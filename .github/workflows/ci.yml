@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        run: npm run build
+
+  tauri-linux-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            rpm \
+            wget
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Tauri Linux Bundles
+        run: npm run tauri build
+
+      - name: Upload Debian Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: comdtex-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
+      - name: Upload RPM Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: comdtex-rpm
+          path: src-tauri/target/release/bundle/rpm/*.rpm
+          if-no-files-found: error
+
+  tauri-arch-build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install Build Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel \
+            curl \
+            file \
+            git \
+            webkit2gtk-4.1 \
+            libayatana-appindicator \
+            librsvg \
+            openssl \
+            patchelf \
+            nodejs \
+            npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Tauri Arch Bundle
+        run: npm run tauri build -- --bundles pacman
+
+      - name: Upload Pacman Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: comdtex-pacman
+          path: src-tauri/target/release/bundle/pacman/*.pkg.tar.zst
+          if-no-files-found: error

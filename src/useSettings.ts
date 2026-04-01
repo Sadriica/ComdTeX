@@ -1,0 +1,49 @@
+import type { Lang } from "./i18n"
+
+export interface Settings {
+  fontSize: number
+  previewFontSize: number
+  autoSaveMs: number
+  theme: "vs-dark" | "vs" | "hc-black"
+  vimMode: boolean
+  previewVisible: boolean
+  language: Lang
+}
+
+const DEFAULTS: Settings = {
+  fontSize: 15,
+  previewFontSize: 15,
+  autoSaveMs: 800,
+  theme: "vs-dark",
+  vimMode: false,
+  previewVisible: true,
+  language: "es",
+}
+
+const KEY = "comdtex_settings"
+
+function load(): Settings {
+  try {
+    const raw = localStorage.getItem(KEY)
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
+  } catch {
+    localStorage.removeItem(KEY)
+    return DEFAULTS
+  }
+}
+
+import { useState, useCallback } from "react"
+
+export function useSettings() {
+  const [settings, setSettings] = useState<Settings>(load)
+
+  const update = useCallback((partial: Partial<Settings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...partial }
+      localStorage.setItem(KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  return { settings, update }
+}

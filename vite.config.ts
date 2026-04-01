@@ -1,0 +1,37 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+// @ts-expect-error process is a nodejs global
+const host = process.env.TAURI_DEV_HOST;
+
+export default defineConfig(async () => ({
+  plugins: [react()],
+
+  clearScreen: false,
+  server: {
+    port: 1420,
+    strictPort: true,
+    host: host || false,
+    hmr: host
+      ? { protocol: "ws", host, port: 1421 }
+      : undefined,
+    watch: {
+      ignored: ["**/src-tauri/**"],
+    },
+  },
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Monaco is huge — split it so the initial chunk loads faster
+          "monaco-editor": ["monaco-editor"],
+          // Keep react in its own chunk
+          "react-vendor": ["react", "react-dom"],
+          // Math rendering
+          "katex": ["katex"],
+        },
+      },
+    },
+  },
+}));

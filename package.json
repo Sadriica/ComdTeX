@@ -1,0 +1,36 @@
+{
+  "name": "comdtex",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "appimage:manual": "bash scripts/build-appimage.sh"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "@types/katex": "^0.16.8",
+    "@types/markdown-it": "^14.1.2",
+    "katex": "^0.16.44",
+    "markdown-it": "^14.1.1",
+    "monaco-vim": "^0.4.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}

@@ -1,0 +1,3 @@
+# Covered by root .gitignore — kept for Cargo tooling compatibility
+/target/
+/gen/schemas
