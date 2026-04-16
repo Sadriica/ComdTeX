@@ -290,6 +290,41 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
   return lines.join("\n")
 }
 
+export function exportReveal(markdown: string, title: string): string {
+  const slides = markdown.split(/\n---\n/)
+
+  const slideHtml = slides.map(slide =>
+    `  <section data-markdown>\n    <textarea data-template>\n${slide.trim()}\n    </textarea>\n  </section>`
+  ).join('\n')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/black.css">
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+${slideHtml}
+    </div>
+  </div>
+  <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
+  <script src="https://unpkg.com/reveal.js/plugin/markdown/markdown.js"></script>
+  <script src="https://unpkg.com/reveal.js/plugin/highlight/highlight.js"></script>
+  <script src="https://unpkg.com/reveal.js/plugin/math/math.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      plugins: [RevealMarkdown, RevealHighlight, RevealMath.KaTeX]
+    });
+  </script>
+</body>
+</html>`
+}
+
 export function exportToTex(raw: string, macrosText = "", title = "", author = ""): string {
   const body = mdToTex(raw)
 

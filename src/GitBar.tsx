@@ -597,6 +597,7 @@ export default function GitBar({ vaultPath }: GitBarProps) {
     finally { setLoading(false) }
   }, [vaultPath])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh() }, [vaultPath])
 
   const openPanel = useCallback(() => {
@@ -650,7 +651,7 @@ export default function GitBar({ vaultPath }: GitBarProps) {
     <div className="menu-item git-menu-item" ref={wrapRef}>
       {/* Menu button */}
       <button className={`menu-btn${panelOpen ? " open" : ""}`}
-        onMouseDown={e => { e.preventDefault(); panelOpen ? setPanelOpen(false) : openPanel() }}>
+        onMouseDown={e => { e.preventDefault(); if (panelOpen) setPanelOpen(false); else openPanel() }}>
         <span style={{ color: "#569cd6" }}>⎇</span>
         <span style={{ margin: "0 4px" }}>{branchLabel}</span>
         {(status?.ahead  ?? 0) > 0 && <span className="git-pill git-pill-ahead">↑{status!.ahead}</span>}

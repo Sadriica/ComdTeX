@@ -26,6 +26,7 @@ export interface T {
     proof: string; remark: string; note: string
     structures: string; table: string; matAuto: string; matFixed: string; matLiteral: string
     togglePreview: string
+    symbolPicker: string
     // labels inside dropdowns
     lbl_heading1: string; lbl_heading2: string; lbl_heading3: string
     lbl_quote: string; lbl_separator: string; lbl_list: string
@@ -52,6 +53,8 @@ export interface T {
     newFileLabel: string; newFolderLabel: string
     renamingLabel: (name: string) => string
     folderLabel: (name: string) => string
+    sortAZ: string; sortZA: string
+    filterPlaceholder: string
   }
 
   search: {
@@ -60,6 +63,9 @@ export interface T {
     count: (n: number) => string
     lineAriaLabel: (line: number, content: string) => string
     showLess: string; more: (n: number) => string
+    toggleReplace: string; replacePlaceholder: string; replaceAll: string
+    replaced: (n: number) => string
+    regexTitle: string; caseSensitiveTitle: string
   }
 
   outline: {
@@ -75,8 +81,9 @@ export interface T {
 
   settings: {
     title: string; language: string; editorFont: string; previewFont: string
-    autosave: string; theme: string; vimMode: string
+    autosave: string; theme: string; vimMode: string; typewriterMode: string
     dark: string; light: string; highContrast: string
+    wordGoal: string; wordGoalOff: string; words: string
   }
 
   help: {
@@ -103,20 +110,58 @@ export interface T {
     macros: (n: number) => string
     words: (n: number) => string
     chars: (n: number) => string
+    selectedWords: (n: number) => string
+    selectionTitle: string
+    readingTimeTitle: string
+    readingTime: (min: number) => string
     modeMarkdown: string; modeTex: string
     ln: string; col: string
   }
 
   palette: {
     placeholder: string; noResults: string
-    save: string; saveAs: string; exportTex: string; exportPdf: string
+    save: string; saveAs: string; exportTex: string; exportPdf: string; exportHtml: string
     findInFile: string; searchVault: string; focusMode: string; newFromTemplate: string
     editMacros: string; editBib: string; settings: string; shortcuts: string
-    openVault: string; viewOutline: string; viewBacklinks: string; viewGit: string
+    openVault: string; viewOutline: string; viewBacklinks: string
+    viewTags: string; viewProperties: string; viewGraph: string
+    viewTodo: string; viewEquations: string; viewStats: string
+    insertToc: string; typewriterMode: string; syncScroll: string
+    wordWrap: string; minimap: string; exportDocx: string
+    spellcheck: string; exportBeamer: string
+    goBack: string; goForward: string
+    viewEnvironments: string; citationManager: string
+    vaultBackup: string; copyHtml: string; copyLatex: string
+    searchReplace: string; tableEditor: string; exportReveal: string
+    checkUpdates: string
   }
 
   sidebar: {
-    files: string; search: string; outline: string; backlinks: string; help: string; git: string
+    files: string; search: string; outline: string; backlinks: string; help: string
+    tags: string; properties: string; graph: string
+    todo: string; equations: string; stats: string; environments: string
+    searchReplace: string
+  }
+
+  todo: {
+    empty: string; all: string; pending: string; done: string
+    summary: (done: number, total: number) => string
+    markDone: string; markPending: string
+  }
+
+  equations: { empty: string; count: (n: number) => string }
+
+  environments: {
+    empty: string
+    count: (n: number) => string
+    types: Record<string, string>
+  }
+
+  stats: {
+    vault: string; content: string
+    files: string; open: string; words: string; tags: string
+    equations: string; figures: string; citations: string; wikilinks: string
+    broken: (n: number) => string
   }
 
   git: {
@@ -188,7 +233,8 @@ export interface T {
   menus: {
     file: string; edit: string; view: string; vault: string
     openVault: string; newFromTemplate: string; save: string; saveAs: string
-    exportMd: string; exportTex: string; exportPdf: string
+    exportMd: string; exportTex: string; exportPdf: string; exportDocx: string; exportBeamer: string
+    exportReveal: string
     recent: string; clearRecent: string
     findInFile: string; searchVault: string; commandPalette: string
     focusMode: string; files: string; search: string; outline: string
@@ -207,6 +253,13 @@ export interface T {
     fileNotInVault: (name: string) => string
     dialogSelectVault: string; dialogExportMd: string
     dialogExportTex: string; dialogExportPdf: string
+    exportDocxSuccess: string; exportDocxError: string
+    exportBeamerSuccess: string; exportBeamerError: string
+    backupSuccess: string; backupError: string
+    copiedHtml: string; copiedLatex: string; copyError: string; bibSaved: string
+    revealExportSuccess: string; revealExportError: string
+    focusModeOn: string; focusModeOff: string
+    upToDate: string
   }
 
   vault: {
@@ -222,6 +275,12 @@ export interface T {
     errorRenaming: (e: string) => string
     errorCreatingFolder: (e: string) => string
     errorSaving: (e: string) => string
+    renameRefactorConfirm: (old: string, newName: string, count: number) => string
+    renameRefactorDone: (count: number) => string
+    moved: (name: string) => string
+    moveError: string
+    replaceSuccess: (n: number) => string
+    replaceError: string
   }
 
   helpPanel: {
@@ -276,6 +335,44 @@ export interface T {
     // env card syntax titles
     syntaxPythagoras: string; syntaxUniqueness: string
     syntaxContinuity: string; syntaxEvenFunction: string
+    // inline example
+    inlineExample: string
+    // example title in environment card
+    exampleTitle: string
+    // mermaid diagrams section
+    mermaid: string; mermaidDesc: string
+    mermaidFlow: string; mermaidSeq: string; mermaidGantt: string
+    // callouts section
+    callouts: string; calloutsDesc: string
+    calloutNote: string; calloutNoteDesc: string
+    calloutWarning: string; calloutWarningDesc: string
+    calloutTip: string; calloutTipDesc: string
+    calloutImportant: string; calloutImportantDesc: string
+    // footnotes section
+    footnotes: string; footnotesDesc: string
+    footnoteInline: string; footnoteInlineDesc: string
+    footnoteDef: string; footnoteDefDesc: string
+    // checkboxes section
+    checkboxes: string; checkboxesDesc: string
+    checkboxUnchecked: string; checkboxUncheckedDesc: string
+    checkboxChecked: string; checkboxCheckedDesc: string
+    // figures section
+    figures: string; figuresDesc: string
+    figureLabel: string; figureLabelDesc: string
+    figureRef: string; figureRefDesc: string
+    // user snippets section
+    userSnippets: string; userSnippetsDesc: string
+    userSnippetFormat: string; userSnippetFormatDesc: string
+    userSnippetExample: string; userSnippetExampleDesc: string
+    // html & media section
+    htmlMedia: string
+    htmlMediaDesc: string
+    htmlImg: string; htmlImgDesc: string
+    htmlVideo: string; htmlVideoDesc: string
+    htmlYoutube: string; htmlYoutubeDesc: string
+    htmlDetails: string; htmlDetailsDesc: string
+    htmlMark: string; htmlMarkDesc: string
+    htmlAllowed: string; htmlBlocked: string
   }
 
   templates: Record<string, { name: string; description: string }>
@@ -305,6 +402,7 @@ const es: T = {
     proof: "Demostración", remark: "Observación", note: "Nota",
     structures: "Estructuras", table: "Tabla", matAuto: "Matriz auto", matFixed: "Matriz fija", matLiteral: "Matriz literal",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
+    symbolPicker: "Selector de símbolos matemáticos",
     lbl_heading1: "H1  # Título", lbl_heading2: "H2  ## Título", lbl_heading3: "H3  ### Título",
     lbl_quote: "❝  Cita", lbl_separator: "—  Separador", lbl_list: "•  Lista",
     lbl_orderedList: "1. Lista numerada", lbl_taskList: "☐  Lista tareas",
@@ -334,6 +432,8 @@ const es: T = {
     newFileLabel: "Nuevo archivo", newFolderLabel: "Nueva carpeta",
     renamingLabel: (name) => `Renombrar ${name}`,
     folderLabel: (name) => `Carpeta: ${name}`,
+    sortAZ: "Ordenar A→Z", sortZA: "Ordenar Z→A",
+    filterPlaceholder: "Filtrar archivos…",
   },
 
   search: {
@@ -342,6 +442,9 @@ const es: T = {
     count: (n) => `${n} resultados`,
     lineAriaLabel: (line, content) => `Línea ${line}: ${content}`,
     showLess: "Mostrar menos", more: (n) => `+${n} más`,
+    toggleReplace: "Buscar y reemplazar", replacePlaceholder: "Reemplazar con…",
+    replaceAll: "Reemplazar todo", replaced: (n) => `${n} reemplazo${n !== 1 ? "s" : ""} realizado${n !== 1 ? "s" : ""}`,
+    regexTitle: "Expresión regular (.*)", caseSensitiveTitle: "Distinguir mayúsculas (Aa)",
   },
 
   outline: {
@@ -359,7 +462,9 @@ const es: T = {
     title: "Configuración", language: "Idioma",
     editorFont: "Fuente del editor", previewFont: "Fuente del preview",
     autosave: "Autoguardado", theme: "Tema", vimMode: "Modo Vim",
+    typewriterMode: "Modo máquina de escribir",
     dark: "Oscuro", light: "Claro", highContrast: "Alto contraste",
+    wordGoal: "Meta de palabras", wordGoalOff: "Sin meta", words: "palabras",
   },
 
   help: {
@@ -390,9 +495,13 @@ const es: T = {
 
   statusBar: {
     macrosLoaded: "Macros cargados",
+    readingTime: (min) => `~${min} min`,
     macros: (n) => `${n} macros`,
     words: (n) => `${n} palabras`,
     chars: (n) => `${n} caracteres`,
+    selectedWords: (n) => `${n} sel.`,
+    selectionTitle: "Palabras seleccionadas",
+    readingTimeTitle: "Tiempo de lectura estimado (~200 pal/min)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col",
   },
@@ -400,17 +509,73 @@ const es: T = {
   palette: {
     placeholder: "Buscar archivos y comandos...", noResults: "Sin resultados",
     save: "Guardar", saveAs: "Guardar como...", exportTex: "Exportar como .tex",
-    exportPdf: "Exportar como PDF", findInFile: "Buscar en archivo",
+    exportPdf: "Exportar como PDF", exportHtml: "Exportar como HTML",
+    findInFile: "Buscar en archivo",
     searchVault: "Buscar en vault", focusMode: "Modo enfoque",
     newFromTemplate: "Nuevo desde plantilla", editMacros: "Editar macros.md",
     editBib: "Editar references.bib", settings: "Configuración",
     shortcuts: "Atajos de teclado", openVault: "Abrir vault...",
-    viewOutline: "Ver esquema", viewBacklinks: "Ver backlinks", viewGit: "Control de versiones",
+    viewOutline: "Ver esquema", viewBacklinks: "Ver backlinks",
+    viewTags: "Ver tags", viewProperties: "Ver propiedades", viewGraph: "Ver grafo",
+    viewTodo: "Ver tareas", viewEquations: "Ver ecuaciones", viewStats: "Estadísticas del vault",
+    insertToc: "Insertar índice (TOC)",
+    typewriterMode: "Modo máquina de escribir (centrar cursor)",
+    syncScroll: "Sincronizar scroll del preview",
+    wordWrap: "Ajuste de línea",
+    minimap: "Minimapa",
+    exportDocx: "Exportar a DOCX",
+    spellcheck: "Corrector ortográfico",
+    exportBeamer: "Exportar presentación (Beamer)",
+    goBack: "Atrás", goForward: "Adelante",
+    viewEnvironments: "Ver entornos matemáticos",
+    citationManager: "Gestor de citas",
+    vaultBackup: "Hacer backup del vault (.zip)",
+    copyHtml: "Copiar como HTML",
+    copyLatex: "Copiar como LaTeX",
+    searchReplace: "Buscar y reemplazar",
+    tableEditor: "Editor de tabla",
+    exportReveal: "Exportar presentación (Reveal.js)",
+    checkUpdates: "Buscar actualizaciones",
   },
 
   sidebar: {
     files: "Archivos", search: "Buscar", outline: "Esquema",
-    backlinks: "Backlinks", help: "Ayuda", git: "Git",
+    backlinks: "Backlinks", help: "Ayuda",
+    tags: "Tags", properties: "Propiedades", graph: "Grafo",
+    todo: "Tareas", equations: "Ecuaciones", stats: "Estadísticas",
+    environments: "Entornos",
+    searchReplace: "Buscar y reemplazar",
+  },
+
+  todo: {
+    empty: "No hay tareas en los archivos abiertos",
+    all: "Todas", pending: "Pendientes", done: "Hechas",
+    summary: (done, total) => `${done}/${total} completadas`,
+    markDone: "Marcar como hecha", markPending: "Marcar como pendiente",
+  },
+
+  equations: {
+    empty: "No hay ecuaciones en este documento",
+    count: (n) => `${n} ecuación${n !== 1 ? "es" : ""}`,
+  },
+
+  environments: {
+    empty: "No hay entornos en los archivos abiertos",
+    count: (n) => `${n} entorno${n === 1 ? "" : "s"}`,
+    types: {
+      theorem: "Teorema", lemma: "Lema", corollary: "Corolario",
+      proposition: "Proposición", definition: "Definición",
+      example: "Ejemplo", exercise: "Ejercicio",
+      proof: "Demostración", remark: "Observación", note: "Nota",
+    },
+  },
+
+  stats: {
+    vault: "Vault", content: "Contenido",
+    files: "Archivos en vault", open: "Archivos abiertos", words: "Palabras (abiertos)",
+    tags: "Tags únicos", equations: "Ecuaciones", figures: "Figuras",
+    citations: "Citas", wikilinks: "Wikilinks",
+    broken: (n) => `${n} enlace${n !== 1 ? "s" : ""} roto${n !== 1 ? "s" : ""}`,
   },
 
   git: {
@@ -468,6 +633,9 @@ const es: T = {
     openVault: "Abrir vault...", newFromTemplate: "Nuevo desde plantilla",
     save: "Guardar", saveAs: "Guardar como...",
     exportMd: "Exportar como .md", exportTex: "Exportar como .tex", exportPdf: "Exportar como PDF",
+    exportDocx: "Exportar a Word (.docx)",
+    exportBeamer: "Exportar presentación Beamer (.pdf)",
+    exportReveal: "Exportar Reveal.js",
     recent: "Recientes", clearRecent: "Limpiar recientes",
     findInFile: "Buscar en archivo", searchVault: "Buscar en vault",
     commandPalette: "Paleta de comandos", focusMode: "Modo enfoque",
@@ -500,6 +668,21 @@ const es: T = {
     dialogExportMd: "Exportar como Markdown",
     dialogExportTex: "Exportar como LaTeX",
     dialogExportPdf: "Exportar como PDF",
+    exportDocxSuccess: "DOCX exportado",
+    exportDocxError: "Error al exportar DOCX",
+    exportBeamerSuccess: "Presentación exportada",
+    exportBeamerError: "Error al exportar presentación",
+    backupSuccess: "Backup creado",
+    backupError: "Error al crear backup",
+    copiedHtml: "HTML copiado",
+    copiedLatex: "LaTeX copiado",
+    copyError: "Error al copiar",
+    bibSaved: "Referencias guardadas",
+    revealExportSuccess: "Presentación exportada",
+    revealExportError: "Error al exportar presentación",
+    focusModeOn: "Modo enfoque activado",
+    focusModeOff: "Modo enfoque desactivado",
+    upToDate: "ComdTeX está al día",
   },
 
   vault: {
@@ -518,6 +701,12 @@ const es: T = {
     errorRenaming: (e) => `No se pudo renombrar: ${e}`,
     errorCreatingFolder: (e) => `No se pudo crear la carpeta: ${e}`,
     errorSaving: (e) => `Error guardando: ${e}`,
+    renameRefactorConfirm: (old, newName, count) => `¿Actualizar ${count} referencia${count !== 1 ? "s" : ""} a [[${old}]] → [[${newName}]] en los archivos abiertos?`,
+    renameRefactorDone: (count) => `${count} referencia${count !== 1 ? "s" : ""} actualizada${count !== 1 ? "s" : ""}`,
+    moved: (name) => `"${name}" movido`,
+    moveError: "No se pudo mover el archivo",
+    replaceSuccess: (n) => `${n} reemplazos realizados`,
+    replaceError: "Error al reemplazar",
   },
 
   helpPanel: {
@@ -585,6 +774,61 @@ const es: T = {
     eqCodeBlock: "$$\nE = mc^2\n$$ {#eq:energia}\n\nVer @eq:energia",
     syntaxPythagoras: "Pitágoras", syntaxUniqueness: "Unicidad",
     syntaxContinuity: "Continuidad", syntaxEvenFunction: "Función par",
+    inlineExample: "Inline:",
+    exampleTitle: "Título",
+    mermaid: "Diagramas Mermaid",
+    mermaidDesc: "Los bloques de código con lenguaje 'mermaid' se renderizan como diagramas interactivos.",
+    mermaidFlow: "Diagrama de flujo",
+    mermaidSeq: "Diagrama de secuencia",
+    mermaidGantt: "Diagrama Gantt",
+    callouts: "Callouts (avisos destacados)",
+    calloutsDesc: "Bloques de cita con tipo especial, estilo Obsidian. El texto del tipo es libre.",
+    calloutNote: "> [!NOTE]\n> Información adicional.",
+    calloutNoteDesc: "Nota informativa (azul)",
+    calloutWarning: "> [!WARNING]\n> Precaución importante.",
+    calloutWarningDesc: "Advertencia (amarillo)",
+    calloutTip: "> [!TIP]\n> Sugerencia útil.",
+    calloutTipDesc: "Consejo (verde)",
+    calloutImportant: "> [!IMPORTANT]\n> No ignorar.",
+    calloutImportantDesc: "Importante (púrpura)",
+    footnotes: "Notas al pie",
+    footnotesDesc: "Sintaxis estándar de Markdown para notas al pie. Se renderizan al final del preview.",
+    footnoteInline: "Texto con nota.[^1]",
+    footnoteInlineDesc: "Referencia inline — muestra un superíndice clicable",
+    footnoteDef: "[^1]: Contenido de la nota al pie.",
+    footnoteDefDesc: "Definición de la nota — puede ir en cualquier parte del documento",
+    checkboxes: "Listas de tareas",
+    checkboxesDesc: "Los checkboxes del preview son interactivos: al hacer clic actualizan el documento.",
+    checkboxUnchecked: "- [ ] Tarea pendiente",
+    checkboxUncheckedDesc: "Tarea sin completar",
+    checkboxChecked: "- [x] Tarea completada",
+    checkboxCheckedDesc: "Tarea completada — clic para desmarcar",
+    figures: "Figuras numeradas",
+    figuresDesc: "Las imágenes con etiqueta {#fig:id} se numeran automáticamente y se pueden referenciar.",
+    figureLabel: "![Leyenda](imagen.png){#fig:diagrama}",
+    figureLabelDesc: "Imagen numerada — genera 'Figura N: Leyenda'",
+    figureRef: "@fig:diagrama",
+    figureRefDesc: "Referencia → (N)",
+    userSnippets: "Snippets de usuario (snippets.md)",
+    userSnippetsDesc: "Crea snippets personalizados en snippets.md en la raíz del vault. Se expanden en el autocompletado del editor.",
+    userSnippetFormat: "> prefijo | descripción | cuerpo del snippet",
+    userSnippetFormatDesc: "Formato de cada snippet (una línea por snippet)",
+    userSnippetExample: "> thm | Plantilla teorema | :::theorem[${1:Título}]\\n${2:Enunciado}\\n:::",
+    userSnippetExampleDesc: "Ejemplo: snippet que inserta un entorno theorem",
+    htmlMedia: "HTML y multimedia",
+    htmlMediaDesc: "El editor acepta HTML directo en el documento. Las etiquetas peligrosas son eliminadas automáticamente.",
+    htmlImg: '<img src="ruta.png" width="400" alt="desc">',
+    htmlImgDesc: "Imagen con ancho personalizado",
+    htmlVideo: '<video controls width="500"><source src="./video.mp4" type="video/mp4"></video>',
+    htmlVideoDesc: "Video local (mp4, webm)",
+    htmlYoutube: '<iframe width="560" height="315" src="https://www.youtube.com/embed/ID" allowfullscreen></iframe>',
+    htmlYoutubeDesc: "Video de YouTube (único iframe permitido)",
+    htmlDetails: '<details><summary>Ver más</summary>Contenido oculto</details>',
+    htmlDetailsDesc: "Bloque colapsable",
+    htmlMark: '<mark>texto resaltado</mark>   <sub>sub</sub>   <sup>sup</sup>',
+    htmlMarkDesc: "Resaltado, subíndice, superíndice inline",
+    htmlAllowed: "Etiquetas permitidas: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (solo YouTube)",
+    htmlBlocked: "Etiquetas bloqueadas: script, iframe (otros), object, embed, form, input, button",
   },
 
   templates: {
@@ -622,6 +866,7 @@ const en: T = {
     proof: "Proof", remark: "Remark", note: "Note",
     structures: "Structures", table: "Table", matAuto: "Auto matrix", matFixed: "Fixed matrix", matLiteral: "Literal matrix",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
+    symbolPicker: "Math symbol picker",
     lbl_heading1: "H1  # Title", lbl_heading2: "H2  ## Title", lbl_heading3: "H3  ### Title",
     lbl_quote: "❝  Quote", lbl_separator: "—  Separator", lbl_list: "•  List",
     lbl_orderedList: "1. Numbered list", lbl_taskList: "☐  Task list",
@@ -651,6 +896,8 @@ const en: T = {
     newFileLabel: "New file", newFolderLabel: "New folder",
     renamingLabel: (name) => `Rename ${name}`,
     folderLabel: (name) => `Folder: ${name}`,
+    sortAZ: "Sort A→Z", sortZA: "Sort Z→A",
+    filterPlaceholder: "Filter files…",
   },
 
   search: {
@@ -659,6 +906,9 @@ const en: T = {
     count: (n) => `${n} results`,
     lineAriaLabel: (line, content) => `Line ${line}: ${content}`,
     showLess: "Show less", more: (n) => `+${n} more`,
+    toggleReplace: "Find & replace", replacePlaceholder: "Replace with…",
+    replaceAll: "Replace all", replaced: (n) => `${n} replacement${n !== 1 ? "s" : ""} made`,
+    regexTitle: "Regular expression (.*)", caseSensitiveTitle: "Case sensitive (Aa)",
   },
 
   outline: {
@@ -676,7 +926,9 @@ const en: T = {
     title: "Settings", language: "Language",
     editorFont: "Editor font", previewFont: "Preview font",
     autosave: "Autosave", theme: "Theme", vimMode: "Vim mode",
+    typewriterMode: "Typewriter mode",
     dark: "Dark", light: "Light", highContrast: "High contrast",
+    wordGoal: "Word goal", wordGoalOff: "No goal", words: "words",
   },
 
   help: {
@@ -707,9 +959,13 @@ const en: T = {
 
   statusBar: {
     macrosLoaded: "Macros loaded",
+    readingTime: (min) => `~${min} min`,
     macros: (n) => `${n} macros`,
     words: (n) => `${n} words`,
     chars: (n) => `${n} chars`,
+    selectedWords: (n) => `${n} sel.`,
+    selectionTitle: "Selected words",
+    readingTimeTitle: "Estimated reading time (~200 wpm)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col",
   },
@@ -722,12 +978,67 @@ const en: T = {
     newFromTemplate: "New from template", editMacros: "Edit macros.md",
     editBib: "Edit references.bib", settings: "Settings",
     shortcuts: "Keyboard shortcuts", openVault: "Open vault...",
-    viewOutline: "View outline", viewBacklinks: "View backlinks", viewGit: "Source control",
+    viewOutline: "View outline", viewBacklinks: "View backlinks",
+    viewTags: "View tags", viewProperties: "View properties", viewGraph: "View graph",
+    viewTodo: "View tasks", viewEquations: "View equations", viewStats: "Vault statistics",
+    insertToc: "Insert table of contents (TOC)",
+    exportHtml: "Export as HTML",
+    typewriterMode: "Typewriter mode (center cursor)",
+    syncScroll: "Sync preview scroll",
+    wordWrap: "Toggle word wrap",
+    minimap: "Toggle minimap",
+    exportDocx: "Export to DOCX",
+    spellcheck: "Toggle spellcheck",
+    exportBeamer: "Export presentation (Beamer)",
+    goBack: "Go back", goForward: "Go forward",
+    viewEnvironments: "View math environments",
+    citationManager: "Citation manager",
+    vaultBackup: "Backup vault (.zip)",
+    copyHtml: "Copy as HTML",
+    copyLatex: "Copy as LaTeX",
+    searchReplace: "Find and replace",
+    tableEditor: "Table editor",
+    exportReveal: "Export presentation (Reveal.js)",
+    checkUpdates: "Check for updates",
   },
 
   sidebar: {
     files: "Files", search: "Search", outline: "Outline",
-    backlinks: "Backlinks", help: "Help", git: "Git",
+    backlinks: "Backlinks", help: "Help",
+    tags: "Tags", properties: "Properties", graph: "Graph",
+    todo: "Tasks", equations: "Equations", stats: "Statistics",
+    environments: "Environments",
+    searchReplace: "Find & Replace",
+  },
+
+  todo: {
+    empty: "No tasks in open files",
+    all: "All", pending: "Pending", done: "Done",
+    summary: (done, total) => `${done}/${total} completed`,
+    markDone: "Mark as done", markPending: "Mark as pending",
+  },
+
+  equations: {
+    empty: "No equations in this document",
+    count: (n) => `${n} equation${n !== 1 ? "s" : ""}`,
+  },
+
+  environments: {
+    empty: "No environments in open files",
+    count: (n) => `${n} environment${n === 1 ? "" : "s"}`,
+    types: {
+      theorem: "Theorem", lemma: "Lemma", corollary: "Corollary",
+      proposition: "Proposition", definition: "Definition",
+      example: "Example", exercise: "Exercise",
+      proof: "Proof", remark: "Remark", note: "Note",
+    },
+  },
+
+  stats: {
+    vault: "Vault", content: "Content",
+    files: "Files in vault", open: "Open files", words: "Words (open)", tags: "Unique tags",
+    equations: "Equations", figures: "Figures", citations: "Citations", wikilinks: "Wikilinks",
+    broken: (n) => `${n} broken link${n !== 1 ? "s" : ""}`,
   },
 
   git: {
@@ -785,6 +1096,9 @@ const en: T = {
     openVault: "Open vault...", newFromTemplate: "New from template",
     save: "Save", saveAs: "Save as...",
     exportMd: "Export as .md", exportTex: "Export as .tex", exportPdf: "Export as PDF",
+    exportDocx: "Export to Word (.docx)",
+    exportBeamer: "Export Beamer slides (.pdf)",
+    exportReveal: "Export Reveal.js",
     recent: "Recent", clearRecent: "Clear recent",
     findInFile: "Find in file", searchVault: "Search in vault",
     commandPalette: "Command palette", focusMode: "Focus mode",
@@ -817,6 +1131,21 @@ const en: T = {
     dialogExportMd: "Export as Markdown",
     dialogExportTex: "Export as LaTeX",
     dialogExportPdf: "Export as PDF",
+    exportDocxSuccess: "DOCX exported",
+    exportDocxError: "DOCX export failed",
+    exportBeamerSuccess: "Presentation exported",
+    exportBeamerError: "Beamer export failed",
+    backupSuccess: "Backup created",
+    backupError: "Backup failed",
+    copiedHtml: "HTML copied",
+    copiedLatex: "LaTeX copied",
+    copyError: "Copy failed",
+    bibSaved: "References saved",
+    revealExportSuccess: "Presentation exported",
+    revealExportError: "Error exporting presentation",
+    focusModeOn: "Focus mode on",
+    focusModeOff: "Focus mode off",
+    upToDate: "ComdTeX is up to date",
   },
 
   vault: {
@@ -835,6 +1164,12 @@ const en: T = {
     errorRenaming: (e) => `Could not rename: ${e}`,
     errorCreatingFolder: (e) => `Could not create folder: ${e}`,
     errorSaving: (e) => `Error saving: ${e}`,
+    renameRefactorConfirm: (old, newName, count) => `Update ${count} reference${count !== 1 ? "s" : ""} to [[${old}]] → [[${newName}]] in open files?`,
+    renameRefactorDone: (count) => `${count} reference${count !== 1 ? "s" : ""} updated`,
+    moved: (name) => `"${name}" moved`,
+    moveError: "Could not move file",
+    replaceSuccess: (n) => `${n} replacements made`,
+    replaceError: "Error replacing",
   },
 
   helpPanel: {
@@ -902,6 +1237,61 @@ const en: T = {
     eqCodeBlock: "$$\nE = mc^2\n$$ {#eq:energy}\n\nSee @eq:energy",
     syntaxPythagoras: "Pythagoras", syntaxUniqueness: "Uniqueness",
     syntaxContinuity: "Continuity", syntaxEvenFunction: "Even function",
+    inlineExample: "Inline:",
+    exampleTitle: "Title",
+    mermaid: "Mermaid diagrams",
+    mermaidDesc: "Code blocks with language 'mermaid' render as interactive diagrams.",
+    mermaidFlow: "Flowchart",
+    mermaidSeq: "Sequence diagram",
+    mermaidGantt: "Gantt chart",
+    callouts: "Callouts (highlighted notices)",
+    calloutsDesc: "Quote blocks with a special type, Obsidian-style. The type text is free-form.",
+    calloutNote: "> [!NOTE]\n> Additional info.",
+    calloutNoteDesc: "Informational note (blue)",
+    calloutWarning: "> [!WARNING]\n> Important caution.",
+    calloutWarningDesc: "Warning (yellow)",
+    calloutTip: "> [!TIP]\n> Useful suggestion.",
+    calloutTipDesc: "Tip (green)",
+    calloutImportant: "> [!IMPORTANT]\n> Do not ignore.",
+    calloutImportantDesc: "Important (purple)",
+    footnotes: "Footnotes",
+    footnotesDesc: "Standard Markdown footnote syntax. Rendered at the bottom of the preview.",
+    footnoteInline: "Text with note.[^1]",
+    footnoteInlineDesc: "Inline reference — shows a clickable superscript",
+    footnoteDef: "[^1]: Footnote content.",
+    footnoteDefDesc: "Footnote definition — can go anywhere in the document",
+    checkboxes: "Task lists",
+    checkboxesDesc: "Checkboxes in the preview are interactive: clicking them updates the document.",
+    checkboxUnchecked: "- [ ] Pending task",
+    checkboxUncheckedDesc: "Unchecked task",
+    checkboxChecked: "- [x] Completed task",
+    checkboxCheckedDesc: "Checked task — click to uncheck",
+    figures: "Numbered figures",
+    figuresDesc: "Images with {#fig:id} labels are auto-numbered and can be referenced.",
+    figureLabel: "![Caption](image.png){#fig:diagram}",
+    figureLabelDesc: "Numbered image — generates 'Figure N: Caption'",
+    figureRef: "@fig:diagram",
+    figureRefDesc: "Reference → (N)",
+    userSnippets: "User snippets (snippets.md)",
+    userSnippetsDesc: "Create custom snippets in snippets.md at the vault root. They appear in the editor's autocomplete.",
+    userSnippetFormat: "> prefix | description | snippet body",
+    userSnippetFormatDesc: "Format of each snippet (one per line)",
+    userSnippetExample: "> thm | Theorem template | :::theorem[${1:Title}]\\n${2:Statement}\\n:::",
+    userSnippetExampleDesc: "Example: snippet that inserts a theorem environment",
+    htmlMedia: "HTML & multimedia",
+    htmlMediaDesc: "The editor accepts raw HTML in documents. Dangerous tags are stripped automatically.",
+    htmlImg: '<img src="path.png" width="400" alt="desc">',
+    htmlImgDesc: "Image with custom width",
+    htmlVideo: '<video controls width="500"><source src="./video.mp4" type="video/mp4"></video>',
+    htmlVideoDesc: "Local video (mp4, webm)",
+    htmlYoutube: '<iframe width="560" height="315" src="https://www.youtube.com/embed/ID" allowfullscreen></iframe>',
+    htmlYoutubeDesc: "YouTube video (only allowed iframe)",
+    htmlDetails: '<details><summary>Show more</summary>Hidden content</details>',
+    htmlDetailsDesc: "Collapsible block",
+    htmlMark: '<mark>highlighted</mark>   <sub>sub</sub>   <sup>sup</sup>',
+    htmlMarkDesc: "Highlight, subscript, superscript inline",
+    htmlAllowed: "Allowed tags: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (YouTube only)",
+    htmlBlocked: "Blocked tags: script, iframe (others), object, embed, form, input, button",
   },
 
   templates: {

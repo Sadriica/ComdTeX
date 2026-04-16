@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 
 interface ResizerProps {
   onDrag: (dx: number) => void
@@ -7,7 +7,7 @@ interface ResizerProps {
 
 export default function Resizer({ onDrag, vertical = true }: ResizerProps) {
   const onDragRef = useRef(onDrag)
-  onDragRef.current = onDrag
+  useLayoutEffect(() => { onDragRef.current = onDrag })
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()

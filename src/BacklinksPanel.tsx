@@ -43,9 +43,13 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree }: Backli
       if (cancelled) return
       setBacklinks(all.flat())
       setLoading(false)
+    }).catch(() => {
+      if (cancelled) return
+      setLoading(false)
     })
 
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFile?.path, tree])
 
   if (!currentFile) {

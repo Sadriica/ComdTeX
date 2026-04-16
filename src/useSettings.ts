@@ -6,8 +6,10 @@ export interface Settings {
   autoSaveMs: number
   theme: "vs-dark" | "vs" | "hc-black"
   vimMode: boolean
+  typewriterMode: boolean
   previewVisible: boolean
   language: Lang
+  wordGoal: number  // 0 = no goal
 }
 
 const DEFAULTS: Settings = {
@@ -16,8 +18,10 @@ const DEFAULTS: Settings = {
   autoSaveMs: 800,
   theme: "vs-dark",
   vimMode: false,
+  typewriterMode: false,
   previewVisible: true,
   language: "es",
+  wordGoal: 0,
 }
 
 const KEY = "comdtex_settings"

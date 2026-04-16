@@ -9,16 +9,8 @@ export interface PaletteCommand {
   action: () => void
 }
 
-interface CommandPaletteProps {
-  open: boolean
-  onClose: () => void
-  files: FileNode[]
-  commands: PaletteCommand[]
-  onOpenFile: (node: FileNode) => void
-}
-
 interface PaletteItem {
-  kind: "file" | "command"
+  kind: "file" | "command" | "recent"
   label: string
   description?: string
   action: () => void
@@ -46,20 +38,46 @@ function flatFiles(tree: FileNode[]): FileNode[] {
   return out
 }
 
-export default function CommandPalette({ open, onClose, files, commands, onOpenFile }: CommandPaletteProps) {
+interface CommandPaletteProps {
+  open: boolean
+  onClose: () => void
+  files: FileNode[]
+  commands: PaletteCommand[]
+  onOpenFile: (node: FileNode) => void
+  recentFiles?: { path: string; name: string }[]
+  onOpenRecent?: (path: string) => void
+}
+
+export default function CommandPalette({ open, onClose, files, commands, onOpenFile, recentFiles, onOpenRecent }: CommandPaletteProps) {
   const t = useT()
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) { setQuery(""); setSelected(0); setTimeout(() => inputRef.current?.focus(), 0) }
+    if (!open) return
+    // Intentional: reset input and selection each time the palette opens.
+    setQuery("") // eslint-disable-line react-hooks/set-state-in-effect
+    setSelected(0)
+    setTimeout(() => inputRef.current?.focus(), 0)
   }, [open])
 
   if (!open) return null
 
   const allFiles = flatFiles(files)
+
+  // When no query: prepend recent files; otherwise search all
+  const recentItems: PaletteItem[] = !query && recentFiles && onOpenRecent
+    ? recentFiles.map((r) => ({
+        kind: "recent" as const,
+        label: r.name,
+        description: r.path,
+        action: () => { onOpenRecent(r.path); onClose() },
+      }))
+    : []
+
   const items: PaletteItem[] = [
+    ...recentItems,
     ...allFiles
       .filter((f) => !query || fuzzy(query, f.name))
       .map((f) => ({
@@ -109,8 +127,8 @@ export default function CommandPalette({ open, onClose, files, commands, onOpenF
               onMouseEnter={() => setSelected(i)}
               onMouseDown={() => item.action()}
             >
-              <span className={`palette-kind ${item.kind === "file" ? "palette-kind-file" : "palette-kind-cmd"}`}>
-                {item.kind === "file" ? "M" : "⌘"}
+              <span className={`palette-kind ${item.kind === "file" ? "palette-kind-file" : item.kind === "recent" ? "palette-kind-recent" : "palette-kind-cmd"}`}>
+                {item.kind === "file" ? "M" : item.kind === "recent" ? "⏱" : "⌘"}
               </span>
               <span className="palette-label">{item.label}</span>
               {item.description && (

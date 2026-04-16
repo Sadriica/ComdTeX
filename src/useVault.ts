@@ -1,15 +1,28 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { readDir, readTextFile, writeTextFile, mkdir, remove, rename } from "@tauri-apps/plugin-fs"
-import { open } from "@tauri-apps/plugin-dialog"
+import { open, save } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toast"
 import { useT } from "./i18n"
 
-const VAULT_KEY  = "comdtex_vault"
-const TABS_KEY   = "comdtex_tabs"
-const ACTIVE_KEY = "comdtex_active"
-const DRAFTS_KEY = "comdtex_drafts"
+const VAULT_KEY   = "comdtex_vault"
+const TABS_KEY    = "comdtex_tabs"
+const ACTIVE_KEY  = "comdtex_active"
+const DRAFTS_KEY  = "comdtex_drafts"
+const RECENT_KEY  = "comdtex_recent_vaults"
+const MAX_RECENT_VAULTS = 5
+
+function loadRecentVaults(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
+  catch { return [] }
+}
+
+function saveRecentVault(path: string) {
+  const current = loadRecentVaults()
+  const next = [path, ...current.filter((p) => p !== path)].slice(0, MAX_RECENT_VAULTS)
+  localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+}
 
 export const README_FILENAME = "README.md"
 
@@ -165,7 +178,7 @@ function clearDraft(path: string) {
 export function useVault(autoSaveMs = 800) {
   const t = useT()
 
-  const validate = (name: string): { valid: boolean; error?: string } => {
+  const validate = useCallback((name: string): { valid: boolean; error?: string } => {
     if (!name || !name.trim()) return { valid: false, error: t.vault.nameEmpty }
     if (name.length > 255) return { valid: false, error: t.vault.nameTooLong }
     if (/[<>:"|?*\\]/.test(name)) return { valid: false, error: t.vault.nameInvalidChars }
@@ -173,14 +186,16 @@ export function useVault(autoSaveMs = 800) {
     if (/^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i.test(name))
       return { valid: false, error: t.vault.nameReserved }
     return { valid: true }
-  }
+  }, [t])
 
   const [vaultPath, setVaultPath] = useState<string | null>(
     () => localStorage.getItem(VAULT_KEY)
   )
+  const [recentVaults, setRecentVaults] = useState<string[]>(() => loadRecentVaults())
   const [tree, setTree] = useState<FileNode[]>([])
   const [openTabs, setOpenTabs] = useState<OpenFile[]>([])
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null)
+  const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const activeTabPathRef = useRef<string | null>(null)
@@ -202,7 +217,7 @@ export function useVault(autoSaveMs = 800) {
   const refreshTree = useCallback(async (path: string) => {
     try { setTree(await buildTree(path)) }
     catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
-  }, [])
+  }, [t])
 
   // ── Restore tabs on mount ────────────────────────────────────────────────
   // Returns true if at least one tab was restored
@@ -240,7 +255,7 @@ export function useVault(autoSaveMs = 800) {
       return false
     } catch { /* corrupted storage */ }
     return false
-  }, [autoSaveMs])
+  }, [])
 
   // ── Open or create README.md ─────────────────────────────────────────────
   const openOrCreateReadme = useCallback(async (vaultP: string) => {
@@ -261,14 +276,22 @@ export function useVault(autoSaveMs = 800) {
     const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content, isDirty: false, mode: "md" }
     setOpenTabs((tabs) => tabs.find((t) => t.path === readmePath) ? tabs : [...tabs, newTab])
     setActiveTabPath(readmePath)
-  }, [])
+  }, [t])
 
-  const selectVault = useCallback(async () => {
-    const selected = await open({ directory: true, multiple: false, title: "Seleccionar carpeta del vault" })
+  const selectVault = useCallback(async (preselected?: string) => {
+    let selected: string | null | string[]
+    if (preselected) {
+      selected = preselected
+    } else {
+      selected = await open({ directory: true, multiple: false, title: "Seleccionar carpeta del vault" })
+    }
     if (!selected || typeof selected !== "string") return
     localStorage.setItem(VAULT_KEY, selected)
     localStorage.removeItem(TABS_KEY)
     localStorage.removeItem(ACTIVE_KEY)
+    // Track in recent vaults
+    saveRecentVault(selected)
+    setRecentVaults(loadRecentVaults())
     // Cancel pending autosaves from the previous vault
     saveTimers.current.forEach(clearTimeout)
     saveTimers.current.clear()
@@ -277,6 +300,28 @@ export function useVault(autoSaveMs = 800) {
     setVaultPath(selected)
     await refreshTree(selected)
     await openOrCreateReadme(selected)
+  }, [refreshTree, openOrCreateReadme])
+
+  const createVault = useCallback(async () => {
+    // Ask for the new folder path via a save-style dialog
+    const chosen = await save({
+      title: "Crear nueva carpeta de vault",
+      defaultPath: "mi-vault",
+    })
+    if (!chosen) return
+    await mkdir(chosen, { recursive: true })
+    localStorage.setItem(VAULT_KEY, chosen)
+    localStorage.removeItem(TABS_KEY)
+    localStorage.removeItem(ACTIVE_KEY)
+    saveRecentVault(chosen)
+    setRecentVaults(loadRecentVaults())
+    saveTimers.current.forEach(clearTimeout)
+    saveTimers.current.clear()
+    setOpenTabs([])
+    setActiveTabPath(null)
+    setVaultPath(chosen)
+    await refreshTree(chosen)
+    await openOrCreateReadme(chosen)
   }, [refreshTree, openOrCreateReadme])
 
   const loadVault = useCallback(async () => {
@@ -310,9 +355,29 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorOpening(node.name, e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [openTabs])
+  }, [openTabs, t])
+
+  const togglePin = useCallback((path: string) => {
+    setPinnedPaths((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }, [])
+
+  const reorderTabs = useCallback((fromIdx: number, toIdx: number) => {
+    setOpenTabs((tabs) => {
+      if (fromIdx === toIdx) return tabs
+      const next = [...tabs]
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
+  }, [])
 
   const closeTab = useCallback((path: string) => {
+    if (pinnedPaths.has(path)) return
     setOpenTabs((prev) => {
       const idx = prev.findIndex((t) => t.path === path)
       if (idx === -1) return prev
@@ -325,7 +390,7 @@ export function useVault(autoSaveMs = 800) {
     const timer = saveTimers.current.get(path)
     if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
     clearDraft(path)
-  }, [])
+  }, [pinnedPaths])
 
   const switchTab = useCallback((path: string) => setActiveTabPath(path), [])
 
@@ -337,7 +402,7 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [])
+  }, [t])
 
   const updateContent = useCallback((content: string) => {
     const path = activeTabPathRef.current
@@ -368,7 +433,7 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorCreating(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, t])
+  }, [vaultPath, refreshTree, validate, t])
 
   const deleteFile = useCallback(async (path: string) => {
     try {
@@ -378,7 +443,7 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorDeleting(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, closeTab])
+  }, [vaultPath, refreshTree, closeTab, t])
 
   const renameFile = useCallback(async (oldPath: string, newName: string) => {
     const v = validate(newName.replace(/\.[^.]+$/, ""))
@@ -394,6 +459,24 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
     }
+  }, [vaultPath, refreshTree, validate, t])
+
+  const moveFile = useCallback(async (oldPath: string, targetFolderPath: string) => {
+    const name = oldPath.split("/").pop()!
+    const newPath = `${targetFolderPath}/${name}`
+    if (oldPath === newPath) return
+    try {
+      await rename(oldPath, newPath)
+      if (vaultPath) await refreshTree(vaultPath)
+      setOpenTabs((tabs) => tabs.map((tab) =>
+        tab.path === oldPath ? { ...tab, path: newPath } : tab
+      ))
+      setActiveTabPath((p) => p === oldPath ? newPath : p)
+      showToast(t.vault.moved(name), "success")
+    } catch (e) {
+      showToast(t.vault.moveError, "error")
+      console.error(e)
+    }
   }, [vaultPath, refreshTree, t])
 
   const createFolder = useCallback(async (name: string) => {
@@ -406,13 +489,34 @@ export function useVault(autoSaveMs = 800) {
     } catch (e) {
       showToast(t.vault.errorCreatingFolder(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, t])
+  }, [vaultPath, refreshTree, validate, t])
+
+  /**
+   * Update the content of any open tab without making it active.
+   * Used for wikilink refactoring on file rename.
+   */
+  const patchTabContent = useCallback((path: string, newContent: string) => {
+    setOpenTabs((tabs) =>
+      tabs.map((t) => t.path === path ? { ...t, content: newContent, isDirty: false } : t)
+    )
+  }, [])
 
   // Search with result limit and cancellation
   const searchAbortRef = useRef<{ cancelled: boolean }>({ cancelled: false })
 
-  const search = useCallback(async (query: string): Promise<SearchResult[]> => {
+  const search = useCallback(async (
+    query: string,
+    opts: { regex?: boolean; caseSensitive?: boolean } = {}
+  ): Promise<SearchResult[]> => {
     if (!vaultPath || !query.trim()) return []
+
+    // Validate regex before starting search
+    let searchRe: RegExp
+    try {
+      searchRe = opts.regex
+        ? new RegExp(query, opts.caseSensitive ? "g" : "gi")
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
+    } catch { return [] }
 
     // Cancel previous search
     searchAbortRef.current.cancelled = true
@@ -421,7 +525,6 @@ export function useVault(autoSaveMs = 800) {
 
     const MAX_RESULTS = 500
     const results: SearchResult[] = []
-    const lower = query.toLowerCase()
 
     const searchIn = async (nodes: FileNode[]) => {
       for (const node of nodes) {
@@ -432,7 +535,8 @@ export function useVault(autoSaveMs = 800) {
           try {
             const content = await readTextFile(node.path)
             content.split("\n").forEach((line, i) => {
-              if (results.length < MAX_RESULTS && line.toLowerCase().includes(lower))
+              searchRe.lastIndex = 0
+              if (results.length < MAX_RESULTS && searchRe.test(line))
                 results.push({ filePath: node.path, fileName: node.name, line: i + 1, content: line.trim().slice(0, 200) })
             })
           } catch { /* skip */ }
@@ -444,13 +548,59 @@ export function useVault(autoSaveMs = 800) {
     return token.cancelled ? [] : results
   }, [vaultPath, tree])
 
+  /**
+   * Replace all occurrences of `query` with `replacement` across every file
+   * in the vault. Returns the total replacement count.
+   * Open tabs are also updated in state to reflect changes.
+   */
+  const replaceInVault = useCallback(async (
+    query: string,
+    replacement: string,
+    opts: { regex?: boolean; caseSensitive?: boolean } = {}
+  ): Promise<number> => {
+    if (!vaultPath || !query) return 0
+
+    let re: RegExp
+    try {
+      re = opts.regex
+        ? new RegExp(query, opts.caseSensitive ? "g" : "gi")
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
+    } catch { return 0 }
+
+    let total = 0
+
+    const replaceIn = async (nodes: FileNode[]) => {
+      for (const node of nodes) {
+        if (node.type === "dir" && node.children) {
+          await replaceIn(node.children)
+        } else if (node.type === "file") {
+          try {
+            const content = await readTextFile(node.path)
+            re.lastIndex = 0
+            const matches = content.match(re)
+            if (!matches) continue
+            re.lastIndex = 0
+            const updated = content.replace(re, replacement)
+            await writeTextFile(node.path, updated)
+            total += matches.length
+            patchTabContent(node.path, updated)
+          } catch { /* skip */ }
+        }
+      }
+    }
+
+    await replaceIn(tree)
+    return total
+  }, [vaultPath, tree, patchTabContent])
+
   return {
-    vaultPath, tree, isLoading,
+    vaultPath, recentVaults, tree, isLoading,
     openTabs, activeTabPath, openFile,
-    selectVault, loadVault,
+    pinnedPaths, togglePin, reorderTabs,
+    selectVault, createVault, loadVault,
     openFileNode, closeTab, switchTab,
-    updateContent, saveFile,
-    createFile, createFolder, deleteFile, renameFile,
-    search,
+    updateContent, saveFile, patchTabContent,
+    createFile, createFolder, deleteFile, renameFile, moveFile,
+    search, replaceInVault,
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useMemo, useState } from "react"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import type { FileNode } from "./types"
 import ContextMenu from "./ContextMenu"
@@ -16,6 +16,7 @@ interface FileTreeProps {
   onCreateFolder: (name: string) => void
   onDeleteFile: (path: string) => void
   onRenameFile: (oldPath: string, newName: string) => void
+  onMoveFile?: (from: string, toFolder: string) => void
 }
 
 interface CtxState {
@@ -34,6 +35,7 @@ function FileNodeRow({
   onRename,
   onContextMenu,
   onFocus,
+  onMoveFile,
 }: {
   node: FileNode
   depth: number
@@ -44,11 +46,13 @@ function FileNodeRow({
   onRename: (path: string, newName: string) => void
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void
   onFocus: (path: string) => void
+  onMoveFile?: (from: string, toFolder: string) => void
 }) {
   const t = useT()
   const [open, setOpen] = useState(true)
   const [renaming, setRenaming] = useState(false)
   const [renameVal, setRenameVal] = useState("")
+  const [isDragOver, setIsDragOver] = useState(false)
   const renameRef = useRef<HTMLInputElement>(null)
   const isActive = node.path === activePath
   const isFocused = node.path === focusedPath
@@ -70,13 +74,21 @@ function FileNodeRow({
     return (
       <div role="treeitem" aria-expanded={open}>
         <div
-          className="tree-row tree-dir"
+          className={`tree-row tree-dir${isDragOver ? " tree-drop-target" : ""}`}
           style={{ paddingLeft: 8 + indent }}
           tabIndex={-1}
           onClick={() => setOpen((o) => !o)}
           onFocus={() => onFocus(node.path)}
           onContextMenu={(e) => onContextMenu(e, node)}
           aria-label={t.fileTree.folderLabel(node.name)}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDragOver(true) }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setIsDragOver(false)
+            const fromPath = e.dataTransfer.getData("text/plain")
+            if (fromPath && fromPath !== node.path) onMoveFile?.(fromPath, node.path)
+          }}
         >
           <span className="tree-icon" aria-hidden="true">{open ? "▾" : "▸"}</span>
           <span className="tree-name">{node.name}</span>
@@ -93,6 +105,7 @@ function FileNodeRow({
             onRename={onRename}
             onContextMenu={onContextMenu}
             onFocus={onFocus}
+            onMoveFile={onMoveFile}
           />
         ))}
       </div>
@@ -113,6 +126,8 @@ function FileNodeRow({
       onFocus={() => onFocus(node.path)}
       onContextMenu={(e) => onContextMenu(e, node)}
       aria-label={node.name}
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("text/plain", node.path); e.dataTransfer.effectAllowed = "move" }}
     >
       <span className="tree-icon" aria-hidden="true">{icon}</span>
       {renaming ? (
@@ -137,6 +152,34 @@ function FileNodeRow({
   )
 }
 
+function sortTree(nodes: FileNode[], asc: boolean): FileNode[] {
+  return [...nodes]
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === "dir" ? -1 : 1
+      return asc
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    })
+    .map(n => n.type === "dir" && n.children
+      ? { ...n, children: sortTree(n.children, asc) }
+      : n
+    )
+}
+
+function filterTree(nodes: FileNode[], query: string): FileNode[] {
+  if (!query) return nodes
+  const q = query.toLowerCase()
+  return nodes.reduce<FileNode[]>((acc, node) => {
+    if (node.type === "dir" && node.children) {
+      const filtered = filterTree(node.children, query)
+      if (filtered.length > 0) acc.push({ ...node, children: filtered })
+    } else if (node.name.toLowerCase().includes(q)) {
+      acc.push(node)
+    }
+    return acc
+  }, [])
+}
+
 export default function FileTree({
   vaultPath,
   tree,
@@ -148,18 +191,21 @@ export default function FileTree({
   onCreateFolder,
   onDeleteFile,
   onRenameFile,
+  onMoveFile,
 }: FileTreeProps) {
   const t = useT()
+  const [sortAsc, setSortAsc] = useState(true)
+  const [filterQuery, setFilterQuery] = useState("")
+
+  const sortedTree = useMemo(() => sortTree(tree, sortAsc), [tree, sortAsc])
+  const filteredTree = useMemo(() => filterTree(sortedTree, filterQuery), [sortedTree, filterQuery])
+
   const [creating, setCreating] = useState<"file" | "folder" | null>(null)
   const [newName, setNewName] = useState("")
   const [ctx, setCtx] = useState<CtxState | null>(null)
   const [renamingCtx, setRenamingCtx] = useState<FileNode | null>(null)
   const [focusedPath, setFocusedPath] = useState<string | null>(null)
   const treeRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (creating) setNewName("")
-  }, [creating])
 
   const submitCreate = () => {
     if (!newName.trim()) { setCreating(null); return }
@@ -195,7 +241,7 @@ export default function FileTree({
         if (n.type === "dir" && n.children) collectAll(n.children)
       }
     }
-    collectAll(tree)
+    collectAll(filteredTree)
 
     const currentIdx = allNodes.findIndex((n) => n.path === focusedPath)
     const focused = allNodes[currentIdx]
@@ -244,10 +290,29 @@ export default function FileTree({
       <div className="tree-header">
         <span className="tree-vault-name" title={vaultPath}>{vaultName}</span>
         <div className="tree-actions">
-          <button title={t.fileTree.newFile} aria-label={t.fileTree.newFileLabel} onClick={() => setCreating("file")}>+</button>
-          <button title={t.fileTree.newFolder} aria-label={t.fileTree.newFolderLabel} onClick={() => setCreating("folder")}>⊞</button>
+          <button title={t.fileTree.newFile} aria-label={t.fileTree.newFileLabel} onClick={() => { setNewName(""); setCreating("file") }}>+</button>
+          <button title={t.fileTree.newFolder} aria-label={t.fileTree.newFolderLabel} onClick={() => { setNewName(""); setCreating("folder") }}>⊞</button>
+          <button
+            title={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
+            aria-label={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
+            onClick={() => setSortAsc(a => !a)}
+          >{sortAsc ? "↑A" : "↓Z"}</button>
           <button title={t.fileTree.changeVault} aria-label={t.fileTree.changeVault} onClick={onSelectVault}>⊙</button>
         </div>
+      </div>
+
+      <div className="tree-filter">
+        <input
+          className="tree-filter-input"
+          type="search"
+          placeholder={t.fileTree.filterPlaceholder}
+          value={filterQuery}
+          onChange={(e) => setFilterQuery(e.target.value)}
+          aria-label={t.fileTree.filterPlaceholder}
+        />
+        {filterQuery && (
+          <button className="tree-filter-clear" onClick={() => setFilterQuery("")} title="Limpiar">×</button>
+        )}
       </div>
 
       {isLoading && (
@@ -298,10 +363,10 @@ export default function FileTree({
       )}
 
       <div className="tree-list" ref={treeRef}>
-        {!isLoading && tree.length === 0 ? (
+        {!isLoading && filteredTree.length === 0 ? (
           <div className="tree-empty">{t.fileTree.noFiles}</div>
         ) : (
-          tree.map((node) => (
+          filteredTree.map((node) => (
             <FileNodeRow
               key={node.path}
               node={node}
@@ -313,6 +378,7 @@ export default function FileTree({
               onRename={onRenameFile}
               onContextMenu={handleContextMenu}
               onFocus={setFocusedPath}
+              onMoveFile={onMoveFile}
             />
           ))
         )}

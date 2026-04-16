@@ -27,27 +27,19 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
-  tauri-linux-build:
-    runs-on: ubuntu-latest
+  tauri-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+          - os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Linux Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            file \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libssl-dev \
-            libwebkit2gtk-4.1-dev \
-            patchelf \
-            rpm \
-            wget
+      - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -55,42 +47,46 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Setup Rust
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            src-tauri -> target
+          workspaces: src-tauri -> target
 
-      - name: Install Dependencies
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri Linux Bundles
-        run: npm run tauri build
+      - name: Type check
+        run: npx tsc --noEmit
 
-      - name: Upload Debian Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: comdtex-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
-          if-no-files-found: error
+      - name: Run tests
+        run: npm test -- --run
 
-      - name: Upload RPM Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: comdtex-rpm
-          path: src-tauri/target/release/bundle/rpm/*.rpm
-          if-no-files-found: error
+      - name: Cargo check (Rust only, fast)
+        working-directory: src-tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: cargo check --release
 
-  tauri-arch-build:
+  arch-check:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
 
     steps:
-      - name: Install Build Dependencies
+      - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
@@ -106,27 +102,28 @@ jobs:
             nodejs \
             npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+        env:
+          CARGO_HOME: /usr/local/cargo
+          RUSTUP_HOME: /usr/local/rustup
 
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            src-tauri -> target
-
-      - name: Install Node Dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri Arch Bundle
-        run: npm run tauri build -- --bundles pacman
+      - name: Type check
+        run: npx tsc --noEmit
 
-      - name: Upload Pacman Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: comdtex-pacman
-          path: src-tauri/target/release/bundle/pacman/*.pkg.tar.zst
-          if-no-files-found: error
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Cargo check
+        working-directory: src-tauri
+        env:
+          PATH: /usr/local/cargo/bin:${{ env.PATH }}
+          CARGO_HOME: /usr/local/cargo
+          RUSTUP_HOME: /usr/local/rustup
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: cargo check --release

@@ -3,6 +3,42 @@ import type * as monaco from "monaco-editor"
 import type { T } from "./i18n"
 import { useT } from "./i18n"
 
+// ── Symbol groups ─────────────────────────────────────────────────────────────
+
+const GREEK_LOWER = [
+  ["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],["ε","\\epsilon"],
+  ["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],["ι","\\iota"],["κ","\\kappa"],
+  ["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],["π","\\pi"],
+  ["ρ","\\rho"],["σ","\\sigma"],["τ","\\tau"],["υ","\\upsilon"],["φ","\\phi"],
+  ["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],["ϕ","\\varphi"],["ε","\\varepsilon"],
+  ["ϑ","\\vartheta"],["ς","\\varsigma"],
+] as const
+
+const GREEK_UPPER = [
+  ["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],["Ξ","\\Xi"],
+  ["Π","\\Pi"],["Σ","\\Sigma"],["Υ","\\Upsilon"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"],
+] as const
+
+const OPERATORS = [
+  ["∞","\\infty"],["∂","\\partial"],["∇","\\nabla"],["±","\\pm"],["∓","\\mp"],
+  ["×","\\times"],["÷","\\div"],["⊗","\\otimes"],["⊕","\\oplus"],["·","\\cdot"],
+  ["∘","\\circ"],["≤","\\leq"],["≥","\\geq"],["≠","\\neq"],["≈","\\approx"],
+  ["≡","\\equiv"],["∼","\\sim"],["≃","\\simeq"],["≅","\\cong"],["∝","\\propto"],
+  ["∈","\\in"],["∉","\\notin"],["⊂","\\subset"],["⊃","\\supset"],["⊆","\\subseteq"],
+  ["∩","\\cap"],["∪","\\cup"],["∅","\\emptyset"],["∀","\\forall"],["∃","\\exists"],
+  ["¬","\\neg"],["∧","\\wedge"],["∨","\\vee"],["⊥","\\perp"],["∥","\\parallel"],
+  ["√","\\sqrt{}"],["∑","\\sum"],["∏","\\prod"],["∫","\\int"],
+] as const
+
+const ARROWS = [
+  ["→","\\rightarrow"],["←","\\leftarrow"],["↔","\\leftrightarrow"],
+  ["⇒","\\Rightarrow"],["⇐","\\Leftarrow"],["⇔","\\Leftrightarrow"],
+  ["↑","\\uparrow"],["↓","\\downarrow"],["↕","\\updownarrow"],
+  ["↦","\\mapsto"],["↪","\\hookrightarrow"],["⟹","\\implies"],
+  ["⟺","\\iff"],["⟶","\\longrightarrow"],["⟵","\\longleftarrow"],
+  ["↗","\\nearrow"],["↘","\\searrow"],["↙","\\swarrow"],["↖","\\nwarrow"],
+] as const
+
 interface ToolbarProps {
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
   previewVisible: boolean
@@ -247,6 +283,73 @@ function getGroups(t: T): Group[] {
   ]
 }
 
+// ── Symbol picker component ───────────────────────────────────────────────────
+
+type SymbolTab = "greek" | "operators" | "arrows"
+
+function SymbolPicker({ onInsert }: { onInsert: (s: string) => void }) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<SymbolTab>("greek")
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", close)
+    return () => document.removeEventListener("mousedown", close)
+  }, [open])
+
+  const symbols =
+    tab === "greek"     ? [...GREEK_LOWER, ...GREEK_UPPER] :
+    tab === "operators" ? OPERATORS : ARROWS
+
+  return (
+    <div className="toolbar-dropdown symbol-picker" ref={ref}>
+      <button
+        className="toolbar-btn toolbar-btn-arrow"
+        title={t.toolbar.symbolPicker}
+        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
+      >
+        Ω <span className="arrow">▾</span>
+      </button>
+      {open && (
+        <div className="symbol-panel">
+          <div className="symbol-tabs">
+            {(["greek", "operators", "arrows"] as SymbolTab[]).map((tb) => (
+              <button
+                key={tb}
+                className={`symbol-tab${tab === tb ? " active" : ""}`}
+                onMouseDown={(e) => { e.preventDefault(); setTab(tb) }}
+              >
+                {tb === "greek" ? "αβ" : tb === "operators" ? "∑∫" : "→⇒"}
+              </button>
+            ))}
+          </div>
+          <div className="symbol-grid">
+            {symbols.map(([glyph, cmd]) => (
+              <button
+                key={cmd}
+                className="symbol-btn"
+                title={cmd}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onInsert(`$${cmd}$`)
+                  setOpen(false)
+                }}
+              >
+                {glyph}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Dropdown component ────────────────────────────────────────────────────────
 
 function Dropdown({
@@ -349,6 +452,11 @@ export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: 
               )}
         </div>
       ))}
+
+      {/* Symbol picker */}
+      <div className="toolbar-group">
+        <SymbolPicker onInsert={insert} />
+      </div>
 
       {/* Preview toggle — right-aligned */}
       <div className="toolbar-group toolbar-right">

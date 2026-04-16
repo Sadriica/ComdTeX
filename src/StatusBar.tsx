@@ -7,6 +7,8 @@ interface StatusBarProps {
   content: string
   isDirty: boolean
   macroCount: number
+  selectedWords?: number
+  wordGoal?: number
 }
 
 function wordCount(text: string): number {
@@ -17,8 +19,14 @@ function charCount(text: string): number {
   return text.length
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount }: StatusBarProps) {
+function readingMinutes(text: string): number {
+  const wc = wordCount(text)
+  return Math.max(1, Math.ceil(wc / 200))
+}
+
+export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal }: StatusBarProps) {
   const t = useT()
+  const wc = wordCount(content)
   return (
     <div className="status-bar">
       <span className="status-left">
@@ -29,7 +37,26 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
         {macroCount > 0 && (
           <span className="status-item" title={t.statusBar.macrosLoaded}>{t.statusBar.macros(macroCount)}</span>
         )}
-        <span className="status-item">{t.statusBar.words(wordCount(content))}</span>
+        {selectedWords != null && selectedWords > 0 ? (
+          <span className="status-item status-selection" title={t.statusBar.selectionTitle}>
+            {t.statusBar.selectedWords(selectedWords)}
+          </span>
+        ) : wordGoal && wordGoal > 0 ? (
+          <span className="status-item status-goal" title={`${wc} / ${wordGoal} palabras`}>
+            <span className="status-goal-bar">
+              <span
+                className={`status-goal-fill${wc >= wordGoal ? " completed" : ""}`}
+                style={{ width: `${Math.min(100, Math.round(wc / wordGoal * 100))}%` }}
+              />
+            </span>
+            {wc}/{wordGoal}
+          </span>
+        ) : (
+          <span className="status-item">{t.statusBar.words(wc)}</span>
+        )}
+        <span className="status-item status-readtime" title={t.statusBar.readingTimeTitle}>
+          ~{readingMinutes(content)} min
+        </span>
         <span className="status-item">{t.statusBar.chars(charCount(content))}</span>
         <span className="status-item">{t.statusBar.ln} {line}, {t.statusBar.col} {col}</span>
       </span>

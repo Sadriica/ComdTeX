@@ -11,7 +11,23 @@
 
 export type KatexMacros = Record<string, string>
 
-const NEWCOMMAND_RE = /\\newcommand\{(\\[\w@]+)\}(?:\[\d+\])?\{((?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*)\}/g
+/**
+ * Extract the content of the first balanced `{...}` block starting at `pos`.
+ * Returns null if there is no opening brace at `pos`.
+ * Safe against deeply nested input — no regex backtracking.
+ */
+function extractBraceContent(s: string, pos: number): { content: string; end: number } | null {
+  if (s[pos] !== "{") return null
+  let depth = 0
+  for (let i = pos; i < s.length; i++) {
+    if (s[i] === "{") depth++
+    else if (s[i] === "}") {
+      depth--
+      if (depth === 0) return { content: s.slice(pos + 1, i), end: i + 1 }
+    }
+  }
+  return null // unclosed brace
+}
 
 export function parseMacros(text: string): KatexMacros {
   const macros: KatexMacros = {}
@@ -20,12 +36,27 @@ export function parseMacros(text: string): KatexMacros {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith("%")) continue
 
-    NEWCOMMAND_RE.lastIndex = 0
-    const m = NEWCOMMAND_RE.exec(trimmed)
-    if (m) {
-      // m[1] = "\R", m[2] = "\mathbb{R}"
-      macros[m[1]] = m[2]
-    }
+    // Match \newcommand{\name} — command name is the first brace group
+    const prefix = /^\\newcommand/.exec(trimmed)
+    if (!prefix) continue
+
+    let pos = prefix[0].length
+
+    // First brace group: the command name, e.g. {\R}
+    const nameBlock = extractBraceContent(trimmed, pos)
+    if (!nameBlock) continue
+    const name = nameBlock.content
+    pos = nameBlock.end
+
+    // Optional arity: [n]
+    const arityMatch = /^\[\d+\]/.exec(trimmed.slice(pos))
+    if (arityMatch) pos += arityMatch[0].length
+
+    // Second brace group: the definition body
+    const bodyBlock = extractBraceContent(trimmed, pos)
+    if (!bodyBlock) continue
+
+    macros[name] = bodyBlock.content
   }
 
   return macros

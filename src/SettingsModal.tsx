@@ -13,7 +13,7 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
   if (!open) return null
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
+    <div className="modal-overlay" onMouseDown={onClose} onKeyDown={(e) => e.key === "Escape" && onClose()}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{t.settings.title}</span>
@@ -69,6 +69,20 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
             </select>
           </label>
 
+          <div className="setting-row">
+            <span>{t.settings.wordGoal}</span>
+            <input
+              type="number"
+              min="0"
+              max="100000"
+              step="100"
+              value={settings.wordGoal}
+              onChange={(e) => onChange({ wordGoal: Math.max(0, parseInt(e.target.value) || 0) })}
+              className="setting-input-num"
+            />
+            <span className="setting-value">{settings.wordGoal === 0 ? t.settings.wordGoalOff : `${settings.wordGoal} ${t.settings.words}`}</span>
+          </div>
+
           <label className="setting-row">
             <span>{t.settings.theme}</span>
             <select
@@ -87,6 +101,15 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
               type="checkbox"
               checked={settings.vimMode}
               onChange={(e) => onChange({ vimMode: e.target.checked })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.typewriterMode}</span>
+            <input
+              type="checkbox"
+              checked={settings.typewriterMode}
+              onChange={() => onChange({ typewriterMode: !settings.typewriterMode })}
             />
           </label>
         </div>

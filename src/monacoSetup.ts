@@ -1,5 +1,7 @@
 import type * as monacoApi from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
+import katex from "katex"
+import { lintFile, type LintContext } from "./contentLinter"
 
 interface Completion {
   label: string
@@ -55,19 +57,127 @@ export const COMPLETIONS: Completion[] = [
   { label: "trans", detail: "trans(A) → Aᵀ",                                     snippet: "trans(${1:A})" },
 ]
 
+// ── LaTeX command list for \ autocomplete ─────────────────────────────────────
+
+const LATEX_COMMANDS: [string, string][] = [
+  ["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],
+  ["ε","\\epsilon"],["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],
+  ["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],
+  ["π","\\pi"],["ρ","\\rho"],["σ","\\sigma"],["τ","\\tau"],
+  ["φ","\\phi"],["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],
+  ["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],
+  ["Σ","\\Sigma"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"],
+  ["∞","\\infty"],["∂","\\partial"],["∇","\\nabla"],["∈","\\in"],
+  ["∉","\\notin"],["⊂","\\subset"],["⊆","\\subseteq"],["∪","\\cup"],
+  ["∩","\\cap"],["∅","\\emptyset"],["∀","\\forall"],["∃","\\exists"],
+  ["→","\\to"],["←","\\leftarrow"],["↔","\\leftrightarrow"],
+  ["⇒","\\Rightarrow"],["⇐","\\Leftarrow"],["⇔","\\Leftrightarrow"],
+  ["±","\\pm"],["×","\\times"],["÷","\\div"],["≤","\\leq"],
+  ["≥","\\geq"],["≠","\\neq"],["≈","\\approx"],["≡","\\equiv"],
+  ["·","\\cdot"],["…","\\ldots"],["⋯","\\cdots"],["⊕","\\oplus"],
+  ["⊗","\\otimes"],["√","\\sqrt{}"],["∑","\\sum"],["∫","\\int"],
+  ["∏","\\prod"],["lim","\\lim"],["sup","\\sup"],["inf","\\inf"],
+  ["sin","\\sin"],["cos","\\cos"],["tan","\\tan"],["log","\\log"],
+  ["ln","\\ln"],["det","\\det"],["dim","\\dim"],
+  ["ℝ","\\mathbb{R}"],["ℕ","\\mathbb{N}"],["ℤ","\\mathbb{Z}"],
+  ["ℚ","\\mathbb{Q}"],["ℂ","\\mathbb{C}"],
+]
+
+// ── User snippets ─────────────────────────────────────────────────────────────
+
+let userSnippets: Completion[] = []
+export function updateUserSnippets(snippets: Completion[]) {
+  userSnippets = snippets
+}
+
+// ── Macro completions (from macros.md \newcommand) ────────────────────────────
+
+let macroCompletions: string[] = []
+export function updateMacroCompletions(macros: string[]) {
+  macroCompletions = macros
+}
+
 // ── Vault file names for wikilink autocomplete ────────────────────────────────
 
 let vaultFileNames: string[] = []
 export function updateVaultFileNames(names: string[]) { vaultFileNames = names }
 
+// ── Open files snapshot for wikilink hover preview ───────────────────────────
+
+let openFilesSnapshot: { name: string; content: string }[] = []
+export function updateOpenFilesSnapshot(files: { name: string; content: string }[]) {
+  openFilesSnapshot = files
+}
+
+// ── BibTeX key/metadata for citation autocomplete + hover ─────────────────────
+
+interface BibSuggestion { key: string; detail: string }
+let bibSuggestions: BibSuggestion[] = []
+export function updateBibSuggestions(entries: { key: string; author?: string; title?: string; year?: string }[]) {
+  bibSuggestions = entries.map((e) => ({
+    key: e.key,
+    detail: [e.author, e.title, e.year].filter(Boolean).join(", "),
+  }))
+}
+
+interface BibHoverEntry { key: string; type: string; fields: Record<string, string> }
+let bibHoverEntries: BibHoverEntry[] = []
+export function updateBibHoverEntries(entries: BibHoverEntry[]) { bibHoverEntries = entries }
+
 // ── Completion provider (dropdown visual) ────────────────────────────────────
 
 let providerDisposable: monacoApi.IDisposable | null = null
+let hoverDisposable: monacoApi.IDisposable | null = null
+let wikilinkHoverDisposable: monacoApi.IDisposable | null = null
+let crossRefHoverDisposable: monacoApi.IDisposable | null = null
+let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 
 export function setupMonaco(monaco: typeof monacoApi) {
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
+    triggerCharacters: ["[", "@", "\\"],
     provideCompletionItems(model, position) {
+      const lineText = model.getLineContent(position.lineNumber)
+      const beforeCursor = lineText.slice(0, position.column - 1)
+
+      // LaTeX command autocomplete: \word
+      const latexMatch = /\\([\w]*)$/.exec(beforeCursor)
+      if (latexMatch) {
+        const typed = latexMatch[0]   // e.g. "\alp"
+        const latexRange = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: position.column - typed.length,
+          endColumn: position.column,
+        }
+        const typedSuffix = typed.slice(1)
+        const macroSuggestions = macroCompletions
+          .filter((macro) => macro.startsWith("\\") && macro.slice(1).startsWith(typedSuffix))
+          .map((macro) => ({
+            label: macro.slice(1),
+            detail: "user macro",
+            kind: monaco.languages.CompletionItemKind.Variable,
+            insertText: macro,
+            range: latexRange,
+            sortText: "000" + macro.slice(1),
+          }))
+        return {
+          suggestions: [
+            ...macroSuggestions,
+            ...LATEX_COMMANDS
+              .filter(([, cmd]) => cmd.slice(1).startsWith(typedSuffix))
+              .map(([glyph, cmd]) => ({
+                label: cmd.slice(1),
+                detail: glyph,
+                kind: monaco.languages.CompletionItemKind.Keyword,
+                insertText: cmd,
+                range: latexRange,
+                sortText: "0" + cmd.slice(1),
+              })),
+          ],
+        }
+      }
+
       const word = model.getWordUntilPosition(position)
       if (word.word.length < 2) return { suggestions: [] }
       const range = {
@@ -76,9 +186,8 @@ export function setupMonaco(monaco: typeof monacoApi) {
         startColumn: word.startColumn,
         endColumn: word.endColumn,
       }
+
       // Check if we're inside [[ for wikilink autocomplete
-      const lineText = model.getLineContent(position.lineNumber)
-      const beforeCursor = lineText.slice(0, position.column - 1)
       const wikiMatch = /\[\[([^\]|]*)$/.exec(beforeCursor)
 
       if (wikiMatch) {
@@ -102,19 +211,260 @@ export function setupMonaco(monaco: typeof monacoApi) {
         }
       }
 
+      // Citation autocomplete: [@key] from BibTeX
+      const bibMatch = /\[@([^\]\s,]*)$/.exec(beforeCursor)
+      if (bibMatch) {
+        const partial = bibMatch[1].toLowerCase()
+        const bibRange = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: position.column - partial.length,
+          endColumn: position.column,
+        }
+        return {
+          suggestions: bibSuggestions
+            .filter((b) => b.key.toLowerCase().startsWith(partial))
+            .map((b) => ({
+              label: { label: b.key, description: b.detail },
+              kind: monaco.languages.CompletionItemKind.Reference,
+              insertText: b.key + "]",
+              range: bibRange,
+              sortText: "0" + b.key,
+              detail: b.detail,
+            })),
+        }
+      }
+
+      const wordLower = word.word.toLowerCase()
+      const userSnippetSuggestions = userSnippets
+        .filter((c) => c.label.startsWith(wordLower))
+        .map((c) => ({
+          label: { label: c.label, description: c.detail },
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: c.snippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range,
+          sortText: "00" + c.label,
+        }))
+
+      const builtinSuggestions = COMPLETIONS
+        .filter((c) => c.label.startsWith(wordLower))
+        .map((c) => ({
+          label: { label: c.label, description: c.detail },
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: c.snippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range,
+          sortText: "0" + c.label,
+        }))
+
       return {
-        suggestions: COMPLETIONS
-          .filter((c) => c.label.startsWith(word.word.toLowerCase()))
-          .map((c) => ({
-            label: { label: c.label, description: c.detail },
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: c.snippet,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            range,
-            sortText: "0" + c.label,
-          })),
+        suggestions: [...userSnippetSuggestions, ...builtinSuggestions],
       }
     },
+  })
+
+  // Auto-close $ pairs and surrounding selection in $...$
+  monaco.languages.setLanguageConfiguration("markdown", {
+    surroundingPairs: [
+      { open: "$", close: "$" },
+      { open: "[", close: "]" },
+      { open: "(", close: ")" },
+      { open: "{", close: "}" },
+      { open: "`", close: "`" },
+      { open: "*", close: "*" },
+      { open: "_", close: "_" },
+    ],
+    autoClosingPairs: [
+      { open: "$", close: "$" },
+      { open: "[", close: "]" },
+      { open: "(", close: ")" },
+      { open: "{", close: "}" },
+      { open: "`", close: "`" },
+    ],
+  })
+
+  // Folding provider for ::: blocks
+  monaco.languages.registerFoldingRangeProvider("markdown", {
+    provideFoldingRanges(model) {
+      const ranges: monacoApi.languages.FoldingRange[] = []
+      const lines = model.getLinesContent()
+      const stack: number[] = []
+      lines.forEach((line, i) => {
+        if (/^:::[\w]/.test(line.trim())) {
+          stack.push(i + 1) // 1-indexed
+        } else if (line.trim() === ":::") {
+          const start = stack.pop()
+          if (start !== undefined) {
+            ranges.push({ start, end: i + 1, kind: monaco.languages.FoldingRangeKind.Region })
+          }
+        }
+      })
+      return ranges
+    },
+  })
+
+  // Citation hover: [@key] → show BibTeX entry info
+  hoverDisposable?.dispose()
+  hoverDisposable = monaco.languages.registerHoverProvider("markdown", {
+    provideHover(model, position) {
+      const line = model.getLineContent(position.lineNumber)
+      const col = position.column - 1
+      // Find [@key] at cursor position
+      const citeRe = /\[@([\w:.-]+)\]/g
+      let m: RegExpExecArray | null
+      while ((m = citeRe.exec(line)) !== null) {
+        if (col >= m.index && col <= m.index + m[0].length) {
+          const key = m[1]
+          const entry = bibHoverEntries.find((e) => e.key === key)
+          if (!entry) break
+          const f = entry.fields
+          const lines: string[] = []
+          if (f.title)   lines.push(`**${f.title}**`)
+          if (f.author)  lines.push(`_${f.author}_`)
+          const meta = [f.year, f.journal ?? f.booktitle ?? f.publisher].filter(Boolean).join(", ")
+          if (meta) lines.push(meta)
+          lines.push(`\`@${entry.type}{${key}}\``)
+          return {
+            range: new monaco.Range(position.lineNumber, m.index + 1, position.lineNumber, m.index + m[0].length + 1),
+            contents: [{ value: lines.join("\n\n"), isTrusted: true }],
+          }
+        }
+      }
+      return null
+    },
+  })
+
+  // Wikilink hover: [[noteName]] → show first 12 non-empty lines of file content
+  wikilinkHoverDisposable?.dispose()
+  wikilinkHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
+    provideHover(model, position) {
+      const line = model.getLineContent(position.lineNumber)
+      const col = position.column - 1 // 0-indexed
+      const wikilinkRe = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
+      let m: RegExpExecArray | null
+      while ((m = wikilinkRe.exec(line)) !== null) {
+        if (col >= m.index && col <= m.index + m[0].length) {
+          const noteName = m[1].trim().replace(/\.md$/i, "")
+          const entry = openFilesSnapshot.find(
+            (f) => f.name.replace(/\.md$/i, "").toLowerCase() === noteName.toLowerCase()
+          )
+          if (!entry) return null
+          const nonEmptyLines = entry.content.split("\n").filter((l) => l.trim() !== "")
+          const preview = nonEmptyLines.slice(0, 12)
+          const hasMore = nonEmptyLines.length > 12
+          const body = preview.join("\n") + (hasMore ? "\n…" : "")
+          return {
+            range: new monaco.Range(
+              position.lineNumber,
+              m.index + 1,
+              position.lineNumber,
+              m.index + m[0].length + 1
+            ),
+            contents: [
+              { value: `**${entry.name}**`, isTrusted: true },
+              { value: body, isTrusted: true },
+            ],
+          }
+        }
+      }
+      return null
+    },
+  })
+
+  // Cross-reference hover: @eq:label / @fig:label → show equation number + source
+  crossRefHoverDisposable?.dispose()
+  crossRefHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
+    provideHover(model, position) {
+      const line = model.getLineContent(position.lineNumber)
+      const col = position.column - 1 // 0-indexed
+      const crossRefRe = /@(eq|fig):([\w:.-]+)/g
+      let m: RegExpExecArray | null
+      while ((m = crossRefRe.exec(line)) !== null) {
+        if (col >= m.index && col <= m.index + m[0].length) {
+          const kind = m[1] as "eq" | "fig"
+          const refKey = m[2]
+          if (kind === "fig") {
+            return {
+              range: new monaco.Range(
+                position.lineNumber,
+                m.index + 1,
+                position.lineNumber,
+                m.index + m[0].length + 1,
+              ),
+              contents: [{ value: `Figure reference: \`fig:${refKey}\``, isTrusted: true }],
+            }
+          }
+          // kind === "eq": search document for matching $$...$$  {#eq:label}
+          const content = model.getValue()
+          const eqRe = /\$\$([\s\S]+?)\$\$(?:\s*\{#eq:([\w:.-]+)\})?/g
+          let eqM: RegExpExecArray | null
+          let eqIndex = 0
+          while ((eqM = eqRe.exec(content)) !== null) {
+            eqIndex++
+            const label = eqM[2] ?? null
+            if (label === refKey) {
+              const texSource = eqM[1].trim()
+              const value = `**Equation (${eqIndex})**\n\n\`\`\`tex\n${texSource}\n\`\`\``
+              return {
+                range: new monaco.Range(
+                  position.lineNumber,
+                  m.index + 1,
+                  position.lineNumber,
+                  m.index + m[0].length + 1,
+                ),
+                contents: [{ value, isTrusted: true }],
+              }
+            }
+          }
+          return null
+        }
+      }
+      return null
+    },
+  })
+
+  // Footnote hover: [^label] (reference) → show definition text
+  footnoteHoverDisposable?.dispose()
+  footnoteHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
+    provideHover(model, position) {
+      const line = model.getLineContent(position.lineNumber)
+      const col = position.column - 1 // 0-indexed
+      const footnoteRefRe = /\[\^([\w-]+)\]/g
+      let m: RegExpExecArray | null
+      while ((m = footnoteRefRe.exec(line)) !== null) {
+        if (col >= m.index && col <= m.index + m[0].length) {
+          const label = m[1]
+          const content = model.getValue()
+          const defRe = new RegExp(`^\\[\\^${label}\\]:\\s*(.+)$`, "m")
+          const defMatch = defRe.exec(content)
+          if (!defMatch) return null
+          const definitionText = defMatch[1]
+          return {
+            range: new monaco.Range(
+              position.lineNumber,
+              m.index + 1,
+              position.lineNumber,
+              m.index + m[0].length + 1,
+            ),
+            contents: [{ value: `**Footnote:** ${definitionText}`, isTrusted: true }],
+          }
+        }
+      }
+      return null
+    },
+  })
+}
+
+// ── Typewriter mode ───────────────────────────────────────────────────────────
+
+export function applyTypewriterMode(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  enabled: boolean,
+) {
+  editor.updateOptions({
+    cursorSurroundingLines: enabled ? 999 : 0,
+    cursorSurroundingLinesStyle: enabled ? "all" : "default",
   })
 }
 
@@ -126,6 +476,148 @@ export async function enableVimMode(
 ): Promise<VimAdapterInstance> {
   const { initVimMode } = await import("monaco-vim")
   return initVimMode(editor, statusEl)
+}
+
+// ── Content linter (Monaco markers) ──────────────────────────────────────────
+
+const LINTER_SOURCE = "comdtex"
+const LINTER_DEBOUNCE_MS = 600
+
+/**
+ * Attach the content linter to `editor`. Runs on every model-content change
+ * (debounced) and on model switch. Returns a disposable to detach.
+ *
+ * @param getContext  Called on each lint pass to get the current vault state.
+ */
+export function setupContentLinter(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  monaco: typeof monacoApi,
+  getContext: () => LintContext,
+): monacoApi.IDisposable {
+  let debounce: ReturnType<typeof setTimeout> | null = null
+
+  const run = () => {
+    const model = editor.getModel()
+    if (!model) return
+    const filename = model.uri.path.split("/").pop() ?? ""
+    const markers = lintFile(model.getValue(), filename, getContext(), monaco.MarkerSeverity)
+    monaco.editor.setModelMarkers(model, LINTER_SOURCE, markers)
+  }
+
+  const schedule = () => {
+    if (debounce) clearTimeout(debounce)
+    debounce = setTimeout(run, LINTER_DEBOUNCE_MS)
+  }
+
+  const contentDisposable = editor.onDidChangeModelContent(schedule)
+  // Re-run when the user switches tabs (model changes)
+  const modelDisposable = editor.onDidChangeModel(schedule)
+
+  // Initial pass
+  setTimeout(run, 0)
+
+  return {
+    dispose() {
+      contentDisposable.dispose()
+      modelDisposable.dispose()
+      if (debounce) clearTimeout(debounce)
+    },
+  }
+}
+
+// ── Math hover preview (KaTeX overlay widget) ─────────────────────────────────
+
+/**
+ * Attach a math preview overlay to the editor.
+ * When the cursor is inside `$...$` or `$$...$$`, renders the expression
+ * with KaTeX in a floating widget above the cursor.
+ */
+export function setupMathHover(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  getMacros: () => Record<string, string>,
+): monacoApi.IDisposable {
+  let currentWidget: monacoApi.editor.IOverlayWidget | null = null
+
+  const removeWidget = () => {
+    if (currentWidget) {
+      editor.removeOverlayWidget(currentWidget)
+      currentWidget = null
+    }
+  }
+
+  const disposable = editor.onDidChangeCursorPosition((e) => {
+    const model = editor.getModel()
+    if (!model) { removeWidget(); return }
+
+    const lineText = model.getLineContent(e.position.lineNumber)
+    const col = e.position.column - 1 // 0-indexed
+
+    let mathExpr: string | null = null
+    let displayMode = false
+    let matchStart = -1
+
+    // Try display math $$ ... $$ on the same line first
+    const displayRe = /\$\$((?:[^$]|\$(?!\$))+?)\$\$/g
+    let m: RegExpExecArray | null
+    while ((m = displayRe.exec(lineText)) !== null) {
+      if (col >= m.index && col <= m.index + m[0].length) {
+        mathExpr = m[1]; displayMode = true; matchStart = m.index; break
+      }
+    }
+
+    // Try inline math $ ... $
+    if (!mathExpr) {
+      const inlineRe = /\$([^$\n]+?)\$/g
+      while ((m = inlineRe.exec(lineText)) !== null) {
+        if (col >= m.index && col <= m.index + m[0].length) {
+          mathExpr = m[1]; displayMode = false; matchStart = m.index; break
+        }
+      }
+    }
+
+    if (!mathExpr) { removeWidget(); return }
+
+    let rendered: string
+    try {
+      rendered = katex.renderToString(mathExpr.trim(), {
+        displayMode,
+        throwOnError: false,
+        macros: getMacros(),
+      })
+    } catch { removeWidget(); return }
+
+    // Get pixel position of the match start within the editor
+    const screenPos = editor.getScrolledVisiblePosition({
+      lineNumber: e.position.lineNumber,
+      column: matchStart + 1,
+    })
+    if (!screenPos) { removeWidget(); return }
+
+    removeWidget()
+
+    const domNode = document.createElement("div")
+    domNode.className = "math-hover-widget"
+    domNode.innerHTML = rendered
+    // Position above the cursor line
+    domNode.style.top = `${Math.max(0, screenPos.top - 4)}px`
+    domNode.style.left = `${screenPos.left}px`
+
+    const widget: monacoApi.editor.IOverlayWidget = {
+      getId: () => "math-hover-preview",
+      getDomNode: () => domNode,
+      getPosition: () => null,
+    }
+
+    editor.addOverlayWidget(widget)
+    currentWidget = widget
+  })
+
+  return {
+    dispose() {
+      disposable.dispose()
+      removeWidget()
+    },
+  }
 }
 
 // ── Tab expansion via onKeyDown ───────────────────────────────────────────────

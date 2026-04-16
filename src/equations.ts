@@ -10,24 +10,13 @@
 // ── Per-render state ──────────────────────────────────────────────────────────
 
 let eqCounter = 0
-let eqLabels = new Map<string, number>()
 
 export function resetEqCounters() {
   eqCounter = 0
-  eqLabels = new Map()
 }
 
 export function nextEqNumber(): number {
   return ++eqCounter
-}
-
-export function registerEqLabel(label: string, n: number) {
-  eqLabels.set(label, n)
-}
-
-export function resolveEqRef(ref: string): number | null {
-  if (/^\d+$/.test(ref)) return parseInt(ref)
-  return eqLabels.get(ref) ?? null
 }
 
 // ── First pass: build label → number map ──────────────────────────────────────
@@ -49,8 +38,10 @@ export function prescanEquations(text: string): Map<string, number> {
 // ── Replace @eq:ref references in text ───────────────────────────────────────
 
 export function resolveEqRefs(text: string, labels: Map<string, number>): string {
-  return text.replace(/@eq:([\w:.-]+)/g, (_, ref) => {
-    const n = /^\d+$/.test(ref) ? parseInt(ref) : labels.get(ref)
+  // Regex: dots only allowed mid-label (e.g. eq:thm.1), not trailing punctuation
+  return text.replace(/@eq:([\w:-]+(?:\.\w+)*)/g, (_, ref) => {
+    // prescanEquations stores keys with the full "eq:" prefix
+    const n = /^\d+$/.test(ref) ? parseInt(ref) : labels.get(`eq:${ref}`)
     return n != null
       ? `<span class="eq-ref">(${n})</span>`
       : `<span class="eq-ref-broken">(?)</span>`

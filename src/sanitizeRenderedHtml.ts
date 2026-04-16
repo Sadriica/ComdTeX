@@ -13,6 +13,13 @@ const BLOCKED_TAGS = new Set([
   "select",
 ])
 
+const YOUTUBE_ORIGIN = /^https:\/\/(www\.)?youtube(-nocookie)?\.com\/embed\//i
+
+function isAllowedIframe(el: Element): boolean {
+  const src = el.getAttribute("src") ?? ""
+  return YOUTUBE_ORIGIN.test(src.trim())
+}
+
 const URL_ATTRS = new Set(["href", "src", "xlink:href"])
 
 function isSafeUrl(value: string): boolean {
@@ -21,11 +28,25 @@ function isSafeUrl(value: string): boolean {
   return /^(#|\/|\.\/|\.\.\/|https?:|data:image\/|blob:|asset:|file:)/i.test(normalized)
 }
 
+/**
+ * Strip url(...) calls with dangerous schemes from inline style values.
+ * Handles both quoted and unquoted URLs, e.g. background:url(javascript:...).
+ */
+function sanitizeStyle(value: string): string {
+  return value.replace(/url\s*\(\s*(['"]?)([^'")\s]*)\1\s*\)/gi, (match, _q, url) => {
+    return isSafeUrl(url.trim()) ? match : ""
+  })
+}
+
 function sanitizeElement(el: Element) {
   const tag = el.tagName.toLowerCase()
   if (BLOCKED_TAGS.has(tag)) {
-    el.remove()
-    return
+    if (tag === "iframe" && isAllowedIframe(el)) {
+      // Keep YouTube iframes but strip all event handlers below
+    } else {
+      el.remove()
+      return
+    }
   }
 
   for (const attr of [...el.attributes]) {
@@ -37,6 +58,11 @@ function sanitizeElement(el: Element) {
     }
     if (URL_ATTRS.has(name) && !isSafeUrl(value)) {
       el.removeAttribute(attr.name)
+      continue
+    }
+    if (name === "style") {
+      const sanitized = sanitizeStyle(value)
+      if (sanitized !== value) el.setAttribute(attr.name, sanitized)
     }
   }
 }

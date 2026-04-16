@@ -90,7 +90,7 @@ export default function HelpPanel() {
         </p>
         <div className="hp-label">{hp.normal.split("—")[0].trim()}</div>
         <Row code=":::sm remark"       desc={hp.compact} />
-        <Row code=":::theorem[Título]" desc={hp.normal} />
+        <Row code={`:::theorem[${hp.exampleTitle}]`} desc={hp.normal} />
         <Row code=":::lg definition"   desc={hp.large} />
 
         <div className="hp-label">{hp.numbered}</div>
@@ -185,7 +185,7 @@ export default function HelpPanel() {
         <Row code="@eq:etq"             desc={hp.refLabel} />
         <Row code="@eq:3"               desc={hp.directRef} />
         <p className="hp-intro" style={{ marginTop: "0.5em" }}>
-          Inline: <code className="hp-code">{"$x^2 + y^2 = r^2$"}</code>
+          {hp.inlineExample} <code className="hp-code">{"$x^2 + y^2 = r^2$"}</code>
           {" → "}
           <span dangerouslySetInnerHTML={{ __html: math("x^2+y^2=r^2") }} />
         </p>
@@ -232,6 +232,63 @@ export default function HelpPanel() {
         <Row code={hp.tplHomework} desc={hp.tplHomeworkDesc} />
         <Row code={hp.tplTheorems} desc={hp.tplTheoremsDesc} />
         <Row code={hp.tplResearch} desc={hp.tplResearchDesc} />
+      </Section>
+
+      {/* ── Mermaid diagrams ── */}
+      <Section title={hp.mermaid}>
+        <p className="hp-intro">{hp.mermaidDesc}</p>
+        <Row code={"```mermaid\ngraph LR\n  A --> B --> C\n```"} desc={hp.mermaidFlow} />
+        <Row code={"```mermaid\nsequenceDiagram\n  Alice->>Bob: Hello\n  Bob-->>Alice: Hi\n```"} desc={hp.mermaidSeq} />
+        <Row code={"```mermaid\ngantt\n  Task 1: a1, 2024-01-01, 7d\n```"} desc={hp.mermaidGantt} />
+      </Section>
+
+      {/* ── Callouts ── */}
+      <Section title={hp.callouts}>
+        <p className="hp-intro">{hp.calloutsDesc}</p>
+        <Row code={hp.calloutNote}      desc={hp.calloutNoteDesc} />
+        <Row code={hp.calloutWarning}   desc={hp.calloutWarningDesc} />
+        <Row code={hp.calloutTip}       desc={hp.calloutTipDesc} />
+        <Row code={hp.calloutImportant} desc={hp.calloutImportantDesc} />
+      </Section>
+
+      {/* ── Footnotes ── */}
+      <Section title={hp.footnotes}>
+        <p className="hp-intro">{hp.footnotesDesc}</p>
+        <Row code={hp.footnoteInline} desc={hp.footnoteInlineDesc} />
+        <Row code={hp.footnoteDef}    desc={hp.footnoteDefDesc} />
+      </Section>
+
+      {/* ── Checkboxes ── */}
+      <Section title={hp.checkboxes}>
+        <p className="hp-intro">{hp.checkboxesDesc}</p>
+        <Row code={hp.checkboxUnchecked} desc={hp.checkboxUncheckedDesc} />
+        <Row code={hp.checkboxChecked}   desc={hp.checkboxCheckedDesc} />
+      </Section>
+
+      {/* ── Figures ── */}
+      <Section title={hp.figures}>
+        <p className="hp-intro">{hp.figuresDesc}</p>
+        <Row code={hp.figureLabel} desc={hp.figureLabelDesc} />
+        <Row code={hp.figureRef}   desc={hp.figureRefDesc} />
+      </Section>
+
+      {/* ── User snippets ── */}
+      <Section title={hp.userSnippets}>
+        <p className="hp-intro">{hp.userSnippetsDesc}</p>
+        <Row code={hp.userSnippetFormat}  desc={hp.userSnippetFormatDesc} />
+        <Row code={hp.userSnippetExample} desc={hp.userSnippetExampleDesc} />
+      </Section>
+
+      {/* ── HTML & media ── */}
+      <Section title={hp.htmlMedia}>
+        <p className="hp-intro">{hp.htmlMediaDesc}</p>
+        <Row code={hp.htmlImg}     desc={hp.htmlImgDesc} />
+        <Row code={hp.htmlVideo}   desc={hp.htmlVideoDesc} />
+        <Row code={hp.htmlYoutube} desc={hp.htmlYoutubeDesc} />
+        <Row code={hp.htmlDetails} desc={hp.htmlDetailsDesc} />
+        <Row code={hp.htmlMark}    desc={hp.htmlMarkDesc} />
+        <p className="hp-intro" style={{ marginTop: "0.5em", color: "#8d8" }}>{hp.htmlAllowed}</p>
+        <p className="hp-intro" style={{ color: "#d88" }}>{hp.htmlBlocked}</p>
       </Section>
 
       {/* ── Greek letters ── */}
