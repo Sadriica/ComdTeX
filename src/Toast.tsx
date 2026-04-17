@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { subscribeToasts } from "./toast"
-import type { Toast } from "./toast"
+import { subscribeToasts } from "./toastService"
+import type { Toast } from "./toastService"
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState<Toast[]>([])

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import { Command } from "@tauri-apps/plugin-shell"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { useT } from "./i18n"
-import { showToast } from "./toast"
+import { showToast } from "./toastService"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

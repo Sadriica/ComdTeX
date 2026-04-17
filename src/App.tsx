@@ -58,7 +58,7 @@ import type { UpdateInfo } from "./useUpdater"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 import ErrorBoundary from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
-import { showToast } from "./toast"
+import { showToast } from "./toastService"
 import "katex/dist/katex.min.css"
 import "./App.css"
 

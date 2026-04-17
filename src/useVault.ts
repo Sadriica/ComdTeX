@@ -3,7 +3,7 @@ import { readDir, readTextFile, writeTextFile, mkdir, remove, rename } from "@ta
 import { open, save } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import type { FileNode, OpenFile, SearchResult } from "./types"
-import { showToast } from "./toast"
+import { showToast } from "./toastService"
 import { useT } from "./i18n"
 
 const VAULT_KEY   = "comdtex_vault"
