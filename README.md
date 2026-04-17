@@ -97,9 +97,7 @@ sudo apt install ./comdtex_<version>_amd64.deb
 
 ### Linux — Arch Linux
 
-```bash
-sudo pacman -U comdtex-<version>-1-x86_64.pkg.tar.zst
-```
+Usa el `.AppImage` (funciona en Arch sin modificaciones). El soporte nativo vía AUR está planificado para una futura versión.
 
 ### Windows
 
@@ -330,7 +328,7 @@ git push origin v1.0.0
 
 This triggers `.github/workflows/release.yml`, which builds:
 - Linux: `.AppImage` + `.deb` (Ubuntu runner via `tauri-action`)
-- Arch Linux: `.pkg.tar.zst` (Arch image via `docker run` on ubuntu runner)
+- Arch Linux: usa el `.AppImage` (Tauri no tiene bundler nativo para pacman; AUR planificado)
 - Windows: `.exe` (NSIS installer)
 
 `TAURI_SIGNING_PRIVATE_KEY` must be set in GitHub Secrets for the updater signature to be included.

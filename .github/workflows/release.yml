@@ -68,72 +68,18 @@ jobs:
 
             | Plataforma | Archivo |
             |---|---|
-            | Linux (portable) | `.AppImage` |
+            | Linux (todas las distros) | `.AppImage` — portable, no requiere instalación |
             | Linux Debian/Ubuntu | `.deb` |
-            | Linux Arch | `.pkg.tar.zst` |
-            | Windows | `.exe` (instalador) |
+            | Windows | `.exe` (instalador NSIS) |
+
+            **Arch Linux:** usa el `.AppImage` o instala desde AUR (próximamente).
 
             ### Auto-actualización
             La app verifica actualizaciones automáticamente al iniciar.
-          releaseDraft: true
+
+            ### Dependencias opcionales
+            - `pandoc` — para exportar PDF, DOCX y Beamer
+            - `zip` — para el backup del vault
+          releaseDraft: false
           prerelease: false
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
-
-  arch-release:
-    needs: release
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build pacman bundle in Arch container
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            -e TAURI_SIGNING_PRIVATE_KEY="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" \
-            archlinux:latest \
-            bash -c "
-              pacman -Syu --noconfirm && \
-              pacman -S --noconfirm base-devel curl file git webkit2gtk-4.1 \
-                libayatana-appindicator librsvg openssl patchelf nodejs npm && \
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-              source /root/.cargo/env && \
-              npm ci && \
-              npm run tauri build -- --bundles pacman
-            "
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          files: src-tauri/target/release/bundle/pacman/*.pkg.tar.zst
-
-  publish:
-    needs: [release, arch-release]
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Publish release (remove draft)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const releases = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const release = releases.data.find(r => r.tag_name === context.ref.replace('refs/tags/', ''));
-            if (release) {
-              await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release.id,
-                draft: false,
-              });
-            }

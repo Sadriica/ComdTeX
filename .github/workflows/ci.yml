@@ -37,7 +37,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-
     steps:
       - uses: actions/checkout@v4
 
@@ -79,28 +78,3 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: cargo check --release
-
-  arch-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cargo check in Arch container
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            -e TAURI_SIGNING_PRIVATE_KEY="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" \
-            archlinux:latest \
-            bash -c "
-              pacman -Syu --noconfirm && \
-              pacman -S --noconfirm base-devel curl webkit2gtk-4.1 \
-                libayatana-appindicator librsvg openssl patchelf nodejs npm && \
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-              source /root/.cargo/env && \
-              npm ci && \
-              npx tsc --noEmit && \
-              npm test -- --run && \
-              cd src-tauri && cargo check --release
-            "
