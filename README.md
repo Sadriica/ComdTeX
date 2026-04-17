@@ -330,7 +330,7 @@ git push origin v1.0.0
 
 This triggers `.github/workflows/release.yml`, which builds:
 - Linux: `.AppImage` + `.deb` (Ubuntu runner via `tauri-action`)
-- Arch Linux: `.pkg.tar.zst` (Arch container)
+- Arch Linux: `.pkg.tar.zst` (Arch image via `docker run` on ubuntu runner)
 - Windows: `.exe` (NSIS installer)
 
 `TAURI_SIGNING_PRIVATE_KEY` must be set in GitHub Secrets for the updater signature to be included.
@@ -371,7 +371,7 @@ Contributions are welcome. Please open an issue before submitting a large change
 | `src/pathUtils.ts` | Cross-platform path helpers |
 | `src/i18n.ts` | English / Spanish translations |
 | `src/templates.ts` | Academic template content |
-| `src/toast.ts` | Singleton toast module |
+| `src/toastService.ts` | Singleton toast module |
 | `src/types.ts` | Shared TypeScript types |
 | `src/EnvironmentsPanel.tsx` | Panel: all theorem/lemma/etc blocks across vault |
 | `src/CitationManager.tsx` | Panel: BibTeX entry browser and editor |

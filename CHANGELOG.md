@@ -3,6 +3,21 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.1] - 2026-04-17
+
+### Fixed
+- **Windows build (TS1149/TS1192):** Renamed `src/toast.ts` → `src/toastService.ts` to eliminate a filename case collision with `src/Toast.tsx` that caused TypeScript errors on Windows (case-insensitive filesystem)
+- **Arch Linux CI:** Replaced `container: image: archlinux:latest` with `docker run archlinux:latest bash -c "..."` inside an `ubuntu-latest` runner — the previous approach failed because GitHub Actions requires `/bin/sh` in the container PATH, which the Arch image does not provide
+- **Copy error toast:** `handleCopyHtml` and `handleCopyLatex` now show the correct error message on clipboard failure instead of the success message
+- **Hardcoded i18n strings in HelpPanel:** `"Inline:"` and `":::theorem[Título]"` were not translated; now use `hp.inlineExample` and `hp.exampleTitle` respectively
+- **Duplicate keyboard shortcut:** `Ctrl+Shift+F` was bound to both Focus mode and Search vault simultaneously; Focus mode binding removed (only `F11` now)
+- **Menu entry not translated:** "Backlinks" menu item was hardcoded in English regardless of language setting
+- **Focus mode menu inconsistency:** Toggling Focus mode from the View menu now shows a toast notification, consistent with the palette and keyboard shortcut
+- **`onCreateVault` did nothing different:** "Create new folder" on the welcome screen now actually creates a new folder via a save dialog instead of reusing the open-folder dialog
+- **`BacklinksPanel` unhandled rejection:** Added `.catch()` to the `Promise.all` that reads vault files
+
+---
+
 ## [1.0.0] - 2026-04-15
 
 ### Added
