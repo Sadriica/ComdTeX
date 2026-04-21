@@ -90,6 +90,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           APPIMAGE=$(find src-tauri/target -name "*.AppImage" | grep -v ".zsync" | head -1)
           APPIMAGE_NAME=$(basename "$APPIMAGE")
@@ -118,7 +119,7 @@ jobs:
           rm -rf squashfs-root appimagetool
 
           # Re-sign for auto-updater
-          npx tauri signer sign "$APPIMAGE" --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password ""
+          npx tauri signer sign "$APPIMAGE"
 
           # Replace assets in the draft release
           gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" \
