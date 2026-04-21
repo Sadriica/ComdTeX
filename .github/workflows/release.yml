@@ -66,21 +66,23 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: ComdTeX ${{ github.ref_name }}
           releaseBody: |
-            ## Instalación
+            ## Installation
 
-            | Plataforma | Archivo |
+            | Platform | File |
             |---|---|
-            | Linux (todas las distros) | `.AppImage` — portable, no requiere instalación |
+            | Linux (all distros) | `.AppImage` — portable, no installation required |
             | Linux Debian/Ubuntu | `.deb` |
-            | Arch Linux | `.pkg.tar.zst` — `sudo pacman -U comdtex-*.pkg.tar.zst` |
-            | Windows | `.exe` (instalador NSIS) |
+            | Arch Linux / Manjaro | `.pkg.tar.zst` — `sudo pacman -U comdtex-*.pkg.tar.zst` |
+            | Windows | `.exe` (NSIS installer) |
 
-            ### Auto-actualización
-            La app verifica actualizaciones automáticamente al iniciar.
+            > **Note for Arch/Mesa 24+ users:** The AppImage crashes with `EGL_BAD_PARAMETER` on systems with Mesa 24+. Use the `.pkg.tar.zst` package instead — it links against the system webkit2gtk and is fully compatible.
 
-            ### Dependencias opcionales
-            - `pandoc` — para exportar PDF, DOCX y Beamer
-            - `zip` — para el backup del vault
+            ### Auto-update
+            ComdTeX checks for updates automatically on startup and installs them with one click.
+
+            ### Optional dependencies
+            - `pandoc` — required for PDF, DOCX and Beamer export
+            - `zip` — required for vault backup
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
@@ -163,14 +165,22 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           echo "/root/.cargo/bin" >> $GITHUB_PATH
 
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --locked
 
       - name: Build pacman package
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri build -- --bundles pacman
+        run: cargo tauri build --bundles pacman
 
       - name: Upload pacman package to release
         env:

@@ -111,24 +111,45 @@ npm run build         # frontend only
 npm run tauri build   # desktop app + bundles (release mode)
 ```
 
----
+### Build output
 
-## Bundles
+After `npm run tauri build`, the compiled binary and installable bundles are written to `src-tauri/target/release/`:
 
-| Format | Platform | Output path |
-|---|---|---|
-| `.AppImage` | Linux (portable, Mesa < 24) | `src-tauri/target/release/bundle/appimage/` |
-| `.deb` | Debian/Ubuntu | `src-tauri/target/release/bundle/deb/` |
-| `.pkg.tar.zst` | Arch/Manjaro | `src-tauri/target/release/bundle/pacman/` |
-| `.exe` (NSIS) | Windows | `src-tauri/target/release/bundle/nsis/` |
+| What | Path |
+|---|---|
+| Raw binary (Linux) | `src-tauri/target/release/comdtex` |
+| AppImage | `src-tauri/target/release/bundle/appimage/ComdTeX_*.AppImage` |
+| .deb | `src-tauri/target/release/bundle/deb/comdtex_*.deb` |
+| .pkg.tar.zst | `src-tauri/target/release/bundle/pacman/comdtex-*.pkg.tar.zst` |
+| .exe (Windows) | `src-tauri/target/release/bundle/nsis/ComdTeX_*_x64-setup.exe` |
 
-To build a specific format:
+To run the app after a release build:
+
+```bash
+# Linux — run the binary directly
+./src-tauri/target/release/comdtex
+
+# Linux — run the AppImage
+./src-tauri/target/release/bundle/appimage/ComdTeX_*.AppImage
+
+# Arch — install and run via pacman
+sudo pacman -U src-tauri/target/release/bundle/pacman/comdtex-*.pkg.tar.zst
+comdtex
+```
+
+To build a specific bundle format only:
 
 ```bash
 npm run tauri build -- --bundles appimage
 npm run tauri build -- --bundles deb
-npm run tauri build -- --bundles pacman
-npm run tauri build -- --bundles nsis
+npm run tauri build -- --bundles nsis       # Windows only
+```
+
+On Arch Linux, the npm `@tauri-apps/cli` binary does not support the `pacman` bundler. Use `cargo tauri build` instead:
+
+```bash
+cargo install tauri-cli --locked            # one-time install
+cargo tauri build --bundles pacman
 ```
 
 ---
@@ -150,28 +171,7 @@ This triggers the GitHub Actions release workflow:
 | `arch-release` | `archlinux:latest` container | `.pkg.tar.zst` |
 | `publish` | `ubuntu-22.04` | Removes draft status after all jobs succeed |
 
-### Required GitHub Secrets
-
-Both secrets must be set in **Settings → Secrets and variables → Actions**:
-
-| Secret | Content |
-|---|---|
-| `TAURI_SIGNING_PRIVATE_KEY` | Full content of the minisign private key file |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password used when generating the key |
-
-Builds without these secrets will complete but will not embed a valid updater signature.
-
-### Signing key setup
-
-```bash
-npx tauri signer generate -w ~/.tauri/comdtex.key
-```
-
-This produces `comdtex.key` (private) and `comdtex.key.pub` (public).
-
-1. Copy the full content of `comdtex.key` into the `TAURI_SIGNING_PRIVATE_KEY` secret.
-2. Copy the password into the `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret.
-3. Copy the public key string from `comdtex.key.pub` into `tauri.conf.json → plugins.updater.pubkey`.
+> The repository must have `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` set in **Settings → Secrets and variables → Actions**. Builds without these secrets will complete but will not embed a valid updater signature.
 
 ---
 
@@ -221,7 +221,7 @@ sudo apt install libwebkit2gtk-4.1-0
 
 **Cause:** `TAURI_SIGNING_PRIVATE_KEY` or `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is missing from GitHub Secrets, or the public key in `tauri.conf.json` does not match the private key used during the build.
 
-**Fix:** Follow the [Signing key setup](#signing-key-setup) steps above and ensure the public key in `tauri.conf.json → plugins.updater.pubkey` matches the generated key pair.
+**Fix:** Ensure `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` are set in GitHub Secrets, and that the public key in `tauri.conf.json → plugins.updater.pubkey` matches the private key used during the build.
 
 ---
 
@@ -286,7 +286,7 @@ sudo apt install libwebkit2gtk-4.1-0
 - 7 academic templates for new files
 
 ### App
-- English and Spanish UI, switchable at runtime
+- English and Spanish UI — switch at runtime via `Vault → Settings` (or `Ctrl+P → Settings`) → **Language** dropdown; no restart required
 - Auto-updater with in-app banner and one-click install
 - Dependency warnings when pandoc or zip are missing
 
