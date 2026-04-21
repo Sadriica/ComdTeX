@@ -123,19 +123,8 @@ jobs:
           gh release download "${{ github.ref_name }}" -p "latest.json" \
             --repo "${{ github.repository }}" 2>/dev/null || true
           if [ -f latest.json ]; then
-            export SIG_FILE="${APPIMAGE}.sig"
-            python3 -c "
-import json, os
-sig = open(os.environ['SIG_FILE']).read()
-with open('latest.json') as f:
-    d = json.load(f)
-plat = d.get('platforms', {})
-if 'linux-x86_64' in plat:
-    plat['linux-x86_64']['signature'] = sig
-with open('latest.json', 'w') as f:
-    json.dump(d, f, indent=2)
-print('latest.json updated')
-"
+            SIG=$(cat "${APPIMAGE}.sig")
+            python3 -c "import json,sys; d=json.load(open('latest.json')); d.get('platforms',{}).get('linux-x86_64',{}).update({'signature':sys.argv[1]}); json.dump(d,open('latest.json','w'),indent=2)" "$SIG"
             gh release upload "${{ github.ref_name }}" latest.json \
               --clobber --repo "${{ github.repository }}"
           fi
