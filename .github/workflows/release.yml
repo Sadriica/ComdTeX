@@ -6,7 +6,7 @@ on:
       - "v*"
 
 jobs:
-  release:
+  build:
     permissions:
       contents: write
 
@@ -55,7 +55,7 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and publish release
+      - name: Build release (draft)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,6 +80,56 @@ jobs:
             ### Dependencias opcionales
             - `pandoc` — para exportar PDF, DOCX y Beamer
             - `zip` — para el backup del vault
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Patch AppImage for EGL compatibility
+        if: matrix.os == 'ubuntu-22.04'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          APPIMAGE=$(find src-tauri/target -name "*.AppImage" | grep -v ".zsync" | head -1)
+          APPIMAGE_NAME=$(basename "$APPIMAGE")
+
+          # Extract AppImage
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract
+
+          # Remove bundled libwayland-egl — incompatible with Mesa 24+/Intel Arc on Arch/Fedora.
+          # The system's own version will be used at runtime instead.
+          rm -f squashfs-root/usr/lib/libwayland-egl.so.1
+
+          # Remove forced GDK_BACKEND=x11 (causes EGL_BAD_PARAMETER on modern Mesa+Wayland).
+          # Add WEBKIT_DISABLE_DMABUF_RENDERER as fallback for GPU configs without DMA-BUF support.
+          sed -i '/export GDK_BACKEND=x11/d' squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh
+          echo 'export WEBKIT_DISABLE_DMABUF_RENDERER=1' >> squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh
+
+          # Repack
+          wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool squashfs-root "$APPIMAGE"
+          rm -rf squashfs-root appimagetool
+
+          # Re-sign for auto-updater
+          npx tauri signer sign "$APPIMAGE" --private-key "$TAURI_SIGNING_PRIVATE_KEY"
+
+          # Replace assets in the draft release
+          gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" \
+            --clobber \
+            --repo "${{ github.repository }}"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ github.ref_name }}" \
+            --draft=false \
+            --repo "${{ github.repository }}"
