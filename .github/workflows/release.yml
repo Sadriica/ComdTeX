@@ -94,10 +94,18 @@ jobs:
           APPIMAGE=$(find src-tauri/target -name "*.AppImage" | grep -v ".zsync" | head -1)
           APPIMAGE_NAME=$(basename "$APPIMAGE")
 
-          # Extract AppImage (unsquashfs avoids needing FUSE on the runner)
-          # AppImage Type 2 embeds squashfs after the ELF runtime, so we must
-          # find the squashfs offset before extracting (magic bytes: 'hsqs').
-          OFFSET=$(grep -boa 'hsqs' "$APPIMAGE" | head -1 | cut -d: -f1)
+          # Extract AppImage without FUSE.
+          # AppImage Type 2: squashfs starts right after the ELF runtime.
+          # Offset = e_shoff + e_shentsize * e_shnum (ELF64 section header table end).
+          OFFSET=$(python3 -c "
+import struct, sys
+with open('$APPIMAGE', 'rb') as f:
+    f.seek(40);  shoff   = struct.unpack('<Q', f.read(8))[0]
+    f.seek(58);  shentsz = struct.unpack('<H', f.read(2))[0]
+    f.seek(60);  shnum   = struct.unpack('<H', f.read(2))[0]
+    print(shoff + shentsz * shnum)
+")
+          echo "squashfs offset: $OFFSET"
           unsquashfs -o "$OFFSET" -d squashfs-root "$APPIMAGE"
 
           # Remove bundled libwayland-egl — incompatible with Mesa 24+/Intel Arc on Arch/Fedora.
