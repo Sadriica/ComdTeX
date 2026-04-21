@@ -118,7 +118,7 @@ jobs:
           rm -rf squashfs-root appimagetool
 
           # Re-sign for auto-updater
-          npx tauri signer sign "$APPIMAGE" --private-key "$TAURI_SIGNING_PRIVATE_KEY"
+          npx tauri signer sign "$APPIMAGE" --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password ""
 
           # Replace assets in the draft release
           gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" \
