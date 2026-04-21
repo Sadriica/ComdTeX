@@ -50,7 +50,8 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            squashfs-tools
 
       - name: Install frontend dependencies
         run: npm ci
@@ -94,8 +95,10 @@ jobs:
           APPIMAGE_NAME=$(basename "$APPIMAGE")
 
           # Extract AppImage (unsquashfs avoids needing FUSE on the runner)
-          sudo apt-get install -y squashfs-tools
-          unsquashfs -d squashfs-root "$APPIMAGE"
+          # AppImage Type 2 embeds squashfs after the ELF runtime, so we must
+          # find the squashfs offset before extracting (magic bytes: 'hsqs').
+          OFFSET=$(grep -boa 'hsqs' "$APPIMAGE" | head -1 | cut -d: -f1)
+          unsquashfs -o "$OFFSET" -d squashfs-root "$APPIMAGE"
 
           # Remove bundled libwayland-egl — incompatible with Mesa 24+/Intel Arc on Arch/Fedora.
           # The system's own version will be used at runtime instead.
@@ -109,7 +112,8 @@ jobs:
           # Repack
           wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
-          ARCH=x86_64 ./appimagetool squashfs-root "$APPIMAGE"
+          # --appimage-extract-and-run bypasses FUSE (unavailable on GitHub runners)
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run squashfs-root "$APPIMAGE"
           rm -rf squashfs-root appimagetool
 
           # Re-sign for auto-updater
