@@ -1,256 +1,89 @@
 # ComdTeX
 
 ![CI](https://github.com/Sadriica/ComdTeX/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
 Desktop editor for `Markdown + LaTeX` aimed at mathematics and science, built with `Tauri + React + TypeScript`.
 
 ---
 
-## Features
+## Table of Contents
 
-### Math and writing
-- **Math environments** — `:::theorem`, `:::proof`, `:::definition` and 7 more, with automatic numbering and optional titles.
-- **Shorthand system** — write `frac(a, b)`, `sqrt(x)`, `mat(1,0,0,1)` and expand with `Tab`, inside or outside `$...$`.
-- **Equation numbering** — every `$$...$$` block is numbered automatically. Add `{#eq:label}` for cross-references with `@eq:label`.
-- **Figure numbering** — `![Caption](image.png){#fig:label}` with `@fig:label` cross-references.
-- **BibTeX citations** — put `references.bib` in the vault root, cite with `[@key]`, bibliography renders at the end of the preview.
-- **Custom LaTeX macros** — define `\newcommand` in `macros.md` at the vault root; they apply to every file in the vault.
-- **User snippets** — define reusable text snippets in `snippets.md` at the vault root.
-- **Callout blocks** — `> [!NOTE]`, `> [!WARNING]`, `> [!TIP]` and more Obsidian-style callouts.
-- **Mermaid diagrams** — fenced code blocks with ` ```mermaid ` render as diagrams in the preview.
-- **HTML embed** — write raw HTML directly in documents; images, video, collapsible blocks and inline formatting pass through. YouTube iframes are allowed via allowlist; dangerous tags (`script`, `iframe` from other origins, `form`, etc.) are stripped automatically.
-- **Footnotes** — standard Markdown footnote syntax (`[^1]`).
-
-### Editor
-- **Typewriter mode** — cursor always centered vertically for distraction-free writing.
-- **Focus mode** — `F11` hides all chrome for full-screen writing.
-- **Vim mode** — toggle from Settings.
-- **Auto-pair** — `$` and `$$` are auto-paired in the editor.
-- **Clickable checkboxes** — `- [ ]` / `- [x]` in the preview are interactive.
-- **Table editor GUI** — visual Markdown table editor (Ctrl+P → "Editor de tabla").
-- **Session restore** — cursor position remembered per file across sessions.
-- **Content linter** — real-time Monaco markers for broken wikilinks, citations, equations, and shorthand errors.
-
-### Navigation and panels
-- **Wikilinks & backlinks** — link notes with `[[note-name]]`, navigate by clicking in the preview, see incoming links in the Backlinks panel.
-- **Command palette** — `Ctrl+P` to open files and run any command by name.
-- **Outline panel** — heading structure of the current file.
-- **Tag panel** — browse files by frontmatter tags.
-- **Graph panel** — visual wikilink graph for the vault.
-- **Environments panel** — collects all theorem/lemma/definition blocks across the vault.
-- **Equations panel** — lists all numbered equations in the current file.
-- **Frontmatter panel** — GUI editor for YAML frontmatter fields.
-- **Citation Manager** — GUI for browsing and editing BibTeX entries.
-- **Search & Replace** — vault-wide find and replace with match preview.
-- **Vault statistics panel** — file count, word count, link health, equation and citation counts.
-- **Todo panel** — collects `- [ ]` items across all open files.
-- **Git panel** — shows branch, staged/unstaged changes, commit and push from inside the app.
-- **Navigation history** — back/forward between files with `Alt+Left` / `Alt+Right`.
-- **Breadcrumb bar** — shows vault-relative path and current heading.
-
-### Vault and files
-- **Autosave** — changes are saved automatically with crash-recovery drafts.
-- **Pinned tabs** — keep important files always open.
-- **File drag-and-drop** — move files between folders in the tree.
-- **Vault backup** — export the entire vault as a zip archive.
-- **Custom preview CSS** — put `custom.css` in the vault root to style the preview.
-- **Recent vaults list** — welcome screen shows recently opened vaults.
-
-### Export
-- **PDF export** — via `pandoc` (fallback: `window.print()`).
-- **LaTeX export** — full `.tex` file with preamble, environments, and macros.
-- **Reveal.js export** — HTML presentation slides from your Markdown.
-- **Copy as HTML / Copy as LaTeX** — clipboard export without saving a file.
-- **DOCX and Beamer** — via `pandoc`.
-
-### App
-- **Auto-updater** — checks for new releases on startup and installs with one click.
-- **Dependency warnings** — amber banner if `pandoc` or `zip` are missing.
-- **YAML frontmatter** — `title`, `author`, `date`, `abstract`, `tags` rendered at the top of the preview.
-- **Academic templates** — Article, Class notes, Homework, Theorem sheet, Research note, and more.
-- **Language** — English and Spanish UI, switchable at runtime from Settings.
-
----
-
-## Screenshots
-
-> _Screenshots coming soon._
+- [Installation](#installation)
+- [Development](#development)
+- [Bundles](#bundles)
+- [Release](#release)
+- [Troubleshooting](#troubleshooting)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Auto-Update](#auto-update)
+- [Known Limitations](#known-limitations)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
+- [License](#license)
 
 ---
 
 ## Installation
 
-### Linux — AppImage (portable)
+### Linux — AppImage
 
-Download the `.AppImage` from the [Releases](https://github.com/Sadriica/ComdTeX/releases) page, make it executable, and run it:
-
-```bash
-chmod +x comdtex_<version>_amd64.AppImage
-./comdtex_<version>_amd64.AppImage
-```
-
-### Linux — Debian / Ubuntu
+Download the `.AppImage` from the [latest release](https://github.com/sadriica/comdtex/releases/latest), make it executable, and run it:
 
 ```bash
-sudo apt install ./comdtex_<version>_amd64.deb
+chmod +x ComdTeX_*.AppImage
+./ComdTeX_*.AppImage
 ```
 
-### Linux — Arch Linux
+> **Mesa 24+ crash (Arch, Fedora, and other rolling distros)**
+> The AppImage bundles Ubuntu 22.04's webkit2gtk, which calls `eglGetDisplay()` during init. Mesa 24 returns `EGL_BAD_PARAMETER` before any environment variable overrides take effect, causing an immediate abort:
+> ```
+> Could not create default EGL display: EGL_BAD_PARAMETER. Aborting.
+> ```
+> There is no reliable workaround for this at runtime. Use the native `.pkg.tar.zst` on Arch/Manjaro, or build from source on other rolling distros (see [Development](#development)).
 
-Usa el `.AppImage` (funciona en Arch sin modificaciones). El soporte nativo vía AUR está planificado para una futura versión.
+### Linux — Debian/Ubuntu
+
+Download the `.deb` from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and install it:
+
+```bash
+sudo dpkg -i comdtex_*.deb
+sudo apt-get install -f   # resolve any missing dependencies
+```
+
+If the app does not launch after installation:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-0
+```
+
+### Linux — Arch/Manjaro
+
+Download the `.pkg.tar.zst` from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and install it:
+
+```bash
+sudo pacman -U comdtex-*.pkg.tar.zst
+```
+
+This package is built natively against Arch's webkit2gtk-4.1 and is fully compatible with Mesa 24+. It is the recommended install method on Arch-based systems.
+
+### Linux — Other rolling distros (Fedora, Gentoo, Void, openSUSE Tumbleweed, etc.)
+
+Pre-built AppImages are not compatible with Mesa 24+. Build from source instead — see [Development](#development).
 
 ### Windows
 
-Download the `.exe` installer from the [Releases](https://github.com/Sadriica/ComdTeX/releases) page and run it.
+Download the `.exe` (NSIS installer) from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and run it.
 
-Packages are available in the [Releases](https://github.com/Sadriica/ComdTeX/releases) section.
+### Optional dependencies
 
-> **Note:** PDF export requires [`pandoc`](https://pandoc.org/installing.html) installed on the system. Vault backup requires `zip`. If `pandoc` is unavailable, export falls back to `window.print()`. ComdTeX shows an amber warning banner on startup if either tool is missing.
+| Tool | Purpose | Install |
+|---|---|---|
+| `pandoc` | PDF export | [pandoc.org/installing.html](https://pandoc.org/installing.html) |
+| `zip` | Vault backup | System package manager (`apt install zip`, `pacman -S zip`, etc.) |
 
-### Language
-
-ComdTeX supports **English** and **Spanish**. The default language is Spanish.
-
-To change it: open **Settings** (menu `Vault → Settings` or `Ctrl+P → Settings`) and select your preferred language from the **Language** dropdown. The entire UI updates immediately — no restart required.
-
----
-
-## Quick Start
-
-### 1. Open a vault
-
-A **vault** is a regular folder on your disk. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files from it. Special files recognized in the vault root:
-
-| File | Purpose |
-|---|---|
-| `macros.md` | LaTeX `\newcommand` definitions applied to every file |
-| `references.bib` | BibTeX entries for `[@key]` citations |
-| `snippets.md` | User-defined text snippets |
-| `custom.css` | Custom CSS applied to the preview |
-
-Click **Open folder** on the welcome screen, or use `File → Open vault` (`Ctrl+O`).
-
-### 2. Write math with shorthands
-
-Shorthands expand to LaTeX when you press `Tab`. They work **inside and outside** `$...$` — if used outside, they are automatically wrapped.
-
-```
-frac(1, n+1)          →  $\frac{1}{n+1}$
-sqrt(x^2 + y^2)       →  $\sqrt{x^2 + y^2}$
-sum(i=0, n)           →  $\sum_{i=0}^{n}$
-int(a, b)             →  $\int_{a}^{b}$
-lim(x, 0)             →  $\lim_{x \to 0}$
-mat(1,0,0,1)          →  2×2 identity matrix
-matf(2,3, a,b,c,d,e,f) →  fixed 2×3 matrix
-norm(vec(v))          →  $\left\|\vec{v}\right\|$   (nesting works)
-pder(f, x)            →  $\frac{\partial f}{\partial x}$
-der(f, x)             →  $\frac{df}{dx}$
-bb(R)                 →  $\mathbb{R}$
-cal(A)                →  $\mathcal{A}$
-```
-
-### 3. Use math environments
-
-```
-:::theorem[Intermediate Value Theorem]
-If $f$ is continuous on $[a, b]$ and $f(a) \cdot f(b) < 0$,
-then there exists $c \in (a, b)$ with $f(c) = 0$.
-:::
-
-:::proof
-Follows from the completeness of $\mathbb{R}$. $\square$
-:::
-```
-
-Available types: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise` (auto-numbered), `proof`, `remark`, `note` (unnumbered). Prefix with `sm` or `lg` to change size.
-
-### 4. Number equations and cross-reference
-
-```markdown
-$$\int_a^b f'(x)\,dx = f(b) - f(a)$$ {#eq:ftc}
-
-See the Fundamental Theorem (@eq:ftc).
-```
-
-Every `$$...$$` block is numbered sequentially. The label is optional.
-
-### 5. Add a BibTeX citation
-
-In `references.bib`:
-```bibtex
-@book{knuth84,
-  author    = {Knuth, Donald E.},
-  title     = {The TeXbook},
-  year      = {1984},
-}
-```
-
-In your note:
-```markdown
-This result is described in [@knuth84].
-```
-
-### 6. Embed multimedia
-
-Raw HTML works inside Markdown documents. Useful tags:
-
-**Images with custom size:**
-```html
-<img src="./diagram.png" width="500" alt="Diagram">
-```
-
-**Local video:**
-```html
-<video controls width="600">
-  <source src="./recording.mp4" type="video/mp4">
-</video>
-```
-
-**YouTube embed:**
-```html
-<iframe width="560" height="315"
-  src="https://www.youtube.com/embed/VIDEO_ID"
-  allowfullscreen>
-</iframe>
-```
-
-**Collapsible block:**
-```html
-<details>
-  <summary>Ver demostración completa</summary>
-  Contenido largo que se oculta por defecto...
-</details>
-```
-
-**Inline formatting:**
-```html
-<mark>texto resaltado</mark>
-Nota al pie<sup>1</sup>
-H<sub>2</sub>O
-```
-
-> Allowed: `img`, `video`, `audio`, `figure`, `details`, `summary`, `table`, `mark`, `kbd`, `sub`, `sup`, `div`, `span`, `blockquote`, and YouTube `iframe`.  
-> Blocked: `script`, `iframe` (non-YouTube), `object`, `embed`, `form`, `input`.
-
----
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| `Ctrl+S` | Save |
-| `Ctrl+Shift+S` | Save as |
-| `Ctrl+O` | Open vault |
-| `Ctrl+P` | Command palette |
-| `Ctrl+F` | Find in file |
-| `Ctrl+Shift+F` | Search across vault |
-| `Ctrl+Shift+P` | Toggle preview |
-| `F11` | Toggle focus mode |
-| `Alt+Left` | Navigate back (history) |
-| `Alt+Right` | Navigate forward (history) |
-| `Tab` | Expand shorthand / advance snippet placeholder |
-| `[[` | Autocomplete wikilink |
-| `?` | Show keyboard shortcuts |
+If either tool is missing, ComdTeX shows an amber warning banner on startup. PDF export falls back to `window.print()` if pandoc is absent; vault backup is disabled if zip is absent.
 
 ---
 
@@ -258,53 +91,36 @@ H<sub>2</sub>O
 
 ### Requirements
 
-- `Node.js` 18+
-- `Rust` / `cargo`
-- System dependencies (see below per distro)
+- **Node.js** 18 or later
+- **Rust** (stable) and `cargo` — install via [rustup](https://rustup.rs/)
+- System libraries for your distro:
 
-**Arch Linux:**
-```bash
-sudo pacman -S webkit2gtk-4.1 libayatana-appindicator librsvg openssl base-devel
-```
-
-**Debian / Ubuntu:**
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev build-essential
-```
-
-**Fedora:**
-```bash
-sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel librsvg2-devel openssl-devel
-```
+| Distro | Command |
+|---|---|
+| Arch/Manjaro | `sudo pacman -S webkit2gtk-4.1 libayatana-appindicator librsvg openssl base-devel` |
+| Debian/Ubuntu | `sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev build-essential` |
+| Fedora | `sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel librsvg2-devel openssl-devel` |
+| Gentoo/other | Install equivalents of `webkit2gtk:4.1`, `libayatana-appindicator`, `librsvg`, `openssl` |
 
 ### Commands
 
 ```bash
-npm install          # install dependencies
-npm run tauri dev    # development mode with hot-reload
-npm run build        # frontend only
-npm run tauri build  # desktop app + bundles
+npm install           # install dependencies
+npm run tauri dev     # development mode with hot-reload
+npm run build         # frontend only
+npm run tauri build   # desktop app + bundles (release mode)
 ```
 
 ---
 
 ## Bundles
 
-### Linux
-
-The build produces these formats:
-
-| Format | Distros | Output path |
+| Format | Platform | Output path |
 |---|---|---|
-| `.AppImage` | Any Linux (portable) | `src-tauri/target/release/bundle/appimage/` |
-| `.deb` | Debian, Ubuntu, Linux Mint | `src-tauri/target/release/bundle/deb/` |
-| `.pkg.tar.zst` | Arch Linux, Manjaro | `src-tauri/target/release/bundle/pacman/` |
-
-### Windows
-
-| Format | Output path |
-|---|---|
-| `.exe` (NSIS installer) | `src-tauri/target/release/bundle/nsis/` |
+| `.AppImage` | Linux (portable, Mesa < 24) | `src-tauri/target/release/bundle/appimage/` |
+| `.deb` | Debian/Ubuntu | `src-tauri/target/release/bundle/deb/` |
+| `.pkg.tar.zst` | Arch/Manjaro | `src-tauri/target/release/bundle/pacman/` |
+| `.exe` (NSIS) | Windows | `src-tauri/target/release/bundle/nsis/` |
 
 To build a specific format:
 
@@ -319,89 +135,432 @@ npm run tauri build -- --bundles nsis
 
 ## Release
 
-The CI workflow builds all bundles automatically when a `v*` tag is pushed:
+Releases are triggered by pushing a version tag:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.x
+git push origin v1.0.x
 ```
 
-This triggers `.github/workflows/release.yml`, which builds:
-- Linux: `.AppImage` + `.deb` (Ubuntu runner via `tauri-action`)
-- Arch Linux: usa el `.AppImage` (Tauri no tiene bundler nativo para pacman; AUR planificado)
-- Windows: `.exe` (NSIS installer)
+This triggers the GitHub Actions release workflow:
 
-`TAURI_SIGNING_PRIVATE_KEY` must be set in GitHub Secrets for the updater signature to be included.
+| Job | Runner | Output |
+|---|---|---|
+| `build` | `ubuntu-22.04` | `.AppImage`, `.deb` (Linux) + `.exe` (Windows) |
+| `arch-release` | `archlinux:latest` container | `.pkg.tar.zst` |
+| `publish` | `ubuntu-22.04` | Removes draft status after all jobs succeed |
+
+### Required GitHub Secrets
+
+Both secrets must be set in **Settings → Secrets and variables → Actions**:
+
+| Secret | Content |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | Full content of the minisign private key file |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password used when generating the key |
+
+Builds without these secrets will complete but will not embed a valid updater signature.
+
+### Signing key setup
+
+```bash
+npx tauri signer generate -w ~/.tauri/comdtex.key
+```
+
+This produces `comdtex.key` (private) and `comdtex.key.pub` (public).
+
+1. Copy the full content of `comdtex.key` into the `TAURI_SIGNING_PRIVATE_KEY` secret.
+2. Copy the password into the `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret.
+3. Copy the public key string from `comdtex.key.pub` into `tauri.conf.json → plugins.updater.pubkey`.
+
+---
+
+## Troubleshooting
+
+### AppImage crashes with `EGL_BAD_PARAMETER`
+
+```
+Could not create default EGL display: EGL_BAD_PARAMETER. Aborting.
+```
+
+**Cause:** The AppImage bundles Ubuntu 22.04's webkit2gtk. Mesa 24 (shipped on Arch, Fedora, and other rolling distros) returns `EGL_BAD_PARAMETER` from `eglGetDisplay()` during webkit init, before any environment variable overrides take effect.
+
+**Fix:**
+- **Arch/Manjaro:** Install the `.pkg.tar.zst` package — it links against the system webkit2gtk.
+- **Other rolling distros:** Build from source (see [Development](#development)).
+
+### pandoc not detected
+
+**Symptom:** Amber warning banner on startup; PDF export uses `window.print()` instead of pandoc.
+
+**Fix:** Install pandoc from [pandoc.org/installing.html](https://pandoc.org/installing.html) and restart ComdTeX.
+
+### zip not detected
+
+**Symptom:** Amber warning banner on startup; vault backup option is disabled.
+
+**Fix:**
+
+```bash
+sudo pacman -S zip      # Arch
+sudo apt install zip    # Debian/Ubuntu
+sudo dnf install zip    # Fedora
+```
+
+### .deb package: app does not launch
+
+**Fix:**
+
+```bash
+sudo apt install libwebkit2gtk-4.1-0
+```
+
+### Auto-updater rejects artifacts
+
+**Symptom:** The updater downloads an update but refuses to install it; or CI builds complete without embedding a signature.
+
+**Cause:** `TAURI_SIGNING_PRIVATE_KEY` or `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is missing from GitHub Secrets, or the public key in `tauri.conf.json` does not match the private key used during the build.
+
+**Fix:** Follow the [Signing key setup](#signing-key-setup) steps above and ensure the public key in `tauri.conf.json → plugins.updater.pubkey` matches the generated key pair.
+
+---
+
+## Features
+
+### Math & Writing
+- Shorthand system: `frac(a,b)`, `sqrt(x)`, `int(a,b)`, `sum(i=0,n)`, `lim(x,0)`, `mat(...)`, `vec(v)`, `norm(v)`, `pder(f,x)`, `der(f,x)`, `bb(R)`, `cal(A)`, `abs(x)`, and more — expand to LaTeX on Tab, work inside and outside `$...$`
+- Auto-numbered math environments: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered: `proof`, `remark`, `note`
+- Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
+- Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
+- BibTeX citations via `references.bib` and `[@key]` syntax
+- Custom LaTeX macros via `\newcommand` in `macros.md` (applied vault-wide)
+- User-defined text snippets via `snippets.md`
+- YAML frontmatter rendering (title, author, date, abstract, tags)
+- Callout blocks (`>[!NOTE]`, `>[!WARNING]`, `>[!TIP]`, etc.)
+- Mermaid diagrams
+- Footnotes
+- HTML embed with sanitizer (YouTube iframes allowed; `<script>` and `<form>` blocked)
+
+### Editor
+- Monaco Editor with syntax highlighting
+- Vim mode (toggle in Settings)
+- Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers
+- Auto-pair `$` and `$$`
+- Clickable checkboxes in preview
+- Visual table editor (Ctrl+P → "Table Editor")
+- Typewriter mode and focus mode (F11)
+- Autosave (debounced) with crash recovery via drafts
+- Session restore (tabs, active file, pinned tabs)
+
+### Navigation & Panels
+- Command palette (Ctrl+P): fuzzy file + command search
+- Outline panel (document headings)
+- Backlinks panel (incoming `[[wikilinks]]`)
+- Wikilinks with `[[note-name]]` autocomplete
+- Tag panel (browse files by frontmatter tag)
+- Graph panel (visual wikilink map)
+- Environments panel (all theorem/lemma/etc. blocks across vault)
+- Equations panel (all numbered equations in current file)
+- Frontmatter panel (GUI editor for YAML fields)
+- Citation manager (browse and edit BibTeX entries)
+- Todo panel (collects `- [ ]` task items across open files)
+- Vault stats panel (file count, word count, link health, equations, citations)
+- Git panel (branch, staged/unstaged changes, commit, push)
+- Navigation history (Alt+Left / Alt+Right)
+- Breadcrumb bar showing vault-relative path
+
+### Vault & Files
+- Vault = a regular folder on disk; open any folder
+- Recent vaults list on welcome screen
+- File tree with context menu (rename, delete, drag-to-move)
+- Vault-wide full-text search and search-and-replace
+- Vault backup (exports as `.zip`)
+- Custom preview CSS via `custom.css`
+
+### Export
+- PDF export via pandoc (falls back to `window.print()` if pandoc is absent)
+- LaTeX export (`.tex` with preamble, environments, and macros)
+- Reveal.js presentation export
+- DOCX and Beamer via pandoc
+- Copy as HTML or LaTeX
+- 7 academic templates for new files
+
+### App
+- English and Spanish UI, switchable at runtime
+- Auto-updater with in-app banner and one-click install
+- Dependency warnings when pandoc or zip are missing
+
+---
+
+## Quick Start
+
+### 1. Open a Vault
+
+A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files directly — no database, no hidden format.
+
+On first launch, click **Open Vault** and select any folder. Four special files in the vault root are recognized automatically:
+
+| File | Purpose |
+|---|---|
+| `macros.md` | `\newcommand` definitions applied to every file's math rendering |
+| `references.bib` | BibTeX entries used by `[@key]` citations |
+| `snippets.md` | User-defined text snippets available in the editor |
+| `custom.css` | Custom CSS applied to the preview pane |
+
+None of these files are required — ComdTeX works without them.
+
+### 2. Vault Structure
+
+A typical math student's vault:
+
+```
+my-vault/
+├── macros.md
+├── references.bib
+├── custom.css
+├── snippets.md
+├── analysis/
+│   ├── real-analysis.md
+│   ├── measure-theory.md
+│   └── functional-analysis.md
+├── algebra/
+│   ├── linear-algebra.md
+│   └── group-theory.md
+├── topology/
+│   └── point-set-topology.md
+├── thesis/
+│   ├── thesis-main.md
+│   ├── chapter-01-intro.md
+│   └── chapter-02-background.md
+└── notes/
+    ├── seminar-2026-03-14.md
+    └── problem-sets.md
+```
+
+### 3. Write Math with Shorthands
+
+Shorthands expand to LaTeX when you press **Tab**. They work inside `$...$` and as standalone text (auto-wrapped on render). Nesting is supported: `frac(sqrt(x), abs(y-1))` → `\frac{\sqrt{x}}{\left|y-1\right|}`.
+
+| Shorthand | Expands to |
+|---|---|
+| `frac(1, n+1)` | `\frac{1}{n+1}` |
+| `sqrt(x)` | `\sqrt{x}` |
+| `sum(i=0, n)` | `\sum_{i=0}^{n}` |
+| `int(a, b)` | `\int_{a}^{b}` |
+| `lim(x, 0)` | `\lim_{x \to 0}` |
+| `vec(v)` | `\vec{v}` |
+| `norm(vec(v))` | `\left\|\vec{v}\right\|` |
+| `abs(x)` | `\left|x\right|` |
+| `pder(f, x)` | `\frac{\partial f}{\partial x}` |
+| `der(f, x)` | `\frac{df}{dx}` |
+| `mat(1,0,0,1)` | 2×2 identity matrix |
+| `bb(R)` | `\mathbb{R}` |
+| `cal(A)` | `\mathcal{A}` |
+
+### 4. Use Math Environments
+
+```markdown
+:::theorem[Intermediate Value Theorem]
+Let $f : [a, b] \to bb(R)$ be continuous. If $f(a) < 0 < f(b)$,
+then there exists $c \in (a, b)$ such that $f(c) = 0$.
+:::
+
+:::proof
+By the completeness of bb(R), consider $S = \{x \in [a,b] \mid f(x) < 0\}$.
+Let $c = \sup S$. A standard $\varepsilon$-$\delta$ argument shows $f(c) = 0$.
+:::
+```
+
+Available types — auto-numbered: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`. Unnumbered: `proof`, `remark`, `note`. Size prefixes: `sm`, `lg`.
+
+### 5. Number Equations and Cross-Reference
+
+```markdown
+$$
+\hat{f}(\xi) = \int_{-\infty}^{\infty} f(x)\, e^{-2\pi i x \xi}\, dx
+$$ {#eq:fourier}
+
+Equation @eq:fourier shows that $\hat{f}$ depends linearly on $f$.
+```
+
+`@eq:fourier` resolves to a clickable `(1)` link in the preview. Every `$$...$$` block is numbered sequentially; the label is optional.
+
+### 6. Add a BibTeX Citation
+
+In `references.bib`:
+
+```bibtex
+@book{rudin1976,
+  author    = {Walter Rudin},
+  title     = {Principles of Mathematical Analysis},
+  edition   = {3},
+  publisher = {McGraw-Hill},
+  year      = {1976}
+}
+```
+
+In your note:
+
+```markdown
+The proof follows from the dominated convergence theorem [@rudin1976, p. 321].
+```
+
+All cited entries are collected into a bibliography section at the bottom of the preview.
+
+---
+
+## Auto-Update
+
+ComdTeX checks for updates automatically on startup using `tauri-plugin-updater`. If a newer version is available, an in-app banner appears — no need to visit GitHub. Clicking **Install** downloads the update and relaunches the app. All artifacts are signed with [minisign](https://jedisct1.github.io/minisign/); the updater verifies the signature before applying any update, so tampered or incomplete downloads are rejected.
+
+---
+
+## Known Limitations
+
+| Limitation | Notes |
+|---|---|
+| AppImage + Mesa 24+ | `EGL_BAD_PARAMETER` crash on Arch, Fedora, and other Mesa 24+ systems. Use `.pkg.tar.zst` on Arch; build from source elsewhere. |
+| No native package for non-Arch rolling distros | No pre-built package for Gentoo, Void, or openSUSE Tumbleweed — build from source. |
+| PDF export requires pandoc | Falls back to `window.print()` if pandoc is not found. |
+| Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
+| No mobile support | Desktop only (Linux, Windows). |
+| No cloud sync | The vault is a local folder. Sync manually with any file sync tool (Syncthing, rclone, etc.). |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+S` | Save current file |
+| `Ctrl+Shift+S` | Save as |
+| `Ctrl+O` | Open vault |
+| `Ctrl+P` | Command palette |
+| `Ctrl+F` | Find in file |
+| `Ctrl+Shift+F` | Search across vault |
+| `Ctrl+Shift+P` | Toggle preview |
+| `F11` | Focus mode |
+| `Alt+Left` | Navigate back |
+| `Alt+Right` | Navigate forward |
+| `Tab` | Expand shorthand / advance snippet placeholder |
+| `[[` | Autocomplete wikilink |
+| `?` | Show keyboard shortcuts reference |
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before submitting a large change so we can discuss the approach.
+Contributions are welcome. Open an issue before submitting a large change so we can discuss the approach.
 
-1. Fork the repository and create a branch from `main`.
-2. Install dependencies and verify the dev build works (`npm run tauri dev`).
-3. Make your changes. If you add a shorthand, update both `src/preprocessor.ts` (render) and `src/monacoSetup.ts` (Tab expansion). If you add UI strings, add them to both `en` and `es` in `src/i18n.ts`.
-4. Open a pull request with a clear description of the change and why it's needed.
+### Setup
+
+```bash
+git clone https://github.com/Sadriica/ComdTeX.git
+cd ComdTeX
+npm install
+npm run tauri dev
+```
+
+Verify the dev build launches and the editor opens a vault before submitting a PR.
+
+### Rules for adding a shorthand
+
+Adding a shorthand requires updating **all five** of the following — omitting any will cause inconsistency between the editor and renderer:
+
+1. `src/preprocessor.ts` — add a handler to `HANDLERS`
+2. `src/monacoSetup.ts` — add a completion entry to `COMPLETIONS`
+3. `src/Toolbar.tsx` — add an entry to the appropriate group in `getGroups(t)`
+4. `src/HelpPanel.tsx` — add a `<Row>` entry in the corresponding section
+5. `src/i18n.ts` — add the label to `T.toolbar` and `T.helpPanel` in **both** `en` and `es`
+
+### Rules for adding UI strings
+
+1. Add the key and type to the `T` interface in `src/i18n.ts`
+2. Provide the translation in both the `en` and `es` objects
+3. Access the string via `useT()` in the component — never hardcode English text
 
 ### Project structure
 
-| Path | Role |
+#### `src/` — Frontend
+
+| File | Role |
 |---|---|
-| `src/App.tsx` | Root component, global state, layout, keybindings |
-| `src/useVault.ts` | Vault, tabs, file CRUD, autosave, search |
-| `src/useSettings.ts` | Settings persisted in localStorage |
-| `src/useUpdater.ts` | Auto-updater: check, download, install |
-| `src/renderer.ts` | Markdown + math → HTML pipeline |
-| `src/preprocessor.ts` | Shorthand expansion before KaTeX |
-| `src/monacoSetup.ts` | Monaco config, Tab expansion, vim mode |
-| `src/environments.ts` | `:::type[Title]` block rendering |
-| `src/equations.ts` | Automatic equation numbering |
-| `src/figures.ts` | Figure numbering and cross-references |
-| `src/bibtex.ts` | BibTeX parser and citation resolver |
-| `src/frontmatter.ts` | YAML frontmatter extraction and rendering |
-| `src/macros.ts` | `\newcommand` macro parser |
-| `src/wikilinks.ts` | Wikilink helpers and backlink resolution |
-| `src/exporter.ts` | Export to `.tex` and Reveal.js HTML |
-| `src/contentLinter.ts` | Real-time Monaco editor diagnostics |
-| `src/checkDeps.ts` | System dependency check (pandoc, zip) |
-| `src/sanitizeRenderedHtml.ts` | DOMParser-based HTML sanitizer |
-| `src/pathUtils.ts` | Cross-platform path helpers |
-| `src/i18n.ts` | English / Spanish translations |
-| `src/templates.ts` | Academic template content |
-| `src/toastService.ts` | Singleton toast module |
-| `src/types.ts` | Shared TypeScript types |
-| `src/EnvironmentsPanel.tsx` | Panel: all theorem/lemma/etc blocks across vault |
-| `src/CitationManager.tsx` | Panel: BibTeX entry browser and editor |
-| `src/SearchReplacePanel.tsx` | Panel: vault-wide find and replace |
-| `src/TableEditor.tsx` | Modal: visual Markdown table editor |
-| `src/WelcomeScreen.tsx` | Welcome screen with recent vaults |
-| `src/DepsWarning.tsx` | Amber banner for missing system tools |
-| `src/UpdateChecker.tsx` | Update notification banner |
-| `src/ErrorBoundary.tsx` | React error boundary |
-| `src/GitBar.tsx` | Git status panel (branch, stage, commit, push) |
-| `src/Breadcrumb.tsx` | Vault-relative path and heading breadcrumb |
-| `src/TagPanel.tsx` | Panel: browse vault files by tag |
-| `src/GraphPanel.tsx` | Panel: wikilink graph visualization |
-| `src/TodoPanel.tsx` | Panel: collects `- [ ]` tasks across vault |
-| `src/EquationsPanel.tsx` | Panel: lists numbered equations in current file |
-| `src/FrontmatterPanel.tsx` | Panel: GUI editor for frontmatter fields |
-| `src/VaultStatsPanel.tsx` | Panel: vault-wide statistics |
-| `src/FileTree.tsx` | File tree with context menu |
-| `src/TabBar.tsx` | Open file tabs |
-| `src/Toolbar.tsx` | Button/dropdown bar |
-| `src/MenuBar.tsx` | Dropdown menu bar |
-| `src/TitleBar.tsx` | Custom window titlebar |
-| `src/StatusBar.tsx` | Bottom bar: mode, cursor, word count |
-| `src/SearchPanel.tsx` | Vault-wide full-text search |
-| `src/OutlinePanel.tsx` | Heading outline of current file |
-| `src/BacklinksPanel.tsx` | Incoming wikilinks panel |
-| `src/CommandPalette.tsx` | Ctrl+P fuzzy file + command launcher |
-| `src/SettingsModal.tsx` | Settings dialog |
-| `src/HelpModal.tsx` | Keyboard shortcuts reference |
-| `src/HelpPanel.tsx` | `?` sidebar syntax reference |
-| `src/TemplateModal.tsx` | New-file-from-template picker |
-| `src/ContextMenu.tsx` | Generic right-click context menu |
-| `src/Resizer.tsx` | Drag handle for panel resizing |
-| `src/Toast.tsx` | Toast notification container |
-| `src-tauri/` | Tauri backend, capabilities, bundle config |
+| `App.tsx` | `App` wrapper (`LanguageContext` provider) + `AppContent` (all state, layout, keybindings, menus) |
+| `useVault.ts` | Central hook: vault folder, tabs, file tree, CRUD, autosave, search |
+| `useSettings.ts` | Settings persisted in `localStorage`: font sizes, theme, vim mode, language |
+| `useUpdater.ts` | Auto-updater: `checkForUpdate()`, `downloadAndInstallUpdate()` |
+| `renderer.ts` | Markdown + math → HTML pipeline |
+| `preprocessor.ts` | Expands shorthands before KaTeX |
+| `monacoSetup.ts` | Monaco config: autocomplete, Tab shorthand expansion, vim mode |
+| `equations.ts` | Auto-numbering of `$$...$$` blocks, label/reference resolution |
+| `environments.ts` | Renders `:::type[title]` blocks |
+| `figures.ts` | Figure numbering and `@fig:label` cross-references |
+| `bibtex.ts` | BibTeX parser and `[@key]` citation resolver |
+| `frontmatter.ts` | Extracts and renders YAML frontmatter |
+| `macros.ts` | Parses `\newcommand` from `macros.md` |
+| `exporter.ts` | Exports to `.tex`; `exportReveal()` → Reveal.js HTML |
+| `templates.ts` | Content for 7 academic templates |
+| `wikilinks.ts` | `[[note-name]]` link helpers and backlink resolution |
+| `pathUtils.ts` | Cross-platform path helpers |
+| `sanitizeRenderedHtml.ts` | DOMParser-based HTML sanitizer — runs on every preview render |
+| `contentLinter.ts` | Real-time Monaco markers: broken links, citations, equations, shorthand errors |
+| `checkDeps.ts` | Checks `pandoc` and `zip` on startup |
+| `i18n.ts` | EN/ES translation system: `T` interface, `LANGS`, `LanguageContext`, `useT()` |
+| `toastService.ts` | Singleton toast module |
+| `types.ts` | Shared TypeScript types (`FileNode`, `OpenFile`, `SearchResult`) |
+| `Toolbar.tsx` | Button/dropdown bar; groups defined in `getGroups(t)` |
+| `HelpPanel.tsx` | `?` sidebar panel with full syntax reference |
+| `FileTree.tsx` | File tree with context menu (rename, delete, drag-to-move) |
+| `TabBar.tsx` | Open file tabs with pinning support |
+| `TitleBar.tsx` | Custom frameless window titlebar |
+| `StatusBar.tsx` | Bottom bar: mode, cursor, word/char count, macro count, reading time |
+| `MenuBar.tsx` | Dropdown menu bar |
+| `SearchPanel.tsx` | Vault-wide full-text search |
+| `SearchReplacePanel.tsx` | Vault-wide find and replace |
+| `OutlinePanel.tsx` | Heading outline of the current file |
+| `BacklinksPanel.tsx` | Incoming wikilinks for the active file |
+| `EnvironmentsPanel.tsx` | All theorem/lemma/etc. blocks across the vault |
+| `CitationManager.tsx` | GUI browser and editor for BibTeX entries |
+| `EquationsPanel.tsx` | All numbered equations in the current file |
+| `FrontmatterPanel.tsx` | GUI editor for YAML frontmatter fields |
+| `TagPanel.tsx` | Browse vault files by frontmatter tag |
+| `GraphPanel.tsx` | Visual wikilink graph |
+| `TodoPanel.tsx` | Collects `- [ ]` task items across open files |
+| `VaultStatsPanel.tsx` | Vault statistics: file count, word count, link health, equations, citations |
+| `GitBar.tsx` | Git status panel: branch, staged/unstaged, commit, push |
+| `Breadcrumb.tsx` | Vault-relative breadcrumb with navigation history |
+| `ContextMenu.tsx` | Generic right-click context menu |
+| `CommandPalette.tsx` | Ctrl+P fuzzy file and command launcher |
+| `SettingsModal.tsx` | Settings dialog (language, fonts, theme, vim) |
+| `HelpModal.tsx` | Keyboard shortcuts reference |
+| `TemplateModal.tsx` | New-file-from-template picker |
+| `TableEditor.tsx` | Modal visual Markdown table editor |
+| `WelcomeScreen.tsx` | Welcome screen with recent vaults list |
+| `DepsWarning.tsx` | Amber banner shown when `pandoc` or `zip` are missing |
+| `UpdateChecker.tsx` | In-app update notification banner |
+| `ErrorBoundary.tsx` | React error boundary wrapping `AppContent` |
+| `Resizer.tsx` | Drag handle for panel resizing |
+| `Toast.tsx` | Toast notification container |
+
+#### `src-tauri/` — Rust / Tauri backend
+
+| File | Role |
+|---|---|
+| `src/main.rs` | Tauri entry point |
+| `src/lib.rs` | Plugin registration and Tauri builder |
+| `tauri.conf.json` | App config: window size, CSP, updater endpoint, bundle settings |
+| `Cargo.toml` | Rust dependencies |
+| `capabilities/default.json` | Tauri v2 ACL capability declarations |
+| `icons/` | App icons for all platforms |
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
+---
+
+## License
+
+MIT © [ComdTeX contributors](https://github.com/Sadriica/ComdTeX)

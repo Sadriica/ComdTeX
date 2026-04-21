@@ -61,6 +61,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ComdTeX ${{ github.ref_name }}
@@ -71,9 +72,8 @@ jobs:
             |---|---|
             | Linux (todas las distros) | `.AppImage` — portable, no requiere instalación |
             | Linux Debian/Ubuntu | `.deb` |
+            | Arch Linux | `.pkg.tar.zst` — `sudo pacman -U comdtex-*.pkg.tar.zst` |
             | Windows | `.exe` (instalador NSIS) |
-
-            **Arch Linux:** usa el `.AppImage` o instala desde AUR (próximamente).
 
             ### Auto-actualización
             La app verifica actualizaciones automáticamente al iniciar.
@@ -93,7 +93,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           APPIMAGE=$(find src-tauri/target -name "*.AppImage" | grep -v ".zsync" | head -1)
-          APPIMAGE_NAME=$(basename "$APPIMAGE")
 
           # Extract AppImage without FUSE.
           # AppImage Type 2: squashfs starts right after the ELF runtime.
@@ -102,32 +101,99 @@ jobs:
           echo "squashfs offset: $OFFSET"
           unsquashfs -o "$OFFSET" -d squashfs-root "$APPIMAGE"
 
-          # Remove bundled libwayland-egl — incompatible with Mesa 24+/Intel Arc on Arch/Fedora.
-          # The system's own version will be used at runtime instead.
+          # Remove bundled libwayland-egl — incompatible with Mesa 24+.
           rm -f squashfs-root/usr/lib/libwayland-egl.so.1
 
-          # Remove forced GDK_BACKEND=x11 (causes EGL_BAD_PARAMETER on modern Mesa+Wayland).
-          # Add WEBKIT_DISABLE_DMABUF_RENDERER as fallback for GPU configs without DMA-BUF support.
+          # Remove forced GDK_BACKEND=x11 and add WEBKIT_DISABLE_DMABUF_RENDERER.
           sed -i '/export GDK_BACKEND=x11/d' squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh
           echo 'export WEBKIT_DISABLE_DMABUF_RENDERER=1' >> squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh
 
-          # Repack
+          # Repack (--appimage-extract-and-run bypasses FUSE on GitHub runners)
           wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
-          # --appimage-extract-and-run bypasses FUSE (unavailable on GitHub runners)
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run squashfs-root "$APPIMAGE"
           rm -rf squashfs-root appimagetool
 
-          # Re-sign for auto-updater
-          npx tauri signer sign "$APPIMAGE" --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+          # Re-sign patched AppImage for auto-updater
+          npx tauri signer sign "$APPIMAGE" \
+            --private-key "$TAURI_SIGNING_PRIVATE_KEY" \
+            --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
-          # Replace assets in the draft release
+          # Update latest.json with the new AppImage signature so auto-updates work
+          gh release download "${{ github.ref_name }}" -p "latest.json" \
+            --repo "${{ github.repository }}" 2>/dev/null || true
+          if [ -f latest.json ]; then
+            export SIG_FILE="${APPIMAGE}.sig"
+            python3 -c "
+import json, os
+sig = open(os.environ['SIG_FILE']).read()
+with open('latest.json') as f:
+    d = json.load(f)
+plat = d.get('platforms', {})
+if 'linux-x86_64' in plat:
+    plat['linux-x86_64']['signature'] = sig
+with open('latest.json', 'w') as f:
+    json.dump(d, f, indent=2)
+print('latest.json updated')
+"
+            gh release upload "${{ github.ref_name }}" latest.json \
+              --clobber --repo "${{ github.repository }}"
+          fi
+
+          # Replace AppImage and sig in the draft release
           gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" \
             --clobber \
             --repo "${{ github.repository }}"
 
-  publish:
+  arch-release:
     needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Arch system dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel git curl wget \
+            nodejs npm \
+            webkit2gtk-4.1 \
+            libappindicator-gtk3 \
+            librsvg \
+            patchelf \
+            openssl \
+            appmenu-gtk-module \
+            github-cli
+
+      - name: Install Rust stable
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "/root/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build pacman package
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --bundles pacman
+
+      - name: Upload pacman package to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PKG=$(find src-tauri/target -name "*.pkg.tar.zst" | head -1)
+          gh release upload "${{ github.ref_name }}" "$PKG" \
+            --clobber \
+            --repo "${{ github.repository }}"
+
+  publish:
+    needs: [build, arch-release]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
