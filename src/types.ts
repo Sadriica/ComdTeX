@@ -12,6 +12,7 @@ export interface OpenFile {
   content: string
   isDirty: boolean
   mode: "md" | "tex"
+  cachedMtime?: number // timestamp for conflict detection
 }
 
 export interface SearchResult {

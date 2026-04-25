@@ -50,10 +50,11 @@ function esc(s: string): string {
  * HTML anchors. Must run before markdown-it (html:true passes them through).
  */
 export function processWikilinks(text: string, existingNames: Set<string>): string {
-  return text.replace(WIKILINK_RE, (_, target, _heading, label) => {
+  return text.replace(WIKILINK_RE, (_, target, heading, label) => {
     const display = label ?? target
     const exists = existingNames.has(target.trim().toLowerCase())
     const cls = exists ? "wikilink" : "wikilink wikilink-broken"
-    return `<a class="${cls}" data-target="${esc(target.trim())}" href="#">${esc(display)}</a>`
+    const headingAttr = heading ? ` data-heading="${esc(heading.trim())}"` : ""
+    return `<a class="${cls}" data-target="${esc(target.trim())}"${headingAttr} href="#">${esc(display)}</a>`
   })
 }

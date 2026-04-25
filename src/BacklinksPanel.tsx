@@ -6,7 +6,7 @@ import { useT } from "./i18n"
 
 interface BacklinksPanelProps {
   currentFile: { name: string; path: string } | null
-  onOpenFile: (node: FileNode) => void
+  onOpenFile: (node: FileNode, line?: number) => void
   tree: FileNode[]
 }
 
@@ -74,12 +74,12 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree }: Backli
         if (!node) return null
         return (
           <div key={filePath} className="search-group">
-            <div className="search-file" onClick={() => onOpenFile(node)}>
+            <div className="search-file" onClick={() => onOpenFile(node, hits[0]?.line)}>
               <span>{hits[0].fileName}</span>
               <span className="search-count">{hits.length}</span>
             </div>
             {hits.map((h, i) => (
-              <div key={i} className="search-hit" onClick={() => onOpenFile(node)}>
+              <div key={i} className="search-hit" onClick={() => onOpenFile(node, h.line)}>
                 <span className="search-line">{h.line}</span>
                 <span className="search-content">{h.content}</span>
               </div>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { TEMPLATES } from "./templates"
+import { loadCustomTemplates, saveCustomTemplate, TEMPLATES, processTemplateVariables } from "./templates"
 import { useT } from "./i18n"
 
 interface TemplateModalProps {
@@ -10,20 +10,42 @@ interface TemplateModalProps {
 
 export default function TemplateModal({ open, onClose, onCreate }: TemplateModalProps) {
   const t = useT()
+  const [customTemplates, setCustomTemplates] = useState(() => loadCustomTemplates())
   const [selectedId, setSelectedId] = useState(TEMPLATES[0].id)
   const [name, setName] = useState("")
+  const [editingTemplate, setEditingTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [templateDescription, setTemplateDescription] = useState("")
+  const [templateContent, setTemplateContent] = useState("---\ntitle: {{title}}\ndate: {{date}}\ntags: []\n---\n\n# {{title}}\n")
 
   if (!open) return null
 
-  const template = TEMPLATES.find((tpl) => tpl.id === selectedId) ?? TEMPLATES[0]
+  const allTemplates = [...TEMPLATES, ...customTemplates]
+  const template = allTemplates.find((tpl) => tpl.id === selectedId) ?? allTemplates[0]
 
   const handleCreate = () => {
     const trimmed = name.trim()
     if (!trimmed) return
     const fileName = trimmed.endsWith(".md") || trimmed.endsWith(".tex") ? trimmed : `${trimmed}.md`
-    onCreate(fileName, template.content)
+    onCreate(fileName, processTemplateVariables(template.content, fileName))
     setName("")
     onClose()
+  }
+
+  const handleSaveTemplate = () => {
+    const trimmed = templateName.trim()
+    if (!trimmed || !templateContent.trim()) return
+    const updated = saveCustomTemplate({
+      name: trimmed,
+      description: templateDescription.trim() || "Plantilla personalizada",
+      icon: "◇",
+      content: templateContent,
+    })
+    setCustomTemplates(updated)
+    setSelectedId(updated[updated.length - 1].id)
+    setEditingTemplate(false)
+    setTemplateName("")
+    setTemplateDescription("")
   }
 
   return (
@@ -34,8 +56,40 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body template-body">
+          <div className="template-actions-row">
+            <button className="template-create-toggle" onClick={() => setEditingTemplate((v) => !v)}>
+              {editingTemplate ? "Usar plantillas" : "Crear plantilla"}
+            </button>
+          </div>
+          {editingTemplate ? (
+            <div className="template-editor">
+              <input
+                className="template-filename-input"
+                placeholder="Nombre de la plantilla"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+              />
+              <input
+                className="template-filename-input"
+                placeholder="Descripción"
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+              />
+              <textarea
+                className="template-content-input"
+                value={templateContent}
+                onChange={(e) => setTemplateContent(e.target.value)}
+                rows={12}
+              />
+              <div className="template-vars-hint">Variables: {"{{title}}"}, {"{{filename}}"}, {"{{date}}"}, {"{{date:formatted}}"}, {"{{year}}"}, {"{{time}}"}, {"{{datetime}}"}, {"{{author}}"}</div>
+              <button className="btn-create" onClick={handleSaveTemplate} disabled={!templateName.trim() || !templateContent.trim()}>
+                Guardar plantilla
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="template-grid">
-            {TEMPLATES.map((tpl) => {
+            {allTemplates.map((tpl) => {
               const tplT = t.templates[tpl.id]
               return (
                 <button
@@ -46,6 +100,7 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
                   <span className="template-icon">{tpl.icon}</span>
                   <span className="template-name">{tplT?.name ?? tpl.name}</span>
                   <span className="template-desc">{tplT?.description ?? tpl.description}</span>
+                  {tpl.custom && <span className="template-custom-badge">personal</span>}
                 </button>
               )
             })}
@@ -61,10 +116,12 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
               autoFocus
             />
           </div>
+          </>
+          )}
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>{t.templateModal.cancel}</button>
-          <button className="btn-create" onClick={handleCreate} disabled={!name.trim()}>{t.templateModal.create}</button>
+          <button className="btn-create" onClick={handleCreate} disabled={editingTemplate || !name.trim()}>{t.templateModal.create}</button>
         </div>
       </div>
     </div>

@@ -10,6 +10,8 @@ export interface Settings {
   previewVisible: boolean
   language: Lang
   wordGoal: number  // 0 = no goal
+  touchpadGestures: boolean
+  previewTheme: "dark" | "light" | "same"
 }
 
 const DEFAULTS: Settings = {
@@ -22,6 +24,8 @@ const DEFAULTS: Settings = {
   previewVisible: true,
   language: "es",
   wordGoal: 0,
+  touchpadGestures: true,
+  previewTheme: "same",
 }
 
 const KEY = "comdtex_settings"

@@ -5,6 +5,8 @@ import {
   resetEnvCounters,
   NUMBERED_ENVS,
   UNNUMBERED_ENVS,
+  prescanEnvironmentLabels,
+  resolveEnvironmentRefs,
 } from "./environments"
 
 beforeEach(() => {
@@ -157,5 +159,15 @@ describe("extractEnvironments", () => {
     const { text: out, slots } = extractEnvironments(text, identity)
     expect(slots).toHaveLength(0)
     expect(out).toBe(text)
+  })
+})
+
+describe("environment labels", () => {
+  it("prescans labeled environments and resolves references", () => {
+    const source = ":::theorem[Principal]{#thm:main}\nContenido\n:::\n\nVer @thm:main"
+    const labels = prescanEnvironmentLabels(source)
+
+    expect(labels.get("thm:main")?.number).toBe("1")
+    expect(resolveEnvironmentRefs("Ver @thm:main", labels)).toContain("Teorema 1")
   })
 })

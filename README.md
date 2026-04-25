@@ -232,6 +232,7 @@ sudo apt install libwebkit2gtk-4.1-0
 - Auto-numbered math environments: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered: `proof`, `remark`, `note`
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
 - Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
+- Structural labels for sections, equations, figures, tables, and theorem-like environments: `{#sec:intro}`, `{#eq:energy}`, `{#fig:diagram}`, `{#tbl:data}`, `{#thm:main}` plus `@...` references
 - BibTeX citations via `references.bib` and `[@key]` syntax
 - Custom LaTeX macros via `\newcommand` in `macros.md` (applied vault-wide)
 - User-defined text snippets via `snippets.md`
@@ -254,10 +255,13 @@ sudo apt install libwebkit2gtk-4.1-0
 
 ### Navigation & Panels
 - Command palette (Ctrl+P): fuzzy file + command search
+- Quick switcher (Ctrl+;): fast file switching across recent and vault files
 - Outline panel (document headings)
 - Backlinks panel (incoming `[[wikilinks]]`)
 - Wikilinks with `[[note-name]]` autocomplete
 - Tag panel (browse files by frontmatter tag)
+- Labels panel (browse structural labels, broken references, duplicate labels, and unused labels across the vault)
+- Quality panel (document diagnostics, export compatibility, project plan, academic structure, and mathematical backlinks)
 - Graph panel (visual wikilink map)
 - Environments panel (all theorem/lemma/etc. blocks across vault)
 - Equations panel (all numbered equations in current file)
@@ -280,10 +284,15 @@ sudo apt install libwebkit2gtk-4.1-0
 ### Export
 - PDF export via pandoc (falls back to `window.print()` if pandoc is absent)
 - LaTeX export (`.tex` with preamble, environments, and macros)
+- Overleaf-friendly LaTeX export with `\label`, `\ref`, `\eqref`, figures, tables, section labels, and theorem labels
+- Obsidian-friendly Markdown export that keeps wikilinks/callouts readable and hides structural label syntax from visible text
+- Export compatibility report for Overleaf/LaTeX and Obsidian Markdown
+- Project export from a main document with `comdtex.main: true` and `![[transclusions]]`
+- Local LaTeX PDF compile through `tectonic`, `xelatex`, or `pdflatex` when installed
 - Reveal.js presentation export
 - DOCX and Beamer via pandoc
 - Copy as HTML or LaTeX
-- 7 academic templates for new files
+- Academic templates for articles, notes, problem sets, theorem sheets, research notes, Overleaf-ready papers, theses, books, plus user-created custom templates
 
 ### App
 - English and Spanish UI — switch at runtime via `Vault → Settings` (or `Ctrl+P → Settings`) → **Language** dropdown; no restart required
@@ -373,6 +382,16 @@ Let $c = \sup S$. A standard $\varepsilon$-$\delta$ argument shows $f(c) = 0$.
 
 Available types — auto-numbered: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`. Unnumbered: `proof`, `remark`, `note`. Size prefixes: `sm`, `lg`.
 
+Theorem-like environments can also be labeled and referenced:
+
+```markdown
+:::theorem[Bolzano]{#thm:bolzano}
+If $f$ is continuous on $[a,b]$ and changes sign, then it has a root.
+:::
+
+The result follows from @thm:bolzano.
+```
+
 ### 5. Number Equations and Cross-Reference
 
 ```markdown
@@ -385,7 +404,62 @@ Equation @eq:fourier shows that $\hat{f}$ depends linearly on $f$.
 
 `@eq:fourier` resolves to a clickable `(1)` link in the preview. Every `$$...$$` block is numbered sequentially; the label is optional.
 
-### 6. Add a BibTeX Citation
+### 6. Label Sections, Tables, and Other Blocks
+
+Use structural labels when a document needs stable references that also export cleanly to LaTeX/Overleaf:
+
+```markdown
+# Introduction {#sec:intro}
+
+See @sec:intro for the setup and @tbl:constants for notation.
+
+| Symbol | Meaning |
+|---|---|
+| $G$ | Group |
+| $e$ | Identity |
+{#tbl:constants}
+```
+
+Supported prefixes:
+
+| Prefix | Use |
+|---|---|
+| `sec:` | Headings and sections |
+| `eq:` | Display equations |
+| `fig:` | Figures |
+| `tbl:` | Markdown tables |
+| `thm:`, `lem:`, `cor:`, `prop:`, `def:`, `ex:`, `exer:` | Theorem-like environments |
+
+Open the **Labels** panel to audit broken references, duplicate labels, unused labels, and to jump directly to the file and line where each label or broken reference is defined.
+
+### 7. Validate, Export, and Compile
+
+The **Quality** panel is the main pre-export checklist:
+
+| Tab | Purpose |
+|---|---|
+| Diagnóstico | Broken structural references, duplicate labels, unused labels, missing citations, missing images, malformed math, table shape warnings, and export risks |
+| Export | Compatibility score for Overleaf/LaTeX and Obsidian Markdown, with line-level degradation warnings |
+| Proyecto | Detects a main document and included `![[transclusions]]`; use `comdtex.main: true` in frontmatter for explicit project roots |
+| Estructura | Academic structure checks such as frontmatter title and theorem/proof proximity |
+| Backlinks math | Shows which sections, theorem-like blocks, equations, figures, and tables reference each structural label |
+
+Project export resolves transclusions before exporting. A typical main document:
+
+```markdown
+---
+title: My Thesis
+comdtex.main: true
+---
+
+# Introduction {#sec:intro}
+
+![[chapters/01-introduction]]
+```
+
+Use **Exportar proyecto .tex** to generate one Overleaf-ready `.tex` file from the main document. Use **Compilar PDF con LaTeX local** to compile the current document with `tectonic`, `xelatex`, or `pdflatex` if one of them is installed locally.
+
+### 8. Add a BibTeX Citation
 
 In `references.bib`:
 
@@ -491,16 +565,27 @@ Adding a shorthand requires updating **all five** of the following — omitting 
 | `useUpdater.ts` | Auto-updater: `checkForUpdate()`, `downloadAndInstallUpdate()` |
 | `renderer.ts` | Markdown + math → HTML pipeline |
 | `preprocessor.ts` | Expands shorthands before KaTeX |
-| `monacoSetup.ts` | Monaco config: autocomplete, Tab shorthand expansion, vim mode |
+| `monacoSetup.ts` | Monaco config: autocomplete, structural label suggestions, Tab shorthand expansion, vim mode |
 | `equations.ts` | Auto-numbering of `$$...$$` blocks, label/reference resolution |
-| `environments.ts` | Renders `:::type[title]` blocks |
+| `references.ts` | Numbered headings and `@sec:label` cross-references |
+| `tables.ts` | Numbered Markdown tables and `@tbl:label` cross-references |
+| `structuralLabels.ts` | Vault-wide index of labels, references, duplicates, broken refs, and unused labels |
+| `LabelsPanel.tsx` | Sidebar panel for structural labels and reference health |
+| `documentDiagnostics.ts` | Document quality checks: refs, citations, assets, math, tables, export risks, academic structure |
+| `exportCompatibility.ts` | Overleaf/LaTeX and Obsidian Markdown compatibility scoring |
+| `projectExport.ts` | Main-document detection and transclusion-aware project export composition |
+| `mathBacklinks.ts` | Backlinks for structural/math references |
+| `DocumentLabPanel.tsx` | Quality sidebar panel combining diagnostics, compatibility, project, structure, and math backlinks |
+| `environments.ts` | Renders `:::type[title]{#label}` blocks and theorem-like references |
 | `figures.ts` | Figure numbering and `@fig:label` cross-references |
 | `bibtex.ts` | BibTeX parser and `[@key]` citation resolver |
 | `frontmatter.ts` | Extracts and renders YAML frontmatter |
 | `macros.ts` | Parses `\newcommand` from `macros.md` |
-| `exporter.ts` | Exports to `.tex`; `exportReveal()` → Reveal.js HTML |
-| `templates.ts` | Content for 7 academic templates |
+| `exporter.ts` | Exports Overleaf-compatible `.tex`; `exportReveal()` → Reveal.js HTML |
+| `obsidianExport.ts` | Exports Obsidian-friendly Markdown |
+| `templates.ts` | Built-in academic templates plus custom template persistence |
 | `wikilinks.ts` | `[[note-name]]` link helpers and backlink resolution |
+| `transclusion.ts` | Resolves `![[note]]` and `![[note#heading]]` embeds |
 | `pathUtils.ts` | Cross-platform path helpers |
 | `sanitizeRenderedHtml.ts` | DOMParser-based HTML sanitizer — runs on every preview render |
 | `contentLinter.ts` | Real-time Monaco markers: broken links, citations, equations, shorthand errors |
@@ -523,7 +608,8 @@ Adding a shorthand requires updating **all five** of the following — omitting 
 | `CitationManager.tsx` | GUI browser and editor for BibTeX entries |
 | `EquationsPanel.tsx` | All numbered equations in the current file |
 | `FrontmatterPanel.tsx` | GUI editor for YAML frontmatter fields |
-| `TagPanel.tsx` | Browse vault files by frontmatter tag |
+| `TagPanel.tsx` | Browse vault files by YAML/inline tags with type/source filters |
+| `LabelsPanel.tsx` | Browse structural labels and reference health across the vault |
 | `GraphPanel.tsx` | Visual wikilink graph |
 | `TodoPanel.tsx` | Collects `- [ ]` task items across open files |
 | `VaultStatsPanel.tsx` | Vault statistics: file count, word count, link health, equations, citations |
@@ -531,9 +617,10 @@ Adding a shorthand requires updating **all five** of the following — omitting 
 | `Breadcrumb.tsx` | Vault-relative breadcrumb with navigation history |
 | `ContextMenu.tsx` | Generic right-click context menu |
 | `CommandPalette.tsx` | Ctrl+P fuzzy file and command launcher |
+| `QuickSwitcher.tsx` | Ctrl+; recent-file and vault-file switcher |
 | `SettingsModal.tsx` | Settings dialog (language, fonts, theme, vim) |
 | `HelpModal.tsx` | Keyboard shortcuts reference |
-| `TemplateModal.tsx` | New-file-from-template picker |
+| `TemplateModal.tsx` | New-file-from-template picker and custom template creator |
 | `TableEditor.tsx` | Modal visual Markdown table editor |
 | `WelcomeScreen.tsx` | Welcome screen with recent vaults list |
 | `DepsWarning.tsx` | Amber banner shown when `pandoc` or `zip` are missing |

@@ -66,6 +66,8 @@ export interface T {
     toggleReplace: string; replacePlaceholder: string; replaceAll: string
     replaced: (n: number) => string
     regexTitle: string; caseSensitiveTitle: string
+    errorPattern: string; errorSearching: string
+    searchPlaceholder: string; replaceWithPlaceholder: string
   }
 
   outline: {
@@ -82,6 +84,7 @@ export interface T {
   settings: {
     title: string; language: string; editorFont: string; previewFont: string
     autosave: string; theme: string; vimMode: string; typewriterMode: string
+    touchpadGestures: string; previewTheme: string; previewThemeSame: string
     dark: string; light: string; highContrast: string
     wordGoal: string; wordGoalOff: string; words: string
   }
@@ -89,9 +92,11 @@ export interface T {
   help: {
     title: string
     file: string; edit: string; view: string; editor: string; math: string
-    save: string; saveAs: string; commandPalette: string
-    findInFile: string; searchVault: string; undo: string; redo: string
+    save: string; saveAs: string; commandPalette: string; quickSwitcher: string
+    findInFile: string; searchVault: string
+    undo: string; redo: string; selectNextOccurrence: string
     focusMode: string; exitFocus: string; togglePreview: string; thisHelp: string
+    zoomInOut: string; resetZoom: string; nextTab: string; prevTab: string; closeTab: string
     expandShorthand: string; navigatePlaceholders: string; autocompleteWikilink: string
     autoMatrix: string; fixedMatrix: string; markdownTable: string
   }
@@ -115,7 +120,7 @@ export interface T {
     readingTimeTitle: string
     readingTime: (min: number) => string
     modeMarkdown: string; modeTex: string
-    ln: string; col: string
+    ln: string; col: string; goToLineTitle: string
   }
 
   palette: {
@@ -136,11 +141,16 @@ export interface T {
     checkUpdates: string
   }
 
+  quickSwitcher: {
+    placeholder: string; noResults: string
+    navigate: string; open: string; close: string
+  }
+
   sidebar: {
     files: string; search: string; outline: string; backlinks: string; help: string
     tags: string; properties: string; graph: string
     todo: string; equations: string; stats: string; environments: string
-    searchReplace: string
+    searchReplace: string; collapse: string; expand: string
   }
 
   todo: {
@@ -260,6 +270,7 @@ export interface T {
     revealExportSuccess: string; revealExportError: string
     focusModeOn: string; focusModeOff: string
     upToDate: string
+    bookmarks: string; noBookmarks: string; line: string; removeBookmark: string; bookmarkToggled: string
   }
 
   vault: {
@@ -275,6 +286,11 @@ export interface T {
     errorRenaming: (e: string) => string
     errorCreatingFolder: (e: string) => string
     errorSaving: (e: string) => string
+    fileChangedExternally: (name: string) => string
+    recentlyClosed: string
+    copiedLatex: string
+    bookmarkToggled: string; bookmarks: string; noBookmarks: string; removeBookmark: string
+    line: string
     renameRefactorConfirm: (old: string, newName: string, count: number) => string
     renameRefactorDone: (count: number) => string
     moved: (name: string) => string
@@ -311,6 +327,12 @@ export interface T {
     nesting: string
     // equations section
     numberedEq: string; numberedNoLabel: string; refLabel: string; directRef: string
+    structuralLabels: string; structuralLabelsDesc: string
+    sectionLabelDesc: string; tableLabelDesc: string; envLabelDesc: string
+    labelsPanelDesc: string; labelAutocompleteDesc: string
+    qualityWorkflow: string; qualityWorkflowDesc: string
+    projectMainDesc: string; projectTransclusionDesc: string
+    projectExportDesc: string; localLatexCompileDesc: string; mathBacklinksDesc: string
     // macros
     macrosDesc: string; noArgs: string; withArgs: string
     // bibtex
@@ -445,6 +467,8 @@ const es: T = {
     toggleReplace: "Buscar y reemplazar", replacePlaceholder: "Reemplazar con…",
     replaceAll: "Reemplazar todo", replaced: (n) => `${n} reemplazo${n !== 1 ? "s" : ""} realizado${n !== 1 ? "s" : ""}`,
     regexTitle: "Expresión regular (.*)", caseSensitiveTitle: "Distinguir mayúsculas (Aa)",
+    errorPattern: "Expresión regular inválida", errorSearching: "Error al buscar en el vault",
+    searchPlaceholder: "Buscar…", replaceWithPlaceholder: "Reemplazar con…",
   },
 
   outline: {
@@ -463,6 +487,8 @@ const es: T = {
     editorFont: "Fuente del editor", previewFont: "Fuente del preview",
     autosave: "Autoguardado", theme: "Tema", vimMode: "Modo Vim",
     typewriterMode: "Modo máquina de escribir",
+    touchpadGestures: "Gestos de touchpad",
+    previewTheme: "Tema del preview", previewThemeSame: "Mismo que editor",
     dark: "Oscuro", light: "Claro", highContrast: "Alto contraste",
     wordGoal: "Meta de palabras", wordGoalOff: "Sin meta", words: "palabras",
   },
@@ -470,11 +496,13 @@ const es: T = {
   help: {
     title: "Atajos de teclado",
     file: "Archivo", edit: "Editar", view: "Vista", editor: "Editor", math: "Math shorthands",
-    save: "Guardar", saveAs: "Guardar como...", commandPalette: "Paleta de comandos",
+    save: "Guardar", saveAs: "Guardar como...", commandPalette: "Paleta de comandos", quickSwitcher: "Cambiador rápido",
     findInFile: "Buscar en archivo", searchVault: "Buscar en vault",
-    undo: "Deshacer", redo: "Rehacer",
+    undo: "Deshacer", redo: "Rehacer", selectNextOccurrence: "Seleccionar siguiente coincidencia",
     focusMode: "Modo enfoque (toggle)", exitFocus: "Salir modo enfoque",
     togglePreview: "Toggle preview", thisHelp: "Esta ayuda",
+    zoomInOut: "Zoom in/out", resetZoom: "Reset zoom",
+    nextTab: "Pestaña siguiente", prevTab: "Pestaña anterior", closeTab: "Cerrar pestaña",
     expandShorthand: "Expandir shorthand (frac, sqrt, mat…)",
     navigatePlaceholders: "Navegar entre placeholders de snippet",
     autocompleteWikilink: "Autocompletar wikilink",
@@ -503,7 +531,7 @@ const es: T = {
     selectionTitle: "Palabras seleccionadas",
     readingTimeTitle: "Tiempo de lectura estimado (~200 pal/min)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
-    ln: "Ln", col: "Col",
+    ln: "Ln", col: "Col", goToLineTitle: "Click para ir a línea",
   },
 
   palette: {
@@ -538,6 +566,12 @@ const es: T = {
     checkUpdates: "Buscar actualizaciones",
   },
 
+  quickSwitcher: {
+    placeholder: "Buscar archivo…",
+    noResults: "Sin resultados",
+    navigate: "navegar", open: "abrir", close: "cerrar",
+  },
+
   sidebar: {
     files: "Archivos", search: "Buscar", outline: "Esquema",
     backlinks: "Backlinks", help: "Ayuda",
@@ -545,6 +579,7 @@ const es: T = {
     todo: "Tareas", equations: "Ecuaciones", stats: "Estadísticas",
     environments: "Entornos",
     searchReplace: "Buscar y reemplazar",
+    collapse: "Colapsar sidebar", expand: "Expandir sidebar",
   },
 
   todo: {
@@ -683,6 +718,11 @@ const es: T = {
     focusModeOn: "Modo enfoque activado",
     focusModeOff: "Modo enfoque desactivado",
     upToDate: "ComdTeX está al día",
+    bookmarks: "Marcadores",
+    noBookmarks: "No hay marcadores",
+    line: "Línea",
+    removeBookmark: "Quitar marcador",
+    bookmarkToggled: "Marcador actualizado",
   },
 
   vault: {
@@ -701,6 +741,14 @@ const es: T = {
     errorRenaming: (e) => `No se pudo renombrar: ${e}`,
     errorCreatingFolder: (e) => `No se pudo crear la carpeta: ${e}`,
     errorSaving: (e) => `Error guardando: ${e}`,
+    fileChangedExternally: (name) => `${name} modificado externamente. Guarda de nuevo para sobrescribir.`,
+    recentlyClosed: "Pestañas cerradas recientemente",
+    copiedLatex: "LaTeX copiado al portapapeles",
+    bookmarkToggled: "Marcador toggled",
+    bookmarks: "Marcadores",
+    noBookmarks: "Sin marcadores",
+    removeBookmark: "Eliminar marcador",
+    line: "Línea",
     renameRefactorConfirm: (old, newName, count) => `¿Actualizar ${count} referencia${count !== 1 ? "s" : ""} a [[${old}]] → [[${newName}]] en los archivos abiertos?`,
     renameRefactorDone: (count) => `${count} referencia${count !== 1 ? "s" : ""} actualizada${count !== 1 ? "s" : ""}`,
     moved: (name) => `"${name}" movido`,
@@ -754,6 +802,20 @@ const es: T = {
     numberedEq: "Ecuación numerada con etiqueta",
     numberedNoLabel: "Numerada sin etiqueta",
     refLabel: "Referencia → (N)", directRef: "Referencia por número directo",
+    structuralLabels: "Labels estructurales",
+    structuralLabelsDesc: "Etiquetas internas para referenciar secciones, ecuaciones, figuras, tablas y entornos. Exportan como \\label/\\ref en LaTeX y quedan limpias en Markdown para Obsidian.",
+    sectionLabelDesc: "Etiqueta una sección; referencia con @sec:intro",
+    tableLabelDesc: "Etiqueta una tabla Markdown; referencia con @tbl:constants",
+    envLabelDesc: "Etiqueta un teorema/lema/definición; referencia con @thm:main",
+    labelsPanelDesc: "Panel que audita referencias rotas, labels duplicados, labels sin uso y salta al archivo/línea",
+    labelAutocompleteDesc: "Autocompleta labels existentes al escribir @eq:, @fig:, @tbl:, @sec:, @thm:, etc.",
+    qualityWorkflow: "Calidad, exportación y proyecto",
+    qualityWorkflowDesc: "Usa el panel Calidad antes de exportar: concentra diagnóstico, compatibilidad Overleaf/Obsidian, estructura académica, proyecto principal y backlinks matemáticos.",
+    projectMainDesc: "Marca un archivo como documento principal del proyecto",
+    projectTransclusionDesc: "Incluye archivos en exportación de proyecto mediante transclusiones",
+    projectExportDesc: "Resuelve transclusiones y genera un .tex único para Overleaf",
+    localLatexCompileDesc: "Usa tectonic, xelatex o pdflatex si están instalados",
+    mathBacklinksDesc: "Muestra qué ecuaciones, secciones, tablas o teoremas usan cada label",
     macrosDesc: "Vault → Editar macros.md. Se aplican en todo el vault.",
     noArgs: "Sin argumentos", withArgs: "Con N argumentos (#1, #2…)",
     bibtexDesc: "Vault → Editar references.bib.",
@@ -762,7 +824,7 @@ const es: T = {
     fmDate: "Fecha del documento", fmTags: "Lista: [t1, t2] o - bullet",
     wikilinkRow: "Enlace — clic en preview para navegar",
     wikilinkDesc: 'La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.',
-    templatesDesc: 'Archivo → Nuevo desde plantilla · o Ctrl+P → "plantilla"',
+    templatesDesc: 'Archivo → Nuevo desde plantilla · o Ctrl+P → "plantilla". Puedes guardar plantillas propias con variables {{title}}, {{filename}}, {{date}} y {{datetime}}.',
     tplArticle: "Artículo", tplArticleDesc: "Abstract + secciones + BibTeX",
     tplNotes: "Apuntes de clase", tplNotesDesc: "Defs, teoremas, demostraciones",
     tplHomework: "Tarea / Problem set", tplHomeworkDesc: "Ejercicios numerados",
@@ -909,6 +971,8 @@ const en: T = {
     toggleReplace: "Find & replace", replacePlaceholder: "Replace with…",
     replaceAll: "Replace all", replaced: (n) => `${n} replacement${n !== 1 ? "s" : ""} made`,
     regexTitle: "Regular expression (.*)", caseSensitiveTitle: "Case sensitive (Aa)",
+    errorPattern: "Invalid regular expression", errorSearching: "Error searching in vault",
+    searchPlaceholder: "Search…", replaceWithPlaceholder: "Replace with…",
   },
 
   outline: {
@@ -927,6 +991,8 @@ const en: T = {
     editorFont: "Editor font", previewFont: "Preview font",
     autosave: "Autosave", theme: "Theme", vimMode: "Vim mode",
     typewriterMode: "Typewriter mode",
+    touchpadGestures: "Touchpad gestures",
+    previewTheme: "Preview theme", previewThemeSame: "Same as editor",
     dark: "Dark", light: "Light", highContrast: "High contrast",
     wordGoal: "Word goal", wordGoalOff: "No goal", words: "words",
   },
@@ -934,11 +1000,13 @@ const en: T = {
   help: {
     title: "Keyboard shortcuts",
     file: "File", edit: "Edit", view: "View", editor: "Editor", math: "Math shorthands",
-    save: "Save", saveAs: "Save as...", commandPalette: "Command palette",
+    save: "Save", saveAs: "Save as...", commandPalette: "Command palette", quickSwitcher: "Quick switcher",
     findInFile: "Find in file", searchVault: "Search in vault",
-    undo: "Undo", redo: "Redo",
+    undo: "Undo", redo: "Redo", selectNextOccurrence: "Select next occurrence",
     focusMode: "Focus mode (toggle)", exitFocus: "Exit focus mode",
     togglePreview: "Toggle preview", thisHelp: "This help",
+    zoomInOut: "Zoom in/out", resetZoom: "Reset zoom",
+    nextTab: "Next tab", prevTab: "Previous tab", closeTab: "Close tab",
     expandShorthand: "Expand shorthand (frac, sqrt, mat…)",
     navigatePlaceholders: "Navigate between snippet placeholders",
     autocompleteWikilink: "Autocomplete wikilink",
@@ -967,7 +1035,7 @@ const en: T = {
     selectionTitle: "Selected words",
     readingTimeTitle: "Estimated reading time (~200 wpm)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
-    ln: "Ln", col: "Col",
+    ln: "Ln", col: "Col", goToLineTitle: "Click to go to line",
   },
 
   palette: {
@@ -1002,6 +1070,12 @@ const en: T = {
     checkUpdates: "Check for updates",
   },
 
+  quickSwitcher: {
+    placeholder: "Search file…",
+    noResults: "No results",
+    navigate: "navigate", open: "open", close: "close",
+  },
+
   sidebar: {
     files: "Files", search: "Search", outline: "Outline",
     backlinks: "Backlinks", help: "Help",
@@ -1009,6 +1083,7 @@ const en: T = {
     todo: "Tasks", equations: "Equations", stats: "Statistics",
     environments: "Environments",
     searchReplace: "Find & Replace",
+    collapse: "Collapse sidebar", expand: "Expand sidebar",
   },
 
   todo: {
@@ -1146,6 +1221,11 @@ const en: T = {
     focusModeOn: "Focus mode on",
     focusModeOff: "Focus mode off",
     upToDate: "ComdTeX is up to date",
+    bookmarks: "Bookmarks",
+    noBookmarks: "No bookmarks",
+    line: "Line",
+    removeBookmark: "Remove bookmark",
+    bookmarkToggled: "Bookmark updated",
   },
 
   vault: {
@@ -1164,6 +1244,14 @@ const en: T = {
     errorRenaming: (e) => `Could not rename: ${e}`,
     errorCreatingFolder: (e) => `Could not create folder: ${e}`,
     errorSaving: (e) => `Error saving: ${e}`,
+    fileChangedExternally: (name) => `${name} modified externally. Save again to overwrite.`,
+    recentlyClosed: "Recently closed tabs",
+    copiedLatex: "LaTeX copied to clipboard",
+    bookmarkToggled: "Bookmark toggled",
+    bookmarks: "Bookmarks",
+    noBookmarks: "No bookmarks",
+    removeBookmark: "Remove bookmark",
+    line: "Line",
     renameRefactorConfirm: (old, newName, count) => `Update ${count} reference${count !== 1 ? "s" : ""} to [[${old}]] → [[${newName}]] in open files?`,
     renameRefactorDone: (count) => `${count} reference${count !== 1 ? "s" : ""} updated`,
     moved: (name) => `"${name}" moved`,
@@ -1217,6 +1305,20 @@ const en: T = {
     numberedEq: "Numbered equation with label",
     numberedNoLabel: "Numbered without label",
     refLabel: "Reference → (N)", directRef: "Reference by direct number",
+    structuralLabels: "Structural labels",
+    structuralLabelsDesc: "Internal labels for referencing sections, equations, figures, tables, and environments. They export as \\label/\\ref in LaTeX and stay clean in Obsidian Markdown.",
+    sectionLabelDesc: "Labels a section; reference with @sec:intro",
+    tableLabelDesc: "Labels a Markdown table; reference with @tbl:constants",
+    envLabelDesc: "Labels a theorem/lemma/definition; reference with @thm:main",
+    labelsPanelDesc: "Panel that audits broken references, duplicate labels, unused labels, and jumps to file/line",
+    labelAutocompleteDesc: "Autocompletes existing labels when typing @eq:, @fig:, @tbl:, @sec:, @thm:, etc.",
+    qualityWorkflow: "Quality, export, and project",
+    qualityWorkflowDesc: "Use the Quality panel before exporting: it combines diagnostics, Overleaf/Obsidian compatibility, academic structure, main-document planning, and mathematical backlinks.",
+    projectMainDesc: "Marks a file as the main project document",
+    projectTransclusionDesc: "Includes files in project export through transclusions",
+    projectExportDesc: "Resolves transclusions and generates one Overleaf-ready .tex file",
+    localLatexCompileDesc: "Uses tectonic, xelatex, or pdflatex when installed",
+    mathBacklinksDesc: "Shows which equations, sections, tables, or theorems use each label",
     macrosDesc: "Vault → Edit macros.md. Applied throughout the vault.",
     noArgs: "Without arguments", withArgs: "With N arguments (#1, #2…)",
     bibtexDesc: "Vault → Edit references.bib.",
@@ -1225,7 +1327,7 @@ const en: T = {
     fmDate: "Document date", fmTags: "List: [t1, t2] or - bullet",
     wikilinkRow: "Link — click in preview to navigate",
     wikilinkDesc: "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
-    templatesDesc: 'File → New from template · or Ctrl+P → "template"',
+    templatesDesc: 'File → New from template · or Ctrl+P → "template". You can save custom templates with {{title}}, {{filename}}, {{date}}, and {{datetime}} variables.',
     tplArticle: "Article", tplArticleDesc: "Abstract + sections + BibTeX",
     tplNotes: "Class notes", tplNotesDesc: "Defs, theorems, proofs",
     tplHomework: "Homework / Problem set", tplHomeworkDesc: "Numbered exercises",

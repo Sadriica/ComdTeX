@@ -19,6 +19,12 @@ export interface FrontmatterData {
   date?: string
   abstract?: string
   tags?: string[]
+  headerLeft?: string
+  headerCenter?: string
+  headerRight?: string
+  footerLeft?: string
+  footerCenter?: string
+  footerRight?: string
   [key: string]: unknown
 }
 
@@ -197,18 +203,56 @@ export function renderFrontmatterHeader(data: FrontmatterData): string {
     parts.push(`<div class="fm-tags">${pills}</div>`)
   }
 
+  // Custom headers for print
+  if (data.headerLeft || data.headerCenter || data.headerRight) {
+    parts.push(`<div class="print-header">`)
+    parts.push(`<span class="print-header-left">${esc(String(data.headerLeft || ""))}</span>`)
+    parts.push(`<span class="print-header-center">${esc(String(data.headerCenter || ""))}</span>`)
+    parts.push(`<span class="print-header-right">${esc(String(data.headerRight || ""))}</span>`)
+    parts.push(`</div>`)
+  }
+
+  // Custom footers for print
+  if (data.footerLeft || data.footerCenter || data.footerRight) {
+    parts.push(`<div class="print-footer">`)
+    parts.push(`<span class="print-footer-left">${esc(String(data.footerLeft || ""))}</span>`)
+    parts.push(`<span class="print-footer-center">${esc(String(data.footerCenter || ""))}</span>`)
+    parts.push(`<span class="print-footer-right">${esc(String(data.footerRight || ""))}</span>`)
+    parts.push(`</div>`)
+  }
+
   if (parts.length === 0) return ""
   return `<div class="frontmatter-header">${parts.join("")}</div>`
 }
 
 /** Extract all tags from a markdown document (frontmatter + inline #tags). */
 export function extractTags(text: string): string[] {
-  const tags = new Set<string>()
+  return extractDetailedTags(text).map((entry) => entry.tag)
+}
+
+export interface DetailedTag {
+  tag: string
+  source: "frontmatter" | "inline"
+  line: number
+  type: string
+}
+
+export function classifyTag(tag: string): string {
+  if (tag.includes("/")) return tag.split("/")[0]
+  if (tag.includes(":")) return tag.split(":")[0]
+  return "general"
+}
+
+export function extractDetailedTags(text: string): DetailedTag[] {
+  const tags = new Map<string, DetailedTag>()
 
   // From frontmatter
   const parsed = extractFrontmatter(text)
   if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
-    for (const t of parsed.data.tags) tags.add(String(t).toLowerCase())
+    for (const t of parsed.data.tags) {
+      const tag = String(t).toLowerCase()
+      tags.set(`frontmatter:${tag}`, { tag, source: "frontmatter", line: 1, type: classifyTag(tag) })
+    }
   }
 
   // Inline #tags — not inside code blocks, not inside math
@@ -220,11 +264,19 @@ export function extractTags(text: string): string[] {
     .replace(/\$\$[\s\S]*?\$\$/g, "")
     .replace(/\$[^$\n]+\$/g, "")
 
-  const tagRe = /(?:^|[\s,;(\[])#([a-zA-Z]\w*)/g
-  let m: RegExpExecArray | null
-  while ((m = tagRe.exec(clean)) !== null) {
-    tags.add(m[1].toLowerCase())
-  }
+  clean.split("\n").forEach((line, index) => {
+    const tagRe = /(?:^|[\s,;(\[])#([a-zA-Z][\w:/-]*)/g
+    let m: RegExpExecArray | null
+    while ((m = tagRe.exec(line)) !== null) {
+      const tag = m[1].toLowerCase()
+      tags.set(`inline:${tag}:${index + 1}`, {
+        tag,
+        source: "inline",
+        line: index + 1 + (parsed ? text.slice(0, text.indexOf(content)).split("\n").length - 1 : 0),
+        type: classifyTag(tag),
+      })
+    }
+  })
 
-  return [...tags].sort()
+  return [...tags.values()].sort((a, b) => a.tag.localeCompare(b.tag) || a.source.localeCompare(b.source))
 }

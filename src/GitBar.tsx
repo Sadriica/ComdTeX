@@ -359,7 +359,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
 
 // ── Stash section ─────────────────────────────────────────────────────────────
 
-function StashSection({ vaultPath }: { vaultPath: string }) {
+export function StashSection({ vaultPath }: { vaultPath: string }) {
   const g = useT().git
   const [stashes, setStashes] = useState<string[]>([])
   const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
@@ -368,12 +368,16 @@ function StashSection({ vaultPath }: { vaultPath: string }) {
     catch { setStashes([]) }
   }, [git])
 
+  useEffect(() => {
+    void load()
+  }, [load])
+
   const push = useCallback(async () => {
     try { const r = await git("stash", "push"); if (r.code !== 0) throw new Error(r.stderr); showToast(g.stashSuccess, "success"); load() }
     catch (e) { showToast(g.stashError(String(e)), "error") }
   }, [git, load, g])
-  const pop = useCallback(async () => {
-    try { const r = await git("stash", "pop"); if (r.code !== 0) throw new Error(r.stderr); showToast(g.stashPopSuccess, "success"); load() }
+  const pop = useCallback(async (i: number) => {
+    try { const r = await git("stash", "pop", `stash@{${i}}`); if (r.code !== 0) throw new Error(r.stderr); showToast(g.stashPopSuccess, "success"); load() }
     catch (e) { showToast(g.stashError(String(e)), "error") }
   }, [git, load, g])
   const drop = useCallback(async (i: number) => {
@@ -391,7 +395,7 @@ function StashSection({ vaultPath }: { vaultPath: string }) {
               <div key={i} className="git-stash-entry">
                 <span className="git-stash-label">{s}</span>
                 <button className="git-action git-section-action" style={{ opacity: 1 }}
-                  title={g.stashPop} onClick={pop}>↑</button>
+                  title={g.stashPop} onClick={() => pop(i)}>↑</button>
                 <button className="git-action git-action-discard" style={{ opacity: 1 }}
                   title="Drop" onClick={() => drop(i)}>×</button>
               </div>
@@ -411,7 +415,6 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
   const [commitMsg, setCommitMsg] = useState("")
   const [committing, setCommitting] = useState(false)
   const [diffs, setDiffs] = useState<Record<string, string>>({})
-  const [logOpen, setLogOpen] = useState(false)
   const [log, setLog] = useState<string[]>([])
 
   const git = useCallback((...args: string[]) =>
@@ -449,11 +452,11 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
       const r = await git("commit","-m",msg)
       if (r.code !== 0) throw new Error(r.stderr || r.stdout)
       setCommitMsg(""); showToast(g.commitSuccess,"success")
-      if (logOpen) { const lr = await git("log","--oneline","-20"); setLog(lr.code===0?lr.stdout.split("\n").filter(Boolean):[]) }
+      if (log.length > 0) { const lr = await git("log","--oneline","-20"); setLog(lr.code===0?lr.stdout.split("\n").filter(Boolean):[]) }
       onRefresh()
     } catch (e) { showToast(g.commitError(String(e)),"error") }
     finally { setCommitting(false) }
-  }, [git,commitMsg,onRefresh,logOpen,g])
+  }, [git,commitMsg,onRefresh,log,g])
 
   const loadLog = useCallback(async () => {
     try { const r = await git("log","--oneline","-20"); setLog(r.code===0?r.stdout.split("\n").filter(Boolean):[]) }
@@ -535,24 +538,22 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
 
       {/* Recent commits */}
       <GitSection title={`${g.recentCommits}`} defaultOpen={false}>
-        {logOpen || true ? (
-          <div className="git-log-list">
-            {log.length === 0
-              ? <div className="git-log-empty" style={{ padding: "6px 8px" }}>
-                  <button className="git-panel-header-btn" onClick={() => { setLogOpen(true); loadLog() }}>{g.loadCommits}</button>
-                </div>
-              : log.map((entry, i) => {
-                  const si = entry.indexOf(" ")
-                  return (
-                    <div key={i} className="git-log-entry">
-                      <span className="git-log-hash">{entry.slice(0, si)}</span>
-                      <span className="git-log-msg">{entry.slice(si + 1)}</span>
-                    </div>
-                  )
-                })
-            }
-          </div>
-        ) : null}
+        <div className="git-log-list">
+          {log.length === 0
+            ? <div className="git-log-empty" style={{ padding: "6px 8px" }}>
+                <button className="git-panel-header-btn" onClick={loadLog}>{g.loadCommits}</button>
+              </div>
+            : log.map((entry, i) => {
+                const si = entry.indexOf(" ")
+                return (
+                  <div key={i} className="git-log-entry">
+                    <span className="git-log-hash">{entry.slice(0, si)}</span>
+                    <span className="git-log-msg">{entry.slice(si + 1)}</span>
+                  </div>
+                )
+              })
+          }
+        </div>
       </GitSection>
 
     </div>

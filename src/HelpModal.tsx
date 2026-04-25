@@ -14,10 +14,12 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
     { key: "Ctrl+S",          desc: t.help.save },
     { key: "Ctrl+Shift+S",    desc: t.help.saveAs },
     { key: "Ctrl+P",          desc: t.help.commandPalette },
+    { key: "Ctrl+;",          desc: t.help.quickSwitcher },
 
     { group: t.help.edit },
     { key: "Ctrl+F",          desc: t.help.findInFile },
     { key: "Ctrl+Shift+F",    desc: t.help.searchVault },
+    { key: "Ctrl+D",          desc: t.help.selectNextOccurrence },
     { key: "Ctrl+Z",          desc: t.help.undo },
     { key: "Ctrl+Y",          desc: t.help.redo },
 
@@ -25,6 +27,11 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
     { key: "F11",             desc: t.help.focusMode },
     { key: "Escape",          desc: t.help.exitFocus },
     { key: "Ctrl+Shift+P",    desc: t.help.togglePreview },
+    { key: "Ctrl++/-",        desc: t.help.zoomInOut },
+    { key: "Ctrl+0",          desc: t.help.resetZoom },
+    { key: "Ctrl+Tab",        desc: t.help.nextTab },
+    { key: "Ctrl+Shift+Tab",  desc: t.help.prevTab },
+    { key: "Ctrl+W",          desc: t.help.closeTab },
     { key: "?",               desc: t.help.thisHelp },
 
     { group: t.help.editor },

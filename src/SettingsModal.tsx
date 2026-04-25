@@ -112,6 +112,27 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
               onChange={() => onChange({ typewriterMode: !settings.typewriterMode })}
             />
           </label>
+
+          <label className="setting-row">
+            <span>{t.settings.touchpadGestures}</span>
+            <input
+              type="checkbox"
+              checked={settings.touchpadGestures}
+              onChange={() => onChange({ touchpadGestures: !settings.touchpadGestures })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.previewTheme}</span>
+            <select
+              value={settings.previewTheme}
+              onChange={(e) => onChange({ previewTheme: e.target.value as "dark" | "light" | "same" })}
+            >
+              <option value="same">{t.settings.previewThemeSame}</option>
+              <option value="dark">{t.settings.dark}</option>
+              <option value="light">{t.settings.light}</option>
+            </select>
+          </label>
         </div>
       </div>
     </div>

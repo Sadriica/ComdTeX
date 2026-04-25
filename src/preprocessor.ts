@@ -226,7 +226,8 @@ export function preprocess(text: string): string {
   let cursor = 0
 
   // Detect existing math regions ($...$ and $$...$$)
-  const mathRe = /\$\$([\s\S]+?)\$\$|\$([^\$\n]+?)\$/g
+  // Display math: requires at least 1 char, but also matches literal $ (common in math notation)
+  const mathRe = /\$\$((?:.|\$(?!\$))+?)\$\$|\$([^\$\n]+?)\$/g
   let m: RegExpExecArray | null
 
   while ((m = mathRe.exec(text)) !== null) {

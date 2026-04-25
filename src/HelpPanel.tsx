@@ -191,6 +191,27 @@ export default function HelpPanel() {
         </p>
       </Section>
 
+      {/* ── Structural labels ── */}
+      <Section title={hp.structuralLabels}>
+        <p className="hp-intro">{hp.structuralLabelsDesc}</p>
+        <Row code="# Introducción {#sec:intro}" desc={hp.sectionLabelDesc} />
+        <Row code="![Leyenda](img.png){#fig:diagrama}" desc={hp.figureLabelDesc} />
+        <Row code={"| A | B |\n|---|---|\n| 1 | 2 |\n{#tbl:constants}"} desc={hp.tableLabelDesc} />
+        <Row code=":::theorem[Título]{#thm:main}" desc={hp.envLabelDesc} />
+        <Row code="@eq:energia, @fig:diagrama, @tbl:constants" desc={hp.labelAutocompleteDesc} />
+        <Row code="Labels" desc={hp.labelsPanelDesc} />
+      </Section>
+
+      {/* ── Quality workflow ── */}
+      <Section title={hp.qualityWorkflow}>
+        <p className="hp-intro">{hp.qualityWorkflowDesc}</p>
+        <Row code="comdtex.main: true" desc={hp.projectMainDesc} />
+        <Row code="![[capitulo]]" desc={hp.projectTransclusionDesc} />
+        <Row code="Exportar proyecto .tex" desc={hp.projectExportDesc} />
+        <Row code="Compilar PDF con LaTeX local" desc={hp.localLatexCompileDesc} />
+        <Row code="Backlinks math" desc={hp.mathBacklinksDesc} />
+      </Section>
+
       {/* ── Custom macros ── */}
       <Section title={hp.macros}>
         <p className="hp-intro">{hp.macrosDesc}</p>

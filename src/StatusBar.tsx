@@ -9,6 +9,7 @@ interface StatusBarProps {
   macroCount: number
   selectedWords?: number
   wordGoal?: number
+  onGoToLine?: (line: number) => void
 }
 
 function wordCount(text: string): number {
@@ -24,7 +25,7 @@ function readingMinutes(text: string): number {
   return Math.max(1, Math.ceil(wc / 200))
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal }: StatusBarProps) {
+export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine }: StatusBarProps) {
   const t = useT()
   const wc = wordCount(content)
   return (
@@ -58,7 +59,13 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
           ~{readingMinutes(content)} min
         </span>
         <span className="status-item">{t.statusBar.chars(charCount(content))}</span>
-        <span className="status-item">{t.statusBar.ln} {line}, {t.statusBar.col} {col}</span>
+        <button
+          className="status-item status-position"
+          onClick={() => onGoToLine?.(line)}
+          title={t.statusBar.goToLineTitle}
+        >
+          {t.statusBar.ln} {line}, {t.statusBar.col} {col}
+        </button>
       </span>
     </div>
   )

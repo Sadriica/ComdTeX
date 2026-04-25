@@ -124,6 +124,12 @@ interface BibHoverEntry { key: string; type: string; fields: Record<string, stri
 let bibHoverEntries: BibHoverEntry[] = []
 export function updateBibHoverEntries(entries: BibHoverEntry[]) { bibHoverEntries = entries }
 
+interface StructuralLabelSuggestion { id: string; kind: string; detail: string }
+let structuralLabelSuggestions: StructuralLabelSuggestion[] = []
+export function updateStructuralLabelSuggestions(labels: StructuralLabelSuggestion[]) {
+  structuralLabelSuggestions = labels
+}
+
 // ── Completion provider (dropdown visual) ────────────────────────────────────
 
 let providerDisposable: monacoApi.IDisposable | null = null
@@ -135,7 +141,7 @@ let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 export function setupMonaco(monaco: typeof monacoApi) {
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
-    triggerCharacters: ["[", "@", "\\"],
+    triggerCharacters: ["[", "@", "\\", "^"],
     provideCompletionItems(model, position) {
       const lineText = model.getLineContent(position.lineNumber)
       const beforeCursor = lineText.slice(0, position.column - 1)
@@ -232,6 +238,67 @@ export function setupMonaco(monaco: typeof monacoApi) {
               sortText: "0" + b.key,
               detail: b.detail,
             })),
+        }
+      }
+
+      // Structural reference autocomplete: @eq:, @fig:, @tbl:, @sec:, @thm:, ...
+      const labelMatch = /@([a-zA-Z]+):([\w.-]*)$/.exec(beforeCursor)
+      if (labelMatch) {
+        const rawKind = labelMatch[1].toLowerCase()
+        const partial = labelMatch[2].toLowerCase()
+        const labelRange = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: position.column - partial.length,
+          endColumn: position.column,
+        }
+        const aliases: Record<string, string> = {
+          theorem: "thm",
+          lemma: "lem",
+          definition: "def",
+          example: "ex",
+          exercise: "exc",
+        }
+        const wantedKind = aliases[rawKind] ?? rawKind
+        return {
+          suggestions: structuralLabelSuggestions
+            .filter((label) => label.kind === wantedKind && label.id.split(":").slice(1).join(":").toLowerCase().startsWith(partial))
+            .map((label) => {
+              const insertText = label.id.split(":").slice(1).join(":")
+              return {
+                label: { label: insertText, description: label.detail },
+                kind: monaco.languages.CompletionItemKind.Reference,
+                insertText,
+                range: labelRange,
+                sortText: "0" + insertText,
+                detail: label.id,
+              }
+            }),
+        }
+      }
+
+      // Footnote autocomplete: [^1]
+      const footnoteMatch = /\[\^([^\]]*)\]/.exec(beforeCursor)
+      if (footnoteMatch) {
+        const partial = footnoteMatch[1]
+        const footnoteRange = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: position.column - partial.length - 2,
+          endColumn: position.column,
+        }
+        const suggestions = []
+        for (let i = 1; i <= 50; i++) {
+          suggestions.push({
+            label: i.toString(),
+            kind: monaco.languages.CompletionItemKind.Value,
+            insertText: `${i}]`,
+            range: footnoteRange,
+            sortText: i.toString().padStart(3, "0"),
+          })
+        }
+        return {
+          suggestions: suggestions.filter((s) => s.label.startsWith(partial)),
         }
       }
 
@@ -378,13 +445,15 @@ export function setupMonaco(monaco: typeof monacoApi) {
     provideHover(model, position) {
       const line = model.getLineContent(position.lineNumber)
       const col = position.column - 1 // 0-indexed
-      const crossRefRe = /@(eq|fig):([\w:.-]+)/g
+      const crossRefRe = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
       let m: RegExpExecArray | null
       while ((m = crossRefRe.exec(line)) !== null) {
         if (col >= m.index && col <= m.index + m[0].length) {
-          const kind = m[1] as "eq" | "fig"
+          const kind = m[1]
           const refKey = m[2]
-          if (kind === "fig") {
+          if (kind !== "eq") {
+            const id = `${kind}:${refKey}`
+            const label = structuralLabelSuggestions.find((candidate) => candidate.id === id)
             return {
               range: new monaco.Range(
                 position.lineNumber,
@@ -392,7 +461,7 @@ export function setupMonaco(monaco: typeof monacoApi) {
                 position.lineNumber,
                 m.index + m[0].length + 1,
               ),
-              contents: [{ value: `Figure reference: \`fig:${refKey}\``, isTrusted: true }],
+              contents: [{ value: label ? `**${label.id}**\n\n${label.detail}` : `Reference: \`${id}\``, isTrusted: true }],
             }
           }
           // kind === "eq": search document for matching $$...$$  {#eq:label}
@@ -557,7 +626,8 @@ export function setupMathHover(
     let matchStart = -1
 
     // Try display math $$ ... $$ on the same line first
-    const displayRe = /\$\$((?:[^$]|\$(?!\$))+?)\$\$/g
+    // Use (?:.|$(?!\$))+? to match at least one char but allow escaped $
+    const displayRe = /\$\$((?:.|\$(?!\$))+?)\$\$/g
     let m: RegExpExecArray | null
     while ((m = displayRe.exec(lineText)) !== null) {
       if (col >= m.index && col <= m.index + m[0].length) {

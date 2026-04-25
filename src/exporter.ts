@@ -14,6 +14,8 @@ import MarkdownIt from "markdown-it"
 type Token = any
 import { preprocess } from "./preprocessor"
 import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
+import { extractFrontmatter } from "./frontmatter"
+import { preprocessFigureLabels } from "./figures"
 
 interface LatexMacro {
   command: string
@@ -41,24 +43,63 @@ function escTex(text: string): string {
     .replace(/\^/g, "\\textasciicircum{}")
 }
 
+function refToTex(prefix: string, id: string): string {
+  const label = `${prefix}:${id}`
+  if (prefix === "eq") return `\\eqref{${label}}`
+  if (prefix === "fig") return `Figura~\\ref{${label}}`
+  if (prefix === "tbl") return `Tabla~\\ref{${label}}`
+  if (prefix === "sec") return `sección~\\ref{${label}}`
+  const envNames: Record<string, string> = {
+    thm: "Teorema",
+    theorem: "Teorema",
+    lem: "Lema",
+    lemma: "Lema",
+    cor: "Corolario",
+    prop: "Proposición",
+    def: "Definición",
+    definition: "Definición",
+    ex: "Ejemplo",
+    example: "Ejemplo",
+    exc: "Ejercicio",
+    exercise: "Ejercicio",
+  }
+  return envNames[prefix] ? `${envNames[prefix]}~\\ref{${label}}` : `@${label}`
+}
+
+function textRefsToTex(text: string): string {
+  const out: string[] = []
+  const re = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    out.push(escTex(text.slice(last, m.index)))
+    out.push(refToTex(m[1], m[2]))
+    last = m.index + m[0].length
+  }
+  out.push(escTex(text.slice(last)))
+  return out.join("")
+}
+
 /** Escape only the non-math parts of a text string. */
 function textToTex(text: string): string {
   const parts: string[] = []
   let last = 0
-  const re = /\$\$([\s\S]+?)\$\$|\$([^\$\n]+?)\$/g
+  const re = /\$\$([\s\S]+?)\$\$(?:\s*\{#(eq:[\w:.-]+)\})?|\$([^\$\n]+?)\$/g
   let m: RegExpExecArray | null
 
   while ((m = re.exec(text)) !== null) {
-    parts.push(escTex(text.slice(last, m.index)))
+    parts.push(textRefsToTex(text.slice(last, m.index)))
     if (m[1] !== undefined) {
-      parts.push(`\\[\n${m[1].trim()}\n\\]`)
+      parts.push(m[2]
+        ? `\\begin{equation}\n${m[1].trim()}\n\\label{${m[2]}}\n\\end{equation}`
+        : `\\[\n${m[1].trim()}\n\\]`)
     } else {
-      parts.push(`$${m[2]}$`)
+      parts.push(`$${m[3]}$`)
     }
     last = m.index + m[0].length
   }
 
-  parts.push(escTex(text.slice(last)))
+  parts.push(textRefsToTex(text.slice(last)))
   return parts.join("")
 }
 
@@ -81,7 +122,20 @@ function inlineToTex(tokens: Token[]): string {
       case "link_open":    out += `\\href{${tok.attrGet("href") ?? ""}}{`; break
       case "link_close":   out += "}"; break
       case "image":
-        out += `\\includegraphics{${tok.attrGet("src") ?? ""}}`
+        {
+          const src = tok.attrGet("src") ?? ""
+          const alt = tok.content ?? ""
+          const title = tok.attrGet("title") ?? ""
+          const label = /^fig-label:(fig:[\w:.-]+)$/.exec(title)?.[1]
+          out += [
+            "\\begin{figure}[htbp]",
+            "\\centering",
+            `\\includegraphics[width=0.9\\linewidth]{${escTex(src)}}`,
+            alt ? `\\caption{${escTex(alt)}}` : "",
+            label ? `\\label{${label}}` : "",
+            "\\end{figure}",
+          ].filter(Boolean).join("\n")
+        }
         break
       case "html_inline":  break // skip raw HTML
     }
@@ -108,7 +162,13 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>): string {
         const cmds = ["section", "subsection", "subsubsection", "paragraph", "subparagraph"]
         const cmd = cmds[level - 1] ?? "subparagraph"
         const inline = tokens[i + 1]
-        out.push(`\\${cmd}{${inlineToTex(inline.children ?? [])}}\n`)
+        const rawText = (inline.children ?? []).map((child: Token) => child.content ?? "").join("")
+        const label = /\s*\{#(sec:[\w:.-]+)\}\s*$/.exec(rawText)?.[1]
+        const cleanChildren = label
+          ? (inline.children ?? []).map((child: Token) =>
+              child.type === "text" ? { ...child, content: child.content.replace(/\s*\{#sec:[\w:.-]+\}\s*$/, "") } : child)
+          : (inline.children ?? [])
+        out.push(`\\${cmd}{${inlineToTex(cleanChildren)}}${label ? `\n\\label{${label}}` : ""}\n`)
         i += 2
         break
       }
@@ -179,8 +239,13 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>): string {
         }
 
         if (rows.length > 0) {
+          const labelToken = tokens[j + 2]
+          const label = labelToken?.type === "inline"
+            ? /^\{#(tbl:[\w:.-]+)\}$/.exec(labelToken.content.trim())?.[1]
+            : undefined
           const cols = Math.max(...rows.map((r) => r.length))
           const colSpec = Array(cols).fill("l").join(" | ")
+          if (label) out.push("\\begin{table}[htbp]\n\\centering")
           out.push(`\\begin{tabular}{| ${colSpec} |}`)
           out.push("\\hline")
           rows.forEach((row, ri) => {
@@ -191,6 +256,13 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>): string {
           })
           out.push("\\hline")
           out.push("\\end{tabular}\n")
+          if (label) {
+            out.push(`\\caption{${escTex(label.replace(/^tbl:/, ""))}}`)
+            out.push(`\\label{${label}}`)
+            out.push("\\end{table}\n")
+            i = j + 3
+            break
+          }
         }
 
         i = j
@@ -214,14 +286,14 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
   let n = 0
 
   const result = text.replace(
-    /^:::([\w]+)(?:\[([^\]]*)\])?\s*\n([\s\S]*?)^:::\s*$/gm,
-    (_, rawName, title, content) => {
+    /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*\n([\s\S]*?)^:::\s*$/gm,
+    (_, rawName, title, label, content) => {
       const envName = rawName.toLowerCase()
       if (!ALL_ENVS[envName]) return _
 
       // Convert inner content to LaTeX recursively
       const innerTex = mdToTex(content.trim())
-      const latexBlock = envToLatex(envName, title ?? "", innerTex)
+      const latexBlock = envToLatex(envName, title ?? "", innerTex, label ?? undefined)
       const key = `ENV${n++}`
       slots.set(key, latexBlock)
       return `\x02${key}\x03`
@@ -235,7 +307,11 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
 
 function mdToTex(raw: string): string {
   const { text, slots } = extractEnvBlocks(raw)
-  const preprocessed = preprocess(text)
+  const tableSafeText = text.replace(
+    /((?:^\s*\|.*\|\s*\n)+)\s*\{#(tbl:[\w:.-]+)\}/gm,
+    (_match, tableRows, label) => `${tableRows}\n{#${label}}\n`,
+  )
+  const preprocessed = preprocess(preprocessFigureLabels(tableSafeText))
   let tokens
   try {
     tokens = md.parse(preprocessed, {})
@@ -257,6 +333,7 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     buildTheoremPreamble(),
     "\\usepackage{ulem}",   // \sout
     "\\usepackage{graphicx}",
+    "\\usepackage{float}",
   ]
 
   if (hasCode) {
@@ -325,8 +402,9 @@ ${slideHtml}
 </html>`
 }
 
-export function exportToTex(raw: string, macrosText = "", title = "", author = ""): string {
-  const body = mdToTex(raw)
+export function exportToTex(raw: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
+  const parsed = extractFrontmatter(raw)
+  const body = mdToTex(parsed?.content ?? raw)
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)
@@ -348,8 +426,20 @@ export function exportToTex(raw: string, macrosText = "", title = "", author = "
   const docTitle = title ? `\\title{${escTex(title)}}\n\\author{${escTex(author)}}\n\\date{\\today}\n` : ""
   const maketitle = title ? "\\maketitle\n\n" : ""
 
+  // Custom headers/footers using fancyhdr
+  const hasCustomHF = frontmatter && (frontmatter.headerLeft || frontmatter.headerCenter || frontmatter.headerRight || frontmatter.footerLeft || frontmatter.footerCenter || frontmatter.footerRight)
+  const hfPreamble = hasCustomHF ? `\n\\usepackage{fancyhdr}\n\\pagestyle{fancy}\n` +
+    (frontmatter!.headerLeft ? `\\fancyhead[L]{${escTex(frontmatter.headerLeft)}}\n` : "") +
+    (frontmatter!.headerCenter ? `\\fancyhead[C]{${escTex(frontmatter.headerCenter)}}\n` : "") +
+    (frontmatter!.headerRight ? `\\fancyhead[R]{${escTex(frontmatter.headerRight)}}\n` : "") +
+    (frontmatter!.footerLeft ? `\\fancyfoot[L]{${escTex(frontmatter.footerLeft)}}\n` : "") +
+    (frontmatter!.footerCenter ? `\\fancyfoot[C]{${escTex(frontmatter.footerCenter)}}\n` : "") +
+    (frontmatter!.footerRight ? `\\fancyfoot[R]{${escTex(frontmatter.footerRight)}}\n` : "")
+    : ""
+
   return [
     preamble,
+    hfPreamble,
     "",
     docTitle,
     "\\begin{document}",

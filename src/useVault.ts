@@ -1,21 +1,35 @@
 import { useState, useCallback, useRef, useEffect } from "react"
-import { readDir, readTextFile, writeTextFile, mkdir, remove, rename } from "@tauri-apps/plugin-fs"
+import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
+import { extractDetailedTags, extractFrontmatter } from "./frontmatter"
 
 const VAULT_KEY   = "comdtex_vault"
 const TABS_KEY    = "comdtex_tabs"
 const ACTIVE_KEY  = "comdtex_active"
 const DRAFTS_KEY  = "comdtex_drafts"
 const RECENT_KEY  = "comdtex_recent_vaults"
+const CLOSED_KEY  = "comdtex_closed_tabs"
 const MAX_RECENT_VAULTS = 5
+const MAX_CLOSED_TABS = 20
 
 function loadRecentVaults(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
   catch { return [] }
+}
+
+function loadClosedTabs(): string[] {
+  try { return JSON.parse(localStorage.getItem(CLOSED_KEY) ?? "[]") }
+  catch { return [] }
+}
+
+function saveClosedTab(path: string) {
+  const current = loadClosedTabs()
+  const next = [path, ...current.filter((p) => p !== path)].slice(0, MAX_CLOSED_TABS)
+  localStorage.setItem(CLOSED_KEY, JSON.stringify(next))
 }
 
 function saveRecentVault(path: string) {
@@ -357,6 +371,44 @@ export function useVault(autoSaveMs = 800) {
     }
   }, [openTabs, t])
 
+  const openFilePath = useCallback(async (path: string) => {
+    if (openTabs.find((t) => t.path === path)) {
+      setActiveTabPath(path)
+      return
+    }
+
+    const name = displayBasename(path)
+    const ext = name.split(".").pop()?.toLowerCase() ?? ""
+    if (BINARY_EXTS.has(ext)) {
+      showToast(t.vault.binaryFile(name), "error")
+      return
+    }
+
+    try {
+      const content = await readTextFile(path)
+      // Get modification time for conflict detection
+      let cachedMtime: number | undefined
+      try {
+        const info = await stat(path)
+        cachedMtime = info.mtime?.getTime()
+      } catch {
+        // stat optional - some filesystems may not support it
+      }
+      const newTab: OpenFile = {
+        path,
+        name,
+        content,
+        isDirty: false,
+        mode: ext === "tex" ? "tex" : "md",
+        cachedMtime,
+      }
+      setOpenTabs((tabs) => tabs.find((tb) => tb.path === path) ? tabs : [...tabs, newTab])
+      setActiveTabPath(path)
+    } catch (e) {
+      showToast(t.vault.errorOpening(name, e instanceof Error ? e.message : String(e)), "error")
+    }
+  }, [openTabs, t])
+
   const togglePin = useCallback((path: string) => {
     setPinnedPaths((prev) => {
       const next = new Set(prev)
@@ -378,6 +430,7 @@ export function useVault(autoSaveMs = 800) {
 
   const closeTab = useCallback((path: string) => {
     if (pinnedPaths.has(path)) return
+    const closedTab = openTabs.find((t) => t.path === path)
     setOpenTabs((prev) => {
       const idx = prev.findIndex((t) => t.path === path)
       if (idx === -1) return prev
@@ -387,22 +440,51 @@ export function useVault(autoSaveMs = 800) {
       }
       return next
     })
+    if (closedTab && !closedTab.isDirty) {
+      saveClosedTab(path)
+    }
     const timer = saveTimers.current.get(path)
     if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
     clearDraft(path)
-  }, [pinnedPaths])
+  }, [pinnedPaths, openTabs])
 
   const switchTab = useCallback((path: string) => setActiveTabPath(path), [])
 
+  const reopenTab = useCallback(async (path: string) => {
+    await openFilePath(path)
+  }, [openFilePath])
+
+  const getClosedTabs = useCallback(() => loadClosedTabs(), [])
+
   const saveFile = useCallback(async (path: string, content: string) => {
     try {
+      // Check for external modification before saving
+      const openTab = openTabs.find((t) => t.path === path && t.cachedMtime)
+      if (openTab?.cachedMtime) {
+        try {
+          const info = await stat(path)
+          const currentMtime = info.mtime?.getTime()
+          if (currentMtime && currentMtime > openTab.cachedMtime) {
+            showToast(t.vault.fileChangedExternally(openTab.name), "error")
+            return // Don't save — will retry on next change
+          }
+        } catch {
+          // ignore stat errors
+        }
+      }
       await writeTextFile(path, content)
-      setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, isDirty: false } : t))
+      // Update mtime after successful save
+      try {
+        const info = await stat(path)
+        setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, isDirty: false, cachedMtime: info.mtime?.getTime() } : t))
+      } catch {
+        setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, isDirty: false } : t))
+      }
       clearDraft(path)
     } catch (e) {
       showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [t])
+  }, [openTabs, t])
 
   const updateContent = useCallback((content: string) => {
     const path = activeTabPathRef.current
@@ -510,12 +592,30 @@ export function useVault(autoSaveMs = 800) {
   ): Promise<SearchResult[]> => {
     if (!vaultPath || !query.trim()) return []
 
+    const terms = query.trim().split(/\s+/)
+    const filters = {
+      tags: terms.filter((term) => term.startsWith("tag:")).map((term) => term.slice(4).toLowerCase()),
+      paths: terms.filter((term) => term.startsWith("path:")).map((term) => term.slice(5).toLowerCase()),
+      exts: terms.filter((term) => term.startsWith("ext:")).map((term) => term.slice(4).replace(/^\./, "").toLowerCase()),
+      frontmatter: terms
+        .filter((term) => term.startsWith("fm:"))
+        .map((term) => term.slice(3))
+        .map((term) => {
+          const [key, ...valueParts] = term.split("=")
+          return { key: key.toLowerCase(), value: valueParts.join("=").toLowerCase() }
+        })
+        .filter((item) => item.key),
+    }
+    const textQuery = terms
+      .filter((term) => !/^(tag|path|ext|fm):/.test(term))
+      .join(" ")
+
     // Validate regex before starting search
     let searchRe: RegExp
     try {
       searchRe = opts.regex
-        ? new RegExp(query, opts.caseSensitive ? "g" : "gi")
-        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
+        ? new RegExp(textQuery || ".*", opts.caseSensitive ? "g" : "gi")
+        : new RegExp((textQuery || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
     } catch { return [] }
 
     // Cancel previous search
@@ -533,10 +633,25 @@ export function useVault(autoSaveMs = 800) {
           await searchIn(node.children)
         } else if (node.type === "file") {
           try {
+            if (filters.exts.length > 0 && !filters.exts.includes((node.ext ?? "").toLowerCase())) continue
+            if (filters.paths.length > 0 && !filters.paths.some((path) => node.path.toLowerCase().includes(path))) continue
             const content = await readTextFile(node.path)
+            const parsed = extractFrontmatter(content)
+            const tags = extractDetailedTags(content).map((tag) => tag.tag)
+            if (filters.tags.length > 0 && !filters.tags.every((tag) => tags.includes(tag))) continue
+            if (filters.frontmatter.length > 0) {
+              const data = parsed?.data ?? {}
+              const ok = filters.frontmatter.every(({ key, value }) => {
+                const actual = data[key]
+                if (actual == null) return false
+                if (!value) return true
+                return String(actual).toLowerCase().includes(value)
+              })
+              if (!ok) continue
+            }
             content.split("\n").forEach((line, i) => {
               searchRe.lastIndex = 0
-              if (results.length < MAX_RESULTS && searchRe.test(line))
+              if (results.length < MAX_RESULTS && (!textQuery || searchRe.test(line)))
                 results.push({ filePath: node.path, fileName: node.name, line: i + 1, content: line.trim().slice(0, 200) })
             })
           } catch { /* skip */ }
@@ -598,7 +713,8 @@ export function useVault(autoSaveMs = 800) {
     openTabs, activeTabPath, openFile,
     pinnedPaths, togglePin, reorderTabs,
     selectVault, createVault, loadVault,
-    openFileNode, closeTab, switchTab,
+    openFileNode, openFilePath, closeTab, switchTab,
+    reopenTab, getClosedTabs,
     updateContent, saveFile, patchTabContent,
     createFile, createFolder, deleteFile, renameFile, moveFile,
     search, replaceInVault,

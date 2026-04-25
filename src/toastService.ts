@@ -16,7 +16,10 @@ function notify() {
   listeners.forEach((fn) => fn(snapshot))
 }
 
-export function showToast(message: string, type: ToastType = "info", durationMs = 3500) {
+export function showToast(message: string, type: ToastType = "info", durationMs?: number) {
+  // Default durations: 6s for errors (need more time to read), 3.5s otherwise
+  const defaultDuration = type === "error" ? 6000 : 3500
+  const effectiveDuration = durationMs ?? defaultDuration
   const id = ++nextId
   current = [...current, { id, message, type }]
   notify()
@@ -24,7 +27,7 @@ export function showToast(message: string, type: ToastType = "info", durationMs 
     timers.delete(id)
     current = current.filter((t) => t.id !== id)
     notify()
-  }, durationMs)
+  }, effectiveDuration)
   timers.set(id, timer)
 }
 

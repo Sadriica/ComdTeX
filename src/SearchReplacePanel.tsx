@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from "react"
 import { displayBasename } from "./pathUtils"
+import { buildSearchRegExp, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
+import { useT } from "./i18n"
 
 interface SearchReplaceResult {
   filePath: string
@@ -12,22 +14,7 @@ interface SearchReplaceResult {
 interface SearchReplacePanelProps {
   vaultPath: string
   onOpenFile: (path: string, line?: number) => void
-  onReplaceInFile: (path: string, search: string, replace: string, flags: string) => Promise<number>
-}
-
-function buildFlags(caseSensitive: boolean): string {
-  return caseSensitive ? "g" : "gi"
-}
-
-function buildPattern(query: string, caseSensitive: boolean, wholeWord: boolean, regexMode: boolean): RegExp | null {
-  try {
-    let pattern = regexMode ? query : query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    if (wholeWord) pattern = `\\b${pattern}\\b`
-    const flags = caseSensitive ? "g" : "gi"
-    return new RegExp(pattern, flags)
-  } catch {
-    return null
-  }
+  onReplaceInFile: (path: string, search: string, replace: string, opts: SearchReplaceOptions, target?: SearchReplaceTarget) => Promise<number>
 }
 
 function highlightMatch(content: string, matchStart: number, matchEnd: number): { before: string; match: string; after: string } {
@@ -42,6 +29,7 @@ function highlightMatch(content: string, matchStart: number, matchEnd: number): 
 }
 
 export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, onReplaceInFile }: SearchReplacePanelProps) {
+  const t = useT()
   const [query, setQuery] = useState("")
   const [replacement, setReplacement] = useState("")
   const [caseSensitive, setCaseSensitive] = useState(false)
@@ -52,11 +40,13 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
   const [replacing, setReplacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const pendingSearchRef = useRef<() => void>(() => {})
 
-  const handleSearch = useCallback(async () => {
+  const doSearch = useCallback(async () => {
     if (!query.trim()) return
-    const pattern = buildPattern(query, caseSensitive, wholeWord, regexMode)
-    if (!pattern) { setError("Expresión regular inválida"); return }
+    const pattern = buildSearchRegExp(query, { caseSensitive, wholeWord, regex: regexMode })
+    if (!pattern) { setError(t.search.errorPattern); return }
     const validPattern = pattern
     setError(null)
     setSearching(true)
@@ -92,6 +82,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
                     matchStart: m.index,
                     matchEnd: m.index + m[0].length,
                   })
+                  if (m[0].length === 0) re.lastIndex++
                   if (!re.global) break
                 }
               })
@@ -110,57 +101,78 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
       }
     } catch {
       if (mountedRef.current) {
-        setError("Error al buscar en el vault")
+        setError(t.search.errorSearching)
         setSearching(false)
       }
     }
-  }, [query, caseSensitive, wholeWord, regexMode, _vaultPath])
+  }, [query, caseSensitive, wholeWord, regexMode, _vaultPath, t])
+
+  const handleSearch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => doSearch(), 300)
+    pendingSearchRef.current = doSearch
+  }, [doSearch])
+
+  const handleSearchNow = useCallback(async () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    await doSearch()
+  }, [doSearch])
 
   const handleReplaceOne = useCallback(async (result: SearchReplaceResult) => {
     if (replacing) return
     setReplacing(true)
     try {
-      const flags = buildFlags(caseSensitive)
-      await onReplaceInFile(result.filePath, query, replacement, flags)
+      await onReplaceInFile(result.filePath, query, replacement, {
+        caseSensitive,
+        wholeWord,
+        regex: regexMode,
+      }, {
+        line: result.line,
+        matchStart: result.matchStart,
+        matchEnd: result.matchEnd,
+      })
       // Re-run search to refresh results
-      await handleSearch()
+      await handleSearchNow()
     } finally {
       if (mountedRef.current) setReplacing(false)
     }
-  }, [replacing, caseSensitive, query, replacement, onReplaceInFile, handleSearch])
+  }, [replacing, caseSensitive, wholeWord, regexMode, query, replacement, onReplaceInFile, handleSearchNow])
 
   const handleReplaceAll = useCallback(async () => {
     if (replacing || results.length === 0) return
     setReplacing(true)
     try {
-      const flags = buildFlags(caseSensitive)
       // Group by file path to replace once per file
       const files = [...new Set(results.map(r => r.filePath))]
       for (const filePath of files) {
-        await onReplaceInFile(filePath, query, replacement, flags)
+        await onReplaceInFile(filePath, query, replacement, {
+          caseSensitive,
+          wholeWord,
+          regex: regexMode,
+        })
       }
-      await handleSearch()
+      await handleSearchNow()
     } finally {
       if (mountedRef.current) setReplacing(false)
     }
-  }, [replacing, results, caseSensitive, query, replacement, onReplaceInFile, handleSearch])
+  }, [replacing, results, caseSensitive, wholeWord, regexMode, query, replacement, onReplaceInFile, handleSearchNow])
 
   return (
     <div className="panel">
       <div className="panel-header">
-        <span className="panel-header-title">Buscar y Reemplazar</span>
+        <span className="panel-header-title">{t.search.toggleReplace}</span>
       </div>
 
       <div className="search-replace-inputs">
         <input
-          placeholder="Buscar…"
+          placeholder={t.search.searchPlaceholder}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSearch()}
           aria-label="Término de búsqueda"
         />
         <input
-          placeholder="Reemplazar con…"
+          placeholder={t.search.replaceWithPlaceholder}
           value={replacement}
           onChange={e => setReplacement(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSearch()}
@@ -184,7 +196,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
       </div>
 
       <div className="search-replace-btns">
-        <button onClick={handleSearch} disabled={!query.trim() || searching}>
+        <button onClick={handleSearchNow} disabled={!query.trim() || searching}>
           {searching ? "Buscando…" : "Buscar"}
         </button>
         <button onClick={handleReplaceAll} disabled={results.length === 0 || replacing}>
@@ -195,11 +207,11 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
       {error && <div className="panel-empty" style={{ color: "#e88" }}>{error}</div>}
 
       {!error && query && results.length === 0 && !searching && (
-        <div className="panel-empty">Sin resultados</div>
+        <div className="panel-empty">{t.search.noResults}</div>
       )}
 
       {results.length >= 500 && (
-        <div className="panel-empty" style={{ color: "#888" }}>Mostrando primeros 500 resultados</div>
+        <div className="panel-empty" style={{ color: "#888" }}>{t.search.limit}</div>
       )}
 
       <div style={{ overflowY: "auto", flex: 1 }}>

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import Editor, { BeforeMount, OnMount } from "@monaco-editor/react"
+import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
@@ -8,7 +8,7 @@ import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
-import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions } from "./monacoSetup"
+import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions } from "./monacoSetup"
 import { lintFileSummary, type LintSummary } from "./contentLinter"
 import { useVault } from "./useVault"
 import { useSettings } from "./useSettings"
@@ -25,45 +25,50 @@ import FileTree from "./FileTree"
 import SearchPanel from "./SearchPanel"
 import OutlinePanel from "./OutlinePanel"
 import BacklinksPanel from "./BacklinksPanel"
-import HelpPanel from "./HelpPanel"
 import GitBar from "./GitBar"
 import Resizer from "./Resizer"
 import Breadcrumb from "./Breadcrumb"
 import TagPanel from "./TagPanel"
+import LabelsPanel from "./LabelsPanel"
+import DocumentLabPanel from "./DocumentLabPanel"
 import FrontmatterPanel from "./FrontmatterPanel"
-import GraphPanel from "./GraphPanel"
-import TodoPanel from "./TodoPanel"
-import EquationsPanel from "./EquationsPanel"
-import EnvironmentsPanel from "./EnvironmentsPanel"
-import VaultStatsPanel from "./VaultStatsPanel"
-import CitationManager from "./CitationManager"
 import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand } from "./CommandPalette"
-import SettingsModal from "./SettingsModal"
-import HelpModal from "./HelpModal"
-import TemplateModal from "./TemplateModal"
 import ToastContainer from "./Toast"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { exportToTex, exportReveal } from "./exporter"
+import { exportToObsidianMarkdown } from "./obsidianExport"
+import { extractFrontmatter } from "./frontmatter"
 import { checkDependencies, type DepStatus } from "./checkDeps"
 import DepsWarning from "./DepsWarning"
-import SearchReplacePanel from "./SearchReplacePanel"
 import TableEditor from "./TableEditor"
-import UpdateChecker from "./UpdateChecker"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
+import { handleGlobalShortcut } from "./appShortcuts"
+import { useTouchpadGestures } from "./useTouchpadGestures"
 import ErrorBoundary from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
+import { buildSearchRegExp, replaceMatchAt, replaceMatches, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
+import { buildTocMarkdown } from "./toc"
+import { resolveTransclusions } from "./transclusion"
+import { scanStructuralLabels } from "./structuralLabels"
+import { composeProjectMarkdown } from "./projectExport"
 import { showToast } from "./toastService"
+import ClosedTabsPopup from "./ClosedTabsPopup"
+import QuickSwitcher from "./QuickSwitcher"
+import BookmarksPopup from "./BookmarksPopup"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
 const RECENT_KEY = "comdtex_recent"
+const BOOKMARKS_KEY = "comdtex_bookmarks"
+const CURSOR_KEY = "comdtex_cursor_positions"
 const MAX_RECENT = 10
+type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -72,6 +77,23 @@ function loadRecentFiles(): string[] {
 
 function saveRecentFiles(paths: string[]) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(paths))
+}
+
+function loadBookmarks(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) ?? "{}") }
+  catch { return {} }
+}
+
+function saveBookmarks(bookmarks: Record<number, number>) {
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks))
+}
+
+function renderErrorHtml(error: unknown): string {
+  const msg = (error instanceof Error ? error.message : String(error))
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+  return `<pre style="color:red;padding:1rem">Error al renderizar: ${msg}</pre>`
 }
 
 const BIB_TEMPLATE = `% references.bib — BibTeX references for ComdTeX
@@ -218,6 +240,23 @@ La bibliografía completa se genera al final del preview.
 const SIDEBAR_MIN = 150
 const SIDEBAR_MAX = 450
 const EDITOR_MIN = 280
+const HelpPanel = lazy(() => import("./HelpPanel"))
+const GraphPanel = lazy(() => import("./GraphPanel"))
+const TodoPanel = lazy(() => import("./TodoPanel"))
+const EquationsPanel = lazy(() => import("./EquationsPanel"))
+const EnvironmentsPanel = lazy(() => import("./EnvironmentsPanel"))
+const VaultStatsPanel = lazy(() => import("./VaultStatsPanel"))
+const CitationManager = lazy(() => import("./CitationManager"))
+const SettingsModal = lazy(() => import("./SettingsModal"))
+const HelpModal = lazy(() => import("./HelpModal"))
+const TemplateModal = lazy(() => import("./TemplateModal"))
+const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
+const UpdateChecker = lazy(() => import("./UpdateChecker"))
+const MonacoEditor = lazy(async () => {
+  await import("./monacoRuntime")
+  const mod = await import("@monaco-editor/react")
+  return { default: mod.default }
+})
 
 export default function App() {
   const { settings, update: updateSettings } = useSettings()
@@ -248,32 +287,36 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [dragOver, setDragOver] = useState(false)
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
-  const [deps, setDeps] = useState<DepStatus | null>(null)
-  const [depsWarningDismissed, setDepsWarningDismissed] = useState(false)
-
-  const [sidebarMode, setSidebarMode] = useState<"files" | "search" | "searchReplace" | "outline" | "backlinks" | "help" | "tags" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats">("files")
-  const [citationManagerOpen, setCitationManagerOpen] = useState(false)
-  const [tableEditorOpen, setTableEditorOpen] = useState(false)
-  const [customCss, setCustomCss] = useState("")
-  const cursorSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const CURSOR_KEY = "comdtex_cursors"
-  const [previewContent, setPreviewContent] = useState(WELCOME)
+  const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
+  const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
   const [bibMap, setBibMap] = useState<Map<string, BibEntry>>(new Map())
+  const [deps, setDeps] = useState<DepStatus | null>(null)
+  const [depsWarningDismissed, setDepsWarningDismissed] = useState(false)
+  const [customCss, setCustomCss] = useState("")
+  const [vaultTextCache, setVaultTextCache] = useState<Map<string, string>>(new Map())
+  const [previewContent, setPreviewContent] = useState("")
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
+  const [selectedWords, setSelectedWords] = useState(0)
+  const [tabLintCounts, setTabLintCounts] = useState<Record<string, LintSummary>>({})
   const [focusMode, setFocusMode] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false)
+  const [closedTabsOpen, setClosedTabsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
-  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
-  const [selectedWords, setSelectedWords] = useState(0)
-  const [sidebarWidth, setSidebarWidth] = useState(220)
-  const [editorWidth, setEditorWidth] = useState(0)
-  const [tabLintCounts, setTabLintCounts] = useState<Record<string, LintSummary>>({})
-  const [splitFile, setSplitFile] = useState<string | null>(null)
+  const [citationManagerOpen, setCitationManagerOpen] = useState(false)
+  const [tableEditorOpen, setTableEditorOpen] = useState(false)
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(260)
+  const [editorWidth, setEditorWidth] = useState<number | null>(null)
   const [typewriterMode, setTypewriterMode] = useState(false)
   const [syncScroll, setSyncScroll] = useState(false)
-  const [wordWrap, setWordWrap] = useState(true)
+  const [wordWrap, setWordWrap] = useState(false)
+  const [splitFile, setSplitFile] = useState<string | null>(null)
+  const [recentlyClosed, setRecentlyClosed] = useState<string[]>([])
   const [minimapEnabled, setMinimapEnabled] = useState(false)
   const [spellcheck, setSpellcheck] = useState(false)
   const [navHistory, setNavHistory] = useState<string[]>([])
@@ -281,11 +324,32 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [updaterDismissed, setUpdaterDismissed] = useState(false)
   const [installing, setInstalling] = useState(false)
+  const cursorSaveRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const previewPaneRef = useRef<HTMLDivElement>(null)
+  const splitPreviewRef = useRef<HTMLDivElement>(null)
 
   // ── Wikilink file names (memoized — stable reference for effects) ─────────
   const wikiNames = useMemo(() => getFileNameSet(vault.tree), [vault.tree])
   const bibKeys = useMemo(() => new Set(bibMap.keys()), [bibMap])
+  const vaultFiles = useMemo(() => {
+    const openContent = new Map(vault.openTabs.map((tab) => [tab.path, tab.content]))
+    return flatFiles(vault.tree)
+      .filter((file) => file.ext === "md" || file.ext === "tex")
+      .map((file) => ({
+        path: file.path,
+        name: file.name,
+        content: openContent.get(file.path) ?? vaultTextCache.get(file.path) ?? "",
+      }))
+  }, [vault.tree, vault.openTabs, vaultTextCache])
+
+  const transclusionResolver = useCallback((target: string): string | null => {
+    const lower = target.replace(/\.[^.]+$/, "").toLowerCase()
+    const found = vaultFiles.find((file) =>
+      file.name.replace(/\.[^.]+$/, "").toLowerCase() === lower ||
+      file.name.toLowerCase() === target.toLowerCase() ||
+      file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`))
+    return found?.content || null
+  }, [vaultFiles])
 
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
   const currentHeading = useMemo(() => {
@@ -309,6 +373,33 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   useEffect(() => {
     updateOpenFilesSnapshot(vault.openTabs.map((t) => ({ name: t.name, content: t.content })))
   }, [vault.openTabs])
+
+  useEffect(() => {
+    updateStructuralLabelSuggestions(scanStructuralLabels(vaultFiles).labels.map((label) => ({
+      id: label.id,
+      kind: label.kind,
+      detail: `${label.fileName}:${label.line}`,
+    })))
+  }, [vaultFiles])
+
+  useEffect(() => {
+    let cancelled = false
+    const files = flatFiles(vault.tree).filter((file) => file.ext === "md" || file.ext === "tex")
+    Promise.all(files.map(async (file) => {
+      const openTab = vault.openTabs.find((tab) => tab.path === file.path)
+      if (openTab) return [file.path, openTab.content] as const
+      try {
+        return [file.path, await readTextFile(file.path)] as const
+      } catch {
+        return [file.path, ""] as const
+      }
+    })).then((entries) => {
+      if (!cancelled) setVaultTextCache(new Map(entries))
+    }).catch(() => {
+      if (!cancelled) setVaultTextCache(new Map())
+    })
+    return () => { cancelled = true }
+  }, [vault.tree, vault.openTabs])
 
   useEffect(() => { macrosRef.current = macros }, [macros])
 
@@ -363,9 +454,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (el) el.spellcheck = spellcheck
   }, [spellcheck])
 
-  // ── Preview scroll sync ───────────────────────────────────────────────────
+  // ── Preview scroll sync + active heading highlight ───────────────────────────
   useEffect(() => {
-    if (!syncScroll || !settings.previewVisible) return
+    if (!settings.previewVisible) return
     const content = vault.openFile?.content
     if (!content) return
 
@@ -379,37 +470,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const activeIdx = headingLines.reduce((found, lineNum, i) =>
       lineNum <= cursorPos.line ? i : found, -1)
 
-    if (activeIdx < 0) return
-
     const previewEl = previewPaneRef.current
     if (!previewEl) return
     const headingEls = previewEl.querySelectorAll("h1,h2,h3,h4,h5,h6")
-    const target = headingEls[activeIdx] as HTMLElement | undefined
-    target?.scrollIntoView({ behavior: "smooth", block: "start" })
+
+    // Remove all active-heading classes
+    headingEls.forEach((el) => el.classList.remove("active-heading"))
+
+    if (activeIdx >= 0) {
+      const target = headingEls[activeIdx] as HTMLElement | undefined
+
+      // Add active class
+      target?.classList.add("active-heading")
+
+      // Scroll only if syncScroll is enabled
+      if (syncScroll) {
+        target?.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
+    }
   }, [cursorPos.line, syncScroll, settings.previewVisible, vault.openFile?.content])
 
   useEffect(() => {
     lintBibKeysRef.current = bibKeys
   }, [bibKeys])
-
-  // ── Mermaid diagram rendering ─────────────────────────────────────────────
-  useEffect(() => {
-    import("mermaid").then(({ default: mermaid }) => {
-      mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" })
-      const els = document.querySelectorAll<HTMLElement>("pre code.language-mermaid")
-      if (els.length === 0) return
-      els.forEach((el) => {
-        const pre = el.parentElement!
-        const diagram = el.textContent ?? ""
-        const div = document.createElement("div")
-        div.className = "mermaid-diagram"
-        pre.replaceWith(div)
-        mermaid.render(`mermaid-${Math.random().toString(36).slice(2)}`, diagram)
-          .then(({ svg }) => { div.innerHTML = svg })
-          .catch(() => { div.innerHTML = `<pre>${diagram}</pre>` })
-      })
-    }).catch(() => {})
-  }, [previewContent])
 
   // ── Sync BibTeX suggestions for citation autocomplete + hover ─────────────
   useEffect(() => {
@@ -468,42 +551,96 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.vaultPath])
 
+  const nextTab = useCallback(() => {
+    const tabs = vault.openTabs
+    const idx = tabs.findIndex((t) => t.path === vault.activeTabPath)
+    if (tabs.length <= 1) return
+    const next = idx === tabs.length - 1 ? 0 : idx + 1
+    vault.switchTab(tabs[next].path)
+  }, [vault])
+
+  const prevTab = useCallback(() => {
+    const tabs = vault.openTabs
+    const idx = tabs.findIndex((t) => t.path === vault.activeTabPath)
+    if (tabs.length <= 1) return
+    const next = idx <= 0 ? tabs.length - 1 : idx - 1
+    vault.switchTab(tabs[next].path)
+  }, [vault])
+
   // ── Focus mode + Ctrl+P + Ctrl+Shift+P + ? ───────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "F11") { e.preventDefault(); setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) }
-      if (e.key === "Escape" && focusMode) setFocusMode(false)
-      if ((e.ctrlKey || e.metaKey) && e.key === "p" && !e.shiftKey) { e.preventDefault(); setPaletteOpen(true) }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "P") {
-        e.preventDefault()
-        updateSettings({ previewVisible: !settings.previewVisible })
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === "=" || e.key === "+")) {
-        e.preventDefault()
-        updateSettings({
-          fontSize: Math.min(24, settings.fontSize + 1),
-          previewFontSize: Math.min(24, settings.previewFontSize + 1),
-        })
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "-") {
-        e.preventDefault()
-        updateSettings({
-          fontSize: Math.max(11, settings.fontSize - 1),
-          previewFontSize: Math.max(11, settings.previewFontSize - 1),
-        })
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
-        e.preventDefault()
-        updateSettings({ fontSize: 15, previewFontSize: 15 })
-      }
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
-        setHelpOpen(true)
-      }
+      handleGlobalShortcut(
+        e,
+        {
+          focusMode,
+          isTextInputTarget: e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement,
+        },
+        {
+          toggleFocusMode: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }),
+          exitFocusMode: () => setFocusMode(false),
+          openCommandPalette: () => setPaletteOpen(true),
+          openQuickSwitcher: () => setQuickSwitcherOpen(true),
+          toggleBookmark: () => {
+            if (!editorRef.current || !vault.activeTabPath) return
+            const line = editorRef.current.getPosition()?.lineNumber ?? 1
+            setBookmarks((prev) => {
+              const next = { ...prev }
+              const existing = Object.entries(next).find(([, l]) => l === line)
+              if (existing) {
+                delete next[parseInt(existing[0])]
+              } else {
+                const slot = Object.keys(next).length < 9 ? Object.keys(next).length + 1 : 1
+                next[slot] = line
+              }
+              saveBookmarks(next)
+              return next
+            })
+            showToast(t.app.bookmarkToggled, "info")
+          },
+          showBookmarks: () => setBookmarksOpen(true),
+          togglePreview: () => updateSettings({ previewVisible: !settings.previewVisible }),
+          zoomIn: () => updateSettings({
+            fontSize: Math.min(24, settings.fontSize + 1),
+            previewFontSize: Math.min(24, settings.previewFontSize + 1),
+          }),
+          zoomOut: () => updateSettings({
+            fontSize: Math.max(11, settings.fontSize - 1),
+            previewFontSize: Math.max(11, settings.previewFontSize - 1),
+          }),
+          resetZoom: () => updateSettings({ fontSize: 15, previewFontSize: 15 }),
+          openHelp: () => setHelpOpen(true),
+          saveAs: () => {
+            const editor = editorRef.current
+            if (!editor) return
+            void (async () => {
+              const path = await save({
+                title: t.menus.saveAs,
+                filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+                defaultPath: vault.openFile?.name,
+              })
+              if (!path) return
+              await writeTextFile(path, editor.getValue())
+              await vault.loadVault()
+            })()
+          },
+          openVault: () => { void vault.selectVault() },
+          nextTab,
+          prevTab,
+          closeTab: () => { if (vault.activeTabPath) vault.closeTab(vault.activeTabPath) },
+          reopenTab: () => {
+            const closed = vault.getClosedTabs()
+            if (closed.length > 0) {
+              setRecentlyClosed(closed)
+              setClosedTabsOpen(true)
+            }
+          },
+        },
+      )
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusMode, settings.previewVisible, settings.fontSize, settings.previewFontSize])
+  }, [focusMode, settings.previewVisible, settings.fontSize, settings.previewFontSize, t, updateSettings, vault, nextTab, prevTab])
 
   // ── Linter + math hover cleanup on unmount ────────────────────────────────
   useEffect(() => () => {
@@ -564,6 +701,93 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.openFile?.isDirty])
 
+  const renderPreviewHtml = useCallback((content: string) => {
+    try {
+      return sanitizeRenderedHtml(
+        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+      )
+    } catch (e) {
+      return renderErrorHtml(e)
+    }
+  }, [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver])
+
+  const deferredPreviewContent = useDeferredValue(previewContent)
+
+  const previewHtml = useMemo(
+    () => renderPreviewHtml(deferredPreviewContent),
+    [renderPreviewHtml, deferredPreviewContent]
+  )
+
+  const splitTab = useMemo(
+    () => vault.openTabs.find((t) => t.path === splitFile) ?? null,
+    [vault.openTabs, splitFile]
+  )
+
+  const deferredSplitContent = useDeferredValue(splitTab?.content ?? "")
+
+  const splitPreviewHtml = useMemo(
+    () => splitTab ? renderPreviewHtml(deferredSplitContent) : "",
+    [renderPreviewHtml, splitTab, deferredSplitContent]
+  )
+
+  const previewNeedsMermaid = useMemo(
+    () => previewHtml.includes("language-mermaid"),
+    [previewHtml]
+  )
+
+  const splitNeedsMermaid = useMemo(
+    () => splitPreviewHtml.includes("language-mermaid"),
+    [splitPreviewHtml]
+  )
+
+  // ── Mermaid diagram rendering ─────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+
+    if (!previewNeedsMermaid && !splitNeedsMermaid) return
+
+    const renderInContainer = async (container: HTMLDivElement | null, suffix: string) => {
+      if (!container) return
+      const blocks = [...container.querySelectorAll<HTMLElement>("pre code.language-mermaid")]
+      if (blocks.length === 0) return
+
+      const { default: mermaid } = await import("mermaid")
+      if (cancelled) return
+
+      mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict" })
+
+      await Promise.all(blocks.map(async (el, index) => {
+        const pre = el.parentElement
+        if (!pre) return
+
+        const diagram = el.textContent ?? ""
+        const div = document.createElement("div")
+        div.className = "mermaid-diagram"
+        pre.replaceWith(div)
+
+        try {
+          const { svg } = await mermaid.render(
+            `mermaid-${suffix}-${index}-${Math.random().toString(36).slice(2)}`,
+            diagram,
+          )
+          if (cancelled) return
+          div.innerHTML = sanitizeRenderedHtml(svg)
+        } catch {
+          const fallback = document.createElement("pre")
+          fallback.textContent = diagram
+          div.replaceChildren(fallback)
+        }
+      }))
+    }
+
+    Promise.all([
+      previewNeedsMermaid ? renderInContainer(previewPaneRef.current, "preview") : Promise.resolve(),
+      splitNeedsMermaid ? renderInContainer(splitPreviewRef.current, "split") : Promise.resolve(),
+    ]).catch(() => {})
+
+    return () => { cancelled = true }
+  }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid])
+
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
     setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
@@ -612,6 +836,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor
     setupEditorCommands(editor, monaco)
+    // Note: Monaco has built-in spell-check via browser (no config needed)
     linterDisposableRef.current?.dispose()
     linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
       vaultFileNames: lintWikiNamesRef.current,
@@ -622,6 +847,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const f = vault.openFile
       if (f) vault.saveFile(f.path, editor.getValue())
     })
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
+      () => {
+        void (async () => {
+          const path = await save({
+            title: t.menus.saveAs,
+            filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+            defaultPath: vault.openFile?.name,
+          })
+          if (!path) return
+          await writeTextFile(path, editor.getValue())
+          await vault.loadVault()
+        })()
+      }
+    )
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO,
+      () => { void vault.selectVault() }
+    )
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
       () => setSidebarMode("search")
@@ -669,7 +913,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     // Apply typewriter mode from settings
     applyTypewriterMode(editor, settings.typewriterMode)
-  }, [vault, settings.vimMode, settings.typewriterMode])
+  }, [vault, settings.vimMode, settings.typewriterMode, t])
 
   const handleChange = useCallback((value: string | undefined) => {
     const content = value ?? ""
@@ -740,6 +984,46 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return () => window.removeEventListener("keydown", handler)
   }, [goBack, goForward])
 
+  const searchVault = useCallback(() => setSidebarMode("search"), [])
+
+  const goToDefinition = useCallback(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const position = editor.getPosition()
+    if (!position) return
+    const model = editor.getModel()
+    if (!model) return
+    const word = model.getWordAtPosition(position)
+    if (!word) return
+
+    // Try wikilink or citation first
+    const line = model.getLineContent(position.lineNumber)
+    const wikiMatch = /\[\[([^\]]+)\]\]/.exec(line)
+    if (wikiMatch) {
+      const targetName = wikiMatch[1].trim()
+      const targetNode = flatFiles(vault.tree).find((f) => f.name === targetName || f.name === targetName + ".md")
+      if (targetNode) { handleOpenFileNode(targetNode); return }
+    }
+
+    const citeMatch = /@([a-zA-Z0-9_-]+)/.exec(line)
+    if (citeMatch) { setCitationManagerOpen(true); return }
+
+    // Try structural label
+    const labelMatch = /@([a-zA-Z0-9_-]+):/.exec(line)
+    if (labelMatch) { setSidebarMode("labels"); return }
+  }, [vault, handleOpenFileNode])
+
+  useTouchpadGestures({
+    openCommandPalette: () => setPaletteOpen(true),
+    nextTab,
+    prevTab,
+    searchVault,
+    goToDefinition,
+    zoomIn: () => updateSettings({ fontSize: Math.min(24, settings.fontSize + 1), previewFontSize: Math.min(24, settings.previewFontSize + 1) }),
+    zoomOut: () => updateSettings({ fontSize: Math.max(11, settings.fontSize - 1), previewFontSize: Math.max(11, settings.previewFontSize - 1) }),
+    resetZoom: () => updateSettings({ fontSize: 15, previewFontSize: 15 }),
+  }, settings.touchpadGestures && !!vault.vaultPath)
+
   const handleOpenRecent = useCallback((path: string) => {
     const node = flatFiles(vault.tree).find((f) => f.path === path)
     if (node) { handleOpenFileNode(node); return }
@@ -755,6 +1039,40 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Wikilink click in preview ─────────────────────────────────────────────
   const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.target as HTMLElement
+    const editor = editorRef.current
+
+    // Copy LaTeX from KaTeX
+    const katexWrapper = el.closest(".katex-wrapper") as HTMLElement | null
+    if (katexWrapper) {
+      const expr = katexWrapper.dataset.expr
+      if (expr) {
+        navigator.clipboard.writeText(decodeURIComponent(expr)).then(() => {
+          katexWrapper.classList.add("copied")
+          showToast(t.app.copiedLatex, "success")
+          setTimeout(() => katexWrapper.classList.remove("copied"), 1500)
+        })
+      }
+      return
+    }
+
+    const heading = el.closest("h1, h2, h3, h4") as HTMLElement | null
+    if (heading && editor && vault.openFile) {
+      const headingText = (heading.textContent || "")
+        .replace(/^\d+(?:\.\d+)*\s+/, "")
+        .trim()
+        .toLowerCase()
+      const lines = vault.openFile.content.split("\n")
+      const targetLine = lines.findIndex((line) => {
+        const match = /^#{1,4}\s+(.+)$/.exec(line.trim())
+        return match?.[1].trim().toLowerCase() === headingText
+      })
+      if (targetLine >= 0) {
+        editor.revealLineInCenter(targetLine + 1)
+        editor.setPosition({ lineNumber: targetLine + 1, column: 1 })
+        editor.focus()
+        return
+      }
+    }
 
     // ── Clickable checkboxes ───────────────────────────────────────────────
     if (el.classList.contains("preview-checkbox")) {
@@ -784,8 +1102,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const wikiTarget = link.dataset.target
     if (!wikiTarget) return
     const node = findByName(vault.tree, wikiTarget)
-    if (node) handleOpenFileNode(node)
-  }, [vault, handleOpenFileNode])
+    if (node) {
+      const heading = link.dataset.heading
+      if (heading) {
+        const content = vaultFiles.find((file) => file.path === node.path)?.content ?? ""
+        const line = content.split("\n").findIndex((candidate) => {
+          const match = /^#{1,6}\s+(.+)$/.exec(candidate)
+          return match?.[1].replace(/\s*\{#[\w:.-]+\}\s*$/, "").trim().toLowerCase() === heading.toLowerCase()
+        })
+        if (line >= 0) pendingJumpRef.current = line + 1
+      }
+      handleOpenFileNode(node)
+    }
+  }, [vault, vaultFiles, handleOpenFileNode, t.app.copiedLatex])
 
   // ── File actions ──────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -801,7 +1130,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       defaultPath: vault.openFile?.name,
     })
     if (!path) return
-    await writeTextFile(path, editor.getValue())
+    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
     await vault.loadVault()
   }, [vault, t])
 
@@ -826,7 +1155,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       } catch { /* ok */ }
     }
     const titleGuess = vault.openFile?.name.replace(/\.[^.]+$/, "") ?? ""
-    const tex = exportToTex(editor.getValue(), macrosText, titleGuess)
+    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
+    const parsed = extractFrontmatter(content)
+    const fm = parsed?.data
+    const author = fm?.author as string | undefined
+    const tex = exportToTex(
+      content,
+      macrosText,
+      (fm?.title as string) || titleGuess,
+      author,
+      { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
+    )
     const path = await save({
       title: t.app.dialogExportTex,
       filters: [{ name: "LaTeX", extensions: ["tex"] }],
@@ -834,7 +1173,91 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })
     if (!path) return
     await writeTextFile(path, tex)
-  }, [vault, t])
+  }, [vault, t, transclusionResolver])
+
+  const handleExportProjectTex = useCallback(async () => {
+    let macrosText = ""
+    if (vault.vaultPath) {
+      try {
+        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+        if (await exists(mp)) macrosText = await readTextFile(mp)
+      } catch { /* ok */ }
+    }
+    const content = composeProjectMarkdown(vaultFiles, vault.activeTabPath)
+    if (!content) {
+      showToast("No hay documento principal para exportar", "error")
+      return
+    }
+    const parsed = extractFrontmatter(content)
+    const fm = parsed?.data
+    const title = (fm?.title as string) || vault.openFile?.name.replace(/\.[^.]+$/, "") || "project"
+    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
+    const path = await save({
+      title: "Exportar proyecto como LaTeX",
+      filters: [{ name: "LaTeX", extensions: ["tex"] }],
+      defaultPath: `${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
+    })
+    if (!path) return
+    await writeTextFile(path, tex)
+  }, [vault.vaultPath, vault.activeTabPath, vault.openFile, vaultFiles])
+
+  const handleCompileLatexPdf = useCallback(async () => {
+    const editor = editorRef.current
+    const currentFile = vault.openFile
+    if (!editor || !currentFile) return
+    let macrosText = ""
+    if (vault.vaultPath) {
+      try {
+        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+        if (await exists(mp)) macrosText = await readTextFile(mp)
+      } catch { /* ok */ }
+    }
+    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
+    const parsed = extractFrontmatter(content)
+    const fm = parsed?.data
+    const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
+    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
+    const outPath = await save({
+      title: "Compilar PDF con LaTeX local",
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+      defaultPath: currentFile.name.replace(/\.[^.]+$/, ".pdf"),
+    })
+    if (!outPath) return
+
+    const dir = currentFile.path.split("/").slice(0, -1).join("/") || "."
+    const base = currentFile.name.replace(/\.[^.]+$/, "")
+    const tmpTex = `${dir}/${base}.comdtex-compile.tex`
+    const tmpPdf = `${dir}/${base}.comdtex-compile.pdf`
+    await writeTextFile(tmpTex, tex)
+    const attempts: Array<[string, string[]]> = [
+      ["tectonic", [tmpTex, "--outdir", dir]],
+      ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
+      ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
+    ]
+    let lastError = ""
+    try {
+      for (const [cmdName, args] of attempts) {
+        try {
+          const result = await Command.create(cmdName, args, { cwd: dir }).execute()
+          if (result.code === 0 && await exists(tmpPdf)) {
+            await copyFile(tmpPdf, outPath)
+            await openPath(outPath)
+            showToast("PDF compilado con LaTeX local", "success")
+            return
+          }
+          lastError = result.stderr || result.stdout || `${cmdName} falló`
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : String(err)
+        }
+      }
+      showToast(`No se pudo compilar con tectonic/xelatex/pdflatex: ${lastError}`, "error", 8000)
+    } finally {
+      await remove(tmpTex).catch(() => {})
+      await remove(tmpPdf).catch(() => {})
+      await remove(`${dir}/${base}.comdtex-compile.aux`).catch(() => {})
+      await remove(`${dir}/${base}.comdtex-compile.log`).catch(() => {})
+    }
+  }, [vault.openFile, vault.vaultPath, transclusionResolver])
 
   const handleExportPdf = useCallback(async () => {
     const editor = editorRef.current
@@ -952,21 +1375,38 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const file = vault.openFile
     if (!file) return
     try {
-      const html = renderMarkdown(file.content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap)
+      const html = renderMarkdown(file.content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
       await navigator.clipboard.writeText(sanitizeRenderedHtml(html))
       showToast(t.app.copiedHtml, "success")
     } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
-  }, [vault.openFile, macros, wikiNames, bibMap, vault.vaultPath, t])
+  }, [vault.openFile, macros, wikiNames, bibMap, vault.vaultPath, transclusionResolver, t])
 
   const handleCopyLatex = useCallback(async () => {
     const file = vault.openFile
     if (!file) return
     try {
-      const tex = exportToTex(file.content, file.name)
+      let macrosText = ""
+      if (vault.vaultPath) {
+        try {
+          const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+          if (await exists(mp)) macrosText = await readTextFile(mp)
+        } catch { /* ok */ }
+      }
+      const title = file.name.replace(/\.[^.]+$/, "")
+      const parsed = extractFrontmatter(file.content)
+      const fm = parsed?.data
+      const author = fm?.author as string | undefined
+      const tex = exportToTex(
+        resolveTransclusions(file.content, transclusionResolver),
+        macrosText,
+        (fm?.title as string) || title,
+        author,
+        { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
+      )
       await navigator.clipboard.writeText(tex)
       showToast(t.app.copiedLatex, "success")
     } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
-  }, [vault.openFile, t])
+  }, [vault.openFile, vault.vaultPath, transclusionResolver, t])
 
   const handleSaveBib = useCallback(async (bibtexString: string) => {
     if (!vault.vaultPath) return
@@ -1005,15 +1445,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     filePath: string,
     search: string,
     replace: string,
-    flags: string,
+    opts: SearchReplaceOptions,
+    target?: SearchReplaceTarget,
   ): Promise<number> => {
     try {
       const text = await readTextFile(filePath)
-      const re = new RegExp(search, flags)
-      const matches = text.match(new RegExp(search, flags.includes("g") ? flags : flags + "g"))
-      const count = matches?.length ?? 0
+      const re = buildSearchRegExp(search, opts)
+      if (!re) return 0
+      const { count, content: newContent } = target
+        ? replaceMatchAt(text, re, replace, target)
+        : replaceMatches(text, re, replace)
       if (count === 0) return 0
-      const newContent = text.replace(re, replace)
       await writeTextFile(filePath, newContent)
       vault.patchTabContent(filePath, newContent)
       return count
@@ -1022,6 +1464,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       return 0
     }
   }, [vault])
+
+  const handleBreadcrumbNavigate = useCallback((path: string) => {
+    const node = flatFiles(vault.tree).find((f) => f.path === path)
+    if (node) {
+      handleOpenFileNode(node)
+      return
+    }
+    setSidebarMode("files")
+  }, [vault.tree, handleOpenFileNode])
 
   // ── Table editor: insert markdown at cursor ───────────────────────────────
   const handleInsertTable = useCallback((markdown: string) => {
@@ -1049,7 +1500,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     let html: string
     try {
       html = sanitizeRenderedHtml(
-        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap)
+        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
       )
     } catch { return }
 
@@ -1089,32 +1540,15 @@ ${html}
     await writeTextFile(path, standalone)
     showToast("HTML exportado", "success")
     await openPath(path)
-  }, [vault, macros, wikiNames, bibMap])
+  }, [vault, macros, wikiNames, bibMap, transclusionResolver])
 
   // ── Insert TOC ────────────────────────────────────────────────────────────
   const handleInsertToc = useCallback(() => {
     const editor = editorRef.current
     if (!editor) return
     const content = editor.getValue()
-    const lines = content.split("\n")
-    const headings: { level: number; text: string; slug: string }[] = []
-    for (const line of lines) {
-      const m = /^(#{1,6})\s+(.+)$/.exec(line)
-      if (m) {
-        const text = m[2].trim()
-        const slug = text.toLowerCase()
-          .replace(/[^\w\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/-+/g, "-")
-        headings.push({ level: m[1].length, text, slug })
-      }
-    }
-    if (headings.length === 0) return
-    const minLevel = Math.min(...headings.map((h) => h.level))
-    const toc = headings.map((h) => {
-      const indent = "  ".repeat(h.level - minLevel)
-      return `${indent}- [${h.text}](#${h.slug})`
-    }).join("\n")
+    const toc = buildTocMarkdown(content, 3)
+    if (!toc) return
     const pos = editor.getPosition()
     editor.executeEdits("insert-toc", [{
       range: {
@@ -1131,11 +1565,9 @@ ${html}
   const handleOpenMacros = useCallback(async () => {
     if (!vault.vaultPath) return
     const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
-    if (!(await exists(mp))) { await writeTextFile(mp, MACROS_TEMPLATE); await vault.loadVault() }
-    setTimeout(() => {
-      const node = flatFiles(vault.tree).find((f) => f.name === MACROS_FILENAME)
-      if (node) vault.openFileNode(node)
-    }, 100)
+    if (!(await exists(mp))) await writeTextFile(mp, MACROS_TEMPLATE)
+    await vault.loadVault()
+    await vault.openFilePath(mp)
   }, [vault])
 
   const handleCreateFromTemplate = useCallback(async (name: string, content: string) => {
@@ -1165,26 +1597,32 @@ ${html}
 
     // Only offer refactor for .md files where the base name actually changes
     if (oldBasename !== newBasename && oldPath.endsWith(".md")) {
-      // Count how many open tabs (other than the renamed file) reference the old name
       const re = new RegExp(`\\[\\[${oldBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}((?:#[^\\]|]+)?)((?:\\|[^\\]]+)?)\\]\\]`, "g")
-      const tabsWithLinks = vault.openTabs.filter(
-        (tab) => tab.path !== oldPath && re.test(tab.content)
-      )
+      const markdownFiles = flatFiles(vault.tree)
+        .filter((file) => file.path !== oldPath && file.ext === "md")
+      const filesWithLinks: { path: string; content: string }[] = []
 
-      if (tabsWithLinks.length > 0) {
+      for (const file of markdownFiles) {
+        const openTab = vault.openTabs.find((tab) => tab.path === file.path)
+        const source = openTab?.content ?? await readTextFile(file.path).catch(() => "")
+        re.lastIndex = 0
+        if (source && re.test(source)) filesWithLinks.push({ path: file.path, content: source })
+      }
+
+      if (filesWithLinks.length > 0) {
         let refactorCount = 0
         try {
           const ok = await tauriConfirm(
-            t.vault.renameRefactorConfirm(oldBasename, newBasename, tabsWithLinks.length),
+            t.vault.renameRefactorConfirm(oldBasename, newBasename, filesWithLinks.length),
             { title: "ComdTeX" }
           )
           if (ok) {
-            for (const tab of tabsWithLinks) {
+            for (const file of filesWithLinks) {
               re.lastIndex = 0
-              const updated = tab.content.replace(re, `[[${newBasename}$1$2]]`)
-              await writeTextFile(tab.path, updated)
-              vault.patchTabContent(tab.path, updated)
-              const matches = tab.content.match(re)
+              const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
+              const matches = file.content.match(re)
+              await writeTextFile(file.path, updated)
+              vault.patchTabContent(file.path, updated)
               refactorCount += matches ? matches.length : 0
             }
             if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
@@ -1199,11 +1637,9 @@ ${html}
   const handleOpenBib = useCallback(async () => {
     if (!vault.vaultPath) return
     const bp = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
-    if (!(await exists(bp))) { await writeTextFile(bp, BIB_TEMPLATE); await vault.loadVault() }
-    setTimeout(() => {
-      const node = flatFiles(vault.tree).find((f) => f.name === BIBTEX_FILENAME)
-      if (node) vault.openFileNode(node)
-    }, 100)
+    if (!(await exists(bp))) await writeTextFile(bp, BIB_TEMPLATE)
+    await vault.loadVault()
+    await vault.openFilePath(bp)
   }, [vault])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1351,6 +1787,8 @@ ${html}
     { id: "save",       label: t.palette.save,            description: "Ctrl+S",       action: handleSave },
     { id: "saveAs",     label: t.palette.saveAs,                                        action: handleSaveAs },
     { id: "exportTex",  label: t.palette.exportTex,                                    action: handleExportTex },
+    { id: "exportProjectTex", label: "Exportar proyecto como .tex",                     action: handleExportProjectTex },
+    { id: "compileLatexPdf", label: "Compilar PDF con LaTeX local",                     action: handleCompileLatexPdf },
     { id: "exportPdf",  label: t.palette.exportPdf,                                    action: handleExportPdf },
     { id: "find",       label: t.palette.findInFile,      description: "Ctrl+F",       action: handleFind },
     { id: "findVault",  label: t.palette.searchVault,     description: "Ctrl+Shift+F", action: () => setSidebarMode("search") },
@@ -1364,6 +1802,8 @@ ${html}
     { id: "outline",    label: t.palette.viewOutline,                                  action: () => setSidebarMode("outline") },
     { id: "backlinks",  label: t.palette.viewBacklinks,                                action: () => setSidebarMode("backlinks") },
     { id: "tags",       label: t.palette.viewTags,                                     action: () => setSidebarMode("tags") },
+    { id: "labels",     label: "Ver labels",                                           action: () => setSidebarMode("labels") },
+    { id: "quality",    label: "Diagnóstico de documento",                             action: () => setSidebarMode("quality") },
     { id: "properties", label: t.palette.viewProperties,                               action: () => setSidebarMode("properties") },
     { id: "graph",      label: t.palette.viewGraph,                                    action: () => setSidebarMode("graph") },
     { id: "toc",        label: t.palette.insertToc,                                     action: handleInsertToc },
@@ -1421,6 +1861,8 @@ ${html}
         { separator: true },
         { label: t.menus.exportMd,         disabled: !hasFile, action: handleExportMd },
         { label: t.menus.exportTex,        disabled: !hasFile, action: handleExportTex },
+        { label: "Exportar proyecto .tex", disabled: !hasVault, action: handleExportProjectTex },
+        { label: "Compilar PDF con LaTeX local", disabled: !hasFile, action: handleCompileLatexPdf },
         { label: t.menus.exportPdf,        disabled: !hasFile, action: handleExportPdf },
         { label: t.menus.exportDocx,       disabled: !hasFile, action: handleExportDocx },
         { label: t.menus.exportBeamer,     disabled: !hasFile, action: handleExportBeamer },
@@ -1485,13 +1927,15 @@ ${html}
           recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
           onOpenRecent={handleOpenRecent}
         />
-        <SettingsModal
-          open={settingsOpen}
-          settings={settings}
-          onClose={() => setSettingsOpen(false)}
-          onChange={updateSettings}
-        />
-        <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+        <Suspense fallback={null}>
+          <SettingsModal
+            open={settingsOpen}
+            settings={settings}
+            onClose={() => setSettingsOpen(false)}
+            onChange={updateSettings}
+          />
+          <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+        </Suspense>
       </div>
     )
   }
@@ -1513,22 +1957,35 @@ ${html}
 
       <div className="main" ref={mainRef}>
         {/* ── Sidebar ── */}
-        <div className="sidebar" style={{ width: sidebarWidth }}>
+        <div className="sidebar" style={{ width: sidebarCollapsed ? 0 : sidebarWidth, overflow: sidebarCollapsed ? "hidden" : "auto" }}>
+          <div className="sidebar-header">
+            <button
+              className="sidebar-collapse-btn"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? t.sidebar.expand : t.sidebar.collapse}
+            >
+              {sidebarCollapsed ? "»" : "«"}
+            </button>
+          </div>
+          {!sidebarCollapsed && (
+            <>
           <div className="sidebar-tabs" role="tablist" aria-label="Panel lateral">
-            {(["files", "search", "searchReplace", "outline", "backlinks", "tags", "properties", "graph", "todo", "equations", "environments", "stats", "help"] as const).map((mode) => {
+            {(["files", "search", "searchReplace", "outline", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "equations", "environments", "stats", "help"] as const).map((mode) => {
               const labels: Record<string, string> = {
                 files: t.sidebar.files, search: t.sidebar.search, outline: t.sidebar.outline,
                 backlinks: t.sidebar.backlinks, help: t.sidebar.help,
-                tags: t.sidebar.tags, properties: t.sidebar.properties, graph: t.sidebar.graph,
+                tags: t.sidebar.tags, labels: "Labels", properties: t.sidebar.properties, graph: t.sidebar.graph,
                 todo: t.sidebar.todo, equations: t.sidebar.equations, stats: t.sidebar.stats,
                 environments: t.sidebar.environments,
                 searchReplace: t.sidebar.searchReplace,
+                quality: "Calidad",
               }
               const icons: Record<string, string> = {
                 files: "☰", search: "⌕", outline: "≡", backlinks: "←",
-                tags: "#", properties: "≋", graph: "⬡", help: "?",
+                tags: "#", labels: "⌁", properties: "≋", graph: "⬡", help: "?",
                 todo: "☑", equations: "∑", environments: "∀", stats: "◈",
                 searchReplace: "⇄",
+                quality: "✓",
               }
               return (
                 <button
@@ -1579,17 +2036,19 @@ ${html}
               />
             )}
             {sidebarMode === "searchReplace" && vault.vaultPath && (
-              <SearchReplacePanel
-                vaultPath={vault.vaultPath}
-                onOpenFile={(path, line) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
-                  if (!node) return
-                  if (line !== undefined) pendingJumpRef.current = line
-                  handleOpenFileNode(node)
-                  setSidebarMode("files")
-                }}
-                onReplaceInFile={handleReplaceInFile}
-              />
+              <Suspense fallback={null}>
+                <SearchReplacePanel
+                  vaultPath={vault.vaultPath}
+                  onOpenFile={(path, line) => {
+                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    if (!node) return
+                    if (line !== undefined) pendingJumpRef.current = line
+                    handleOpenFileNode(node)
+                    setSidebarMode("files")
+                  }}
+                  onReplaceInFile={handleReplaceInFile}
+                />
+              </Suspense>
             )}
             {sidebarMode === "outline" && (
               <OutlinePanel content={previewContent} editorRef={editorRef} activeLine={cursorPos.line} />
@@ -1598,15 +2057,51 @@ ${html}
               <BacklinksPanel
                 currentFile={vault.openFile}
                 tree={vault.tree}
-                onOpenFile={handleOpenFileNode}
+                onOpenFile={(node, line) => {
+                  if (line !== undefined) pendingJumpRef.current = line
+                  handleOpenFileNode(node)
+                  setSidebarMode("files")
+                }}
               />
             )}
             {sidebarMode === "tags" && (
               <TagPanel
-                openTabs={vault.openTabs}
-                onOpenFile={(path) => {
+                files={vaultFiles}
+                onOpenFile={(path, line) => {
                   const node = flatFiles(vault.tree).find((f) => f.path === path)
-                  if (node) { handleOpenFileNode(node); setSidebarMode("files") }
+                  if (node) {
+                    if (line !== undefined) pendingJumpRef.current = line
+                    handleOpenFileNode(node)
+                    setSidebarMode("files")
+                  }
+                }}
+              />
+            )}
+            {sidebarMode === "labels" && (
+              <LabelsPanel
+                files={vaultFiles}
+                onOpenFile={(path, line) => {
+                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  if (node) {
+                    if (line !== undefined) pendingJumpRef.current = line
+                    handleOpenFileNode(node)
+                    setSidebarMode("files")
+                  }
+                }}
+              />
+            )}
+            {sidebarMode === "quality" && (
+              <DocumentLabPanel
+                files={vaultFiles}
+                activePath={vault.activeTabPath}
+                activeContent={vault.openFile?.content ?? ""}
+                onOpenFile={(path, line) => {
+                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  if (node) {
+                    if (line !== undefined) pendingJumpRef.current = line
+                    handleOpenFileNode(node)
+                    setSidebarMode("files")
+                  }
                 }}
               />
             )}
@@ -1617,45 +2112,61 @@ ${html}
               />
             )}
             {sidebarMode === "graph" && (
-              <GraphPanel
-                tree={vault.tree}
-                openTabs={vault.openTabs}
-                activePath={vault.activeTabPath}
-                onOpenFile={(path) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
-                  if (node) handleOpenFileNode(node)
-                }}
-              />
+              <Suspense fallback={null}>
+                <GraphPanel
+                  tree={vault.tree}
+                  openTabs={vault.openTabs}
+                  activePath={vault.activeTabPath}
+                  onOpenFile={(path) => {
+                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    if (node) handleOpenFileNode(node)
+                  }}
+                />
+              </Suspense>
             )}
             {sidebarMode === "todo" && (
-              <TodoPanel
-                openTabs={vault.openTabs}
-                onNavigate={handleTodoNavigate}
-                onToggle={handleTodoToggle}
-              />
+              <Suspense fallback={null}>
+                <TodoPanel
+                  openTabs={vault.openTabs}
+                  onNavigate={handleTodoNavigate}
+                  onToggle={handleTodoToggle}
+                />
+              </Suspense>
             )}
             {sidebarMode === "equations" && (
-              <EquationsPanel content={vault.openFile?.content ?? ""} editorRef={editorRef} />
+              <Suspense fallback={null}>
+                <EquationsPanel content={vault.openFile?.content ?? ""} editorRef={editorRef} />
+              </Suspense>
             )}
             {sidebarMode === "environments" && (
-              <EnvironmentsPanel
-                openTabs={vault.openTabs}
-                editorRef={editorRef}
-                activeTabPath={vault.activeTabPath}
-                onOpenFile={(path) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
-                  if (node) handleOpenFileNode(node)
-                }}
-              />
+              <Suspense fallback={null}>
+                <EnvironmentsPanel
+                  openTabs={vault.openTabs}
+                  editorRef={editorRef}
+                  activeTabPath={vault.activeTabPath}
+                  onOpenFile={(path) => {
+                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    if (node) handleOpenFileNode(node)
+                  }}
+                />
+              </Suspense>
             )}
             {sidebarMode === "stats" && (
-              <VaultStatsPanel tree={vault.tree} openTabs={vault.openTabs} wikiNames={wikiNames} />
+              <Suspense fallback={null}>
+                <VaultStatsPanel tree={vault.tree} openTabs={vault.openTabs} wikiNames={wikiNames} />
+              </Suspense>
             )}
-            {sidebarMode === "help" && <HelpPanel />}
+            {sidebarMode === "help" && (
+              <Suspense fallback={null}>
+                <HelpPanel />
+              </Suspense>
+            )}
           </div>
+          </>
+          )}
         </div>
 
-        <Resizer onDrag={handleSidebarResize} />
+        {!sidebarCollapsed && <Resizer onDrag={handleSidebarResize} />}
 
         {/* ── Editor ── */}
         <div
@@ -1689,31 +2200,34 @@ ${html}
             canGoForward={navFuture.length > 0}
             onGoBack={goBack}
             onGoForward={goForward}
+            onNavigate={handleBreadcrumbNavigate}
           />
-          <Editor
-            key={vault.activeTabPath ?? "welcome"}
-            defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
-            value={currentContent}
-            onChange={handleChange}
-            beforeMount={handleBeforeMount}
-            onMount={handleEditorMount}
-            theme={settings.theme}
-            options={{
-              fontSize: settings.fontSize,
-              lineHeight: Math.round(settings.fontSize * 1.6),
-              wordWrap: wordWrap ? "on" : "off",
-              minimap: { enabled: minimapEnabled },
-              scrollBeyondLastLine: false,
-              renderWhitespace: "none",
-              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-              padding: { top: 16, bottom: 16 },
-              readOnly: !vault.openFile,
-              quickSuggestions: { other: true, comments: false, strings: true },
-              suggestOnTriggerCharacters: true,
-              snippetSuggestions: "top",
-              cursorSmoothCaretAnimation: "on",
-            }}
-          />
+          <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+            <MonacoEditor
+              key={vault.activeTabPath ?? "welcome"}
+              defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
+              value={currentContent}
+              onChange={handleChange}
+              beforeMount={handleBeforeMount}
+              onMount={handleEditorMount}
+              theme={settings.theme}
+              options={{
+                fontSize: settings.fontSize,
+                lineHeight: Math.round(settings.fontSize * 1.6),
+                wordWrap: wordWrap ? "on" : "off",
+                minimap: { enabled: minimapEnabled },
+                scrollBeyondLastLine: false,
+                renderWhitespace: "none",
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                padding: { top: 16, bottom: 16 },
+                readOnly: !vault.openFile,
+                quickSuggestions: { other: true, comments: false, strings: true },
+                suggestOnTriggerCharacters: true,
+                snippetSuggestions: "top",
+                cursorSmoothCaretAnimation: "on",
+              }}
+            />
+          </Suspense>
           {/* Vim mode status bar */}
           <div
             ref={vimStatusRef}
@@ -1725,37 +2239,27 @@ ${html}
 
         {/* ── Preview ── */}
         {settings.previewVisible && (
-          <div className="pane preview-pane" id="preview-pane" ref={previewPaneRef}>
+          <div
+            className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
+            id="preview-pane"
+            ref={previewPaneRef}
+          >
             {customCss && <style>{customCss}</style>}
             <div
               className="preview-content"
               style={{ fontSize: settings.previewFontSize }}
               onClick={handlePreviewClick}
-              dangerouslySetInnerHTML={{
-                __html: (() => {
-                  try {
-                    return sanitizeRenderedHtml(
-                      renderMarkdown(previewContent, macros, vault.vaultPath ?? undefined, wikiNames, bibMap)
-                    )
-                  } catch (e) {
-                    const msg = (e instanceof Error ? e.message : String(e))
-                      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                    return `<pre style="color:red;padding:1rem">Error al renderizar: ${msg}</pre>`
-                  }
-                })()
-              }}
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
           </div>
         )}
 
         {/* ── Split view — reference panel ── */}
-        {splitFile && (() => {
-          const splitTab = vault.openTabs.find((t) => t.path === splitFile)
-          const splitContent = splitTab?.content ?? ""
+        {splitTab && (() => {
           return (
             <>
               <Resizer onDrag={() => {}} />
-              <div className="pane preview-pane split-pane">
+              <div className="pane preview-pane split-pane" ref={splitPreviewRef}>
                 <div className="split-pane-header">
                   <span className="split-pane-title">{splitTab?.name ?? ""}</span>
                   <button className="split-pane-close" onClick={() => setSplitFile(null)} title="Cerrar panel">×</button>
@@ -1763,15 +2267,7 @@ ${html}
                 <div
                   className="preview-content"
                   style={{ fontSize: settings.previewFontSize }}
-                  dangerouslySetInnerHTML={{
-                    __html: (() => {
-                      try {
-                        return sanitizeRenderedHtml(
-                          renderMarkdown(splitContent, macros, vault.vaultPath ?? undefined, wikiNames, bibMap)
-                        )
-                      } catch { return "" }
-                    })()
-                  }}
+                  dangerouslySetInnerHTML={{ __html: splitPreviewHtml }}
                 />
               </div>
             </>
@@ -1788,6 +2284,12 @@ ${html}
         macroCount={Object.keys(macros).length}
         selectedWords={selectedWords}
         wordGoal={settings.wordGoal > 0 ? settings.wordGoal : undefined}
+        onGoToLine={(line) => {
+          const editor = editorRef.current
+          editor?.setPosition({ lineNumber: line, column: 1 })
+          editor?.revealLineInCenter(line)
+          editor?.focus()
+        }}
       />
 
       <CommandPalette
@@ -1800,29 +2302,63 @@ ${html}
         onOpenRecent={handleOpenRecent}
       />
 
-      <SettingsModal
-        open={settingsOpen}
-        settings={settings}
-        onClose={() => setSettingsOpen(false)}
-        onChange={updateSettings}
+      <ClosedTabsPopup
+        open={closedTabsOpen}
+        paths={recentlyClosed}
+        onSelect={(path) => vault.reopenTab(path)}
+        onClose={() => setClosedTabsOpen(false)}
       />
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <QuickSwitcher
+        open={quickSwitcherOpen}
+        files={flatFiles(vault.tree).map((f) => ({ path: f.path, name: f.name }))}
+        recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
+        onSelect={(path) => {
+          const node = flatFiles(vault.tree).find((f) => f.path === path)
+          if (node) handleOpenFileNode(node)
+        }}
+        onClose={() => setQuickSwitcherOpen(false)}
+      />
+
+      <BookmarksPopup
+        open={bookmarksOpen}
+        bookmarks={Object.entries(bookmarks).map(([slot, line]) => ({ slot: parseInt(slot), line }))}
+        onGoTo={(line) => {
+          const editor = editorRef.current
+          editor?.setPosition({ lineNumber: line, column: 1 })
+          editor?.revealLineInCenter(line)
+          editor?.focus()
+        }}
+        onRemove={(slot) => setBookmarks((prev) => { const next = { ...prev }; delete next[slot]; saveBookmarks(next); return next })}
+        onClose={() => setBookmarksOpen(false)}
+      />
+
+      <Suspense fallback={null}>
+        <SettingsModal
+          open={settingsOpen}
+          settings={settings}
+          onClose={() => setSettingsOpen(false)}
+          onChange={updateSettings}
+        />
+        <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      </Suspense>
 
       <ToastContainer />
 
-      <TemplateModal
-        open={templateOpen}
-        onClose={() => setTemplateOpen(false)}
-        onCreate={handleCreateFromTemplate}
-      />
+      <Suspense fallback={null}>
+        <TemplateModal
+          open={templateOpen}
+          onClose={() => setTemplateOpen(false)}
+          onCreate={handleCreateFromTemplate}
+        />
 
-      <CitationManager
-        open={citationManagerOpen}
-        bibMap={bibMap}
-        onSave={handleSaveBib}
-        onClose={() => setCitationManagerOpen(false)}
-      />
+        <CitationManager
+          open={citationManagerOpen}
+          bibMap={bibMap}
+          onSave={handleSaveBib}
+          onClose={() => setCitationManagerOpen(false)}
+        />
+      </Suspense>
       <TableEditor
         open={tableEditorOpen}
         onClose={() => setTableEditorOpen(false)}
@@ -1830,12 +2366,14 @@ ${html}
       />
 
       {updateInfo?.available && !updaterDismissed && (
-        <UpdateChecker
-          updateInfo={updateInfo}
-          onInstall={handleInstallUpdate}
-          onDismiss={() => setUpdaterDismissed(true)}
-          installing={installing}
-        />
+        <Suspense fallback={null}>
+          <UpdateChecker
+            updateInfo={updateInfo}
+            onInstall={handleInstallUpdate}
+            onDismiss={() => setUpdaterDismissed(true)}
+            installing={installing}
+          />
+        </Suspense>
       )}
     </div>
   )

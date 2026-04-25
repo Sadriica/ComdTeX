@@ -54,14 +54,18 @@ export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHea
             {i > 0 && <span className="breadcrumb-sep">›</span>}
             {isLast ? (
               <span className="breadcrumb-current">{seg.label}</span>
-            ) : (
+            ) : onNavigate ? (
               <button
                 className="breadcrumb-link"
-                onClick={() => onNavigate?.(seg.path)}
+                onClick={() => onNavigate(seg.path)}
                 title={seg.path}
               >
                 {seg.label}
               </button>
+            ) : (
+              <span className="breadcrumb-link" title={seg.path}>
+                {seg.label}
+              </span>
             )}
           </span>
         )
