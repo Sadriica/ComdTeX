@@ -1,4 +1,5 @@
 import { useT } from "./i18n"
+import { pathBasename } from "./pathUtils"
 
 interface BreadcrumbProps {
   vaultPath: string | null
@@ -16,7 +17,7 @@ export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHea
   if (!vaultPath || !filePath) return null
 
   // Build segments relative to vault root
-  const vaultName = vaultPath.split("/").filter(Boolean).pop() ?? vaultPath
+  const vaultName = pathBasename(vaultPath) || vaultPath
   const relative = filePath.startsWith(vaultPath)
     ? filePath.slice(vaultPath.length).replace(/^\//, "")
     : filePath

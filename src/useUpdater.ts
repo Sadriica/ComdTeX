@@ -24,12 +24,18 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 }
 
 export async function downloadAndInstallUpdate(): Promise<void> {
-  const { check } = await import("@tauri-apps/plugin-updater")
-  const update = await check()
-  if (update) {
-    await update.downloadAndInstall()
-    // Restart
-    const { relaunch } = await import("@tauri-apps/plugin-process")
-    await relaunch()
+  try {
+    const { check } = await import("@tauri-apps/plugin-updater")
+    const update = await check()
+    if (update) {
+      await update.downloadAndInstall()
+      // Restart
+      const { relaunch } = await import("@tauri-apps/plugin-process")
+      await relaunch()
+    }
+  } catch (e) {
+    console.warn("Update install failed:", e)
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(msg)
   }
 }

@@ -28,7 +28,7 @@ import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
-import { pathJoin, displayBasename } from "./pathUtils"
+import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import TitleBar from "./TitleBar"
 import MenuBar from "./MenuBar"
 import type { MenuDef, MenuEntry } from "./MenuBar"
@@ -1788,7 +1788,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
-    const dir = currentFile.path.split("/").slice(0, -1).join("/") || "."
+    const dir = pathDirname(currentFile.path) || "."
     const base = currentFile.name.replace(/\.[^.]+$/, "")
     const tmpTex = `${dir}/${base}.comdtex-rebuild.tex`
     const tmpPdf = `${dir}/${base}.comdtex-rebuild.pdf`
@@ -2434,7 +2434,14 @@ ${html}
 
   const handleInstallUpdate = async () => {
     setInstalling(true)
-    await downloadAndInstallUpdate()
+    try {
+      await downloadAndInstallUpdate()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      showToast(t.app.updateInstallFailed(msg), "error")
+    } finally {
+      setInstalling(false)
+    }
   }
 
   // ── Command palette entries ───────────────────────────────────────────────

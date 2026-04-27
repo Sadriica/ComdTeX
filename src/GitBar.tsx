@@ -3,6 +3,7 @@ import { Command } from "@tauri-apps/plugin-shell"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { useT } from "./i18n"
 import { showToast } from "./toastService"
+import { pathBasename, pathDirname } from "./pathUtils"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -90,9 +91,8 @@ function FileRow({ file, isStaged, diff, onStage, onUnstage, onDiscard, onToggle
   stageTitle: string; unstageTitle: string; discardTitle: string
 }) {
   const code = isStaged ? file.x : file.y
-  const segs = file.path.split("/")
-  const name = segs.pop() ?? file.path
-  const dir  = segs.join("/")
+  const name = pathBasename(file.path) || file.path
+  const dir  = pathDirname(file.path)
   return (
     <div className="git-file-item">
       <div className="git-file-row">

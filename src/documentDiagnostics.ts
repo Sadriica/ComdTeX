@@ -1,4 +1,5 @@
 import { scanStructuralLabels } from "./structuralLabels"
+import { pathBasename } from "./pathUtils"
 
 export type DiagnosticSeverity = "error" | "warning" | "info"
 export type DiagnosticCategory = "references" | "citations" | "assets" | "math" | "tables" | "export" | "structure"
@@ -78,7 +79,7 @@ function scanImages(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
       const src = match[1].trim().replace(/^<|>$/g, "").split(/\s+/)[0]
       if (/^(https?:|data:|file:)/i.test(src)) continue
       const clean = src.replace(/^\.\//, "")
-      if (!known.has(clean.toLowerCase()) && !basenames.has(clean.split("/").pop()?.toLowerCase() ?? "")) {
+      if (!known.has(clean.toLowerCase()) && !basenames.has(pathBasename(clean).toLowerCase())) {
         push(issues, file, "warning", "assets", `Imagen local no encontrada: ${src}`, lineOf(file.content, match.index))
       }
     }

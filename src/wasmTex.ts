@@ -118,7 +118,19 @@ export class WasmTexEngine {
     // Listen for compile results on the same worker, regardless of init outcome.
     worker.addEventListener("message", (ev) => this.dispatch(ev))
 
-    return this.ready
+    // If init fails, clear the cached rejected promise so callers can retry
+    // by invoking init() again instead of being stuck awaiting a permanently
+    // rejected promise. We also tear down the dead worker.
+    const ready = this.ready
+    ready.catch(() => {
+      if (this.ready === ready) {
+        this.ready = null
+        try { this.worker?.terminate() } catch { /* ignore */ }
+        this.worker = null
+      }
+    })
+
+    return ready
   }
 
   /**

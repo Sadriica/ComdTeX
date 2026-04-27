@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useMemo } from "react"
 import type { FileNode } from "./types"
 import { flatFiles } from "./wikilinks"
-import { displayBasename } from "./pathUtils"
+import { displayBasename, pathBasename, pathDirname } from "./pathUtils"
 import { extractFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
 
@@ -45,16 +45,14 @@ function buildGraph(
 
   // Collect unique folder names for coloring
   for (const f of files) {
-    const parts = f.path.split("/")
-    const folder = parts.length > 1 ? parts[parts.length - 2] : ""
+    const folder = pathBasename(pathDirname(f.path))
     folderSet.add(folder)
   }
 
   // Create nodes with random initial positions
   const W = 400, H = 400
   const nodes: GraphNode[] = files.map((f) => {
-    const parts = f.path.split("/")
-    const folder = parts.length > 1 ? parts[parts.length - 2] : ""
+    const folder = pathBasename(pathDirname(f.path))
     const content = tabContent.get(f.path) ?? ""
     let tags: string[] = []
     if (content) {

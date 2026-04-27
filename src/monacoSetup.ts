@@ -2,6 +2,7 @@ import type * as monacoApi from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import katex from "katex"
 import { lintFile, type LintContext } from "./contentLinter"
+import { pathBasename } from "./pathUtils"
 
 interface Completion {
   label: string
@@ -599,7 +600,7 @@ export function setupContentLinter(
   const run = () => {
     const model = editor.getModel()
     if (!model) return
-    const filename = model.uri.path.split("/").pop() ?? ""
+    const filename = pathBasename(model.uri.path)
     const markers = lintFile(model.getValue(), filename, getContext(), monaco.MarkerSeverity)
     monaco.editor.setModelMarkers(model, LINTER_SOURCE, markers)
   }

@@ -377,6 +377,7 @@ export interface T {
     dailyNoteOpened: (name: string) => string
     dailyNoteError: (err: string) => string
     dailyNoteNoVault: string
+    updateInstallFailed: (err: string) => string
   }
 
   welcome: {
@@ -416,6 +417,7 @@ export interface T {
     moveError: string
     replaceSuccess: (n: number) => string
     replaceError: string
+    closeTabSaveError: (name: string, err: string) => string
   }
 
   helpPanel: {
@@ -1209,6 +1211,7 @@ const es: T = {
     dailyNoteOpened: (name) => `Nota diaria abierta: ${name}`,
     dailyNoteError: (err) => `Error al abrir nota diaria: ${err}`,
     dailyNoteNoVault: "Abre un vault para usar las notas diarias",
+    updateInstallFailed: (err) => `No se pudo instalar la actualización: ${err}`,
   },
 
   welcome: {
@@ -1254,6 +1257,7 @@ const es: T = {
     moveError: "No se pudo mover el archivo",
     replaceSuccess: (n) => `${n} reemplazos realizados`,
     replaceError: "Error al reemplazar",
+    closeTabSaveError: (name, err) => `No se pudo guardar "${name}" — pestaña no cerrada: ${err}`,
   },
 
   helpPanel: {
@@ -2108,6 +2112,7 @@ const en: T = {
     dailyNoteOpened: (name) => `Daily note opened: ${name}`,
     dailyNoteError: (err) => `Daily note error: ${err}`,
     dailyNoteNoVault: "Open a vault to use daily notes",
+    updateInstallFailed: (err) => `Update install failed: ${err}`,
   },
 
   welcome: {
@@ -2153,6 +2158,7 @@ const en: T = {
     moveError: "Could not move file",
     replaceSuccess: (n) => `${n} replacements made`,
     replaceError: "Error replacing",
+    closeTabSaveError: (name, err) => `Couldn't save "${name}" — tab kept open: ${err}`,
   },
 
   helpPanel: {

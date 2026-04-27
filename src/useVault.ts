@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
-import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
+import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
@@ -634,9 +634,16 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const pending = pendingContent.current.get(path)
     if (pending !== undefined && closedTab?.isDirty && !conflictPaths.current.has(path)) {
       // Await the save. If it succeeds, saveFile will clearDraft itself; if it
-      // fails (or hits the conflict prompt), the draft remains so the user can
-      // recover on next launch.
-      try { await saveFile(path, pending) } catch {}
+      // fails, surface the error and KEEP the tab open so the user does not
+      // silently lose unsaved content. The draft remains so a future retry
+      // (or crash recovery) can still rescue the data.
+      try {
+        await saveFile(path, pending)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        showToast(t.vault.closeTabSaveError(closedTab?.name ?? path, msg), "error")
+        return
+      }
     }
     setOpenTabs((prev) => {
       const idx = prev.findIndex((t) => t.path === path)
@@ -655,7 +662,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // the flush above failed, we want the draft to survive for crash recovery.
     // saveFile clears the draft on success.
     if (!closedTab?.isDirty) clearDraft(path)
-  }, [pinnedPaths, openTabs, saveFile])
+  }, [pinnedPaths, openTabs, saveFile, t])
 
   const createFile = useCallback(async (name: string, content = "") => {
     if (!vaultPath) return
@@ -694,7 +701,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const renameFile = useCallback(async (oldPath: string, newName: string) => {
     const v = validate(newName.replace(/\.[^.]+$/, ""))
     if (!v.valid) { showToast(v.error!, "error"); return }
-    const dir = await pathDirname(oldPath)
+    const dir = pathDirname(oldPath)
     const newPath = await pathJoin(dir, newName)
     try {
       await rename(oldPath, newPath)
@@ -708,7 +715,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
   }, [vaultPath, refreshTree, validate, t])
 
   const moveFile = useCallback(async (oldPath: string, targetFolderPath: string) => {
-    const name = oldPath.split("/").pop()!
+    const name = pathBasename(oldPath)
     const newPath = `${targetFolderPath}/${name}`
     if (oldPath === newPath) return
     try {

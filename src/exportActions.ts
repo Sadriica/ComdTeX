@@ -10,7 +10,7 @@ import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversi
 import { exportReveal, exportToTex } from "./exporter"
 import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
-import { pathJoin } from "./pathUtils"
+import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import { resolveTransclusions } from "./transclusion"
 import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
@@ -261,7 +261,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   }
 
   // ── Step 2 — fall back to local LaTeX toolchain ─────────────────────────
-  const dir = currentFile.path.split("/").slice(0, -1).join("/") || "."
+  const dir = pathDirname(currentFile.path) || "."
   const base = currentFile.name.replace(/\.[^.]+$/, "")
   const tmpTex = `${dir}/${base}.comdtex-compile.tex`
   const tmpPdf = `${dir}/${base}.comdtex-compile.pdf`
@@ -450,7 +450,7 @@ export async function backupVault(ctx: ExportActionsContext) {
   const outPath = await save({ filters: [{ name: "ZIP Archive", extensions: ["zip"] }] })
   if (!outPath) return
   try {
-    const vaultName = ctx.vaultPath.split("/").pop() ?? "vault"
+    const vaultName = pathBasename(ctx.vaultPath) || "vault"
     const result = await Command.create("zip", ["-r", outPath, vaultName], { cwd: ctx.vaultPath + "/.." }).execute()
     if (result.code !== 0) throw new Error(result.stderr)
     ctx.toast(ctx.messages.backupSuccess, "success")
