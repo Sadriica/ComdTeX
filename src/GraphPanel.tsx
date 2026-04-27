@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useMemo } from "react"
 import type { FileNode } from "./types"
 import { flatFiles } from "./wikilinks"
 import { displayBasename } from "./pathUtils"
+import { useT } from "./i18n"
 
 interface GraphPanelProps {
   tree: FileNode[]
@@ -152,6 +153,7 @@ function simulate(
 const FOLDER_COLORS_LIST = FOLDER_COLORS
 
 export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: GraphPanelProps) {
+  const t = useT()
   const baseGraph = useMemo(() => {
     const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, openTabs)
     const simulated = simulate(rawNodes, rawEdges)
@@ -210,15 +212,15 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
   }, [])
 
   if (flatFiles(tree).length === 0) {
-    return <div className="tree-empty">Sin archivos en el vault</div>
+    return <div className="tree-empty">{t.graphPanel.noFiles}</div>
   }
 
   return (
     <div className="graph-panel">
       <div className="graph-toolbar">
-        <button className="graph-btn" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1) }} title="Reiniciar vista">⊕</button>
+        <button className="graph-btn" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1) }} title={t.graphPanel.resetView}>⊕</button>
         <span className="graph-zoom-label">{Math.round(zoom * 100)}%</span>
-        <span className="graph-info">{nodes.length} nodos · {edges.length} enlaces</span>
+        <span className="graph-info">{t.graphPanel.graphInfo(nodes.length, edges.length)}</span>
       </div>
       <svg
         ref={svgRef}
@@ -294,7 +296,7 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
         {[...folderColors.entries()].slice(0, 6).map(([folder, color]) => (
           <span key={folder} className="graph-legend-item">
             <span className="graph-legend-dot" style={{ background: color }} />
-            {folder || "raíz"}
+            {folder || t.graphPanel.root}
           </span>
         ))}
       </div>

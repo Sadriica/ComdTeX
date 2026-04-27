@@ -24,8 +24,10 @@ export default function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCou
     <div className="tab-bar">
       {tabs.map((tab, idx) => {
         const counts = lintCounts?.[tab.path]
-        const hasErrors = (counts?.errors ?? 0) > 0
-        const hasWarnings = (counts?.warnings ?? 0) > 0
+        const errors = counts?.errors ?? 0
+        const warnings = counts?.warnings ?? 0
+        const hasErrors = errors > 0
+        const hasWarnings = warnings > 0
         const isPinned = pinnedPaths?.has(tab.path) ?? false
 
         return (
@@ -43,20 +45,20 @@ export default function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCou
             <span className="tab-name">{tab.name}</span>
             {tab.isDirty && <span className="tab-dirty">●</span>}
             {hasErrors && (
-              <span className="tab-lint-error" title={`${counts!.errors} error${counts!.errors === 1 ? "" : "s"}`}>
-                {counts!.errors}
+              <span className="tab-lint-error" title={`${errors} error${errors === 1 ? "" : "s"}`}>
+                {errors}
               </span>
             )}
             {!hasErrors && hasWarnings && (
-              <span className="tab-lint-warning" title={`${counts!.warnings} aviso${counts!.warnings === 1 ? "" : "s"}`}>
-                {counts!.warnings}
+              <span className="tab-lint-warning" title={t.tabBar.warningCount(warnings)}>
+                {warnings}
               </span>
             )}
             <button
               className={`tab-pin${isPinned ? " tab-pinned" : ""}`}
-              title={isPinned ? "Desanclar" : "Anclar"}
+              title={isPinned ? t.tabBar.unpin : t.tabBar.pin}
               onClick={(e) => { e.stopPropagation(); onTogglePin?.(tab.path) }}
-              aria-label={isPinned ? "Desanclar pestaña" : "Anclar pestaña"}
+              aria-label={isPinned ? t.tabBar.unpinAriaLabel : t.tabBar.pinAriaLabel}
             >
               {isPinned ? "📌" : "·"}
             </button>

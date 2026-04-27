@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { loadCustomTemplates, saveCustomTemplate, TEMPLATES, processTemplateVariables } from "./templates"
 import { useT } from "./i18n"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface TemplateModalProps {
   open: boolean
@@ -17,6 +18,8 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
   const [templateName, setTemplateName] = useState("")
   const [templateDescription, setTemplateDescription] = useState("")
   const [templateContent, setTemplateContent] = useState("---\ntitle: {{title}}\ndate: {{date}}\ntags: []\n---\n\n# {{title}}\n")
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
 
@@ -37,7 +40,7 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
     if (!trimmed || !templateContent.trim()) return
     const updated = saveCustomTemplate({
       name: trimmed,
-      description: templateDescription.trim() || "Plantilla personalizada",
+      description: templateDescription.trim() || t.templateModal.defaultDescription,
       icon: "◇",
       content: templateContent,
     })
@@ -50,28 +53,28 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{t.templateModal.title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.templateModal.closeAriaLabel}>✕</button>
         </div>
         <div className="modal-body template-body">
           <div className="template-actions-row">
             <button className="template-create-toggle" onClick={() => setEditingTemplate((v) => !v)}>
-              {editingTemplate ? "Usar plantillas" : "Crear plantilla"}
+              {editingTemplate ? t.templateModal.useTemplates : t.templateModal.createTemplate}
             </button>
           </div>
           {editingTemplate ? (
             <div className="template-editor">
               <input
                 className="template-filename-input"
-                placeholder="Nombre de la plantilla"
+                placeholder={t.templateModal.namePlaceholder}
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
               />
               <input
                 className="template-filename-input"
-                placeholder="Descripción"
+                placeholder={t.templateModal.descriptionPlaceholder}
                 value={templateDescription}
                 onChange={(e) => setTemplateDescription(e.target.value)}
               />
@@ -81,9 +84,9 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
                 onChange={(e) => setTemplateContent(e.target.value)}
                 rows={12}
               />
-              <div className="template-vars-hint">Variables: {"{{title}}"}, {"{{filename}}"}, {"{{date}}"}, {"{{date:formatted}}"}, {"{{year}}"}, {"{{time}}"}, {"{{datetime}}"}, {"{{author}}"}</div>
+              <div className="template-vars-hint">{t.templateModal.variablesHint}: {"{{title}}"}, {"{{filename}}"}, {"{{date}}"}, {"{{date:formatted}}"}, {"{{year}}"}, {"{{time}}"}, {"{{datetime}}"}, {"{{author}}"}</div>
               <button className="btn-create" onClick={handleSaveTemplate} disabled={!templateName.trim() || !templateContent.trim()}>
-                Guardar plantilla
+                {t.templateModal.saveTemplate}
               </button>
             </div>
           ) : (
@@ -100,7 +103,7 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
                   <span className="template-icon">{tpl.icon}</span>
                   <span className="template-name">{tplT?.name ?? tpl.name}</span>
                   <span className="template-desc">{tplT?.description ?? tpl.description}</span>
-                  {tpl.custom && <span className="template-custom-badge">personal</span>}
+                  {tpl.custom && <span className="template-custom-badge">{t.templateModal.customBadge}</span>}
                 </button>
               )
             })}

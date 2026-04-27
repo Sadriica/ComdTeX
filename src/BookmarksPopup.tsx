@@ -1,4 +1,6 @@
+import { useRef } from "react"
 import { useT } from "./i18n"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface Bookmark {
   slot: number
@@ -15,15 +17,17 @@ interface BookmarksPopupProps {
 
 export default function BookmarksPopup({ open, bookmarks, onGoTo, onRemove, onClose }: BookmarksPopupProps) {
   const t = useT()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{t.app.bookmarks}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="modal-body">
           {bookmarks.length === 0 && (

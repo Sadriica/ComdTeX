@@ -367,8 +367,32 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
   return lines.join("\n")
 }
 
+/** Allowed Reveal.js themes (per Reveal distribution). */
+export const REVEAL_THEMES = [
+  "black", "white", "league", "beige", "night", "serif",
+  "simple", "solarized", "moon", "dracula", "sky", "blood",
+] as const
+
+export type RevealTheme = (typeof REVEAL_THEMES)[number]
+
+function pickRevealTheme(raw: unknown): RevealTheme {
+  if (typeof raw !== "string") return "black"
+  const candidate = raw.trim().toLowerCase()
+  return (REVEAL_THEMES as readonly string[]).includes(candidate)
+    ? (candidate as RevealTheme)
+    : "black"
+}
+
 export function exportReveal(markdown: string, title: string): string {
-  const slides = markdown.split(/\n---\n/)
+  // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
+  const parsed = extractFrontmatter(markdown)
+  const body = parsed?.content ?? markdown
+  const fmTheme = parsed?.data
+    ? (parsed.data["reveal_theme"] ?? parsed.data["theme"])
+    : undefined
+  const theme = pickRevealTheme(fmTheme)
+
+  const slides = body.split(/\n---\n/)
 
   const slideHtml = slides.map(slide =>
     `  <section data-markdown>\n    <textarea data-template>\n${slide.trim()}\n    </textarea>\n  </section>`
@@ -380,7 +404,7 @@ export function exportReveal(markdown: string, title: string): string {
   <meta charset="utf-8">
   <title>${title}</title>
   <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
-  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/black.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/${theme}.css">
 </head>
 <body>
   <div class="reveal">

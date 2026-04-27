@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import {
   buildEnvHTML,
   extractEnvironments,
@@ -169,5 +169,31 @@ describe("environment labels", () => {
 
     expect(labels.get("thm:main")?.number).toBe("1")
     expect(resolveEnvironmentRefs("Ver @thm:main", labels)).toContain("Teorema 1")
+  })
+
+  it("handles duplicate labels: first wins, second gets suffixed id, dupes warn", () => {
+    const source =
+      ":::theorem {#thm:foo}\nFirst\n:::\n:::theorem {#thm:foo}\nSecond\n:::\n@thm:foo"
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      // Both theorems render; first keeps id="env-thm:foo", second gets "-2".
+      const { slots } = extractEnvironments(source, identity)
+      expect(slots).toHaveLength(2)
+      expect(slots[0]).toContain('id="env-thm:foo"')
+      expect(slots[1]).toContain('id="env-thm:foo-2"')
+      // Sanity: no collision (slot 0 must NOT carry the suffixed id).
+      expect(slots[0]).not.toContain('id="env-thm:foo-2"')
+
+      // Reference resolves to the FIRST occurrence (number 1, anchor #env-thm:foo).
+      const labels = prescanEnvironmentLabels(source)
+      expect(warn).toHaveBeenCalledWith("Duplicate environment label: thm:foo")
+      expect(labels.get("thm:foo")?.number).toBe("1")
+      const refHtml = resolveEnvironmentRefs("@thm:foo", labels)
+      expect(refHtml).toContain('href="#env-thm:foo"')
+      expect(refHtml).toContain("Teorema 1")
+    } finally {
+      warn.mockRestore()
+    }
   })
 })

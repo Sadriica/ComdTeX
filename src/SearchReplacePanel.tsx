@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react"
 import { displayBasename } from "./pathUtils"
 import { buildSearchRegExp, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
+import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
 
 interface SearchReplaceResult {
@@ -69,7 +70,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
             await scanDir(fullPath)
           } else if (entry.name.endsWith(".md") || entry.name.endsWith(".tex")) {
             try {
-              const text = await readTextFile(fullPath)
+              const text = toEditorContent(fullPath, await readTextFile(fullPath))
               const lines = text.split("\n")
               lines.forEach((lineContent, lineIdx) => {
                 const re = new RegExp(validPattern.source, validPattern.flags)
@@ -169,14 +170,14 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSearch()}
-          aria-label="Término de búsqueda"
+          aria-label={t.searchReplace.searchAriaLabel}
         />
         <input
           placeholder={t.search.replaceWithPlaceholder}
           value={replacement}
           onChange={e => setReplacement(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSearch()}
-          aria-label="Texto de reemplazo"
+          aria-label={t.searchReplace.replaceAriaLabel}
         />
       </div>
 
@@ -197,10 +198,10 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
 
       <div className="search-replace-btns">
         <button onClick={handleSearchNow} disabled={!query.trim() || searching}>
-          {searching ? "Buscando…" : "Buscar"}
+          {searching ? t.documentLab.searching : t.documentLab.search}
         </button>
         <button onClick={handleReplaceAll} disabled={results.length === 0 || replacing}>
-          {replacing ? "Reemplazando…" : "Reemplazar todo"}
+          {replacing ? t.documentLab.replacing : t.documentLab.replaceAll}
         </button>
       </div>
 
@@ -248,7 +249,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
                 onClick={() => handleReplaceOne(result)}
                 disabled={replacing}
               >
-                Reemplazar
+                {t.documentLab.replace}
               </button>
             </div>
           )

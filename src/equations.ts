@@ -21,14 +21,25 @@ export function nextEqNumber(): number {
 
 // ── First pass: build label → number map ──────────────────────────────────────
 
-const DISPLAY_MATH_RE = /\$\$([\s\S]+?)\$\$(?:\s*\{#([\w:.-]+)\})?/g
+// Match a display-math block, optionally followed by a `{#label}` annotation.
+// Capture groups:
+//   1: math expression (between the $$ delimiters)
+//   2: label (without leading `#`), if present
+// IMPORTANT: keep this regex shape in sync with the render-time consumer in
+// `renderer.ts` so prescan and render strip the same `{#label}` suffix.
+export const DISPLAY_MATH_RE = /\$\$([\s\S]+?)\$\$(?:\s*\{#([\w:.-]+)\})?/g
+
+function stripCodeFences(text: string): string {
+  return text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, "")
+}
 
 export function prescanEquations(text: string): Map<string, number> {
   const labels = new Map<string, number>()
   let n = 0
+  const stripped = stripCodeFences(text)
   DISPLAY_MATH_RE.lastIndex = 0
   let m: RegExpExecArray | null
-  while ((m = DISPLAY_MATH_RE.exec(text)) !== null) {
+  while ((m = DISPLAY_MATH_RE.exec(stripped)) !== null) {
     n++
     if (m[2]) labels.set(m[2], n)
   }

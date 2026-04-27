@@ -126,6 +126,16 @@ export const HANDLERS: Record<string, Handler> = {
   // Linear algebra
   inv:   ([x])        => `${x}^{-1}`,
   trans: ([x])        => `${x}^{\\top}`,
+  // Trig / math functions
+  sin:   ([x])        => `\\sin(${x})`,
+  cos:   ([x])        => `\\cos(${x})`,
+  tan:   ([x])        => `\\tan(${x})`,
+  cot:   ([x])        => `\\cot(${x})`,
+  sec:   ([x])        => `\\sec(${x})`,
+  csc:   ([x])        => `\\csc(${x})`,
+  exp:   ([x])        => `\\exp(${x})`,
+  ln:    ([x])        => `\\ln(${x})`,
+  log:   ([x])        => `\\log(${x})`,
 }
 
 const NAMES = Object.keys(HANDLERS).join("|")
@@ -219,9 +229,44 @@ function applyMatrixShorthand(text: string): string {
   })
 }
 
+// ── Code-block masking ───────────────────────────────────────────────────────
+
+// Mask fenced code blocks (``` or ~~~) and inline code (`...`) so shorthand
+// expansion does NOT touch literal code. The masked text is restored verbatim
+// after the math/shorthand passes.
+//
+// Fenced code is matched line-anchored: opening fence on its own line, content,
+// then a matching close fence on its own line. Inline code follows CommonMark's
+// "balanced backticks" rule: a run of N backticks ends at the next run of
+// exactly N backticks on the same input.
+const FENCED_CODE_RE = /(^|\n)([ \t]{0,3})(```+|~~~+)([^\n]*)\n([\s\S]*?)\n\2\3[ \t]*(?=\n|$)/g
+const INLINE_CODE_RE = /(`+)(?!`)([\s\S]+?)\1(?!`)/g
+
+function maskCode(text: string): { masked: string; slots: string[] } {
+  const slots: string[] = []
+  // Fenced first so inline backticks inside a fence don't get double-masked.
+  let masked = text.replace(FENCED_CODE_RE, (full, lead) => {
+    slots.push(full.slice(lead.length))
+    return `${lead}\x02CODE${slots.length - 1}\x03`
+  })
+  masked = masked.replace(INLINE_CODE_RE, (full) => {
+    slots.push(full)
+    return `\x02CODE${slots.length - 1}\x03`
+  })
+  return { masked, slots }
+}
+
+function unmaskCode(text: string, slots: string[]): string {
+  return text.replace(/\x02CODE(\d+)\x03/g, (_, i) => slots[parseInt(i)] ?? "")
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 export function preprocess(text: string): string {
+  // Mask code blocks before any math/shorthand processing so their contents
+  // are preserved verbatim (no `frac(a,b)` → `\frac{a}{b}` inside code).
+  const { masked, slots: codeSlots } = maskCode(text)
+
   const parts: string[] = []
   let cursor = 0
 
@@ -230,9 +275,9 @@ export function preprocess(text: string): string {
   const mathRe = /\$\$((?:.|\$(?!\$))+?)\$\$|\$([^\$\n]+?)\$/g
   let m: RegExpExecArray | null
 
-  while ((m = mathRe.exec(text)) !== null) {
+  while ((m = mathRe.exec(masked)) !== null) {
     // Text region before the math block → shorthands are auto-wrapped
-    const before = text.slice(cursor, m.index)
+    const before = masked.slice(cursor, m.index)
     parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true))))
 
     // Dentro del bloque math → shorthands sin wrap
@@ -249,8 +294,8 @@ export function preprocess(text: string): string {
   }
 
   // Texto restante
-  const tail = text.slice(cursor)
+  const tail = masked.slice(cursor)
   parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(tail, true))))
 
-  return parts.join("")
+  return unmaskCode(parts.join(""), codeSlots)
 }

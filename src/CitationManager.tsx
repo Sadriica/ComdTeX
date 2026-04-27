@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import type { BibEntry } from "./bibtex"
+import { useT } from "./i18n"
 
 interface CitationManagerProps {
   open: boolean
@@ -21,12 +22,6 @@ function serializeBibtex(entries: Map<string, BibEntry>): string {
 }
 
 const ENTRY_TYPES = ["article", "book", "inproceedings", "misc", "phdthesis", "techreport"]
-
-function venueLabel(type: string): string {
-  if (type === "article") return "Revista (journal)"
-  if (type === "inproceedings") return "Evento (booktitle)"
-  return "Booktitle / Fuente"
-}
 
 interface FormState {
   type: string
@@ -52,6 +47,7 @@ export default function CitationManager({
   onSave,
   onClose,
 }: CitationManagerProps) {
+  const t = useT()
   const [entries, setEntries] = useState<Map<string, BibEntry>>(new Map(bibMap))
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [error, setError] = useState<string | null>(null)
@@ -69,14 +65,20 @@ export default function CitationManager({
 
   if (!open) return null
 
+  const venueLabel = (type: string): string => {
+    if (type === "article") return t.citationManager.venueJournal
+    if (type === "inproceedings") return t.citationManager.venueBooktitle
+    return t.citationManager.venueSource
+  }
+
   const handleAdd = () => {
     const key = form.key.trim()
     if (!key) {
-      setError("Key requerido")
+      setError(t.citationManager.keyRequired)
       return
     }
     if (entries.has(key)) {
-      setError(`Key "${key}" ya existe`)
+      setError(t.citationManager.keyExists(key))
       return
     }
     const venueField = ["article", "inproceedings"].includes(form.type) ? "journal" : "booktitle"
@@ -122,8 +124,8 @@ export default function CitationManager({
       <div className="cit-manager">
         {/* Header */}
         <div className="cit-manager-header">
-          <span className="cit-manager-title">Gestor de Referencias BibTeX</span>
-          <button className="cit-manager-close" onClick={onClose} title="Cerrar">×</button>
+          <span className="cit-manager-title">{t.citationManager.title}</span>
+          <button className="cit-manager-close" onClick={onClose} title={t.citationManager.close}>×</button>
         </div>
 
         {/* Body */}
@@ -132,7 +134,7 @@ export default function CitationManager({
           <div className="cit-list">
             {entries.size === 0 && (
               <div style={{ padding: "16px 12px", color: "#555", fontSize: 12 }}>
-                No hay entradas. Agrega una abajo.
+                {t.citationManager.noEntries}
               </div>
             )}
             {[...entries.entries()].map(([key, entry]) => {
@@ -145,7 +147,7 @@ export default function CitationManager({
                       <span className="cit-type-badge">{entry.type}</span>
                     </div>
                     <div className="cit-item-title" title={f.title ?? ""}>
-                      {f.title || <em style={{ color: "#555" }}>Sin título</em>}
+                      {f.title || <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>}
                     </div>
                     <div className="cit-item-meta">
                       {[f.author, f.year].filter(Boolean).join(" · ")}
@@ -153,7 +155,7 @@ export default function CitationManager({
                   </div>
                   <button
                     className="cit-delete-btn"
-                    title={deleteConfirm === key ? "Confirmar eliminación" : "Eliminar entrada"}
+                    title={deleteConfirm === key ? t.citationManager.confirmDelete : t.citationManager.deleteEntry}
                     onClick={() => handleDelete(key)}
                     style={deleteConfirm === key ? { color: "#f48771" } : undefined}
                   >
@@ -167,7 +169,7 @@ export default function CitationManager({
           {/* Add entry form */}
           <div className="cit-add-form">
             <div style={{ fontSize: 11, color: "#888", marginBottom: 2, fontWeight: 600 }}>
-              Agregar entrada
+              {t.citationManager.addEntry}
             </div>
             <div className="cit-add-form-row">
               <select
@@ -180,14 +182,14 @@ export default function CitationManager({
                 ))}
               </select>
               <input
-                placeholder="Key *"
+                placeholder={t.citationManager.keyPlaceholder}
                 value={form.key}
                 onChange={e => updateForm("key", e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
                 style={{ flex: "0 0 auto", minWidth: 100, maxWidth: 140 }}
               />
               <input
-                placeholder="Año"
+                placeholder={t.citationManager.yearPlaceholder}
                 value={form.year}
                 onChange={e => updateForm("year", e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
@@ -196,7 +198,7 @@ export default function CitationManager({
             </div>
             <div className="cit-add-form-row">
               <input
-                placeholder="Título"
+                placeholder={t.citationManager.titlePlaceholder}
                 value={form.title}
                 onChange={e => updateForm("title", e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
@@ -204,7 +206,7 @@ export default function CitationManager({
             </div>
             <div className="cit-add-form-row">
               <input
-                placeholder="Autor(es)"
+                placeholder={t.citationManager.authorPlaceholder}
                 value={form.author}
                 onChange={e => updateForm("author", e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
@@ -223,7 +225,7 @@ export default function CitationManager({
                 onClick={handleAdd}
                 style={{ marginLeft: "auto" }}
               >
-                Añadir
+                {t.citationManager.add}
               </button>
             </div>
           </div>
@@ -231,8 +233,8 @@ export default function CitationManager({
 
         {/* Footer */}
         <div className="cit-manager-footer">
-          <button className="cit-cancel-btn" onClick={onClose}>Cancelar</button>
-          <button className="cit-save-btn" onClick={handleSave}>Guardar</button>
+          <button className="cit-cancel-btn" onClick={onClose}>{t.citationManager.cancel}</button>
+          <button className="cit-save-btn" onClick={handleSave}>{t.citationManager.save}</button>
         </div>
       </div>
     </div>

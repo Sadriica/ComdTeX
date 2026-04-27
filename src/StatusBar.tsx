@@ -43,7 +43,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
             {t.statusBar.selectedWords(selectedWords)}
           </span>
         ) : wordGoal && wordGoal > 0 ? (
-          <span className="status-item status-goal" title={`${wc} / ${wordGoal} palabras`}>
+          <span className="status-item status-goal" title={t.statusBar.wordGoalTitle(wc, wordGoal)}>
             <span className="status-goal-bar">
               <span
                 className={`status-goal-fill${wc >= wordGoal ? " completed" : ""}`}

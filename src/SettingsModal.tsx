@@ -1,5 +1,7 @@
+import { useRef } from "react"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface SettingsModalProps {
   open: boolean
@@ -10,17 +12,21 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ open, settings, onClose, onChange }: SettingsModalProps) {
   const t = useT()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, open, onClose)
   if (!open) return null
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose} onKeyDown={(e) => e.key === "Escape" && onClose()}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{t.settings.title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>✕</button>
         </div>
 
         <div className="modal-body">
+          <h4 className="setting-section">{t.settings.sectionGeneral}</h4>
+
           <label className="setting-row">
             <span>{t.settings.language}</span>
             <select
@@ -33,6 +39,29 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
           </label>
 
           <label className="setting-row">
+            <span>{t.settings.theme}</span>
+            <select
+              value={settings.theme}
+              onChange={(e) => onChange({ theme: e.target.value as Settings["theme"] })}
+            >
+              <option value="vs-dark">{t.settings.dark}</option>
+              <option value="vs">{t.settings.light}</option>
+              <option value="hc-black">{t.settings.highContrast}</option>
+            </select>
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.touchpadGestures}</span>
+            <input
+              type="checkbox"
+              checked={settings.touchpadGestures}
+              onChange={() => onChange({ touchpadGestures: !settings.touchpadGestures })}
+            />
+          </label>
+
+          <h4 className="setting-section">{t.settings.sectionEditor}</h4>
+
+          <label className="setting-row">
             <span>{t.settings.editorFont}</span>
             <div className="setting-control">
               <input
@@ -41,18 +70,6 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
                 onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
               />
               <span className="setting-value">{settings.fontSize}px</span>
-            </div>
-          </label>
-
-          <label className="setting-row">
-            <span>{t.settings.previewFont}</span>
-            <div className="setting-control">
-              <input
-                type="range" min={11} max={24} step={1}
-                value={settings.previewFontSize}
-                onChange={(e) => onChange({ previewFontSize: Number(e.target.value) })}
-              />
-              <span className="setting-value">{settings.previewFontSize}px</span>
             </div>
           </label>
 
@@ -84,18 +101,6 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
           </div>
 
           <label className="setting-row">
-            <span>{t.settings.theme}</span>
-            <select
-              value={settings.theme}
-              onChange={(e) => onChange({ theme: e.target.value as Settings["theme"] })}
-            >
-              <option value="vs-dark">{t.settings.dark}</option>
-              <option value="vs">{t.settings.light}</option>
-              <option value="hc-black">{t.settings.highContrast}</option>
-            </select>
-          </label>
-
-          <label className="setting-row">
             <span>{t.settings.vimMode}</span>
             <input
               type="checkbox"
@@ -114,11 +119,70 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
           </label>
 
           <label className="setting-row">
-            <span>{t.settings.touchpadGestures}</span>
+            <span>{t.settings.wordWrap}</span>
             <input
               type="checkbox"
-              checked={settings.touchpadGestures}
-              onChange={() => onChange({ touchpadGestures: !settings.touchpadGestures })}
+              checked={settings.wordWrap}
+              onChange={() => onChange({ wordWrap: !settings.wordWrap })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.minimap}</span>
+            <input
+              type="checkbox"
+              checked={settings.minimapEnabled}
+              onChange={() => onChange({ minimapEnabled: !settings.minimapEnabled })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.spellcheck}</span>
+            <input
+              type="checkbox"
+              checked={settings.spellcheck}
+              onChange={() => onChange({ spellcheck: !settings.spellcheck })}
+            />
+          </label>
+
+          <h4 className="setting-section">{t.settings.sectionPreview}</h4>
+
+          <label className="setting-row">
+            <span>{t.settings.previewFont}</span>
+            <div className="setting-control">
+              <input
+                type="range" min={11} max={24} step={1}
+                value={settings.previewFontSize}
+                onChange={(e) => onChange({ previewFontSize: Number(e.target.value) })}
+              />
+              <span className="setting-value">{settings.previewFontSize}px</span>
+            </div>
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.previewVisible}</span>
+            <input
+              type="checkbox"
+              checked={settings.previewVisible}
+              onChange={() => onChange({ previewVisible: !settings.previewVisible })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.syncScroll}</span>
+            <input
+              type="checkbox"
+              checked={settings.syncScroll}
+              onChange={() => onChange({ syncScroll: !settings.syncScroll })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.mathPreview}</span>
+            <input
+              type="checkbox"
+              checked={settings.mathPreview ?? true}
+              onChange={() => onChange({ mathPreview: !(settings.mathPreview ?? true) })}
             />
           </label>
 

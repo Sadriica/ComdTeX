@@ -118,6 +118,39 @@ export default function HelpPanel() {
           <code className="hp-code">#### </code>
           {hp.headingsPurpose}
         </p>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.pseudocode}</div>
+        <p className="hp-intro">{hp.pseudocodeDesc}</p>
+        <Row code={hp.pseudocodeSyntax} desc={hp.pseudocodeDesc} />
+        <p className="hp-intro" style={{ fontSize: "0.85em", color: "#888" }}>{hp.pseudocodeSyntaxAlt}</p>
+        <p className="hp-intro" style={{ fontSize: "0.85em", color: "#888" }}>{hp.pseudocodeKeywords}</p>
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.pseudocodeExample}</pre>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.truthTable}</div>
+        <p className="hp-intro">{hp.truthTableDesc}</p>
+        <Row code=":::truth[title]" desc={hp.truthTableDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.truthTableExample}</pre>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.graphViz}</div>
+        <p className="hp-intro">{hp.graphVizDesc}</p>
+        <Row code=":::graph[title]" desc={hp.graphVizDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.graphVizExample}</pre>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.functionPlot}</div>
+        <p className="hp-intro">{hp.functionPlotDesc}</p>
+        <Row code=":::plot[title]" desc={hp.functionPlotDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.functionPlotExample}</pre>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.commDiag}</div>
+        <p className="hp-intro">{hp.commDiagDesc}</p>
+        <Row code=":::commdiag[title]" desc={hp.commDiagDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.commDiagExample}</pre>
+
+        <div className="hp-label" style={{ marginTop: "0.8rem" }}>{hp.symbolPickerHelp}</div>
+        <p className="hp-intro">{hp.symbolPickerDesc}</p>
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.mathPreviewHelp}</div>
+        <p className="hp-intro">{hp.mathPreviewDesc}</p>
       </Section>
 
       {/* ── Math shorthands ── */}
@@ -168,6 +201,17 @@ export default function HelpPanel() {
         <Row code="matf(2,3, a,b,c, d,e,f)"  desc={hp.matFixed} />
         <Row code="table(Col1, Col2)"         desc={hp.matTable} />
         <Row code="[[1,2],[3,4]]"             desc={hp.matLiteral} />
+
+        <div className="hp-label">{hp.trigFunctions}</div>
+        <Row code="sin(x)"         desc={hp.hpSin}          render={math("\\sin(x)")} />
+        <Row code="cos(x)"         desc={hp.hpCos}          render={math("\\cos(x)")} />
+        <Row code="tan(x)"         desc={hp.hpTan}          render={math("\\tan(x)")} />
+        <Row code="cot(x)"         desc={hp.hpCot}          render={math("\\cot(x)")} />
+        <Row code="sec(x)"         desc={hp.hpSec}          render={math("\\sec(x)")} />
+        <Row code="csc(x)"         desc={hp.hpCsc}          render={math("\\csc(x)")} />
+        <Row code="exp(x)"         desc={hp.hpExp}          render={math("\\exp(x)")} />
+        <Row code="ln(x)"          desc={hp.hpLn}           render={math("\\ln(x)")} />
+        <Row code="log(x)"         desc={hp.hpLog}          render={math("\\log(x)")} />
 
         <p className="hp-intro" style={{ marginTop: "0.6rem" }}>
           <strong>{hp.nesting}</strong>{" "}
@@ -347,6 +391,24 @@ export default function HelpPanel() {
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* ── Editor toggles ── */}
+      <Section title={hp.editorToggles}>
+        <p className="hp-intro">{hp.editorTogglesIntro}</p>
+        <Row code={hp.toggleTypewriter}  desc={hp.toggleTypewriterDesc} />
+        <Row code={hp.toggleSyncScroll}  desc={hp.toggleSyncScrollDesc} />
+        <Row code={hp.toggleWordWrap}    desc={hp.toggleWordWrapDesc} />
+        <Row code={hp.toggleMinimap}     desc={hp.toggleMinimapDesc} />
+        <Row code={hp.toggleSpellcheck}  desc={hp.toggleSpellcheckDesc} />
+      </Section>
+
+      {/* ── Sidebar panels ── */}
+      <Section title={hp.sidebarPanels}>
+        <p className="hp-intro">{hp.sidebarPanelsIntro}</p>
+        <Row code={hp.panelEnvironments} desc={hp.panelEnvironmentsDesc} />
+        <Row code={hp.panelLabels}       desc={hp.panelLabelsDesc} />
+        <Row code={hp.panelQuality}      desc={hp.panelQualityDesc} />
       </Section>
 
     </div>

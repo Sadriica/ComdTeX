@@ -1,3 +1,5 @@
+import { useT } from "./i18n"
+
 interface BreadcrumbProps {
   vaultPath: string | null
   filePath: string | null
@@ -10,6 +12,7 @@ interface BreadcrumbProps {
 }
 
 export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHeading, canGoBack, canGoForward, onGoBack, onGoForward }: BreadcrumbProps) {
+  const t = useT()
   if (!vaultPath || !filePath) return null
 
   // Build segments relative to vault root
@@ -32,20 +35,20 @@ export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHea
   }
 
   return (
-    <nav className="breadcrumb" aria-label="Ubicación">
+    <nav className="breadcrumb" aria-label={t.breadcrumb.location}>
       <button
         className="breadcrumb-nav-btn"
         onClick={onGoBack}
         disabled={!canGoBack}
-        title="Atrás (Alt+←)"
-        aria-label="Atrás"
+        title={t.breadcrumb.backTitle}
+        aria-label={t.breadcrumb.back}
       >‹</button>
       <button
         className="breadcrumb-nav-btn"
         onClick={onGoForward}
         disabled={!canGoForward}
-        title="Adelante (Alt+→)"
-        aria-label="Adelante"
+        title={t.breadcrumb.forwardTitle}
+        aria-label={t.breadcrumb.forward}
       >›</button>
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1

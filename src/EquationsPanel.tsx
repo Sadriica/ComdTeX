@@ -53,7 +53,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
           key={eq.number}
           className="eq-list-item"
           onClick={() => jump(eq.line)}
-          title={`Línea ${eq.line}${eq.label ? ` — ${eq.label}` : ""}`}
+          title={`${t.equations.lineTitle(eq.line)}${eq.label ? ` — ${eq.label}` : ""}`}
         >
           <span className="eq-list-num">({eq.number})</span>
           {eq.label && <span className="eq-list-label">#{eq.label}</span>}

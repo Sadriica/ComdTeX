@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { exportToTex } from "./exporter"
+import { exportToTex, exportReveal } from "./exporter"
 
 describe("exportToTex", () => {
   it("uses frontmatter metadata without exporting raw YAML as document body", () => {
@@ -37,5 +37,30 @@ describe("exportToTex", () => {
     expect(tex).toContain("\\label{tbl:data}")
     expect(tex).toContain("\\label{thm:main}")
     expect(tex).toContain("Teorema~\\ref{thm:main}")
+  })
+})
+
+describe("exportReveal", () => {
+  it("defaults to the black theme when no frontmatter is present", () => {
+    const html = exportReveal("# Slide", "Demo")
+    expect(html).toContain("theme/black.css")
+  })
+
+  it("reads `reveal_theme` from frontmatter", () => {
+    const html = exportReveal("---\nreveal_theme: dracula\n---\n# Slide", "Demo")
+    expect(html).toContain("theme/dracula.css")
+    expect(html).not.toContain("theme/black.css")
+    // Frontmatter must not leak into the slide body
+    expect(html).not.toContain("reveal_theme: dracula")
+  })
+
+  it("falls back to `theme` field if `reveal_theme` is missing", () => {
+    const html = exportReveal("---\ntheme: solarized\n---\n# Slide", "Demo")
+    expect(html).toContain("theme/solarized.css")
+  })
+
+  it("ignores invalid theme names and falls back to black", () => {
+    const html = exportReveal("---\nreveal_theme: not-a-theme\n---\n# Slide", "Demo")
+    expect(html).toContain("theme/black.css")
   })
 })

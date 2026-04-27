@@ -146,3 +146,44 @@ describe("preprocess — robustness", () => {
     expect(out).toContain("\\left\\|b\\right\\|")
   })
 })
+
+describe("preprocess — code regions are skipped", () => {
+  it("expands frac(a,b) outside code", () => {
+    expect(preprocess("frac(a,b)")).toBe("$\\frac{a}{b}$")
+  })
+
+  it("does NOT expand frac(a,b) inside a fenced code block", () => {
+    const input = "Before frac(x,y)\n```\nfrac(a,b)\n```\nAfter frac(p,q)"
+    const out = preprocess(input)
+    // Code fence content preserved verbatim (no expansion, no wrapping in $...$).
+    expect(out).toContain("```\nfrac(a,b)\n```")
+    expect(out).not.toContain("\\frac{a}{b}")
+    // Surrounding text still expanded.
+    expect(out).toContain("$\\frac{x}{y}$")
+    expect(out).toContain("$\\frac{p}{q}$")
+  })
+
+  it("preserves the code fence itself verbatim (including info string)", () => {
+    const input = "```js\nfrac(a,b)\n```"
+    const out = preprocess(input)
+    expect(out).toBe("```js\nfrac(a,b)\n```")
+  })
+
+  it("does NOT expand frac(a,b) inside inline backticks", () => {
+    const out = preprocess("Use `frac(a,b)` to write fractions")
+    expect(out).toContain("`frac(a,b)`")
+    expect(out).not.toContain("\\frac{a}{b}")
+  })
+
+  it("inline code does not break surrounding expansion", () => {
+    const out = preprocess("Try `frac(a,b)` then frac(1,2).")
+    expect(out).toContain("`frac(a,b)`")
+    expect(out).toContain("$\\frac{1}{2}$")
+  })
+
+  it("tilde-fenced code blocks are also skipped", () => {
+    const input = "~~~\nfrac(a,b)\n~~~"
+    const out = preprocess(input)
+    expect(out).toBe("~~~\nfrac(a,b)\n~~~")
+  })
+})

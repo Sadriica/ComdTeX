@@ -1,4 +1,6 @@
+import { useRef } from "react"
 import { useT } from "./i18n"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface HelpModalProps {
   open: boolean
@@ -7,6 +9,8 @@ interface HelpModalProps {
 
 export default function HelpModal({ open, onClose }: HelpModalProps) {
   const t = useT()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, open, onClose)
   if (!open) return null
 
   const shortcuts = [
@@ -51,10 +55,10 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{t.help.title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="modal-body help-body">
           {shortcuts.map((item, i) =>

@@ -12,6 +12,11 @@ export interface Settings {
   wordGoal: number  // 0 = no goal
   touchpadGestures: boolean
   previewTheme: "dark" | "light" | "same"
+  mathPreview: boolean
+  wordWrap: boolean
+  minimapEnabled: boolean
+  spellcheck: boolean
+  syncScroll: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -26,6 +31,11 @@ const DEFAULTS: Settings = {
   wordGoal: 0,
   touchpadGestures: true,
   previewTheme: "same",
+  mathPreview: true,
+  wordWrap: false,
+  minimapEnabled: false,
+  spellcheck: false,
+  syncScroll: true,
 }
 
 const KEY = "comdtex_settings"

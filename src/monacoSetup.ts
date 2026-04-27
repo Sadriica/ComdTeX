@@ -11,26 +11,47 @@ interface Completion {
 
 export const COMPLETIONS: Completion[] = [
   // ── Environments ─────────────────────────────────────────────────────────
-  { label: "theorem",     detail: ":::theorem → Teorema numerado",     snippet: ":::theorem[${1:título}]\n${2:enunciado}\n:::" },
-  { label: "lemma",       detail: ":::lemma → Lema numerado",          snippet: ":::lemma[${1:título}]\n${2:enunciado}\n:::" },
-  { label: "corollary",   detail: ":::corollary → Corolario",          snippet: ":::corollary\n${1:enunciado}\n:::" },
-  { label: "proposition", detail: ":::proposition → Proposición",      snippet: ":::proposition\n${1:enunciado}\n:::" },
-  { label: "definition",  detail: ":::definition → Definición",        snippet: ":::definition\n${1:definición}\n:::" },
-  { label: "example",     detail: ":::example → Ejemplo",              snippet: ":::example\n${1:ejemplo}\n:::" },
-  { label: "exercise",    detail: ":::exercise → Ejercicio",           snippet: ":::exercise\n${1:ejercicio}\n:::" },
-  { label: "proof",       detail: ":::proof → Demostración (con □)",   snippet: ":::proof\n${1:demostración}\n:::" },
-  { label: "remark",      detail: ":::remark → Observación",           snippet: ":::remark\n${1:observación}\n:::" },
-  { label: "note",        detail: ":::note → Nota",                    snippet: ":::note\n${1:nota}\n:::" },
+  { label: "theorem",     detail: ":::theorem → numbered theorem",     snippet: ":::theorem[${1:title}]\n${2:statement}\n:::" },
+  { label: "lemma",       detail: ":::lemma → numbered lemma",         snippet: ":::lemma[${1:title}]\n${2:statement}\n:::" },
+  { label: "corollary",   detail: ":::corollary → corollary",          snippet: ":::corollary\n${1:statement}\n:::" },
+  { label: "proposition", detail: ":::proposition → proposition",      snippet: ":::proposition\n${1:statement}\n:::" },
+  { label: "definition",  detail: ":::definition → definition",        snippet: ":::definition\n${1:definition}\n:::" },
+  { label: "example",     detail: ":::example → example",              snippet: ":::example\n${1:example}\n:::" },
+  { label: "exercise",    detail: ":::exercise → exercise",            snippet: ":::exercise\n${1:exercise}\n:::" },
+  { label: "proof",       detail: ":::proof → proof (with □)",         snippet: ":::proof\n${1:proof}\n:::" },
+  { label: "remark",      detail: ":::remark → remark",                snippet: ":::remark\n${1:remark}\n:::" },
+  { label: "note",        detail: ":::note → note",                    snippet: ":::note\n${1:note}\n:::" },
+  // ── Truth table ─────────────────────────────────────────────────────────────
+  { label: ":::truth", detail: ":::truth → truth table block", snippet: ":::truth[${1:title}]\n${2:p ∧ q}\n:::" },
+  // ── Graph visualizer ────────────────────────────────────────────────────────
+  { label: ":::graph", detail: "Graph visualizer", snippet: ":::graph[${1:title}]\n${2:A -- B}\n${3:A -- C}\n:::" },
+  // ── Function plotter ────────────────────────────────────────────────────────
+  { label: ":::plot", detail: "Function plotter", snippet: ":::plot[${1:title}]\n${2:f(x) = sin(x)}\nrange: [${3:-6.28}, ${4:6.28}]\n:::" },
+  // ── Commutative diagram ─────────────────────────────────────────────────────
+  { label: ":::commdiag", detail: "Commutative diagram", snippet: ":::commdiag[${1:title}]\n${2:A} -> ${3:B} [${4:f}]\n${5:A} -> ${6:C} [${7:g}]\n${8:B} -> ${9:D} [${10:h}]\n${11:C} -> ${12:D} [${13:k}]\n:::" },
+  // ── Pseudocode ──────────────────────────────────────────────────────────────
+  { label: "#algo",     detail: "#algo[Title] ... #end → algorithm block with flowchart", snippet: "#algo[${1:Algorithm name}]\nINPUT: ${2:description}\nOUTPUT: ${3:description}\n\n${4:FOR i ← 1 TO n DO\n  ${5:statement}\nEND FOR}\n#end" },
+  { label: "FOR",       detail: "pseudocode: FOR loop",     snippet: "FOR ${1:i} ← ${2:1} TO ${3:n} DO\n  ${4}\nEND FOR" },
+  { label: "WHILE",     detail: "pseudocode: WHILE loop",   snippet: "WHILE ${1:condition} DO\n  ${2}\nEND WHILE" },
+  { label: "IF",        detail: "pseudocode: IF statement", snippet: "IF ${1:condition} THEN\n  ${2}\nEND IF" },
+  { label: "FUNCTION",   detail: "pseudocode: FUNCTION block",       snippet: "FUNCTION ${1:Name}(${2:args})\n  ${3}\n  RETURN ${4}\nEND FUNCTION" },
+  { label: "RETURN",    detail: "pseudocode: RETURN",                snippet: "RETURN ${1:value}" },
+  { label: "REPEAT",    detail: "pseudocode: REPEAT...UNTIL loop",   snippet: "REPEAT\n  ${1:statement}\nUNTIL ${2:condition}" },
+  { label: "ELSE",      detail: "pseudocode: ELSE branch",           snippet: "ELSE\n  ${1:statement}" },
+  { label: "INPUT",     detail: "pseudocode: input (parallelogram)",  snippet: "INPUT: ${1:variable}" },
+  { label: "OUTPUT",    detail: "pseudocode: output (parallelogram)", snippet: "OUTPUT: ${1:value}" },
+  { label: "PROCEDURE", detail: "pseudocode: PROCEDURE block",       snippet: "PROCEDURE ${1:Name}(${2:args})\n  ${3}\nEND PROCEDURE" },
+  { label: "#end",      detail: "pseudocode: close #algo block",     snippet: "#end" },
   // ── Math shorthands ───────────────────────────────────────────────────────
-  { label: "table", detail: "table(Col1, Col2, ...) → tabla markdown",            snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
-  { label: "mat",   detail: "mat(v1, v2, ...) → tamaño auto-detectado",          snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
-  { label: "matf",  detail: "matf(filas, cols, v1, ...) → tamaño explícito",     snippet: "matf(${1:2}, ${2:2})" },
-  { label: "frac",  detail: "frac(numerador, denominador) → a/b",                snippet: "frac(${1:a}, ${2:b})" },
-  { label: "sqrt",  detail: "sqrt(x) → √x",                                      snippet: "sqrt(${1:x})" },
-  { label: "root",  detail: "root(n, x) → ⁿ√x",                                 snippet: "root(${1:n}, ${2:x})" },
-  { label: "sum",   detail: "sum(inicio, fin) → Σ",                              snippet: "sum(${1:i=0}, ${2:n})" },
-  { label: "int",   detail: "int(a, b) → ∫",                                     snippet: "int(${1:a}, ${2:b})" },
-  { label: "lim",   detail: "lim(var, valor) → lím",                             snippet: "lim(${1:x}, ${2:0})" },
+  { label: "table", detail: "table(Col1, Col2, ...) → markdown table",         snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
+  { label: "mat",   detail: "mat(v1, v2, ...) → auto-sized matrix",            snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
+  { label: "matf",  detail: "matf(rows, cols, v1, ...) → explicit-size matrix",snippet: "matf(${1:2}, ${2:2})" },
+  { label: "frac",  detail: "frac(num, den) → a/b",                            snippet: "frac(${1:a}, ${2:b})" },
+  { label: "sqrt",  detail: "sqrt(x) → √x",                                    snippet: "sqrt(${1:x})" },
+  { label: "root",  detail: "root(n, x) → ⁿ√x",                               snippet: "root(${1:n}, ${2:x})" },
+  { label: "sum",   detail: "sum(start, end) → Σ",                             snippet: "sum(${1:i=0}, ${2:n})" },
+  { label: "int",   detail: "int(a, b) → ∫",                                   snippet: "int(${1:a}, ${2:b})" },
+  { label: "lim",   detail: "lim(var, val) → lim",                             snippet: "lim(${1:x}, ${2:0})" },
   { label: "vec",   detail: "vec(v) → v⃗",                                       snippet: "vec(${1:v})" },
   { label: "abs",   detail: "abs(x) → |x|",                                      snippet: "abs(${1:x})" },
   { label: "norm",  detail: "norm(v) → ‖v‖",                                     snippet: "norm(${1:v})" },
@@ -55,6 +76,16 @@ export const COMPLETIONS: Completion[] = [
   // Linear algebra
   { label: "inv",   detail: "inv(A) → A⁻¹",                                      snippet: "inv(${1:A})" },
   { label: "trans", detail: "trans(A) → Aᵀ",                                     snippet: "trans(${1:A})" },
+  // ── Trig / Math functions ──────────────────────────────────────────────────
+  { label: "sin",   detail: "sin(x) → \\sin(x)",                                  snippet: "sin(${1:x})" },
+  { label: "cos",   detail: "cos(x) → \\cos(x)",                                  snippet: "cos(${1:x})" },
+  { label: "tan",   detail: "tan(x) → \\tan(x)",                                  snippet: "tan(${1:x})" },
+  { label: "cot",   detail: "cot(x) → \\cot(x)",                                  snippet: "cot(${1:x})" },
+  { label: "sec",   detail: "sec(x) → \\sec(x)",                                  snippet: "sec(${1:x})" },
+  { label: "csc",   detail: "csc(x) → \\csc(x)",                                  snippet: "csc(${1:x})" },
+  { label: "exp",   detail: "exp(x) → \\exp(x)",                                  snippet: "exp(${1:x})" },
+  { label: "ln",    detail: "ln(x) → \\ln(x)",                                    snippet: "ln(${1:x})" },
+  { label: "log",   detail: "log(x) → \\log(x)",                                  snippet: "log(${1:x})" },
 ]
 
 // ── LaTeX command list for \ autocomplete ─────────────────────────────────────
@@ -642,6 +673,39 @@ export function setupMathHover(
         if (col >= m.index && col <= m.index + m[0].length) {
           mathExpr = m[1]; displayMode = false; matchStart = m.index; break
         }
+      }
+    }
+
+    // Try multi-line $$ block
+    if (!mathExpr) {
+      const lineCount = model.getLineCount()
+      const cursorLine = e.position.lineNumber
+
+      // Scan upward for opening $$
+      let openLine = -1
+      for (let ln = cursorLine; ln >= 1; ln--) {
+        if (model.getLineContent(ln).trim() === "$$") { openLine = ln; break }
+        // Stop if we hit another line that starts a new block or clearly exits
+        if (ln < cursorLine && model.getLineContent(ln).trim() === "") break
+      }
+
+      // Scan downward for closing $$
+      let closeLine = -1
+      if (openLine !== -1) {
+        for (let ln = cursorLine; ln <= lineCount; ln++) {
+          if (ln === openLine) continue
+          if (model.getLineContent(ln).trim() === "$$") { closeLine = ln; break }
+        }
+      }
+
+      if (openLine !== -1 && closeLine !== -1) {
+        const exprLines: string[] = []
+        for (let ln = openLine + 1; ln < closeLine; ln++) {
+          exprLines.push(model.getLineContent(ln))
+        }
+        mathExpr = exprLines.join("\n")
+        displayMode = true
+        matchStart = 0
       }
     }
 

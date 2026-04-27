@@ -91,7 +91,7 @@ export default function EnvironmentsPanel({
           key={idx}
           className="env-list-item"
           onClick={() => handleClick(item)}
-          title={`${item.fileName} — line ${item.line}`}
+          title={t.environments.fileLineTitle(item.fileName, item.line)}
         >
           <div className="env-list-row1">
             <span className={`env-badge env-badge-${item.type}`}>{typeLabel(item.type)}</span>

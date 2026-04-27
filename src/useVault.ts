@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
-import { open, save } from "@tauri-apps/plugin-dialog"
+import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
 import { extractDetailedTags, extractFrontmatter } from "./frontmatter"
+import { analyzeConversion, storageFormatForPath, toEditorContent, toDiskContent } from "./cmdxFormat"
 
 const VAULT_KEY   = "comdtex_vault"
 const TABS_KEY    = "comdtex_tabs"
@@ -36,6 +37,20 @@ function saveRecentVault(path: string) {
   const current = loadRecentVaults()
   const next = [path, ...current.filter((p) => p !== path)].slice(0, MAX_RECENT_VAULTS)
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+}
+
+function editorModeForPath(path: string): "md" | "tex" {
+  return storageFormatForPath(path) === "tex" ? "tex" : "md"
+}
+
+function showConversionWarnings(path: string, content: string, phase: "opening" | "saving") {
+  const format = storageFormatForPath(path)
+  if (!format) return
+  const warnings = analyzeConversion(content, format).warnings
+  if (warnings.length === 0) return
+  const first = warnings[0]
+  const verb = phase === "opening" ? "abrir" : "guardar"
+  showToast(`CMDX: ${warnings.length} advertencia(s) al ${verb} ${displayBasename(path)}. Línea ${first.line}: ${first.message}`, "info", 7000)
 }
 
 export const README_FILENAME = "README.md"
@@ -189,7 +204,24 @@ function clearDraft(path: string) {
 
 // ── Main hook ────────────────────────────────────────────────────────────────
 
-export function useVault(autoSaveMs = 800) {
+export interface UseVaultOptions {
+  autoSaveMs?: number
+  /**
+   * Fires after a file is successfully written to disk (manual save or autosave).
+   * Used by the host to trigger side effects such as macros.md hot-reload.
+   * Receives both the absolute path and the basename for convenience.
+   */
+  onAfterSave?: (path: string, basename: string) => void
+}
+
+export function useVault(options: UseVaultOptions | number = {}) {
+  // Backward-compat: original signature was useVault(autoSaveMs?: number).
+  const opts: UseVaultOptions = typeof options === "number" ? { autoSaveMs: options } : options
+  const autoSaveMs = opts.autoSaveMs ?? 800
+  // Keep the latest onAfterSave in a ref so saveFile (memoised) always fires the
+  // current callback even if the host re-renders with a new function identity.
+  const onAfterSaveRef = useRef<UseVaultOptions["onAfterSave"]>(opts.onAfterSave)
+  onAfterSaveRef.current = opts.onAfterSave
   const t = useT()
 
   const validate = useCallback((name: string): { valid: boolean; error?: string } => {
@@ -212,6 +244,13 @@ export function useVault(autoSaveMs = 800) {
   const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // Pending un-flushed content per path (set on every keystroke, cleared after
+  // a successful save). Lets closeTab flush synchronously and lets the conflict
+  // resolution flow access the latest in-memory edits.
+  const pendingContent = useRef<Map<string, string>>(new Map())
+  // Paths that have an unresolved external-modification conflict. Autosave is
+  // skipped for these until the user decides reload / overwrite / cancel.
+  const conflictPaths = useRef<Set<string>>(new Set())
   const activeTabPathRef = useRef<string | null>(null)
   activeTabPathRef.current = activeTabPath
 
@@ -250,12 +289,19 @@ export function useVault(autoSaveMs = 800) {
         if (BINARY_EXTS.has(ext)) continue
         try {
           const name = displayBasename(path)
-          const fileExt = name.split(".").pop() ?? "md"
           // Use draft if present — cleared on save, its presence indicates unsaved changes
           const draft = getDrafts().find((d) => d.path === path)
           const content = await readTextFile(path)
-          const finalContent = draft ? draft.content : content
-          tabs.push({ path, name, content: finalContent, isDirty: !!draft, mode: fileExt === "tex" ? "tex" : "md" })
+          let cachedMtime: number | undefined
+          try {
+            const info = await stat(path)
+            cachedMtime = info.mtime?.getTime()
+          } catch {
+            // stat optional - some filesystems may not support it
+          }
+          showConversionWarnings(path, content, "opening")
+          const finalContent = draft ? draft.content : toEditorContent(path, content)
+          tabs.push({ path, name, content: finalContent, isDirty: !!draft, mode: editorModeForPath(path), cachedMtime })
         } catch { /* file deleted, skip */ }
       }
       if (tabs.length > 0) {
@@ -287,7 +333,7 @@ export function useVault(autoSaveMs = 800) {
         return
       }
     }
-    const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content, isDirty: false, mode: "md" }
+    const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content: toEditorContent(readmePath, content), isDirty: false, mode: "md" }
     setOpenTabs((tabs) => tabs.find((t) => t.path === readmePath) ? tabs : [...tabs, newTab])
     setActiveTabPath(readmePath)
   }, [t])
@@ -362,8 +408,16 @@ export function useVault(autoSaveMs = 800) {
     }
     try {
       const content = await readTextFile(node.path)
-      const ext = node.ext ?? "md"
-      const newTab: OpenFile = { path: node.path, name: node.name, content, isDirty: false, mode: ext === "tex" ? "tex" : "md" }
+      showConversionWarnings(node.path, content, "opening")
+      let cachedMtime: number | undefined
+      try {
+        const info = await stat(node.path)
+        cachedMtime = info.mtime?.getTime()
+      } catch {
+        // stat optional - some filesystems may not support it
+      }
+      const internalContent = toEditorContent(node.path, content)
+      const newTab: OpenFile = { path: node.path, name: node.name, content: internalContent, isDirty: false, mode: editorModeForPath(node.path), cachedMtime }
       setOpenTabs((tabs) => tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, newTab])
       setActiveTabPath(node.path)
     } catch (e) {
@@ -386,6 +440,7 @@ export function useVault(autoSaveMs = 800) {
 
     try {
       const content = await readTextFile(path)
+      showConversionWarnings(path, content, "opening")
       // Get modification time for conflict detection
       let cachedMtime: number | undefined
       try {
@@ -394,12 +449,13 @@ export function useVault(autoSaveMs = 800) {
       } catch {
         // stat optional - some filesystems may not support it
       }
+      const internalContent = toEditorContent(path, content)
       const newTab: OpenFile = {
         path,
         name,
-        content,
+        content: internalContent,
         isDirty: false,
-        mode: ext === "tex" ? "tex" : "md",
+        mode: editorModeForPath(path),
         cachedMtime,
       }
       setOpenTabs((tabs) => tabs.find((tb) => tb.path === path) ? tabs : [...tabs, newTab])
@@ -428,9 +484,160 @@ export function useVault(autoSaveMs = 800) {
     })
   }, [])
 
-  const closeTab = useCallback((path: string) => {
+  const switchTab = useCallback((path: string) => setActiveTabPath(path), [])
+
+  const reopenTab = useCallback(async (path: string) => {
+    await openFilePath(path)
+  }, [openFilePath])
+
+  const getClosedTabs = useCallback(() => loadClosedTabs(), [])
+
+  /**
+   * Persist `content` to `path`. By default, refuses to save if the file's
+   * on-disk mtime advanced past the cached value (external modification) and
+   * prompts the user with reload/overwrite/cancel. Passing `{ force: true }`
+   * bypasses the mtime check (used after the user picks "Keep mine").
+   *
+   * Returns `true` only if the bytes actually reached disk — callers that need
+   * to flush before destroying state (e.g. closeTab) rely on this signal so
+   * they only clear drafts after a confirmed successful write.
+   */
+  const saveFile = useCallback(async (
+    path: string,
+    content: string,
+    saveOpts: { force?: boolean } = {},
+  ): Promise<boolean> => {
+    try {
+      const openTab = openTabs.find((tab) => tab.path === path)
+      if (!saveOpts.force && openTab?.cachedMtime) {
+        try {
+          const info = await stat(path)
+          const currentMtime = info.mtime?.getTime()
+          if (currentMtime && currentMtime > openTab.cachedMtime) {
+            // Mark the path as conflicted so subsequent autosaves stay blocked
+            // until the user decides — without this, the *next* keystroke would
+            // refresh cachedMtime via a no-op path and silently overwrite the
+            // external changes.
+            conflictPaths.current.add(path)
+            // Cancel any queued autosave for this path; we don't want it to
+            // race with the modal.
+            const queued = saveTimers.current.get(path)
+            if (queued) { clearTimeout(queued); saveTimers.current.delete(path) }
+            // Three-way prompt: Yes = reload from disk (lose edits),
+            // No = keep my version (overwrite disk), Cancel = decide later.
+            let choice: string
+            try {
+              choice = await message(
+                `${openTab.name} ${t.vault.fileChangedExternally(openTab.name)}\n\n` +
+                "Yes = Reload from disk (lose your edits)\n" +
+                "No  = Keep mine (overwrite disk)\n" +
+                "Cancel = Leave as-is (autosave stays paused)",
+                {
+                  title: "ComdTeX",
+                  kind: "warning",
+                  buttons: { yes: "Reload", no: "Keep mine", cancel: "Cancel" },
+                },
+              )
+            } catch {
+              // Tauri dialog unavailable (e.g. during tests) — fall back to the
+              // safe choice: don't overwrite, don't lose edits, leave conflict
+              // pending so the user is forced to handle it explicitly.
+              showToast(t.vault.fileChangedExternally(openTab.name), "error")
+              return false
+            }
+            if (choice === "Yes") {
+              // Reload from disk and replace tab content
+              try {
+                const fresh = await readTextFile(path)
+                let freshMtime: number | undefined
+                try { freshMtime = (await stat(path)).mtime?.getTime() } catch {}
+                setOpenTabs((tabs) => tabs.map((tab) =>
+                  tab.path === path
+                    ? { ...tab, content: fresh, isDirty: false, cachedMtime: freshMtime }
+                    : tab
+                ))
+                pendingContent.current.delete(path)
+                clearDraft(path)
+                conflictPaths.current.delete(path)
+              } catch (e) {
+                showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+              }
+              return false
+            }
+            if (choice === "No") {
+              // Force-save, fall through to the write below
+              conflictPaths.current.delete(path)
+            } else {
+              // Cancel — stay in conflict state, autosave remains blocked
+              return false
+            }
+          }
+        } catch {
+          // ignore stat errors (filesystem may not support mtime)
+        }
+      }
+      showConversionWarnings(path, content, "saving")
+      // Convert from CMDX to storage format before saving. Non-CMDX files like .bib stay raw.
+      const storageContent = toDiskContent(path, content)
+      await writeTextFile(path, storageContent)
+      // Update mtime after successful save
+      let newMtime: number | undefined
+      try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
+      setOpenTabs((tabs) => tabs.map((tab) =>
+        tab.path === path ? { ...tab, isDirty: false, cachedMtime: newMtime ?? tab.cachedMtime } : tab
+      ))
+      // Only drop the draft AFTER the bytes are confirmed on disk; if the
+      // write threw above the catch block returns false and the draft remains
+      // for crash recovery.
+      pendingContent.current.delete(path)
+      conflictPaths.current.delete(path)
+      clearDraft(path)
+      onAfterSaveRef.current?.(path, displayBasename(path))
+      return true
+    } catch (e) {
+      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
+      return false
+    }
+  }, [openTabs, t])
+
+  const updateContent = useCallback((content: string) => {
+    const path = activeTabPathRef.current
+    if (!path) return
+    setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, content, isDirty: true } : t))
+    pendingContent.current.set(path, content)
+    saveDraft(path, content)
+    // If there is an unresolved external-mod conflict, do NOT schedule an
+    // autosave — the user must explicitly resolve it first. The draft above
+    // still preserves the in-memory edits for crash recovery.
+    if (conflictPaths.current.has(path)) return
+    const existing = saveTimers.current.get(path)
+    if (existing) clearTimeout(existing)
+    saveTimers.current.set(path, setTimeout(() => {
+      saveTimers.current.delete(path)
+      void saveFile(path, content)
+    }, autoSaveMs))
+  }, [saveFile, autoSaveMs])
+
+  const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return
     const closedTab = openTabs.find((t) => t.path === path)
+    // Flush any pending autosave SYNCHRONOUSLY before tearing down the tab.
+    // Without this, three failure modes are possible:
+    //   (a) timer fires after closeTab and re-creates a draft for a closed tab,
+    //   (b) timer's saveFile races with the user reopening + editing the file,
+    //   (c) the timer's clearTimeout below loses the last unsaved edit entirely.
+    const timer = saveTimers.current.get(path)
+    if (timer) {
+      clearTimeout(timer)
+      saveTimers.current.delete(path)
+    }
+    const pending = pendingContent.current.get(path)
+    if (pending !== undefined && closedTab?.isDirty && !conflictPaths.current.has(path)) {
+      // Await the save. If it succeeds, saveFile will clearDraft itself; if it
+      // fails (or hits the conflict prompt), the draft remains so the user can
+      // recover on next launch.
+      try { await saveFile(path, pending) } catch {}
+    }
     setOpenTabs((prev) => {
       const idx = prev.findIndex((t) => t.path === path)
       if (idx === -1) return prev
@@ -440,64 +647,15 @@ export function useVault(autoSaveMs = 800) {
       }
       return next
     })
+    pendingContent.current.delete(path)
     if (closedTab && !closedTab.isDirty) {
       saveClosedTab(path)
     }
-    const timer = saveTimers.current.get(path)
-    if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
-    clearDraft(path)
-  }, [pinnedPaths, openTabs])
-
-  const switchTab = useCallback((path: string) => setActiveTabPath(path), [])
-
-  const reopenTab = useCallback(async (path: string) => {
-    await openFilePath(path)
-  }, [openFilePath])
-
-  const getClosedTabs = useCallback(() => loadClosedTabs(), [])
-
-  const saveFile = useCallback(async (path: string, content: string) => {
-    try {
-      // Check for external modification before saving
-      const openTab = openTabs.find((t) => t.path === path && t.cachedMtime)
-      if (openTab?.cachedMtime) {
-        try {
-          const info = await stat(path)
-          const currentMtime = info.mtime?.getTime()
-          if (currentMtime && currentMtime > openTab.cachedMtime) {
-            showToast(t.vault.fileChangedExternally(openTab.name), "error")
-            return // Don't save — will retry on next change
-          }
-        } catch {
-          // ignore stat errors
-        }
-      }
-      await writeTextFile(path, content)
-      // Update mtime after successful save
-      try {
-        const info = await stat(path)
-        setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, isDirty: false, cachedMtime: info.mtime?.getTime() } : t))
-      } catch {
-        setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, isDirty: false } : t))
-      }
-      clearDraft(path)
-    } catch (e) {
-      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [openTabs, t])
-
-  const updateContent = useCallback((content: string) => {
-    const path = activeTabPathRef.current
-    if (!path) return
-    setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, content, isDirty: true } : t))
-    saveDraft(path, content)
-    const existing = saveTimers.current.get(path)
-    if (existing) clearTimeout(existing)
-    saveTimers.current.set(path, setTimeout(() => {
-      saveFile(path, content)
-      saveTimers.current.delete(path)
-    }, autoSaveMs))
-  }, [saveFile, autoSaveMs])
+    // Note: clearDraft is intentionally NOT called here for dirty tabs — if
+    // the flush above failed, we want the draft to survive for crash recovery.
+    // saveFile clears the draft on success.
+    if (!closedTab?.isDirty) clearDraft(path)
+  }, [pinnedPaths, openTabs, saveFile])
 
   const createFile = useCallback(async (name: string, content = "") => {
     if (!vaultPath) return
@@ -506,10 +664,9 @@ export function useVault(autoSaveMs = 800) {
     const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") ? name : `${name}.md`
     const filePath = await pathJoin(vaultPath, fileName)
     try {
-      await writeTextFile(filePath, content)
+      await writeTextFile(filePath, toDiskContent(filePath, content))
       await refreshTree(vaultPath)
-      const ext = fileName.split(".").pop() as string
-      const newTab: OpenFile = { path: filePath, name: fileName, content, isDirty: false, mode: ext === "tex" ? "tex" : "md" }
+      const newTab: OpenFile = { path: filePath, name: fileName, content: toEditorContent(filePath, content), isDirty: false, mode: editorModeForPath(filePath) }
       setOpenTabs((tabs) => [...tabs, newTab])
       setActiveTabPath(filePath)
     } catch (e) {
@@ -519,9 +676,16 @@ export function useVault(autoSaveMs = 800) {
 
   const deleteFile = useCallback(async (path: string) => {
     try {
+      // Drop pending autosave before deleting — we don't want a queued write
+      // to recreate the file we're about to delete.
+      const timer = saveTimers.current.get(path)
+      if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
+      pendingContent.current.delete(path)
+      conflictPaths.current.delete(path)
       await remove(path)
       if (vaultPath) await refreshTree(vaultPath)
-      closeTab(path)
+      await closeTab(path)
+      clearDraft(path)
     } catch (e) {
       showToast(t.vault.errorDeleting(e instanceof Error ? e.message : String(e)), "error")
     }
@@ -636,8 +800,9 @@ export function useVault(autoSaveMs = 800) {
             if (filters.exts.length > 0 && !filters.exts.includes((node.ext ?? "").toLowerCase())) continue
             if (filters.paths.length > 0 && !filters.paths.some((path) => node.path.toLowerCase().includes(path))) continue
             const content = await readTextFile(node.path)
-            const parsed = extractFrontmatter(content)
-            const tags = extractDetailedTags(content).map((tag) => tag.tag)
+            const editorContent = toEditorContent(node.path, content)
+            const parsed = extractFrontmatter(editorContent)
+            const tags = extractDetailedTags(editorContent).map((tag) => tag.tag)
             if (filters.tags.length > 0 && !filters.tags.every((tag) => tags.includes(tag))) continue
             if (filters.frontmatter.length > 0) {
               const data = parsed?.data ?? {}
@@ -649,7 +814,7 @@ export function useVault(autoSaveMs = 800) {
               })
               if (!ok) continue
             }
-            content.split("\n").forEach((line, i) => {
+            editorContent.split("\n").forEach((line, i) => {
               searchRe.lastIndex = 0
               if (results.length < MAX_RESULTS && (!textQuery || searchRe.test(line)))
                 results.push({ filePath: node.path, fileName: node.name, line: i + 1, content: line.trim().slice(0, 200) })
@@ -691,12 +856,13 @@ export function useVault(autoSaveMs = 800) {
         } else if (node.type === "file") {
           try {
             const content = await readTextFile(node.path)
+            const editorContent = toEditorContent(node.path, content)
             re.lastIndex = 0
-            const matches = content.match(re)
+            const matches = editorContent.match(re)
             if (!matches) continue
             re.lastIndex = 0
-            const updated = content.replace(re, replacement)
-            await writeTextFile(node.path, updated)
+            const updated = editorContent.replace(re, replacement)
+            await writeTextFile(node.path, toDiskContent(node.path, updated))
             total += matches.length
             patchTabContent(node.path, updated)
           } catch { /* skip */ }

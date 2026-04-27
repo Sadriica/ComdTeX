@@ -4,6 +4,7 @@ import { diagnoseDocuments, type DiagnosticIssue } from "./documentDiagnostics"
 import { buildProjectPlan } from "./projectExport"
 import { scanMathBacklinks } from "./mathBacklinks"
 import { displayBasename } from "./pathUtils"
+import { useT } from "./i18n"
 
 interface DocumentLabPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -13,14 +14,6 @@ interface DocumentLabPanelProps {
 }
 
 type LabTab = "diagnostics" | "compatibility" | "project" | "structure" | "mathlinks"
-
-const TAB_LABELS: Record<LabTab, string> = {
-  diagnostics: "Diagnóstico",
-  compatibility: "Export",
-  project: "Proyecto",
-  structure: "Estructura",
-  mathlinks: "Backlinks math",
-}
 
 const severityLabel: Record<DiagnosticIssue["severity"], string> = {
   error: "error",
@@ -39,6 +32,7 @@ function IssueRow({ issue, onOpenFile }: { issue: DiagnosticIssue; onOpenFile: (
 }
 
 export default function DocumentLabPanel({ files, activePath, activeContent, onOpenFile }: DocumentLabPanelProps) {
+  const t = useT()
   const [tab, setTab] = useState<LabTab>("diagnostics")
   const diagnostics = useMemo(() => diagnoseDocuments(files), [files])
   const compatibility = useMemo(() => analyzeExportCompatibility(activeContent), [activeContent])
@@ -46,10 +40,18 @@ export default function DocumentLabPanel({ files, activePath, activeContent, onO
   const mathlinks = useMemo(() => scanMathBacklinks(files), [files])
   const structureIssues = diagnostics.issues.filter((issue) => issue.category === "structure")
 
+  const TAB_LABELS: Record<LabTab, string> = {
+    diagnostics: t.documentLab.diagnostics,
+    compatibility: t.documentLab.compatibility,
+    project: t.documentLab.project,
+    structure: t.documentLab.structure,
+    mathlinks: t.documentLab.mathlinks,
+  }
+
   return (
     <div className="document-lab-panel">
       <div className="panel-header">
-        <span className="panel-header-title">Calidad</span>
+        <span className="panel-header-title">{t.documentLab.quality}</span>
         <span className="panel-header-actions">{diagnostics.errors}/{diagnostics.warnings}</span>
       </div>
       <div className="lab-tabs">
@@ -61,12 +63,12 @@ export default function DocumentLabPanel({ files, activePath, activeContent, onO
       {tab === "diagnostics" && (
         <div className="lab-list">
           <div className="lab-score-row">
-            <span>Errores {diagnostics.errors}</span>
-            <span>Warnings {diagnostics.warnings}</span>
-            <span>Info {diagnostics.info}</span>
+            <span>{t.documentLab.errors} {diagnostics.errors}</span>
+            <span>{t.documentLab.warnings} {diagnostics.warnings}</span>
+            <span>{t.documentLab.info} {diagnostics.info}</span>
           </div>
           {diagnostics.issues.length === 0
-            ? <div className="panel-empty">Sin problemas detectados.</div>
+            ? <div className="panel-empty">{t.documentLab.noIssues}</div>
             : diagnostics.issues.map((issue, i) => <IssueRow key={`${issue.filePath}-${issue.line}-${i}`} issue={issue} onOpenFile={onOpenFile} />)}
         </div>
       )}
@@ -79,20 +81,20 @@ export default function DocumentLabPanel({ files, activePath, activeContent, onO
           </div>
           <div className="labels-section-title">LaTeX</div>
           {compatibility.latexIssues.length === 0
-            ? <div className="panel-empty">Sin degradaciones detectadas.</div>
+            ? <div className="panel-empty">{t.documentLab.noIssuesCompat}</div>
             : compatibility.latexIssues.map((issue, i) => (
               <button key={`tex-${i}`} className={`lab-item lab-${issue.severity}`} onClick={() => activePath && onOpenFile(activePath, issue.line)}>
                 <span className="lab-item-title">{issue.message}</span>
-                <span className="lab-item-meta">línea {issue.line}</span>
+                <span className="lab-item-meta">{t.documentLab.line} {issue.line}</span>
               </button>
             ))}
           <div className="labels-section-title">Obsidian</div>
           {compatibility.obsidianIssues.length === 0
-            ? <div className="panel-empty">Sin degradaciones detectadas.</div>
+            ? <div className="panel-empty">{t.documentLab.noIssuesCompat}</div>
             : compatibility.obsidianIssues.map((issue, i) => (
               <button key={`obs-${i}`} className={`lab-item lab-${issue.severity}`} onClick={() => activePath && onOpenFile(activePath, issue.line)}>
                 <span className="lab-item-title">{issue.message}</span>
-                <span className="lab-item-meta">línea {issue.line}</span>
+                <span className="lab-item-meta">{t.documentLab.line} {issue.line}</span>
               </button>
             ))}
         </div>
@@ -103,14 +105,14 @@ export default function DocumentLabPanel({ files, activePath, activeContent, onO
           {project.main ? (
             <>
               <div className="lab-card">
-                <span className="lab-item-title">Documento principal</span>
+                <span className="lab-item-title">{t.documentLab.mainDocument}</span>
                 <button className="lab-link" onClick={() => onOpenFile(project.main!.path, 1)}>{project.main.name}</button>
               </div>
               <div className="lab-score-row">
-                <span>Incluidos {project.included.length}</span>
-                <span>Embeds faltantes {project.missingEmbeds.length}</span>
+                <span>{t.documentLab.included} {project.included.length}</span>
+                <span>{t.documentLab.missingEmbeds} {project.missingEmbeds.length}</span>
               </div>
-              <div className="labels-section-title">Archivos incluidos</div>
+              <div className="labels-section-title">{t.documentLab.includedFiles}</div>
               {project.included.map((file) => (
                 <button key={file.path} className="lab-item" onClick={() => onOpenFile(file.path, 1)}>
                   <span className="lab-item-title">{file.name}</span>
@@ -119,29 +121,29 @@ export default function DocumentLabPanel({ files, activePath, activeContent, onO
               ))}
               {project.missingEmbeds.map((item) => (
                 <div key={item} className="lab-item lab-warning">
-                  <span className="lab-item-title">Embed faltante: {item}</span>
+                  <span className="lab-item-title">{t.documentLab.missingEmbed(item)}</span>
                 </div>
               ))}
             </>
-          ) : <div className="panel-empty">No hay documento principal detectado.</div>}
+          ) : <div className="panel-empty">{t.documentLab.noMainDoc}</div>}
         </div>
       )}
 
       {tab === "structure" && (
         <div className="lab-list">
           {structureIssues.length === 0
-            ? <div className="panel-empty">Estructura académica sin alertas.</div>
+            ? <div className="panel-empty">{t.documentLab.noIssuesStructure}</div>
             : structureIssues.map((issue, i) => <IssueRow key={`${issue.filePath}-${issue.line}-${i}`} issue={issue} onOpenFile={onOpenFile} />)}
         </div>
       )}
 
       {tab === "mathlinks" && (
         <div className="lab-list">
-          {mathlinks.length === 0 ? <div className="panel-empty">Sin backlinks matemáticos.</div> : mathlinks.map((group) => (
+          {mathlinks.length === 0 ? <div className="panel-empty">{t.documentLab.noMathBacklinks}</div> : mathlinks.map((group) => (
             <div key={`${group.label.filePath}-${group.label.id}`} className="labels-section">
               <button className="lab-item" onClick={() => onOpenFile(group.label.filePath, group.label.line)}>
                 <span className="lab-item-title">{group.label.id}</span>
-                <span className="lab-item-meta">{group.references.length} referencia(s)</span>
+                <span className="lab-item-meta">{t.documentLab.references(group.references.length)}</span>
               </button>
               {group.references.map((ref, i) => (
                 <button key={`${ref.filePath}-${ref.line}-${i}`} className="lab-item lab-nested" onClick={() => onOpenFile(ref.filePath, ref.line)}>

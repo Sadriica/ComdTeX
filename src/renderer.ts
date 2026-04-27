@@ -6,7 +6,7 @@ import { preprocess } from "./preprocessor"
 import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs } from "./environments"
 import { processWikilinks } from "./wikilinks"
 import type { KatexMacros } from "./macros"
-import { resetEqCounters, nextEqNumber, prescanEquations, resolveEqRefs, wrapNumbered } from "./equations"
+import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, DISPLAY_MATH_RE } from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
@@ -87,6 +87,37 @@ function renderKatex(expr: string, display: boolean, macros: KatexMacros): strin
   }
 }
 
+/**
+ * Pre-render display math (`$$ ... $$ {#label}?`) blocks in textual order.
+ *
+ * Returns the text with each display block replaced by a `\x02DMATH<n>\x03`
+ * placeholder, plus an array of pre-rendered HTML strings indexed by `<n>`.
+ *
+ * This MUST run before `renderInner` (and therefore before
+ * `extractEnvironments`) so that equation numbering follows the document's
+ * textual order rather than the recursive render order. Otherwise math inside
+ * a `:::theorem:::` block would be numbered before math that textually
+ * precedes it, and the `(N)` rendered next to the equation would not match
+ * the `(N)` produced by `@eq:label` references (which use prescan order).
+ *
+ * Also strips the `{#label}` annotation here so it never leaks to the output.
+ */
+function preRenderDisplayMath(
+  text: string,
+  macros: KatexMacros,
+): { text: string; slots: string[] } {
+  const slots: string[] = []
+  let n = 0
+  DISPLAY_MATH_RE.lastIndex = 0
+  const replaced = text.replace(DISPLAY_MATH_RE, (_full, expr: string) => {
+    n++
+    const html = wrapNumbered(renderKatex(expr, true, macros), n)
+    slots.push(html)
+    return `\x02DMATH${slots.length - 1}\x03`
+  })
+  return { text: replaced, slots }
+}
+
 function renderInner(raw: string, macros: KatexMacros): string {
   let text = preprocess(raw)
 
@@ -101,9 +132,8 @@ function renderInner(raw: string, macros: KatexMacros): string {
     return `\x02MATH${mathSlots.length - 1}\x03`
   }
 
-  text = text.replace(/\$\$([\s\S]+?)\$\$(?:\s*\{#[\w:.-]+\})?/g, (_, expr) =>
-    saveMath(wrapNumbered(renderKatex(expr, true, macros), nextEqNumber()))
-  )
+  // Display math is pre-rendered before `renderInner` is called and survives
+  // here as `\x02DMATH<n>\x03` placeholders. Only inline math is processed.
   text = text.replace(/\$([^\$\n]+?)\$/g, (_, expr) =>
     saveMath(renderKatex(expr, false, macros))
   )
@@ -129,6 +159,118 @@ function resolveImages(html: string, vaultPath: string): string {
       return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
     }
   )
+}
+
+// ── Source-line annotation (preview ↔ editor sync) ──────────────────────────
+
+const SOURCE_KEY_LEN = 40
+
+/** Strip markdown noise so a line's first 40 chars match its rendered text. */
+function normalizeSourceKey(s: string): string {
+  return s
+    // List bullets and task-list markers
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
+    // Blockquote markers (also "> [!callout]")
+    .replace(/^\s*>+\s*(?:\[![\w]+\]\s*)?/, "")
+    // Heading markers
+    .replace(/^\s*#{1,6}\s+/, "")
+    // Table row leading pipe + cell separators
+    .replace(/^\s*\|\s*/, "")
+    // Common markdown emphasis / wikilink delimiters
+    .replace(/[*_`~|]+/g, "")
+    .replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, SOURCE_KEY_LEN)
+}
+
+/** Pick the rendered-text key for a DOM element (first 40 chars, normalized). */
+function elementTextKey(el: Element): string {
+  let text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
+  // Strip auto-numbering prefixes from headings: numberHeadings turns
+  // `# Intro` → `<h1>1 Intro</h1>` and `## Sub` → `<h2>1.1 Sub</h2>`. The
+  // source line is just `Intro`, so peel the leading `N(.N)*` group.
+  if (/^h[1-6]$/i.test(el.tagName)) {
+    text = text.replace(/^\d+(?:\.\d+)*\s+/, "")
+  }
+  return text.slice(0, SOURCE_KEY_LEN)
+}
+
+/**
+ * Build a map from `key → line[]` for lines in `raw` that can plausibly be
+ * the source of a rendered block. `key` is the first ~40 chars of the line's
+ * non-markup text. Multiple source lines can share a key — we keep them all
+ * and consume them in order during annotation so repeated content (e.g. a
+ * list of "TODO") still maps each `<li>` to its own source line.
+ */
+export function buildParagraphLineMap(raw: string): Map<string, number[]> {
+  const map = new Map<string, number[]>()
+  const lines = raw.split("\n")
+  let inFence = false
+  let inFrontmatter = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    // Toggle fenced code blocks
+    if (/^```/.test(trimmed)) { inFence = !inFence; continue }
+    if (inFence) continue
+    // Toggle YAML frontmatter (only at very top)
+    if (i === 0 && trimmed === "---") { inFrontmatter = true; continue }
+    if (inFrontmatter) {
+      if (trimmed === "---") inFrontmatter = false
+      continue
+    }
+    if (!trimmed) continue
+    // Skip equation/env delimiters and standalone math
+    if (/^:::/.test(trimmed)) continue
+    if (/^\$\$/.test(trimmed) && !/[^$]/.test(trimmed.replace(/\$\$/g, ""))) continue
+    // Skip table separator rows
+    if (/^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?$/.test(trimmed)) continue
+
+    const key = normalizeSourceKey(trimmed)
+    if (!key) continue
+    const existing = map.get(key)
+    // Store as 1-indexed lines (Monaco convention)
+    if (existing) existing.push(i + 1)
+    else map.set(key, [i + 1])
+  }
+  return map
+}
+
+const ANNOTATABLE_SELECTOR = "h1, h2, h3, h4, h5, h6, p, li, blockquote, figure.tbl-block, div.callout"
+
+/**
+ * Walk the rendered HTML and add `data-source-line="N"` to block elements
+ * (headings, paragraphs, list items, blockquotes, table figures, callouts)
+ * whose text content matches a source line in `raw`. Used by the preview
+ * pane click handler to jump the editor to the corresponding line.
+ */
+export function annotateSourceLines(html: string, raw: string): string {
+  if (typeof DOMParser === "undefined") return html
+  const map = buildParagraphLineMap(raw)
+  // Track consumed indices per key so duplicate keys map to distinct lines.
+  const consumed = new Map<string, number>()
+
+  const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html")
+  const root = doc.getElementById("root")
+  if (!root) return html
+
+  const targets = [...root.querySelectorAll(ANNOTATABLE_SELECTOR)] as HTMLElement[]
+  for (const el of targets) {
+    if (el.hasAttribute("data-source-line")) continue
+    const key = elementTextKey(el)
+    if (!key) continue
+    const lines = map.get(key)
+    if (!lines || lines.length === 0) continue
+    const idx = consumed.get(key) ?? 0
+    const line = lines[Math.min(idx, lines.length - 1)]
+    consumed.set(key, idx + 1)
+    el.setAttribute("data-source-line", String(line))
+  }
+
+  return root.innerHTML
 }
 
 function resolveFootnotes(html: string): string {
@@ -197,7 +339,14 @@ export function renderMarkdown(
 
   withRefs = preprocessCallouts(withRefs)
 
-  let html = renderInner(withRefs, macros)
+  // Pre-render display math in textual order before recursive renderInner so
+  // equation numbers match prescan-based references.
+  const dmath = preRenderDisplayMath(withRefs, macros)
+
+  let html = renderInner(dmath.text, macros)
+  // Restore display-math placeholders left intact through markdown-it and
+  // recursive environment extraction.
+  html = html.replace(/\x02DMATH(\d+)\x03/g, (_, i) => dmath.slots[parseInt(i)] ?? "")
   if (vaultPath) html = resolveImages(html, vaultPath)
   html = resolveFootnotes(html)
 
@@ -211,6 +360,11 @@ export function renderMarkdown(
     citedKeys = resolved.citedKeys
   }
   const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
+
+  // Annotate block elements with their source line for preview ↔ editor sync.
+  // Use the original raw input so headings/lists/callouts carry an accurate
+  // line number for the click-to-jump handler in the preview pane.
+  html = annotateSourceLines(html, raw)
 
   return frontmatterHtml + html + bibHtml
 }

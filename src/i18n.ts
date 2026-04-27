@@ -25,6 +25,7 @@ export interface T {
     definition: string; example: string; exercise: string
     proof: string; remark: string; note: string
     structures: string; table: string; matAuto: string; matFixed: string; matLiteral: string
+    more: string
     togglePreview: string
     symbolPicker: string
     // labels inside dropdowns
@@ -39,6 +40,9 @@ export interface T {
     lbl_proposition: string; lbl_definition: string; lbl_example: string
     lbl_exercise: string; lbl_proof: string; lbl_remark: string; lbl_note: string
     lbl_table: string; lbl_matAuto: string; lbl_matFixed: string; lbl_matLiteral: string
+    // trig / math functions
+    sin: string; cos: string; tan: string; cot: string; sec: string; csc: string
+    exp: string; ln: string; log: string
   }
 
   fileTree: {
@@ -55,6 +59,7 @@ export interface T {
     folderLabel: (name: string) => string
     sortAZ: string; sortZA: string
     filterPlaceholder: string
+    clearFilter: string
   }
 
   search: {
@@ -73,6 +78,8 @@ export interface T {
   outline: {
     noHeadings: string
     lineTitle: (n: number) => string
+    totalWords: string
+    wordsAbbr: string
   }
 
   backlinks: {
@@ -84,9 +91,12 @@ export interface T {
   settings: {
     title: string; language: string; editorFont: string; previewFont: string
     autosave: string; theme: string; vimMode: string; typewriterMode: string
-    touchpadGestures: string; previewTheme: string; previewThemeSame: string
+    touchpadGestures: string; mathPreview: string; previewTheme: string; previewThemeSame: string
     dark: string; light: string; highContrast: string
     wordGoal: string; wordGoalOff: string; words: string
+    wordWrap: string; minimap: string; spellcheck: string; syncScroll: string; previewVisible: string
+    closeAriaLabel: string
+    sectionEditor: string; sectionPreview: string; sectionGeneral: string
   }
 
   help: {
@@ -104,10 +114,16 @@ export interface T {
   templateModal: {
     title: string; filenameLabel: string; filenamePlaceholder: string
     cancel: string; create: string
+    useTemplates: string; createTemplate: string
+    namePlaceholder: string; descriptionPlaceholder: string
+    saveTemplate: string; defaultDescription: string
+    customBadge: string
+    variablesHint: string
+    closeAriaLabel: string
   }
 
   titleBar: {
-    minimize: string; maximize: string; close: string
+    minimize: string; maximize: string; close: string; settings: string
   }
 
   statusBar: {
@@ -121,6 +137,7 @@ export interface T {
     readingTime: (min: number) => string
     modeMarkdown: string; modeTex: string
     ln: string; col: string; goToLineTitle: string
+    wordGoalTitle: (current: number, goal: number) => string
   }
 
   palette: {
@@ -139,6 +156,18 @@ export interface T {
     vaultBackup: string; copyHtml: string; copyLatex: string
     searchReplace: string; tableEditor: string; exportReveal: string
     checkUpdates: string
+    exportAnkiCards: string
+    symbolPicker: string
+    exportProjectTex: string
+    compileLatexPdf: string
+    viewLabels: string
+    viewQuality: string
+  }
+
+  ankiExport: {
+    exportAnkiCards: string
+    ankiNoCards: string
+    ankiExported: (n: number) => string
   }
 
   quickSwitcher: {
@@ -151,6 +180,9 @@ export interface T {
     tags: string; properties: string; graph: string
     todo: string; equations: string; stats: string; environments: string
     searchReplace: string; collapse: string; expand: string
+    symbols: string
+    labels: string
+    quality: string
   }
 
   todo: {
@@ -159,12 +191,13 @@ export interface T {
     markDone: string; markPending: string
   }
 
-  equations: { empty: string; count: (n: number) => string }
+  equations: { empty: string; count: (n: number) => string; lineTitle: (n: number) => string }
 
   environments: {
     empty: string
     count: (n: number) => string
     types: Record<string, string>
+    fileLineTitle: (fileName: string, line: number) => string
   }
 
   stats: {
@@ -172,6 +205,15 @@ export interface T {
     files: string; open: string; words: string; tags: string
     equations: string; figures: string; citations: string; wikilinks: string
     broken: (n: number) => string
+  }
+
+  brokenLinks: {
+    createNote: (name: string) => string
+    removeLink: string
+    ignore: string
+    noteCreated: (name: string) => string
+    linkRemoved: string
+    removeLinkError: (msg: string) => string
   }
 
   git: {
@@ -212,6 +254,7 @@ export interface T {
     // stash
     stash: string
     stashPop: string
+    stashDrop: string
     stashList: string
     stashSuccess: string
     stashPopSuccess: string
@@ -271,6 +314,28 @@ export interface T {
     focusModeOn: string; focusModeOff: string
     upToDate: string
     bookmarks: string; noBookmarks: string; line: string; removeBookmark: string; bookmarkToggled: string
+    noMainDocument: string
+    pdfCompiledLocal: string
+    compilationFailed: (err: string) => string
+    pandocMissingDocx: string
+    pandocMissingBeamer: string
+    zipMissing: string
+    htmlExported: string
+    replaceError: (err: string) => string
+    closeSplitPane: string
+  }
+
+  welcome: {
+    tagline: string
+    openExisting: string
+    createNew: string
+    features: string
+    recents: string
+    hint: string
+    featureMath: string; featureMathDesc: string
+    featureBib: string; featureBibDesc: string
+    featureEnv: string; featureEnvDesc: string
+    featureExport: string; featureExportDesc: string
   }
 
   vault: {
@@ -325,6 +390,10 @@ export interface T {
     sumsLimits: string; sum: string; integral: string; limit: string; derivative: string; partialDer: string
     matrices: string; matAuto: string; matFixed: string; matTable: string; matLiteral: string
     nesting: string
+    // trig / math functions
+    trigFunctions: string
+    hpSin: string; hpCos: string; hpTan: string; hpCot: string; hpSec: string; hpCsc: string
+    hpExp: string; hpLn: string; hpLog: string
     // equations section
     numberedEq: string; numberedNoLabel: string; refLabel: string; directRef: string
     structuralLabels: string; structuralLabelsDesc: string
@@ -395,9 +464,196 @@ export interface T {
     htmlDetails: string; htmlDetailsDesc: string
     htmlMark: string; htmlMarkDesc: string
     htmlAllowed: string; htmlBlocked: string
+    // pseudocode section
+    pseudocode: string; pseudocodeDesc: string
+    pseudocodeExample: string; pseudocodeKeywords: string
+    pseudocodeSyntax: string; pseudocodeSyntaxAlt: string
+    // truth table section
+    truthTable: string; truthTableDesc: string; truthTableExample: string
+    // graph visualizer section
+    graphViz: string; graphVizDesc: string; graphVizExample: string
+    // function plotter section
+    functionPlot: string; functionPlotDesc: string; functionPlotExample: string
+    // commutative diagram section
+    commDiag: string; commDiagDesc: string; commDiagExample: string
+    // symbol picker / math preview section
+    symbolPickerHelp: string; symbolPickerDesc: string
+    mathPreviewHelp: string; mathPreviewDesc: string
+    // editor toggles & sidebar panels section
+    editorToggles: string; editorTogglesIntro: string
+    sidebarPanels: string; sidebarPanelsIntro: string
+    toggleTypewriter: string; toggleTypewriterDesc: string
+    toggleSyncScroll: string; toggleSyncScrollDesc: string
+    toggleWordWrap: string; toggleWordWrapDesc: string
+    toggleMinimap: string; toggleMinimapDesc: string
+    toggleSpellcheck: string; toggleSpellcheckDesc: string
+    panelEnvironments: string; panelEnvironmentsDesc: string
+    panelLabels: string; panelLabelsDesc: string
+    panelQuality: string; panelQualityDesc: string
+  }
+
+  labelsPanel: {
+    title: string
+    filterPlaceholder: string
+    allTypes: string
+    broken: string
+    duplicates: string
+    unused: string
+    brokenSection: string
+    duplicateChip: string
+    unusedChip: string
+  }
+
+  citationManager: {
+    title: string
+    close: string
+    noEntries: string
+    noTitle: string
+    confirmDelete: string
+    deleteEntry: string
+    addEntry: string
+    yearPlaceholder: string
+    titlePlaceholder: string
+    authorPlaceholder: string
+    keyPlaceholder: string
+    add: string
+    cancel: string
+    save: string
+    keyRequired: string
+    keyExists: (key: string) => string
+    venueJournal: string
+    venueBooktitle: string
+    venueSource: string
+  }
+
+  graphPanel: {
+    noFiles: string
+    resetView: string
+    graphInfo: (nodes: number, edges: number) => string
+    root: string
+  }
+
+  frontmatterPanel: {
+    fieldTitle: string
+    fieldAuthor: string
+    fieldDate: string
+    fieldAbstract: string
+    fieldTags: string
+    removeField: string
+    addField: string
+    fieldKeyPlaceholder: string
+    fieldValuePlaceholder: string
+    layoutSection: string
+    paperSize: string
+    paperA4: string
+    paperLetter: string
+    paperA5: string
+    paperA3: string
+    paperLegal: string
+    headerLabel: string
+    footerLabel: string
+    headerFooterHint: string
+    orientation: string
+    portrait: string
+    landscape: string
+    left: string; center: string; right: string
+  }
+
+  tagPanel: {
+    noFiles: string
+    noTags: string
+    addTagsHint: string
+    filterPlaceholder: string
+    typeAriaLabel: string
+    allTypes: string
+    fileCount: (n: number) => string
+  }
+
+  tabBar: {
+    warningCount: (n: number) => string
+    pin: string
+    unpin: string
+    pinAriaLabel: string
+    unpinAriaLabel: string
+  }
+
+  tableEditor: {
+    alignLeft: string
+    alignCenter: string
+    alignRight: string
+    copyLatex: string
+    latexCopied: string
+    addRow: string
+    removeRow: string
+    addColumn: string
+    removeColumn: string
+    preview: string
+    cancel: string
+    insert: string
+  }
+
+  latexErrors: {
+    title: string
+    noDetails: string
+    errorLabel: string
+    warningLabel: string
+    line: string
+    context: string
+    suggestion: string
+    close: string
+  }
+
+  documentLab: {
+    diagnostics: string
+    compatibility: string
+    project: string
+    structure: string
+    mathlinks: string
+    quality: string
+    errors: string
+    warnings: string
+    info: string
+    noIssues: string
+    noIssuesCompat: string
+    noIssuesStructure: string
+    noMathBacklinks: string
+    noMainDoc: string
+    mainDocument: string
+    included: string
+    missingEmbeds: string
+    includedFiles: string
+    missingEmbed: (name: string) => string
+    references: (n: number) => string
+    line: string
+    searchLabel: string
+    replaceLabel: string
+    searching: string
+    replacing: string
+    search: string
+    replaceAll: string
+    replace: string
+  }
+
+  breadcrumb: {
+    location: string
+    back: string
+    backTitle: string
+    forward: string
+    forwardTitle: string
+  }
+
+  searchReplace: {
+    searchAriaLabel: string
+    replaceAriaLabel: string
   }
 
   templates: Record<string, { name: string; description: string }>
+
+  symbolPicker: {
+    title: string
+    searchPlaceholder: string
+    all: string
+  }
 }
 
 // ── Spanish ───────────────────────────────────────────────────────────────────
@@ -423,6 +679,7 @@ const es: T = {
     definition: "Definición", example: "Ejemplo", exercise: "Ejercicio",
     proof: "Demostración", remark: "Observación", note: "Nota",
     structures: "Estructuras", table: "Tabla", matAuto: "Matriz auto", matFixed: "Matriz fija", matLiteral: "Matriz literal",
+    more: "Más",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
     symbolPicker: "Selector de símbolos matemáticos",
     lbl_heading1: "H1  # Título", lbl_heading2: "H2  ## Título", lbl_heading3: "H3  ### Título",
@@ -440,6 +697,8 @@ const es: T = {
     lbl_proof: "proof     Demostración", lbl_remark: "remark    Observación", lbl_note: "note      Nota",
     lbl_table: "tabla  table(Col1, Col2)", lbl_matAuto: "mat    auto-matriz",
     lbl_matFixed: "matf   matriz fija", lbl_matLiteral: "[[]]   matriz literal",
+    sin: "Seno", cos: "Coseno", tan: "Tangente", cot: "Cotangente",
+    sec: "Secante", csc: "Cosecante", exp: "Exponencial", ln: "Logaritmo natural", log: "Logaritmo",
   },
 
   fileTree: {
@@ -456,6 +715,7 @@ const es: T = {
     folderLabel: (name) => `Carpeta: ${name}`,
     sortAZ: "Ordenar A→Z", sortZA: "Ordenar Z→A",
     filterPlaceholder: "Filtrar archivos…",
+    clearFilter: "Limpiar filtro",
   },
 
   search: {
@@ -474,6 +734,8 @@ const es: T = {
   outline: {
     noHeadings: "Sin encabezados",
     lineTitle: (n) => `Línea ${n}`,
+    totalWords: "Total",
+    wordsAbbr: "pal",
   },
 
   backlinks: {
@@ -488,9 +750,14 @@ const es: T = {
     autosave: "Autoguardado", theme: "Tema", vimMode: "Modo Vim",
     typewriterMode: "Modo máquina de escribir",
     touchpadGestures: "Gestos de touchpad",
+    mathPreview: "Vista previa de ecuaciones",
     previewTheme: "Tema del preview", previewThemeSame: "Mismo que editor",
     dark: "Oscuro", light: "Claro", highContrast: "Alto contraste",
     wordGoal: "Meta de palabras", wordGoalOff: "Sin meta", words: "palabras",
+    wordWrap: "Ajuste de línea", minimap: "Minimapa", spellcheck: "Corrector ortográfico",
+    syncScroll: "Sincronizar scroll editor↔preview", previewVisible: "Mostrar preview",
+    closeAriaLabel: "Cerrar configuración",
+    sectionEditor: "Editor", sectionPreview: "Vista previa", sectionGeneral: "General",
   },
 
   help: {
@@ -515,10 +782,16 @@ const es: T = {
     title: "Nuevo archivo desde plantilla",
     filenameLabel: "Nombre del archivo", filenamePlaceholder: "mi-documento.md",
     cancel: "Cancelar", create: "Crear",
+    useTemplates: "Usar plantillas", createTemplate: "Crear plantilla",
+    namePlaceholder: "Nombre de la plantilla", descriptionPlaceholder: "Descripción",
+    saveTemplate: "Guardar plantilla", defaultDescription: "Plantilla personalizada",
+    customBadge: "personal",
+    variablesHint: "Variables",
+    closeAriaLabel: "Cerrar",
   },
 
   titleBar: {
-    minimize: "Minimizar", maximize: "Maximizar", close: "Cerrar",
+    minimize: "Minimizar", maximize: "Maximizar", close: "Cerrar", settings: "Configuración",
   },
 
   statusBar: {
@@ -532,6 +805,7 @@ const es: T = {
     readingTimeTitle: "Tiempo de lectura estimado (~200 pal/min)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col", goToLineTitle: "Click para ir a línea",
+    wordGoalTitle: (c, g) => `${c} / ${g} palabras`,
   },
 
   palette: {
@@ -564,6 +838,18 @@ const es: T = {
     tableEditor: "Editor de tabla",
     exportReveal: "Exportar presentación (Reveal.js)",
     checkUpdates: "Buscar actualizaciones",
+    exportAnkiCards: "Exportar tarjetas Anki",
+    symbolPicker: "Selector de símbolos matemáticos",
+    exportProjectTex: "Exportar proyecto como .tex",
+    compileLatexPdf: "Compilar PDF con LaTeX local",
+    viewLabels: "Ver labels",
+    viewQuality: "Diagnóstico de documento",
+  },
+
+  ankiExport: {
+    exportAnkiCards: "Exportar tarjetas Anki",
+    ankiNoCards: "No se encontraron bloques exportables",
+    ankiExported: (n) => `${n} tarjeta${n !== 1 ? "s" : ""} exportada${n !== 1 ? "s" : ""}`,
   },
 
   quickSwitcher: {
@@ -580,6 +866,9 @@ const es: T = {
     environments: "Entornos",
     searchReplace: "Buscar y reemplazar",
     collapse: "Colapsar sidebar", expand: "Expandir sidebar",
+    symbols: "Símbolos",
+    labels: "Labels",
+    quality: "Diagnóstico",
   },
 
   todo: {
@@ -592,6 +881,7 @@ const es: T = {
   equations: {
     empty: "No hay ecuaciones en este documento",
     count: (n) => `${n} ecuación${n !== 1 ? "es" : ""}`,
+    lineTitle: (n) => `Línea ${n}`,
   },
 
   environments: {
@@ -603,6 +893,7 @@ const es: T = {
       example: "Ejemplo", exercise: "Ejercicio",
       proof: "Demostración", remark: "Observación", note: "Nota",
     },
+    fileLineTitle: (fileName, line) => `${fileName} — línea ${line}`,
   },
 
   stats: {
@@ -611,6 +902,15 @@ const es: T = {
     tags: "Tags únicos", equations: "Ecuaciones", figures: "Figuras",
     citations: "Citas", wikilinks: "Wikilinks",
     broken: (n) => `${n} enlace${n !== 1 ? "s" : ""} roto${n !== 1 ? "s" : ""}`,
+  },
+
+  brokenLinks: {
+    createNote: (name) => `Crear nota "${name}"`,
+    removeLink: "Eliminar enlace",
+    ignore: "Ignorar",
+    noteCreated: (name) => `Nota "${name}" creada.`,
+    linkRemoved: "Enlace eliminado.",
+    removeLinkError: (msg) => `Error al eliminar enlace: ${msg}`,
   },
 
   git: {
@@ -645,7 +945,7 @@ const es: T = {
     switchBranch: "Cambiar rama", newBranchPlaceholder: "nueva-rama",
     newBranchSuccess: (name) => `Rama "${name}" creada.`,
     newBranchError: (msg) => `Error al crear rama: ${msg}`,
-    stash: "Stash", stashPop: "Pop stash", stashList: "Lista de stashes",
+    stash: "Stash", stashPop: "Pop stash", stashDrop: "Descartar stash", stashList: "Lista de stashes",
     stashSuccess: "Cambios guardados en stash.", stashPopSuccess: "Stash aplicado.",
     noStashes: "No hay stashes.",
     stashError: (msg) => `Error en stash: ${msg}`,
@@ -723,6 +1023,28 @@ const es: T = {
     line: "Línea",
     removeBookmark: "Quitar marcador",
     bookmarkToggled: "Marcador actualizado",
+    noMainDocument: "No hay documento principal para exportar",
+    pdfCompiledLocal: "PDF compilado con LaTeX local",
+    compilationFailed: (err) => `No se pudo compilar: ${err}`,
+    pandocMissingDocx: "Pandoc no está instalado. Visita pandoc.org para instalarlo.",
+    pandocMissingBeamer: "Pandoc no está instalado. Visita pandoc.org para instalarlo.",
+    zipMissing: "zip no está instalado. En Linux: sudo apt install zip / En Mac: brew install zip",
+    htmlExported: "HTML exportado",
+    replaceError: (err) => `Error al reemplazar: ${err}`,
+    closeSplitPane: "Cerrar panel dividido",
+  },
+
+  welcome: {
+    tagline: "Editor académico para Markdown + LaTeX",
+    openExisting: "Abrir carpeta existente",
+    createNew: "Crear nueva carpeta",
+    features: "Funciones",
+    recents: "Recientes",
+    hint: "Ctrl+O para abrir vault",
+    featureMath: "Matemáticas KaTeX", featureMathDesc: "Ecuaciones, entornos, shorthands",
+    featureBib: "BibTeX", featureBibDesc: "Citas y bibliografía automática",
+    featureEnv: "Entornos", featureEnvDesc: "theorem, proof, definition…",
+    featureExport: "Exportar", featureExportDesc: "PDF, LaTeX, HTML, DOCX",
   },
 
   vault: {
@@ -799,6 +1121,10 @@ const es: T = {
     matTable: "Tabla Markdown lista para rellenar",
     matLiteral: "Matriz numérica literal → bmatrix",
     nesting: "Anidamiento:",
+    trigFunctions: "Funciones trigonométricas y logarítmicas",
+    hpSin: "Seno", hpCos: "Coseno", hpTan: "Tangente", hpCot: "Cotangente",
+    hpSec: "Secante", hpCsc: "Cosecante", hpExp: "Exponencial",
+    hpLn: "Logaritmo natural", hpLog: "Logaritmo",
     numberedEq: "Ecuación numerada con etiqueta",
     numberedNoLabel: "Numerada sin etiqueta",
     refLabel: "Referencia → (N)", directRef: "Referencia por número directo",
@@ -891,6 +1217,165 @@ const es: T = {
     htmlMarkDesc: "Resaltado, subíndice, superíndice inline",
     htmlAllowed: "Etiquetas permitidas: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (solo YouTube)",
     htmlBlocked: "Etiquetas bloqueadas: script, iframe (otros), object, embed, form, input, button",
+    pseudocode: "Pseudocódigo",
+    pseudocodeDesc: "Bloque de algoritmo con numeración de líneas, palabras clave resaltadas y diagrama de flujo generado automáticamente.",
+    pseudocodeSyntax: "#algo[Título] … #end",
+    pseudocodeSyntaxAlt: "Alternativa: :::pseudocode[Título] … :::",
+    pseudocodeExample: "#algo[Bubble Sort]\nINPUT: Array A[1..n]\nFOR i ← 1 TO n-1 DO\n  IF A[j] > A[j+1] THEN\n    SWAP A[j] ↔ A[j+1]\n  END IF\nEND FOR\n#end",
+    pseudocodeKeywords: "Palabras clave: INPUT, OUTPUT, FOR, WHILE, IF, THEN, ELSE, RETURN, FUNCTION, PROCEDURE, REPEAT, UNTIL, SWAP, PRINT, BEGIN, END, …",
+    truthTable: "Tabla de verdad",
+    truthTableDesc: "Genera la tabla de verdad de una o varias expresiones booleanas.",
+    truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    graphViz: "Grafo (Teoría de grafos)",
+    graphVizDesc: "Visualiza grafos dirigidos y no dirigidos a partir de una lista de aristas.",
+    graphVizExample: ":::graph[Ejemplo]\nA -- B\nA -- C\nB -> D\n:::",
+    functionPlot: "Graficador de funciones",
+    functionPlotDesc: "Grafica funciones matemáticas: sin(x), x^2, etc. Soporta múltiples funciones y rango personalizado.",
+    functionPlotExample: ":::plot[Trigonométricas]\nf(x) = sin(x)\ng(x) = cos(x)\nrange: [-6.28, 6.28]\n:::",
+    commDiag: "Diagrama conmutativo",
+    commDiagDesc: "Diagrama de flechas para álgebra categórica. Nodos y aristas con etiquetas.",
+    commDiagExample: ":::commdiag[Ejemplo]\nA -> B [f]\nA -> C [g]\nB -> D [h]\nC -> D [k]\n:::",
+    symbolPickerHelp: "Selector de símbolos (panel lateral)",
+    symbolPickerDesc: "Abre el panel de símbolos matemáticos desde la paleta de comandos (Ctrl+P → 'Selector de símbolos'). Haz clic en cualquier símbolo para insertarlo en el cursor. Puedes buscar por nombre o categoría (griego, operadores, flechas, lógica…).",
+    mathPreviewHelp: "Vista previa de matemáticas en línea",
+    mathPreviewDesc: "Al mover el cursor fuera de un bloque de matemáticas en línea ($...$), aparece una vista previa renderizada debajo. Se puede desactivar en Configuración → Vista previa de ecuaciones.",
+    editorToggles: "Ajustes del editor",
+    editorTogglesIntro: "Acceso rápido desde la paleta (Ctrl+P) o desde Configuración. Todos se conservan entre sesiones.",
+    sidebarPanels: "Paneles laterales",
+    sidebarPanelsIntro: "Cambia entre paneles desde la barra lateral o la paleta de comandos.",
+    toggleTypewriter: "Modo máquina de escribir",
+    toggleTypewriterDesc: "Mantiene el cursor centrado verticalmente en el editor.",
+    toggleSyncScroll: "Scroll sincronizado",
+    toggleSyncScrollDesc: "El preview se desplaza junto al cursor del editor.",
+    toggleWordWrap: "Ajuste de línea",
+    toggleWordWrapDesc: "Las líneas largas se ajustan al ancho del editor en lugar de hacer scroll horizontal.",
+    toggleMinimap: "Minimapa",
+    toggleMinimapDesc: "Vista en miniatura del archivo a la derecha del editor.",
+    toggleSpellcheck: "Corrector ortográfico",
+    toggleSpellcheckDesc: "Activa el corrector nativo del navegador en el editor.",
+    panelEnvironments: "Entornos",
+    panelEnvironmentsDesc: "Lista todos los bloques :::theorem, :::lemma, etc. del vault con enlaces directos.",
+    panelLabels: "Etiquetas estructurales",
+    panelLabelsDesc: "Muestra todas las etiquetas {#sec:..} {#eq:..} {#fig:..} {#thm:..} y dónde se referencian.",
+    panelQuality: "Diagnóstico del documento",
+    panelQualityDesc: "Linter de calidad: enlaces rotos, citas faltantes, etiquetas duplicadas, ecuaciones sin numerar.",
+  },
+
+  labelsPanel: {
+    title: "Etiquetas",
+    filterPlaceholder: "Filtrar etiquetas…",
+    allTypes: "Todos los tipos",
+    broken: "rotas",
+    duplicates: "duplicadas",
+    unused: "sin usar",
+    brokenSection: "Referencias rotas",
+    duplicateChip: "dup",
+    unusedChip: "sin uso",
+  },
+
+  citationManager: {
+    title: "Gestor de Referencias BibTeX",
+    close: "Cerrar",
+    noEntries: "No hay entradas. Agrega una abajo.",
+    noTitle: "Sin título",
+    confirmDelete: "Confirmar eliminación",
+    deleteEntry: "Eliminar entrada",
+    addEntry: "Agregar entrada",
+    yearPlaceholder: "Año",
+    titlePlaceholder: "Título",
+    authorPlaceholder: "Autor(es)",
+    keyPlaceholder: "Clave *",
+    add: "Añadir",
+    cancel: "Cancelar",
+    save: "Guardar",
+    keyRequired: "Key requerido",
+    keyExists: (key) => `Key "${key}" ya existe`,
+    venueJournal: "Revista (journal)",
+    venueBooktitle: "Evento (booktitle)",
+    venueSource: "Booktitle / Fuente",
+  },
+
+  graphPanel: {
+    noFiles: "Sin archivos en el vault",
+    resetView: "Reiniciar vista",
+    graphInfo: (n, e) => `${n} nodos · ${e} enlaces`,
+    root: "raíz",
+  },
+
+  frontmatterPanel: {
+    fieldTitle: "Título",
+    fieldAuthor: "Autor/es",
+    fieldDate: "Fecha",
+    fieldAbstract: "Abstract",
+    fieldTags: "Tags",
+    removeField: "Eliminar campo",
+    addField: "Añadir campo",
+    fieldKeyPlaceholder: "campo",
+    fieldValuePlaceholder: "valor",
+    layoutSection: "Diseño del documento",
+    paperSize: "Tamaño de página",
+    paperA4: "A4 (210×297 mm)",
+    paperLetter: "Carta US (8.5×11 in)",
+    paperA5: "A5 (148×210 mm)",
+    paperA3: "A3 (297×420 mm)",
+    paperLegal: "Oficio (8.5×14 in)",
+    headerLabel: "Encabezado",
+    footerLabel: "Pie de página",
+    headerFooterHint: "Variables: {{title}}, {{author}}, {{date}}, {{page}}",
+    orientation: "Orientación",
+    portrait: "Vertical (Portrait)",
+    landscape: "Horizontal (Landscape)",
+    left: "Izquierda", center: "Centro", right: "Derecha",
+  },
+
+  tagPanel: {
+    noFiles: "No hay archivos para analizar tags",
+    noTags: "Sin tags encontrados",
+    addTagsHint: "Añade tags en frontmatter:",
+    filterPlaceholder: "Filtrar tags…",
+    typeAriaLabel: "Tipo de tag",
+    allTypes: "Todos los tipos",
+    fileCount: (n) => `${n} archivo${n === 1 ? "" : "s"}`,
+  },
+
+  tabBar: {
+    warningCount: (n) => `${n} aviso${n === 1 ? "" : "s"}`,
+    pin: "Anclar",
+    unpin: "Desanclar",
+    pinAriaLabel: "Anclar pestaña",
+    unpinAriaLabel: "Desanclar pestaña",
+  },
+
+  tableEditor: {
+    alignLeft: "Izquierda",
+    alignCenter: "Centro",
+    alignRight: "Derecha",
+    copyLatex: "Copiar como LaTeX",
+    latexCopied: "¡Copiado!",
+    addRow: "+ Fila",
+    removeRow: "− Fila",
+    addColumn: "+ Columna",
+    removeColumn: "− Columna",
+    preview: "Vista previa",
+    cancel: "Cancelar",
+    insert: "Insertar",
+  },
+
+  symbolPicker: {
+    title: "Símbolos matemáticos",
+    searchPlaceholder: "Buscar símbolo…",
+    all: "Todos",
+  },
+
+  latexErrors: {
+    title: "Error al exportar PDF",
+    noDetails: "No se encontraron detalles del error.",
+    errorLabel: "Error",
+    warningLabel: "Advertencia",
+    line: "línea",
+    context: "Contexto",
+    suggestion: "Sugerencia",
+    close: "Cerrar",
   },
 
   templates: {
@@ -901,6 +1386,50 @@ const es: T = {
     theorems:   { name: "Hoja de teoremas",     description: "Colección de teoremas, lemas y corolarios" },
     research:   { name: "Nota de investigación",description: "Plantilla con ecuación principal y bibliografía" },
     letter:     { name: "Carta",                description: "Carta formal con destinatario y firma" },
+  },
+
+  documentLab: {
+    diagnostics: "Diagnóstico",
+    compatibility: "Export",
+    project: "Proyecto",
+    structure: "Estructura",
+    mathlinks: "Backlinks matemáticos",
+    quality: "Calidad",
+    errors: "Errores",
+    warnings: "Warnings",
+    info: "Info",
+    noIssues: "Sin problemas detectados.",
+    noIssuesCompat: "Sin degradaciones detectadas.",
+    noIssuesStructure: "Estructura académica sin alertas.",
+    noMathBacklinks: "Sin backlinks matemáticos.",
+    noMainDoc: "No hay documento principal detectado.",
+    mainDocument: "Documento principal",
+    included: "Incluidos",
+    missingEmbeds: "Embeds faltantes",
+    includedFiles: "Archivos incluidos",
+    missingEmbed: (name) => `Embed faltante: ${name}`,
+    references: (n) => `${n} referencia${n !== 1 ? "s" : ""}`,
+    line: "línea",
+    searchLabel: "Término de búsqueda",
+    replaceLabel: "Texto de reemplazo",
+    searching: "Buscando…",
+    replacing: "Reemplazando…",
+    search: "Buscar",
+    replaceAll: "Reemplazar todo",
+    replace: "Reemplazar",
+  },
+
+  breadcrumb: {
+    location: "Ubicación",
+    back: "Atrás",
+    backTitle: "Atrás (Alt+←)",
+    forward: "Adelante",
+    forwardTitle: "Adelante (Alt+→)",
+  },
+
+  searchReplace: {
+    searchAriaLabel: "Término de búsqueda",
+    replaceAriaLabel: "Texto de reemplazo",
   },
 }
 
@@ -927,6 +1456,7 @@ const en: T = {
     definition: "Definition", example: "Example", exercise: "Exercise",
     proof: "Proof", remark: "Remark", note: "Note",
     structures: "Structures", table: "Table", matAuto: "Auto matrix", matFixed: "Fixed matrix", matLiteral: "Literal matrix",
+    more: "More",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
     symbolPicker: "Math symbol picker",
     lbl_heading1: "H1  # Title", lbl_heading2: "H2  ## Title", lbl_heading3: "H3  ### Title",
@@ -944,6 +1474,8 @@ const en: T = {
     lbl_proof: "proof     Proof", lbl_remark: "remark    Remark", lbl_note: "note      Note",
     lbl_table: "table  table(Col1, Col2)", lbl_matAuto: "mat    auto-matrix",
     lbl_matFixed: "matf   fixed matrix", lbl_matLiteral: "[[]]   literal matrix",
+    sin: "Sine", cos: "Cosine", tan: "Tangent", cot: "Cotangent",
+    sec: "Secant", csc: "Cosecant", exp: "Exponential", ln: "Natural log", log: "Logarithm",
   },
 
   fileTree: {
@@ -960,6 +1492,7 @@ const en: T = {
     folderLabel: (name) => `Folder: ${name}`,
     sortAZ: "Sort A→Z", sortZA: "Sort Z→A",
     filterPlaceholder: "Filter files…",
+    clearFilter: "Clear filter",
   },
 
   search: {
@@ -978,6 +1511,8 @@ const en: T = {
   outline: {
     noHeadings: "No headings",
     lineTitle: (n) => `Line ${n}`,
+    totalWords: "Total",
+    wordsAbbr: "w",
   },
 
   backlinks: {
@@ -992,9 +1527,14 @@ const en: T = {
     autosave: "Autosave", theme: "Theme", vimMode: "Vim mode",
     typewriterMode: "Typewriter mode",
     touchpadGestures: "Touchpad gestures",
+    mathPreview: "Equation preview",
     previewTheme: "Preview theme", previewThemeSame: "Same as editor",
     dark: "Dark", light: "Light", highContrast: "High contrast",
     wordGoal: "Word goal", wordGoalOff: "No goal", words: "words",
+    wordWrap: "Word wrap", minimap: "Minimap", spellcheck: "Spellcheck",
+    syncScroll: "Sync editor↔preview scroll", previewVisible: "Show preview",
+    closeAriaLabel: "Close settings",
+    sectionEditor: "Editor", sectionPreview: "Preview", sectionGeneral: "General",
   },
 
   help: {
@@ -1019,10 +1559,16 @@ const en: T = {
     title: "New file from template",
     filenameLabel: "File name", filenamePlaceholder: "my-document.md",
     cancel: "Cancel", create: "Create",
+    useTemplates: "Use templates", createTemplate: "Create template",
+    namePlaceholder: "Template name", descriptionPlaceholder: "Description",
+    saveTemplate: "Save template", defaultDescription: "Custom template",
+    customBadge: "custom",
+    variablesHint: "Variables",
+    closeAriaLabel: "Close",
   },
 
   titleBar: {
-    minimize: "Minimize", maximize: "Maximize", close: "Close",
+    minimize: "Minimize", maximize: "Maximize", close: "Close", settings: "Settings",
   },
 
   statusBar: {
@@ -1036,6 +1582,7 @@ const en: T = {
     readingTimeTitle: "Estimated reading time (~200 wpm)",
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col", goToLineTitle: "Click to go to line",
+    wordGoalTitle: (c, g) => `${c} / ${g} words`,
   },
 
   palette: {
@@ -1068,6 +1615,18 @@ const en: T = {
     tableEditor: "Table editor",
     exportReveal: "Export presentation (Reveal.js)",
     checkUpdates: "Check for updates",
+    exportAnkiCards: "Export Anki cards",
+    symbolPicker: "Math symbol picker",
+    exportProjectTex: "Export project as .tex",
+    compileLatexPdf: "Compile PDF with local LaTeX",
+    viewLabels: "View labels",
+    viewQuality: "Document diagnostics",
+  },
+
+  ankiExport: {
+    exportAnkiCards: "Export Anki cards",
+    ankiNoCards: "No exportable blocks found",
+    ankiExported: (n) => `${n} card${n !== 1 ? "s" : ""} exported`,
   },
 
   quickSwitcher: {
@@ -1084,6 +1643,9 @@ const en: T = {
     environments: "Environments",
     searchReplace: "Find & Replace",
     collapse: "Collapse sidebar", expand: "Expand sidebar",
+    symbols: "Symbols",
+    labels: "Labels",
+    quality: "Diagnostics",
   },
 
   todo: {
@@ -1096,6 +1658,7 @@ const en: T = {
   equations: {
     empty: "No equations in this document",
     count: (n) => `${n} equation${n !== 1 ? "s" : ""}`,
+    lineTitle: (n) => `Line ${n}`,
   },
 
   environments: {
@@ -1107,6 +1670,7 @@ const en: T = {
       example: "Example", exercise: "Exercise",
       proof: "Proof", remark: "Remark", note: "Note",
     },
+    fileLineTitle: (fileName, line) => `${fileName} — line ${line}`,
   },
 
   stats: {
@@ -1114,6 +1678,15 @@ const en: T = {
     files: "Files in vault", open: "Open files", words: "Words (open)", tags: "Unique tags",
     equations: "Equations", figures: "Figures", citations: "Citations", wikilinks: "Wikilinks",
     broken: (n) => `${n} broken link${n !== 1 ? "s" : ""}`,
+  },
+
+  brokenLinks: {
+    createNote: (name) => `Create note "${name}"`,
+    removeLink: "Remove link",
+    ignore: "Ignore",
+    noteCreated: (name) => `Note "${name}" created.`,
+    linkRemoved: "Link removed.",
+    removeLinkError: (msg) => `Error removing link: ${msg}`,
   },
 
   git: {
@@ -1148,7 +1721,7 @@ const en: T = {
     switchBranch: "Switch branch", newBranchPlaceholder: "new-branch",
     newBranchSuccess: (name) => `Branch "${name}" created.`,
     newBranchError: (msg) => `Branch creation failed: ${msg}`,
-    stash: "Stash", stashPop: "Pop stash", stashList: "Stash list",
+    stash: "Stash", stashPop: "Pop stash", stashDrop: "Drop stash", stashList: "Stash list",
     stashSuccess: "Changes stashed.", stashPopSuccess: "Stash applied.",
     noStashes: "No stashes.",
     stashError: (msg) => `Stash failed: ${msg}`,
@@ -1226,6 +1799,28 @@ const en: T = {
     line: "Line",
     removeBookmark: "Remove bookmark",
     bookmarkToggled: "Bookmark updated",
+    noMainDocument: "No main document to export",
+    pdfCompiledLocal: "PDF compiled with local LaTeX",
+    compilationFailed: (err) => `Compilation failed: ${err}`,
+    pandocMissingDocx: "Pandoc is not installed. Visit pandoc.org to install it.",
+    pandocMissingBeamer: "Pandoc is not installed. Visit pandoc.org to install it.",
+    zipMissing: "zip is not installed. On Linux: sudo apt install zip / On Mac: brew install zip",
+    htmlExported: "HTML exported",
+    replaceError: (err) => `Replace error: ${err}`,
+    closeSplitPane: "Close split pane",
+  },
+
+  welcome: {
+    tagline: "Academic editor for Markdown + LaTeX",
+    openExisting: "Open existing folder",
+    createNew: "Create new folder",
+    features: "Features",
+    recents: "Recent",
+    hint: "Ctrl+O to open vault",
+    featureMath: "KaTeX Math", featureMathDesc: "Equations, environments, shorthands",
+    featureBib: "BibTeX", featureBibDesc: "Citations and bibliography",
+    featureEnv: "Environments", featureEnvDesc: "theorem, proof, definition…",
+    featureExport: "Export", featureExportDesc: "PDF, LaTeX, HTML, DOCX",
   },
 
   vault: {
@@ -1302,6 +1897,10 @@ const en: T = {
     matTable: "Markdown table ready to fill",
     matLiteral: "Literal numeric matrix → bmatrix",
     nesting: "Nesting:",
+    trigFunctions: "Trigonometric and logarithmic functions",
+    hpSin: "Sine", hpCos: "Cosine", hpTan: "Tangent", hpCot: "Cotangent",
+    hpSec: "Secant", hpCsc: "Cosecant", hpExp: "Exponential",
+    hpLn: "Natural log", hpLog: "Logarithm",
     numberedEq: "Numbered equation with label",
     numberedNoLabel: "Numbered without label",
     refLabel: "Reference → (N)", directRef: "Reference by direct number",
@@ -1394,6 +1993,165 @@ const en: T = {
     htmlMarkDesc: "Highlight, subscript, superscript inline",
     htmlAllowed: "Allowed tags: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (YouTube only)",
     htmlBlocked: "Blocked tags: script, iframe (others), object, embed, form, input, button",
+    pseudocode: "Pseudocode",
+    pseudocodeDesc: "Algorithm block with line numbers, highlighted keywords, and an auto-generated flowchart.",
+    pseudocodeSyntax: "#algo[Title] … #end",
+    pseudocodeSyntaxAlt: "Alternative: :::pseudocode[Title] … :::",
+    pseudocodeExample: "#algo[Bubble Sort]\nINPUT: Array A[1..n]\nFOR i ← 1 TO n-1 DO\n  IF A[j] > A[j+1] THEN\n    SWAP A[j] ↔ A[j+1]\n  END IF\nEND FOR\n#end",
+    pseudocodeKeywords: "Keywords: INPUT, OUTPUT, FOR, WHILE, IF, THEN, ELSE, RETURN, FUNCTION, PROCEDURE, REPEAT, UNTIL, SWAP, PRINT, BEGIN, END, …",
+    truthTable: "Truth table",
+    truthTableDesc: "Generates the truth table for one or more boolean expressions.",
+    truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    graphViz: "Graph (Graph theory)",
+    graphVizDesc: "Visualizes directed and undirected graphs from an edge list.",
+    graphVizExample: ":::graph[Example]\nA -- B\nA -- C\nB -> D\n:::",
+    functionPlot: "Function plotter",
+    functionPlotDesc: "Plots mathematical functions: sin(x), x^2, etc. Supports multiple functions and custom range.",
+    functionPlotExample: ":::plot[Trigonometric]\nf(x) = sin(x)\ng(x) = cos(x)\nrange: [-6.28, 6.28]\n:::",
+    commDiag: "Commutative diagram",
+    commDiagDesc: "Arrow diagram for category theory. Nodes and labeled edges, auto-laid out.",
+    commDiagExample: ":::commdiag[Example]\nA -> B [f]\nA -> C [g]\nB -> D [h]\nC -> D [k]\n:::",
+    symbolPickerHelp: "Symbol picker (sidebar panel)",
+    symbolPickerDesc: "Open the math symbol panel from the command palette (Ctrl+P → 'Math symbol picker'). Click any symbol to insert it at the cursor. Search by name or category (greek, operators, arrows, logic…).",
+    mathPreviewHelp: "Inline math preview",
+    mathPreviewDesc: "When moving the cursor away from an inline math block ($...$), a rendered preview appears below it. Can be disabled in Settings → Equation preview.",
+    editorToggles: "Editor toggles",
+    editorTogglesIntro: "Quick access from the command palette (Ctrl+P) or Settings. All persist across sessions.",
+    sidebarPanels: "Sidebar panels",
+    sidebarPanelsIntro: "Switch panels from the sidebar tabs or the command palette.",
+    toggleTypewriter: "Typewriter mode",
+    toggleTypewriterDesc: "Keeps the cursor vertically centered in the editor while you type.",
+    toggleSyncScroll: "Sync scroll",
+    toggleSyncScrollDesc: "The preview scrolls together with the editor cursor.",
+    toggleWordWrap: "Word wrap",
+    toggleWordWrapDesc: "Long lines wrap to the editor width instead of scrolling horizontally.",
+    toggleMinimap: "Minimap",
+    toggleMinimapDesc: "Thumbnail overview of the file shown to the right of the editor.",
+    toggleSpellcheck: "Spellcheck",
+    toggleSpellcheckDesc: "Enables the browser's native spellchecker inside the editor.",
+    panelEnvironments: "Environments",
+    panelEnvironmentsDesc: "Lists every :::theorem, :::lemma, etc. block in the vault with direct links.",
+    panelLabels: "Structural labels",
+    panelLabelsDesc: "Shows every {#sec:..} {#eq:..} {#fig:..} {#thm:..} label and where it's referenced.",
+    panelQuality: "Document diagnostics",
+    panelQualityDesc: "Quality linter: broken links, missing citations, duplicate labels, unnumbered equations.",
+  },
+
+  labelsPanel: {
+    title: "Labels",
+    filterPlaceholder: "Filter labels…",
+    allTypes: "All types",
+    broken: "broken",
+    duplicates: "duplicates",
+    unused: "unused",
+    brokenSection: "Broken references",
+    duplicateChip: "dup",
+    unusedChip: "unused",
+  },
+
+  citationManager: {
+    title: "BibTeX Reference Manager",
+    close: "Close",
+    noEntries: "No entries. Add one below.",
+    noTitle: "No title",
+    confirmDelete: "Confirm deletion",
+    deleteEntry: "Delete entry",
+    addEntry: "Add entry",
+    yearPlaceholder: "Year",
+    titlePlaceholder: "Title",
+    authorPlaceholder: "Author(s)",
+    keyPlaceholder: "Key *",
+    add: "Add",
+    cancel: "Cancel",
+    save: "Save",
+    keyRequired: "Key required",
+    keyExists: (key) => `Key "${key}" already exists`,
+    venueJournal: "Journal",
+    venueBooktitle: "Event (booktitle)",
+    venueSource: "Booktitle / Source",
+  },
+
+  graphPanel: {
+    noFiles: "No files in vault",
+    resetView: "Reset view",
+    graphInfo: (n, e) => `${n} nodes · ${e} links`,
+    root: "root",
+  },
+
+  frontmatterPanel: {
+    fieldTitle: "Title",
+    fieldAuthor: "Author(s)",
+    fieldDate: "Date",
+    fieldAbstract: "Abstract",
+    fieldTags: "Tags",
+    removeField: "Remove field",
+    addField: "Add field",
+    fieldKeyPlaceholder: "field",
+    fieldValuePlaceholder: "value",
+    layoutSection: "Document layout",
+    paperSize: "Paper size",
+    paperA4: "A4 (210×297 mm)",
+    paperLetter: "US Letter (8.5×11 in)",
+    paperA5: "A5 (148×210 mm)",
+    paperA3: "A3 (297×420 mm)",
+    paperLegal: "Legal (8.5×14 in)",
+    headerLabel: "Header",
+    footerLabel: "Footer",
+    headerFooterHint: "Variables: {{title}}, {{author}}, {{date}}, {{page}}",
+    orientation: "Orientation",
+    portrait: "Portrait",
+    landscape: "Landscape",
+    left: "Left", center: "Center", right: "Right",
+  },
+
+  tagPanel: {
+    noFiles: "No files to analyze tags",
+    noTags: "No tags found",
+    addTagsHint: "Add tags in frontmatter:",
+    filterPlaceholder: "Filter tags…",
+    typeAriaLabel: "Tag type",
+    allTypes: "All types",
+    fileCount: (n) => `${n} file${n === 1 ? "" : "s"}`,
+  },
+
+  tabBar: {
+    warningCount: (n) => `${n} warning${n === 1 ? "" : "s"}`,
+    pin: "Pin",
+    unpin: "Unpin",
+    pinAriaLabel: "Pin tab",
+    unpinAriaLabel: "Unpin tab",
+  },
+
+  tableEditor: {
+    alignLeft: "Left",
+    alignCenter: "Center",
+    alignRight: "Right",
+    copyLatex: "Copy as LaTeX",
+    latexCopied: "Copied!",
+    addRow: "+ Row",
+    removeRow: "− Row",
+    addColumn: "+ Col",
+    removeColumn: "− Col",
+    preview: "Preview",
+    cancel: "Cancel",
+    insert: "Insert",
+  },
+
+  symbolPicker: {
+    title: "Math symbols",
+    searchPlaceholder: "Search symbol…",
+    all: "All",
+  },
+
+  latexErrors: {
+    title: "PDF Export Failed",
+    noDetails: "No error details available.",
+    errorLabel: "Error",
+    warningLabel: "Warning",
+    line: "line",
+    context: "Context",
+    suggestion: "Fix",
+    close: "Close",
   },
 
   templates: {
@@ -1404,6 +2162,50 @@ const en: T = {
     theorems:   { name: "Theorem sheet",  description: "Collection of theorems, lemmas and corollaries" },
     research:   { name: "Research note",  description: "Template with main equation and bibliography" },
     letter:     { name: "Letter",         description: "Formal letter with recipient and signature" },
+  },
+
+  documentLab: {
+    diagnostics: "Diagnostics",
+    compatibility: "Export",
+    project: "Project",
+    structure: "Structure",
+    mathlinks: "Math backlinks",
+    quality: "Quality",
+    errors: "Errors",
+    warnings: "Warnings",
+    info: "Info",
+    noIssues: "No issues detected.",
+    noIssuesCompat: "No degradations detected.",
+    noIssuesStructure: "Academic structure — no alerts.",
+    noMathBacklinks: "No math backlinks.",
+    noMainDoc: "No main document detected.",
+    mainDocument: "Main document",
+    included: "Included",
+    missingEmbeds: "Missing embeds",
+    includedFiles: "Included files",
+    missingEmbed: (name) => `Missing embed: ${name}`,
+    references: (n) => `${n} reference${n !== 1 ? "s" : ""}`,
+    line: "line",
+    searchLabel: "Search term",
+    replaceLabel: "Replacement text",
+    searching: "Searching…",
+    replacing: "Replacing…",
+    search: "Search",
+    replaceAll: "Replace all",
+    replace: "Replace",
+  },
+
+  breadcrumb: {
+    location: "Location",
+    back: "Back",
+    backTitle: "Back (Alt+←)",
+    forward: "Forward",
+    forwardTitle: "Forward (Alt+→)",
+  },
+
+  searchReplace: {
+    searchAriaLabel: "Search term",
+    replaceAriaLabel: "Replacement text",
   },
 }
 

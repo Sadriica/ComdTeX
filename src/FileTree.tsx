@@ -311,7 +311,7 @@ export default function FileTree({
           aria-label={t.fileTree.filterPlaceholder}
         />
         {filterQuery && (
-          <button className="tree-filter-clear" onClick={() => setFilterQuery("")} title="Limpiar">×</button>
+          <button className="tree-filter-clear" onClick={() => setFilterQuery("")} title={t.fileTree.clearFilter} aria-label={t.fileTree.clearFilter}>×</button>
         )}
       </div>
 

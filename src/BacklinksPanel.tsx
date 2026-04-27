@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import type { FileNode, SearchResult } from "./types"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { flatFiles } from "./wikilinks"
+import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
 
 interface BacklinksPanelProps {
@@ -29,7 +30,7 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree }: Backli
     Promise.all(
       files.map(async (f) => {
         try {
-          const content = await readTextFile(f.path)
+          const content = toEditorContent(f.path, await readTextFile(f.path))
           const results: SearchResult[] = []
           content.split("\n").forEach((line, i) => {
             if (line.toLowerCase().includes(patternLower)) {
@@ -37,14 +38,18 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree }: Backli
             }
           })
           return results
-        } catch { return [] }
+        } catch (err) {
+          console.warn(`Backlinks: skipped unreadable file ${f.path}`, err)
+          return []
+        }
       })
     ).then((all) => {
       if (cancelled) return
       setBacklinks(all.flat())
       setLoading(false)
-    }).catch(() => {
+    }).catch((err) => {
       if (cancelled) return
+      console.error("Backlinks scan failed", err)
       setLoading(false)
     })
 

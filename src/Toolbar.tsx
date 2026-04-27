@@ -71,23 +71,28 @@ interface DropdownGroup {
   items: DropdownItem[]
 }
 
+interface MoreSection {
+  label: string
+  items: DropdownItem[]
+}
+
 type Group = BtnGroup | DropdownGroup
 
-// ── Group definitions ────────────────────────────────────────────────────────
+// ── Main toolbar (always visible) ────────────────────────────────────────────
 
-function getGroups(t: T): Group[] {
+function getMainGroups(t: T): Group[] {
   return [
-    // ── Formato de texto ────────────────────────────────────────────────────
+    // ── Format: B, I, `, link
     {
       kind: "buttons",
       items: [
         { label: "B",   title: t.toolbar.bold,        snippet: "**${1:texto}**" },
         { label: "I",   title: t.toolbar.italic,      snippet: "_${1:texto}_" },
-        { label: "~~",  title: t.toolbar.strikethrough, snippet: "~~${1:texto}~~" },
         { label: "`",   title: t.toolbar.inlineCode,  snippet: "`${1:código}`" },
+        { label: "🔗",  title: t.toolbar.link,        snippet: "[${1:texto}](${2:url})" },
       ],
     },
-    // ── Encabezados ─────────────────────────────────────────────────────────
+    // ── Headings dropdown
     {
       kind: "dropdown",
       label: "H",
@@ -98,22 +103,23 @@ function getGroups(t: T): Group[] {
         { label: t.toolbar.lbl_heading3, title: t.toolbar.heading3, snippet: "### ${1:Título}" },
       ],
     },
-    // ── Insertar ────────────────────────────────────────────────────────────
+    // ── Insert dropdown (list, link, image, code block, table, math block)
     {
       kind: "dropdown",
       label: "⊕",
       title: t.toolbar.insert,
       items: [
-        { label: t.toolbar.lbl_quote,       title: t.toolbar.quote,       snippet: "> ${1:cita}" },
-        { label: t.toolbar.lbl_separator,   title: t.toolbar.separator,   snippet: "\n---\n" },
         { label: t.toolbar.lbl_list,        title: t.toolbar.list,        snippet: "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}" },
         { label: t.toolbar.lbl_orderedList, title: t.toolbar.orderedList, snippet: "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}" },
         { label: t.toolbar.lbl_taskList,    title: t.toolbar.taskList,    snippet: "- [ ] ${1:tarea}\n- [ ] ${2:tarea}" },
         { label: t.toolbar.lbl_link,        title: t.toolbar.link,        snippet: "[${1:texto}](${2:url})" },
         { label: t.toolbar.lbl_codeBlock,   title: t.toolbar.codeBlock,   snippet: "\\`\\`\\`${1:lenguaje}\n${2:código}\n\\`\\`\\`" },
+        { label: t.toolbar.lbl_table,       title: t.toolbar.table,       snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
+        { label: t.toolbar.lbl_quote,       title: t.toolbar.quote,       snippet: "> ${1:cita}" },
+        { label: t.toolbar.lbl_separator,   title: t.toolbar.separator,   snippet: "\n---\n" },
       ],
     },
-    // ── Math contenedores ───────────────────────────────────────────────────
+    // ── Math containers
     {
       kind: "buttons",
       items: [
@@ -121,11 +127,15 @@ function getGroups(t: T): Group[] {
         { label: "$$",  title: t.toolbar.mathBlock,  snippet: "\\$\\$\n${1}\n\\$\\$" },
       ],
     },
-    // ── Operaciones math ────────────────────────────────────────────────────
+  ]
+}
+
+// ── "More" dropdown sections (collapsed math/symbol categories) ──────────────
+
+function getMoreSections(t: T): MoreSection[] {
+  return [
     {
-      kind: "dropdown",
-      label: "∫",
-      title: t.toolbar.mathOps,
+      label: t.toolbar.mathOps,
       items: [
         { label: t.toolbar.lbl_superscript, title: t.toolbar.superscript, snippet: "sup(${1:x}, ${2:n})" },
         { label: t.toolbar.lbl_subscript,   title: t.toolbar.subscript,   snippet: "sub(${1:x}, ${2:n})" },
@@ -140,13 +150,13 @@ function getGroups(t: T): Group[] {
         { label: t.toolbar.lbl_gradient,    title: t.toolbar.gradient,    snippet: "\\$\\\\nabla ${1:f}\\$" },
         { label: t.toolbar.lbl_inverse,     title: t.toolbar.inverse,     snippet: "inv(${1:A})" },
         { label: t.toolbar.lbl_transpose,   title: t.toolbar.transpose,   snippet: "trans(${1:A})" },
+        { label: t.toolbar.lbl_matAuto,     title: t.toolbar.matAuto,     snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
+        { label: t.toolbar.lbl_matFixed,    title: t.toolbar.matFixed,    snippet: "matf(${1:2}, ${2:2})" },
+        { label: t.toolbar.lbl_matLiteral,  title: t.toolbar.matLiteral,  snippet: "[[${1:1},${2:2}],[${3:3},${4:4}]]" },
       ],
     },
-    // ── Decoradores ─────────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "x̂",
-      title: t.toolbar.decorators,
+      label: t.toolbar.decorators,
       items: [
         { label: "x̂  hat",    title: "hat",   snippet: "hat(${1:x})" },
         { label: "x̄  bar",    title: "bar",   snippet: "bar(${1:x})" },
@@ -156,22 +166,16 @@ function getGroups(t: T): Group[] {
         { label: "v⃗  vec",    title: "vec",   snippet: "vec(${1:v})" },
       ],
     },
-    // ── Math fonts ───────────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "ℝ",
-      title: t.toolbar.mathFonts,
+      label: t.toolbar.mathFonts,
       items: [
         { label: "𝐱  bf",  title: "mathbf",  snippet: "bf(${1:x})" },
         { label: "𝒜  cal", title: "mathcal", snippet: "cal(${1:A})" },
         { label: "ℝ  bb",  title: "mathbb",  snippet: "bb(${1:R})" },
       ],
     },
-    // ── Letras griegas ──────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "α",
-      title: t.toolbar.greekLetters,
+      label: t.toolbar.greekLetters,
       items: [
         { label: "α",  title: "alpha",   snippet: "\\$\\\\alpha\\$" },
         { label: "β",  title: "beta",    snippet: "\\$\\\\beta\\$" },
@@ -204,11 +208,8 @@ function getGroups(t: T): Group[] {
         { label: "Ω",  title: "Omega",   snippet: "\\$\\\\Omega\\$" },
       ],
     },
-    // ── Operators and symbols ────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "±",
-      title: t.toolbar.operators,
+      label: t.toolbar.operators,
       items: [
         { label: "±",  title: "plus-minus",  snippet: "\\$\\\\pm\\$" },
         { label: "×",  title: "times",       snippet: "\\$\\\\times\\$" },
@@ -233,11 +234,8 @@ function getGroups(t: T): Group[] {
         { label: "∨",  title: "or",          snippet: "\\$\\\\vee\\$" },
       ],
     },
-    // ── Flechas ─────────────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "→",
-      title: t.toolbar.arrows,
+      label: t.toolbar.arrows,
       items: [
         { label: "→",  title: "rightarrow",     snippet: "\\$\\\\rightarrow\\$" },
         { label: "←",  title: "leftarrow",      snippet: "\\$\\\\leftarrow\\$" },
@@ -250,11 +248,8 @@ function getGroups(t: T): Group[] {
         { label: "↦",  title: "mapsto",         snippet: "\\$\\\\mapsto\\$" },
       ],
     },
-    // ── Math environments ────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "∎",
-      title: t.toolbar.environments,
+      label: t.toolbar.environments,
       items: [
         { label: t.toolbar.lbl_theorem,     title: t.toolbar.theorem,     snippet: ":::theorem[${1:título}]\n${2:enunciado}\n:::" },
         { label: t.toolbar.lbl_lemma,       title: t.toolbar.lemma,       snippet: ":::lemma[${1:título}]\n${2:enunciado}\n:::" },
@@ -268,16 +263,24 @@ function getGroups(t: T): Group[] {
         { label: t.toolbar.lbl_note,        title: t.toolbar.note,        snippet: ":::note\n${1:nota}\n:::" },
       ],
     },
-    // ── Estructuras ──────────────────────────────────────────────────────────
     {
-      kind: "dropdown",
-      label: "⊞",
-      title: t.toolbar.structures,
+      label: "sin",
       items: [
-        { label: t.toolbar.lbl_table,      title: t.toolbar.table,      snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
-        { label: t.toolbar.lbl_matAuto,    title: t.toolbar.matAuto,    snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
-        { label: t.toolbar.lbl_matFixed,   title: t.toolbar.matFixed,   snippet: "matf(${1:2}, ${2:2})" },
-        { label: t.toolbar.lbl_matLiteral, title: t.toolbar.matLiteral, snippet: "[[${1:1},${2:2}],[${3:3},${4:4}]]" },
+        { label: "sin",  title: "sin",  snippet: "\\$\\\\sin ${1:x}\\$" },
+        { label: "cos",  title: "cos",  snippet: "\\$\\\\cos ${1:x}\\$" },
+        { label: "tan",  title: "tan",  snippet: "\\$\\\\tan ${1:x}\\$" },
+        { label: "csc",  title: "csc",  snippet: "\\$\\\\csc ${1:x}\\$" },
+        { label: "sec",  title: "sec",  snippet: "\\$\\\\sec ${1:x}\\$" },
+        { label: "cot",  title: "cot",  snippet: "\\$\\\\cot ${1:x}\\$" },
+        { label: "arcsin", title: "arcsin", snippet: "\\$\\\\arcsin ${1:x}\\$" },
+        { label: "arccos", title: "arccos", snippet: "\\$\\\\arccos ${1:x}\\$" },
+        { label: "arctan", title: "arctan", snippet: "\\$\\\\arctan ${1:x}\\$" },
+        { label: "sinh", title: "sinh", snippet: "\\$\\\\sinh ${1:x}\\$" },
+        { label: "cosh", title: "cosh", snippet: "\\$\\\\cosh ${1:x}\\$" },
+        { label: "tanh", title: "tanh", snippet: "\\$\\\\tanh ${1:x}\\$" },
+        { label: "log",  title: "log",  snippet: "\\$\\\\log ${1:x}\\$" },
+        { label: "ln",   title: "ln",   snippet: "\\$\\\\ln ${1:x}\\$" },
+        { label: "exp",  title: "exp",  snippet: "\\$\\\\exp ${1:x}\\$" },
       ],
     },
   ]
@@ -406,11 +409,73 @@ function Dropdown({
   )
 }
 
+// ── "More" dropdown component ────────────────────────────────────────────────
+
+function MoreDropdown({
+  title,
+  sections,
+  onInsert,
+}: {
+  title: string
+  sections: MoreSection[]
+  onInsert: (snippet: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", close)
+    return () => document.removeEventListener("mousedown", close)
+  }, [open])
+
+  return (
+    <div className="toolbar-dropdown" ref={ref}>
+      <button
+        className="toolbar-btn toolbar-btn-arrow"
+        title={title}
+        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
+      >
+        ··· <span className="arrow">▾</span>
+      </button>
+      {open && (
+        <div className="dropdown-panel toolbar-more-panel">
+          {sections.map((section) => (
+            <div key={section.label} className="toolbar-more-section">
+              <div className="toolbar-more-section-header">{section.label}</div>
+              <div className="toolbar-more-section-items">
+                {section.items.map((item) => (
+                  <button
+                    key={item.title}
+                    title={item.title}
+                    className="dropdown-item"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      onInsert(item.snippet)
+                      setOpen(false)
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: ToolbarProps) {
   const t = useT()
-  const groups = getGroups(t)
+  const mainGroups = getMainGroups(t)
+  const moreSections = getMoreSections(t)
 
   const insert = (snippet: string) => {
     const editor = editorRef.current
@@ -429,7 +494,7 @@ export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: 
 
   return (
     <div className="toolbar">
-      {groups.map((group, gi) => (
+      {mainGroups.map((group, gi) => (
         <div key={gi} className="toolbar-group">
           {group.kind === "buttons"
             ? group.items.map((btn) => (
@@ -456,6 +521,11 @@ export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: 
       {/* Symbol picker */}
       <div className="toolbar-group">
         <SymbolPicker onInsert={insert} />
+      </div>
+
+      {/* "More" dropdown — collapses math/symbol categories */}
+      <div className="toolbar-group">
+        <MoreDropdown title={t.toolbar.more} sections={moreSections} onInsert={insert} />
       </div>
 
       {/* Preview toggle — right-aligned */}

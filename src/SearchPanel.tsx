@@ -154,7 +154,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
           <div className="search-empty" role="status">{t.search.noResults}</div>
         )}
         {results.length >= 500 && (
-          <div className="search-limit" role="status">{t.search.limit}</div>
+          <div className="search-limit-banner" role="status" aria-live="polite">
+            <span className="search-limit-icon" aria-hidden="true">⚠</span>
+            <span className="search-limit-text">{t.search.limit}</span>
+          </div>
         )}
 
         {Object.entries(grouped).map(([filePath, hits]) => {

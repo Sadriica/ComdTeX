@@ -19,6 +19,8 @@ export interface FrontmatterData {
   date?: string
   abstract?: string
   tags?: string[]
+  papersize?: "a4" | "letter" | "a5" | "a3" | "legal"
+  orientation?: "portrait" | "landscape"
   headerLeft?: string
   headerCenter?: string
   headerRight?: string
@@ -190,6 +192,14 @@ export function renderFrontmatterHeader(data: FrontmatterData): string {
   const meta: string[] = []
   if (data.author) meta.push(`<span class="fm-author">${esc(String(data.author))}</span>`)
   if (data.date)   meta.push(`<span class="fm-date">${esc(String(data.date))}</span>`)
+  if (data.papersize) {
+    const papersizeDisplay: Record<string, string> = { a4: "A4", letter: "Letter", a5: "A5", a3: "A3", legal: "Legal" }
+    const label = papersizeDisplay[String(data.papersize)] ?? String(data.papersize).toUpperCase()
+    meta.push(`<span class="fm-papersize">${esc(label)}</span>`)
+  }
+  if (data.orientation === "landscape") {
+    meta.push(`<span class="fm-papersize">↔ Landscape</span>`)
+  }
   if (meta.length) parts.push(`<div class="fm-meta">${meta.join(" · ")}</div>`)
 
   if (data.abstract) {

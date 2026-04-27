@@ -397,7 +397,7 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
                 <button className="git-action git-section-action" style={{ opacity: 1 }}
                   title={g.stashPop} onClick={() => pop(i)}>↑</button>
                 <button className="git-action git-action-discard" style={{ opacity: 1 }}
-                  title="Drop" onClick={() => drop(i)}>×</button>
+                  title={g.stashDrop} onClick={() => drop(i)}>×</button>
               </div>
             ))
         }

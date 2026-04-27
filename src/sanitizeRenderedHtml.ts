@@ -25,7 +25,18 @@ const URL_ATTRS = new Set(["href", "src", "xlink:href"])
 function isSafeUrl(value: string): boolean {
   const normalized = value.trim().replace(/[\u0000-\u001f\u007f\s]+/g, "")
   if (!normalized) return true
-  return /^(#|\/|\.\/|\.\.\/|https?:|data:image\/|blob:|asset:|file:)/i.test(normalized)
+  if (/^data:/i.test(normalized)) return isSafeDataImage(normalized)
+  return /^(#|\/|\.\/|\.\.\/|https?:|blob:|asset:|file:)/i.test(normalized)
+}
+
+// data:image/<subtype> we accept. Inline SVG (`data:image/svg+xml`) is rejected
+// because it can carry <script> / on* handlers and is never produced by KaTeX
+// or Mermaid in the preview pipeline. Other raster data: images must be
+// base64-encoded so an inline payload can't smuggle markup.
+function isSafeDataImage(normalized: string): boolean {
+  if (!/^data:image\//i.test(normalized)) return false
+  if (/^data:image\/svg/i.test(normalized)) return false
+  return /^data:image\/[a-z0-9.+-]+;base64,/i.test(normalized)
 }
 
 /**

@@ -57,8 +57,48 @@ const ENV_RE = () => /^:::(?:(sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.
 
 // ── HTML rendering ────────────────────────────────────────────────────────────
 
+import { pseudocodeToFlowchart } from "./pseudocodeFlowchart"
+import { renderTruthTableHTML } from "./truthTable"
+import { renderGraphSVG } from "./graphViz"
+import { renderPlotHTML } from "./functionPlot"
+import { renderCommDiagSVG } from "./commDiag"
+
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+function buildPseudocodeHTML(title: string, number: string, content: string): string {
+  const KEYWORDS = /\b(INPUT|OUTPUT|FOR|TO|DOWNTO|DO|END\s+FOR|WHILE|END\s+WHILE|IF|THEN|ELSE\s+IF|ELSE|END\s+IF|RETURN|FUNCTION|END\s+FUNCTION|PROCEDURE|END\s+PROCEDURE|ALGORITHM|REQUIRE|ENSURE|BEGIN|END|SWAP|REPEAT|UNTIL|BREAK|CONTINUE|PRINT|LET|SET)\b/g
+
+  const lines = content.split("\n").filter(line => line !== undefined)
+  let lineNum = 0
+
+  const renderedLines = lines.map((line) => {
+    if (!line.trim()) return `<div class="pc-line pc-empty"></div>`
+    lineNum++
+    const indent = line.match(/^(\s*)/)?.[1].length ?? 0
+    const indentLevel = Math.floor(indent / 2)
+    const trimmed = escHtml(line.trim())
+    const withKeywords = trimmed.replace(KEYWORDS, '<span class="pc-kw">$1</span>')
+    return `<div class="pc-line" style="padding-left:${indentLevel * 1.5}em"><span class="pc-num">${lineNum}</span><span class="pc-content">${withKeywords}</span></div>`
+  })
+
+  const header = title
+    ? `Algorithm ${number}: ${escHtml(title)}`
+    : `Algorithm ${number}`
+
+  const mermaidChart = pseudocodeToFlowchart(content)
+
+  return [
+    `<div class="pseudocode-block">`,
+    `<div class="pc-header">${header}</div>`,
+    `<div class="pc-body">${renderedLines.join("")}</div>`,
+    `<details class="pc-flowchart-section">`,
+    `<summary class="pc-flowchart-toggle">Flowchart</summary>`,
+    `<div class="pc-flowchart"><pre><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre></div>`,
+    `</details>`,
+    `</div>`,
+  ].join("\n")
 }
 
 export function buildEnvHTML(
@@ -105,12 +145,17 @@ export function buildEnvHTML(
  * and returns the text with `\x02ENVn\x03` placeholders + a map to restore them.
  *
  * Call resetEnvCounters() before the first (top-level) call.
+ *
+ * Duplicate labels: the first occurrence keeps the canonical id (`env-<label>`),
+ * subsequent occurrences get a suffix (`env-<label>-2`, `-3`, ...) so DOM ids
+ * remain unique. References (`@thm:foo`) always resolve to the first one.
  */
 export function extractEnvironments(
   text: string,
   renderFn: (inner: string) => string
 ): { text: string; slots: string[] } {
   const slots: string[] = []
+  const labelOccurrences: Record<string, number> = {}
 
   // Process iteratively from innermost outward to support nested environments
   let current = text
@@ -119,6 +164,43 @@ export function extractEnvironments(
     const before = current
     current = current.replace(ENV_RE(), (match, size, rawName, title, label, content) => {
       const envName = rawName.toLowerCase()
+
+      if (envName === "pseudocode") {
+        counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
+        const pcNumber = String(counters["pseudocode"])
+        const html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim())
+        slots.push(html)
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "truth") {
+        counters["truth"] = (counters["truth"] ?? 0) + 1
+        const html = renderTruthTableHTML(title ?? "", content.trim())
+        slots.push(html)
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "graph") {
+        counters["graph"] = (counters["graph"] ?? 0) + 1
+        const html = renderGraphSVG(title ?? "", content.trim())
+        slots.push(html)
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "plot") {
+        counters["plot"] = (counters["plot"] ?? 0) + 1
+        const html = renderPlotHTML(title ?? "", content.trim())
+        slots.push(html)
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "commdiag") {
+        counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
+        const html = renderCommDiagSVG(title ?? "", content.trim())
+        slots.push(html)
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
       if (!ALL_ENVS[envName]) return match
 
       let number = ""
@@ -133,7 +215,15 @@ export function extractEnvironments(
         const msg = String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         innerHTML = `<pre class="math-error">Error in environment: ${msg}</pre>`
       }
-      const html = buildEnvHTML(envName, title ?? "", number, innerHTML, size ?? undefined, label ?? undefined)
+
+      let renderedLabel: string | undefined = label ?? undefined
+      if (label) {
+        const seen = (labelOccurrences[label] ?? 0) + 1
+        labelOccurrences[label] = seen
+        renderedLabel = seen === 1 ? label : `${label}-${seen}`
+      }
+
+      const html = buildEnvHTML(envName, title ?? "", number, innerHTML, size ?? undefined, renderedLabel)
       slots.push(html)
       return `\x02ENV${slots.length - 1}\x03`
     })
@@ -178,7 +268,14 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
       localCounters[envName] = (localCounters[envName] ?? 0) + 1
       number = String(localCounters[envName])
     }
-    if (label) labels.set(label, { kind: ALL_ENVS[envName].es, number, label })
+    if (label) {
+      // Preserve the first occurrence so references stay stable; warn on dupes.
+      if (labels.has(label)) {
+        console.warn(`Duplicate environment label: ${label}`)
+      } else {
+        labels.set(label, { kind: ALL_ENVS[envName].es, number, label })
+      }
+    }
   }
   return labels
 }

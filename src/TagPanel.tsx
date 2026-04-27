@@ -45,15 +45,15 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
   }, [tagMap, filter, typeFilter])
 
   if (files.length === 0) {
-    return <div className="panel-empty">No hay archivos para analizar tags</div>
+    return <div className="panel-empty">{t.tagPanel.noFiles}</div>
   }
 
   if (tagMap.size === 0) {
     return (
       <div className="tag-panel">
         <div className="panel-empty">
-          <div>Sin tags encontrados</div>
-          <div className="tag-hint">Añade tags en frontmatter:<br /><code>tags: [math, analysis]</code><br />o inline: <code>#calculus</code></div>
+          <div>{t.tagPanel.noTags}</div>
+          <div className="tag-hint">{t.tagPanel.addTagsHint}<br /><code>tags: [math, analysis]</code><br />o inline: <code>#calculus</code></div>
         </div>
       </div>
     )
@@ -71,7 +71,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
       <div className="tag-search-wrap">
         <input
           className="tag-filter"
-          placeholder="Filtrar tags…"
+          placeholder={t.tagPanel.filterPlaceholder}
           value={filter}
           onChange={(e) => { setFilter(e.target.value); setSelected(null) }}
         />
@@ -79,10 +79,10 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
           className="tag-filter tag-type-filter"
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setSelected(null) }}
-          aria-label="Tipo de tag"
+          aria-label={t.tagPanel.typeAriaLabel}
         >
           {tagTypes.map((type) => (
-            <option key={type} value={type}>{type === "all" ? "Todos los tipos" : type}</option>
+            <option key={type} value={type}>{type === "all" ? t.tagPanel.allTypes : type}</option>
           ))}
         </select>
       </div>
@@ -113,7 +113,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
               key={tag}
               className="tag-item"
               onClick={() => setSelected(tag)}
-              title={`${files.length} archivo${files.length === 1 ? "" : "s"}`}
+              title={t.tagPanel.fileCount(files.length)}
             >
               <span className="tag-name">#{tag}</span>
               <span className="tag-type">{type}</span>
