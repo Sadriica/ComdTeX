@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { extractDetailedTags } from "./frontmatter"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface TagPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -45,15 +46,20 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
   }, [tagMap, filter, typeFilter])
 
   if (files.length === 0) {
-    return <div className="panel-empty">{t.tagPanel.noFiles}</div>
+    return (
+      <div className="panel-empty-rich">
+        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.tagsIcon}</div>
+        <p className="panel-empty-message">{t.tagPanel.noFiles}</p>
+      </div>
+    )
   }
 
   if (tagMap.size === 0) {
     return (
       <div className="tag-panel">
-        <div className="panel-empty">
-          <div>{t.tagPanel.noTags}</div>
-          <div className="tag-hint">{t.tagPanel.addTagsHint}<br /><code>tags: [math, analysis]</code><br />o inline: <code>#calculus</code></div>
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.tagsIcon}</div>
+          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.tagsMessage)}</p>
         </div>
       </div>
     )

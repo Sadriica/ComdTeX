@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface Equation {
   number: number
@@ -34,7 +35,12 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
   const equations = useMemo(() => parseEquations(content), [content])
 
   if (equations.length === 0) {
-    return <div className="panel-empty">{t.equations.empty}</div>
+    return (
+      <div className="panel-empty-rich">
+        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.equationsIcon}</div>
+        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.equationsMessage)}</p>
+      </div>
+    )
   }
 
   const jump = (line: number) => {

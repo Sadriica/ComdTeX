@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 import type { OpenFile } from "./types"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface TodoItem {
   filePath: string
@@ -52,7 +53,12 @@ export default function TodoPanel({ openTabs, onNavigate, onToggle }: TodoPanelP
     filter === "all" ? true : filter === "done" ? i.done : !i.done
   )
 
-  if (items.length === 0) return <div className="panel-empty">{t.todo.empty}</div>
+  if (items.length === 0) return (
+    <div className="panel-empty-rich">
+      <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.todoIcon}</div>
+      <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.todoMessage)}</p>
+    </div>
+  )
 
   const byFile = visible.reduce<Record<string, TodoItem[]>>((acc, item) => {
     if (!acc[item.filePath]) acc[item.filePath] = []

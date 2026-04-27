@@ -17,6 +17,16 @@ export interface Settings {
   minimapEnabled: boolean
   spellcheck: boolean
   syncScroll: boolean
+  dailyNotesEnabled: boolean
+  dailyNotesFolder: string
+  dailyNotesTemplate: string
+  autoRebuildPdf: boolean
+  /**
+   * If true, PDF compilation tries the bundled WASM LaTeX engine before
+   * falling back to a locally-installed `tectonic` / `xelatex` / `pdflatex`.
+   * Falls back automatically if the WASM engine is unavailable in the build.
+   */
+  useWasmTex: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -36,6 +46,11 @@ const DEFAULTS: Settings = {
   minimapEnabled: false,
   spellcheck: false,
   syncScroll: true,
+  dailyNotesEnabled: true,
+  dailyNotesFolder: "daily",
+  dailyNotesTemplate: "# {{date:YYYY-MM-DD}}\n\n## Tasks\n\n- [ ] \n\n## Notes\n\n",
+  autoRebuildPdf: false,
+  useWasmTex: true,
 }
 
 const KEY = "comdtex_settings"

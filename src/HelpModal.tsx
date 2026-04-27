@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 
@@ -7,18 +7,21 @@ interface HelpModalProps {
   onClose: () => void
 }
 
+type ShortcutItem = { group: string } | { key: string; desc: string }
+
 export default function HelpModal({ open, onClose }: HelpModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const [query, setQuery] = useState("")
   useFocusTrap(modalRef, open, onClose)
-  if (!open) return null
 
-  const shortcuts = [
+  const shortcuts: ShortcutItem[] = useMemo(() => [
     { group: t.help.file },
     { key: "Ctrl+S",          desc: t.help.save },
     { key: "Ctrl+Shift+S",    desc: t.help.saveAs },
     { key: "Ctrl+P",          desc: t.help.commandPalette },
     { key: "Ctrl+;",          desc: t.help.quickSwitcher },
+    { key: "Ctrl+Shift+D",    desc: t.help.dailyNote },
 
     { group: t.help.edit },
     { key: "Ctrl+F",          desc: t.help.findInFile },
@@ -51,7 +54,39 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
     { key: "mat(1,2,3,4)",    desc: t.help.autoMatrix },
     { key: "matf(2,2,...)",   desc: t.help.fixedMatrix },
     { key: "table(C1,C2)",    desc: t.help.markdownTable },
-  ]
+  ], [t])
+
+  // Filter: keep only groups that contain matching rows; show all rows if query empty
+  const filtered: ShortcutItem[] = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return shortcuts
+
+    const out: ShortcutItem[] = []
+    let pendingGroup: { group: string } | null = null
+    let groupHasMatches = false
+
+    for (const item of shortcuts) {
+      if ("group" in item) {
+        // Flush previous group if it had no matches we'll just discard.
+        pendingGroup = item
+        groupHasMatches = false
+      } else {
+        const match = item.key.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)
+        if (match) {
+          if (pendingGroup && !groupHasMatches) {
+            out.push(pendingGroup)
+            groupHasMatches = true
+          }
+          out.push(item)
+        }
+      }
+    }
+    return out
+  }, [shortcuts, query])
+
+  if (!open) return null
+
+  const noMatches = query.trim() !== "" && filtered.length === 0
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -60,15 +95,30 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           <span>{t.help.title}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
+        <div className="help-search-row">
+          <input
+            type="text"
+            className="help-search-input"
+            placeholder={t.help.searchPlaceholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoFocus
+            aria-label={t.help.searchPlaceholder}
+          />
+        </div>
         <div className="modal-body help-body">
-          {shortcuts.map((item, i) =>
-            "group" in item ? (
-              <div key={i} className="help-group">{item.group}</div>
-            ) : (
-              <div key={i} className="help-row">
-                <kbd className="help-key">{"key" in item ? item.key : ""}</kbd>
-                <span className="help-desc">{"desc" in item ? item.desc : ""}</span>
-              </div>
+          {noMatches ? (
+            <div className="help-no-matches">{t.help.noMatches}</div>
+          ) : (
+            filtered.map((item, i) =>
+              "group" in item ? (
+                <div key={i} className="help-group">{item.group}</div>
+              ) : (
+                <div key={i} className="help-row">
+                  <kbd className="help-key">{item.key}</kbd>
+                  <span className="help-desc">{item.desc}</span>
+                </div>
+              )
             )
           )}
         </div>

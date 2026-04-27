@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { LABEL_KIND_TITLES, scanStructuralLabels, type StructuralLabel, type StructuralLabelKind } from "./structuralLabels"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface LabelsPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -24,6 +25,21 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
     ;(acc[label.kind] ??= []).push(label)
     return acc
   }, {})
+
+  if (index.labels.length === 0) {
+    return (
+      <div className="labels-panel">
+        <div className="panel-header">
+          <span className="panel-header-title">{lp.title}</span>
+          <span className="panel-header-actions">0</span>
+        </div>
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.labelsIcon}</div>
+          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.labelsMessage)}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="labels-panel">

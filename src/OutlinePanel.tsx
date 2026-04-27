@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import { computeSectionWordCounts } from "./sectionWordCount"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface Heading {
   level: number
@@ -41,7 +42,12 @@ export default function OutlinePanel({ content, editorRef, activeLine }: Outline
   }, [activeIdx])
 
   if (headings.length === 0) {
-    return <div className="tree-empty">{t.outline.noHeadings}</div>
+    return (
+      <div className="panel-empty-rich">
+        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.outlineIcon}</div>
+        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
+      </div>
+    )
   }
 
   const jump = (line: number) => {

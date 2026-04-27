@@ -13,11 +13,23 @@ const currentYear = () => new Date().getFullYear().toString()
 const now = () => new Date().toISOString()
 const time = () => new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
 
+function formatDate(pattern: string, date = new Date()): string {
+  const pad = (n: number, w = 2) => String(n).padStart(w, "0")
+  return pattern
+    .replace(/YYYY/g, String(date.getFullYear()))
+    .replace(/MM/g, pad(date.getMonth() + 1))
+    .replace(/DD/g, pad(date.getDate()))
+    .replace(/HH/g, pad(date.getHours()))
+    .replace(/mm/g, pad(date.getMinutes()))
+    .replace(/ss/g, pad(date.getSeconds()))
+}
+
 export function processTemplateVariables(content: string, filename?: string): string {
   const fileBasename = filename?.replace(/\.[^.]+$/, "") ?? ""
   return content
-    .replace(/\{\{date\}\}/g, today())
     .replace(/\{\{date:formatted\}\}/g, todayFormatted())
+    .replace(/\{\{date:([^}]+)\}\}/g, (_, pat) => formatDate(pat))
+    .replace(/\{\{date\}\}/g, today())
     .replace(/\{\{year\}\}/g, currentYear())
     .replace(/\{\{time\}\}/g, time())
     .replace(/\{\{datetime\}\}/g, now())

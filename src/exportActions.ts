@@ -1,5 +1,5 @@
 import { save } from "@tauri-apps/plugin-dialog"
-import { copyFile, exists, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs"
+import { copyFile, exists, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { Command } from "@tauri-apps/plugin-shell"
 import { extractAnkiCards, exportAnkiTsv } from "./ankiExport"
@@ -13,6 +13,7 @@ import { MACROS_FILENAME } from "./macros"
 import { pathJoin } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import { resolveTransclusions } from "./transclusion"
+import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
 
 export interface ActiveDocument {
   path: string
@@ -37,8 +38,13 @@ export interface ExportMessages {
   revealExportError: string
   noMainDocument: string
   pdfCompiledLocal: string
+  pdfCompiledWasm?: string
   compilationFailed: (err: string) => string
   zipMissing: string
+  wasmTexInitializing?: string
+  wasmTexCompiling?: string
+  wasmTexFallback?: string
+  wasmTexUnavailable?: string
 }
 
 export interface AnkiExportMessages {
@@ -68,6 +74,21 @@ export interface ExportActionsContext {
   toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void
   writeClipboard: (text: string) => Promise<void>
   onLatexError?: (diagnostics: LatexDiagnostic[]) => void
+  /**
+   * Whether the WASM LaTeX engine should be tried before falling back to
+   * a locally-installed compiler. Defaults to true when omitted.
+   */
+  useWasmTex?: boolean
+  /**
+   * Notified once the PDF is written to disk so callers can refresh the
+   * preview pane.
+   */
+  onPdfSaved?: (outPath: string) => void
+  /**
+   * Notified when the WASM engine starts and stops compiling so callers can
+   * surface a status indicator.
+   */
+  onWasmStatus?: (state: "idle" | "initializing" | "compiling") => void
 }
 
 async function readMacros(vaultPath: string | null): Promise<string> {
@@ -169,6 +190,40 @@ export async function exportProjectLatex(ctx: ExportActionsContext) {
   await writeTextFile(path, tex)
 }
 
+async function tryCompileWithWasm(
+  tex: string,
+  ctx: ExportActionsContext,
+): Promise<WasmTexResult | null> {
+  try {
+    ctx.onWasmStatus?.("initializing")
+    if (ctx.messages.wasmTexInitializing) {
+      ctx.toast(ctx.messages.wasmTexInitializing, "info", 2000)
+    }
+    const { engine, ready } = getSharedWasmTexEngine()
+    await ready
+    ctx.onWasmStatus?.("compiling")
+    if (ctx.messages.wasmTexCompiling) {
+      ctx.toast(ctx.messages.wasmTexCompiling, "info", 2500)
+    }
+    const result = await engine.compile(tex, {
+      mainFile: "main.tex",
+      onProgress: (m) => {
+        // Surface package-level progress as a fleeting toast.
+        if (m) ctx.toast(`LaTeX: ${m}`, "info", 1500)
+      },
+    })
+    return result
+  } catch (err) {
+    return {
+      status: "error",
+      pdf: null,
+      log: err instanceof Error ? err.message : String(err),
+    }
+  } finally {
+    ctx.onWasmStatus?.("idle")
+  }
+}
+
 export async function compileLatexPdf(ctx: ExportActionsContext) {
   const content = ctx.readEditorContent()
   const currentFile = ctx.activeFile
@@ -181,6 +236,31 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   })
   if (!outPath) return
 
+  // ── Step 1 — try the bundled WASM engine if enabled ─────────────────────
+  const wantWasm = ctx.useWasmTex !== false
+  if (wantWasm) {
+    const wasm = await tryCompileWithWasm(tex, ctx)
+    if (wasm && wasm.status === "ok" && wasm.pdf) {
+      await writeFile(outPath, wasm.pdf)
+      ctx.onPdfSaved?.(outPath)
+      await openPath(outPath)
+      ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
+      return
+    }
+    if (wasm && wasm.status === "error") {
+      // Real LaTeX compile error — surface diagnostics, then still try local
+      // as a courtesy in case the user has a richer toolchain installed.
+      if (ctx.onLatexError) {
+        const diags = parseLatexStderr(wasm.log)
+        if (diags.length > 0) ctx.onLatexError(diags)
+      }
+    }
+    if (wasm && wasm.status === "unavailable" && ctx.messages.wasmTexFallback) {
+      ctx.toast(ctx.messages.wasmTexFallback, "info", 3000)
+    }
+  }
+
+  // ── Step 2 — fall back to local LaTeX toolchain ─────────────────────────
   const dir = currentFile.path.split("/").slice(0, -1).join("/") || "."
   const base = currentFile.name.replace(/\.[^.]+$/, "")
   const tmpTex = `${dir}/${base}.comdtex-compile.tex`
@@ -198,6 +278,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         const result = await Command.create(cmdName, args, { cwd: dir }).execute()
         if (result.code === 0 && await exists(tmpPdf)) {
           await copyFile(tmpPdf, outPath)
+          ctx.onPdfSaved?.(outPath)
           await openPath(outPath)
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
           return
@@ -304,6 +385,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
       throw new Error(stderrText || "pandoc failed")
     }
     ctx.toast(ctx.messages.pdfDone, "success")
+    ctx.onPdfSaved?.(outPath)
     await openPath(outPath)
   } catch (err) {
     await remove(`${currentFile.path}.comdtex-export.tmp.md`).catch(() => {})

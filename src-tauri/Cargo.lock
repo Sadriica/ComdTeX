@@ -477,7 +477,7 @@ dependencies = [
 
 [[package]]
 name = "comdtex"
-version = "1.0.9"
+version = "1.1.0"
 dependencies = [
  "serde",
  "serde_json",

@@ -3,6 +3,9 @@ import type { DepStatus } from "./checkDeps"
 
 interface DepsWarningProps {
   deps: DepStatus
+  /** When true, PDF export uses the bundled WASM engine and pandoc is only
+   * required for DOCX/Beamer/MD→PDF — the message below reflects that. */
+  useWasmTex?: boolean
   onDismiss: () => void
 }
 
@@ -16,14 +19,16 @@ function getOsHint(tool: "pandoc" | "zip"): string {
   return "sudo apt install zip"
 }
 
-export default function DepsWarning({ deps, onDismiss }: DepsWarningProps) {
+export default function DepsWarning({ deps, useWasmTex, onDismiss }: DepsWarningProps) {
   const missing: Array<{ name: "pandoc" | "zip"; label: string; feature: string; url: string }> = []
 
   if (!deps.pandoc) {
     missing.push({
       name: "pandoc",
       label: "pandoc",
-      feature: "necesario para exportar PDF, DOCX, Beamer",
+      feature: useWasmTex
+        ? "necesario para exportar DOCX, Beamer y Markdown→PDF (no para PDF normal)"
+        : "necesario para exportar PDF, DOCX, Beamer",
       url: "https://pandoc.org/installing.html",
     })
   }

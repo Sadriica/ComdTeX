@@ -309,10 +309,11 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Custom preview CSS via `custom.css`
 
 ### Export
-- PDF via pandoc (falls back to `window.print()` if pandoc is absent)
+- **PDF via built-in WASM LaTeX engine** — works out of the box, no pandoc / xelatex install needed (see [docs/wasm-tex.md](docs/wasm-tex.md))
+- PDF via pandoc (Markdown → PDF pipeline; falls back to `window.print()` if pandoc is absent)
 - LaTeX (`.tex`) with preamble, environments, and macros — Overleaf-compatible
 - Project export: compose a multi-file project from a main document with `![[transclusions]]`
-- Local LaTeX PDF compile via `tectonic`, `xelatex`, or `pdflatex`
+- Local LaTeX PDF compile via `tectonic`, `xelatex`, or `pdflatex` (used as fallback when the WASM engine isn't bundled or fails)
 - Reveal.js presentation
 - DOCX and Beamer via pandoc
 - Obsidian-friendly Markdown export

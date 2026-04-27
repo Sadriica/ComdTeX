@@ -10,6 +10,10 @@ interface StatusBarProps {
   selectedWords?: number
   wordGoal?: number
   onGoToLine?: (line: number) => void
+  /** "wasm" | "local" — which TeX engine is preferred for PDF export. */
+  texEngine?: "wasm" | "local"
+  /** "compiling" briefly displaces the engine label while a build is running. */
+  texEngineState?: "idle" | "initializing" | "compiling"
 }
 
 function wordCount(text: string): number {
@@ -25,14 +29,30 @@ function readingMinutes(text: string): number {
   return Math.max(1, Math.ceil(wc / 200))
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine }: StatusBarProps) {
+export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState }: StatusBarProps) {
   const t = useT()
   const wc = wordCount(content)
+  const showTexEngine = texEngine !== undefined || (texEngineState && texEngineState !== "idle")
+  const texEngineLabel =
+    texEngineState && texEngineState !== "idle"
+      ? t.statusBar.texEngineCompiling
+      : texEngine === "wasm"
+        ? t.statusBar.texEngineWasm
+        : t.statusBar.texEngineLocal
   return (
     <div className="status-bar">
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
         {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : t.statusBar.modeMarkdown}</span>}
+        {showTexEngine && (
+          <span
+            className="status-item status-tex-engine"
+            title={t.statusBar.texEngineTitle}
+            data-state={texEngineState ?? "idle"}
+          >
+            {texEngineLabel}
+          </span>
+        )}
       </span>
       <span className="status-right">
         {macroCount > 0 && (

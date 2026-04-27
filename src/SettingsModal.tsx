@@ -197,6 +197,54 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
               <option value="light">{t.settings.light}</option>
             </select>
           </label>
+
+          <h4 className="setting-section">{t.settings.sectionDailyNotes}</h4>
+
+          <label className="setting-row">
+            <span>{t.settings.dailyNotesEnabled}</span>
+            <input
+              type="checkbox"
+              checked={settings.dailyNotesEnabled}
+              onChange={() => onChange({ dailyNotesEnabled: !settings.dailyNotesEnabled })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <span>{t.settings.dailyNotesFolder}</span>
+            <input
+              type="text"
+              value={settings.dailyNotesFolder}
+              placeholder={t.settings.dailyNotesFolderPlaceholder}
+              onChange={(e) => onChange({ dailyNotesFolder: e.target.value })}
+              disabled={!settings.dailyNotesEnabled}
+            />
+          </label>
+
+          <label className="setting-row setting-row-stack">
+            <span>{t.settings.dailyNotesTemplate}</span>
+            <textarea
+              className="setting-textarea"
+              rows={6}
+              value={settings.dailyNotesTemplate}
+              onChange={(e) => onChange({ dailyNotesTemplate: e.target.value })}
+              disabled={!settings.dailyNotesEnabled}
+            />
+          </label>
+          <div className="setting-hint">{t.settings.dailyNotesTemplateHint}</div>
+
+          <h4 className="setting-section">{t.settings.sectionPdf}</h4>
+
+          <label className="setting-row">
+            <span>
+              {t.settings.useWasmTex}
+              <span className="setting-help"> — {t.settings.useWasmTexDesc}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.useWasmTex}
+              onChange={() => onChange({ useWasmTex: !settings.useWasmTex })}
+            />
+          </label>
         </div>
       </div>
     </div>

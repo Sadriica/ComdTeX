@@ -2,6 +2,7 @@ import { useRef } from "react"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface ClosedTabsPopupProps {
   open: boolean
@@ -13,12 +14,9 @@ interface ClosedTabsPopupProps {
 export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: ClosedTabsPopupProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
-  const isOpen = open && paths.length > 0
-  useFocusTrap(modalRef, isOpen, onClose)
+  useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
-
-  if (paths.length === 0) return null
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -28,17 +26,24 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
           <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="modal-body" style={{ maxHeight: "300px", overflowY: "auto" }}>
-          {paths.map((path) => (
-            <button
-              key={path}
-              className="closed-tab-item"
-              onClick={() => { onSelect(path); onClose() }}
-            >
-              <span className="closed-tab-icon">📄</span>
-              <span className="closed-tab-name">{displayBasename(path)}</span>
-              <span className="closed-tab-path">{path}</span>
-            </button>
-          ))}
+          {paths.length === 0 ? (
+            <div className="panel-empty-rich">
+              <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.closedTabsIcon}</div>
+              <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.closedTabsMessage)}</p>
+            </div>
+          ) : (
+            paths.map((path) => (
+              <button
+                key={path}
+                className="closed-tab-item"
+                onClick={() => { onSelect(path); onClose() }}
+              >
+                <span className="closed-tab-icon">📄</span>
+                <span className="closed-tab-name">{displayBasename(path)}</span>
+                <span className="closed-tab-path">{path}</span>
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>

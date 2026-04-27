@@ -13,7 +13,7 @@ import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preprocessFigureLabels } from "./figures"
 import { numberHeadings, resolveSectionRefs } from "./references"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
-import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
+import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .use(footnotePlugin)
@@ -313,6 +313,7 @@ export function renderMarkdown(
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
   content = resolveTransclusions(content, transclusionResolver)
+  content = processBlockIds(content)
   const numbered = numberHeadings(content)
   content = numbered.content
 
@@ -360,6 +361,9 @@ export function renderMarkdown(
     citedKeys = resolved.citedKeys
   }
   const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
+
+  // Hoist block-id placeholders to their parent elements before sanitizer runs.
+  html = attachBlockIds(html)
 
   // Annotate block elements with their source line for preview ↔ editor sync.
   // Use the original raw input so headings/lists/callouts carry an accurate

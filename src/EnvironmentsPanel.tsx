@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import type { OpenFile } from "./types"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 const NUMBERED_TYPES = ["theorem", "lemma", "corollary", "proposition", "definition", "example", "exercise"]
 const ALL_TYPES = [...NUMBERED_TYPES, "proof", "remark", "note"]
@@ -58,7 +59,12 @@ export default function EnvironmentsPanel({
   const items = useMemo(() => parseEnvironments(openTabs), [openTabs])
 
   if (items.length === 0) {
-    return <div className="panel-empty">{t.environments.empty}</div>
+    return (
+      <div className="panel-empty-rich">
+        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.environmentsIcon}</div>
+        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.environmentsMessage)}</p>
+      </div>
+    )
   }
 
   const jump = (line: number) => {

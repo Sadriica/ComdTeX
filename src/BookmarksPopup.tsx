@@ -1,6 +1,7 @@
 import { useRef } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface Bookmark {
   slot: number
@@ -31,7 +32,10 @@ export default function BookmarksPopup({ open, bookmarks, onGoTo, onRemove, onCl
         </div>
         <div className="modal-body">
           {bookmarks.length === 0 && (
-            <div className="panel-empty">{t.app.noBookmarks}</div>
+            <div className="panel-empty-rich">
+              <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.bookmarksIcon}</div>
+              <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.bookmarksMessage)}</p>
+            </div>
           )}
           {bookmarks.map(({ slot, line }) => (
             <div key={slot} className="bookmark-item">

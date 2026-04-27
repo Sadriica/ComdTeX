@@ -4,6 +4,7 @@ import { readTextFile } from "@tauri-apps/plugin-fs"
 import { flatFiles } from "./wikilinks"
 import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
+import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface BacklinksPanelProps {
   currentFile: { name: string; path: string } | null
@@ -67,7 +68,10 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree }: Backli
         {loading ? t.backlinks.searching : t.backlinks.links(backlinks.length)}
       </div>
       {backlinks.length === 0 && !loading && (
-        <div className="tree-empty">{t.backlinks.noLinks}</div>
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.backlinksIcon}</div>
+          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.backlinksMessage)}</p>
+        </div>
       )}
       {Object.entries(
         backlinks.reduce((acc, b) => {

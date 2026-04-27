@@ -97,6 +97,16 @@ export interface T {
     wordWrap: string; minimap: string; spellcheck: string; syncScroll: string; previewVisible: string
     closeAriaLabel: string
     sectionEditor: string; sectionPreview: string; sectionGeneral: string
+    sectionDailyNotes: string
+    dailyNotesEnabled: string
+    dailyNotesFolder: string
+    dailyNotesFolderPlaceholder: string
+    dailyNotesTemplate: string
+    dailyNotesTemplateHint: string
+    sectionPdf: string
+    useWasmTex: string; useWasmTexDesc: string
+    wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
+    wasmTexUnavailable: string
   }
 
   help: {
@@ -109,6 +119,34 @@ export interface T {
     zoomInOut: string; resetZoom: string; nextTab: string; prevTab: string; closeTab: string
     expandShorthand: string; navigatePlaceholders: string; autocompleteWikilink: string
     autoMatrix: string; fixedMatrix: string; markdownTable: string
+    searchPlaceholder: string
+    noMatches: string
+    dailyNote: string
+  }
+
+  onboarding: {
+    title: string
+    step: (current: number, total: number) => string
+    skip: string
+    next: string
+    back: string
+    done: string
+    step1Title: string; step1Text: string
+    step2Title: string; step2Text: string
+    step3Title: string; step3Text: string
+    step4Title: string; step4Text: string
+  }
+
+  emptyStates: {
+    todoIcon: string; todoMessage: string
+    backlinksIcon: string; backlinksMessage: string
+    equationsIcon: string; equationsMessage: string
+    environmentsIcon: string; environmentsMessage: string
+    labelsIcon: string; labelsMessage: string
+    tagsIcon: string; tagsMessage: string
+    outlineIcon: string; outlineMessage: string
+    bookmarksIcon: string; bookmarksMessage: string
+    closedTabsIcon: string; closedTabsMessage: string
   }
 
   templateModal: {
@@ -138,6 +176,9 @@ export interface T {
     modeMarkdown: string; modeTex: string
     ln: string; col: string; goToLineTitle: string
     wordGoalTitle: (current: number, goal: number) => string
+    texEngineWasm: string; texEngineLocal: string
+    texEngineCompiling: string
+    texEngineTitle: string
   }
 
   palette: {
@@ -160,8 +201,15 @@ export interface T {
     symbolPicker: string
     exportProjectTex: string
     compileLatexPdf: string
+    compileWasmPdf: string
     viewLabels: string
     viewQuality: string
+    openDailyNote: string
+    showOnboarding: string
+    viewPdf: string
+    addComment: string
+    viewComments: string
+    toggleCommentResolved: string
   }
 
   ankiExport: {
@@ -183,6 +231,8 @@ export interface T {
     symbols: string
     labels: string
     quality: string
+    pdfPreview: string
+    comments: string
   }
 
   todo: {
@@ -323,6 +373,10 @@ export interface T {
     htmlExported: string
     replaceError: (err: string) => string
     closeSplitPane: string
+    dailyNoteCreated: (name: string) => string
+    dailyNoteOpened: (name: string) => string
+    dailyNoteError: (err: string) => string
+    dailyNoteNoVault: string
   }
 
   welcome: {
@@ -531,6 +585,13 @@ export interface T {
     resetView: string
     graphInfo: (nodes: number, edges: number) => string
     root: string
+    searchPlaceholder: string
+    filterPlaceholder: string
+  }
+
+  preview: {
+    hoverLoading: string
+    hoverNotFound: string
   }
 
   frontmatterPanel: {
@@ -647,12 +708,57 @@ export interface T {
     replaceAriaLabel: string
   }
 
+  comments: {
+    title: string
+    addAriaLabel: string
+    addAtCursor: string
+    addPlaceholder: string
+    save: string
+    cancel: string
+    resolved: string
+    unresolved: string
+    all: string
+    deleteAriaLabel: string
+    noComments: string
+    noResolved: string
+    noUnresolved: string
+    atLine: (line: number) => string
+    jumpTitle: (line: number) => string
+    count: (n: number) => string
+    markResolved: string
+    markUnresolved: string
+    editTitle: string
+    emptyBody: string
+    filterAriaLabel: string
+    promptForBody: string
+    addedToast: string
+    deletedToast: string
+    noVault: string
+    noFile: string
+    noCommentAtCursor: string
+  }
+
   templates: Record<string, { name: string; description: string }>
 
   symbolPicker: {
     title: string
     searchPlaceholder: string
     all: string
+  }
+
+  pdfPreview: {
+    title: string
+    loading: string
+    noPdf: string
+    error: string
+    zoomIn: string
+    zoomOut: string
+    fitWidth: string
+    previousPage: string
+    nextPage: string
+    page: string
+    jumpedToHeading: (heading: string) => string
+    headingNotFound: (heading: string) => string
   }
 }
 
@@ -758,6 +864,19 @@ const es: T = {
     syncScroll: "Sincronizar scroll editor↔preview", previewVisible: "Mostrar preview",
     closeAriaLabel: "Cerrar configuración",
     sectionEditor: "Editor", sectionPreview: "Vista previa", sectionGeneral: "General",
+    sectionDailyNotes: "Notas diarias",
+    dailyNotesEnabled: "Habilitar notas diarias",
+    dailyNotesFolder: "Carpeta",
+    dailyNotesFolderPlaceholder: "daily",
+    dailyNotesTemplate: "Plantilla",
+    dailyNotesTemplateHint: "Variables: {{date:YYYY-MM-DD}}, {{date}}, {{time}}, {{datetime}}",
+    sectionPdf: "Compilación PDF",
+    useWasmTex: "Usar motor LaTeX integrado (WASM)",
+    useWasmTexDesc: "Compila PDF sin necesidad de instalar pandoc o xelatex. Si falta el motor, se usa el LaTeX local.",
+    wasmTexInitializing: "Inicializando motor LaTeX (WASM)…",
+    wasmTexCompiling: "Compilando LaTeX (WASM)…",
+    wasmTexFallback: "Motor WASM no disponible — intentando LaTeX local",
+    wasmTexUnavailable: "Motor LaTeX WASM no incluido en esta build",
   },
 
   help: {
@@ -776,6 +895,47 @@ const es: T = {
     autoMatrix: "Matriz auto-dimensionada",
     fixedMatrix: "Matriz de dimensión fija",
     markdownTable: "Tabla markdown",
+    searchPlaceholder: "Buscar atajos…",
+    noMatches: "Sin coincidencias",
+    dailyNote: "Abrir nota diaria de hoy",
+  },
+
+  onboarding: {
+    title: "Bienvenido a ComdTeX",
+    step: (current, total) => `Paso ${current} de ${total}`,
+    skip: "Omitir",
+    next: "Siguiente",
+    back: "Atrás",
+    done: "Listo",
+    step1Title: "Paneles laterales",
+    step1Text: "Cambia entre archivos, búsqueda, esquema, backlinks, tags y más usando las pestañas verticales de la izquierda.",
+    step2Title: "Editor y vista previa",
+    step2Text: "Escribe Markdown + LaTeX a la izquierda y observa el resultado renderizado al instante a la derecha.",
+    step3Title: "Paleta de comandos",
+    step3Text: "Pulsa Ctrl+P en cualquier momento para buscar archivos y ejecutar acciones rápidas.",
+    step4Title: "Configuración",
+    step4Text: "Usa el icono de engranaje en la barra de título para cambiar tema, idioma, fuentes y más.",
+  },
+
+  emptyStates: {
+    todoIcon: "✓",
+    todoMessage: "No hay tareas todavía. Añade `- [ ]` en cualquier nota.",
+    backlinksIcon: "←",
+    backlinksMessage: "Ninguna nota enlaza aquí. Usa `[[nombre]]` en otra nota.",
+    equationsIcon: "∑",
+    equationsMessage: "No hay ecuaciones. Usa bloques `$$ … $$`.",
+    environmentsIcon: "∀",
+    environmentsMessage: "Sin teoremas/demostraciones. Usa bloques `:::theorem`.",
+    labelsIcon: "⌁",
+    labelsMessage: "No hay etiquetas. Usa `{#sec:nombre}`, `{#eq:nombre}`, etc.",
+    tagsIcon: "#",
+    tagsMessage: "Sin tags. Añade `tags: [foo, bar]` en frontmatter YAML.",
+    outlineIcon: "≡",
+    outlineMessage: "Sin encabezados. Usa `# Título`, `## Sección`, etc.",
+    bookmarksIcon: "★",
+    bookmarksMessage: "Sin marcadores. Pulsa Ctrl+Shift+1..9 para crear uno.",
+    closedTabsIcon: "↺",
+    closedTabsMessage: "No hay pestañas cerradas recientemente.",
   },
 
   templateModal: {
@@ -806,6 +966,10 @@ const es: T = {
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col", goToLineTitle: "Click para ir a línea",
     wordGoalTitle: (c, g) => `${c} / ${g} palabras`,
+    texEngineWasm: "TeX: WASM",
+    texEngineLocal: "TeX: local",
+    texEngineCompiling: "TeX: compilando…",
+    texEngineTitle: "Motor LaTeX usado para exportar PDF",
   },
 
   palette: {
@@ -842,8 +1006,15 @@ const es: T = {
     symbolPicker: "Selector de símbolos matemáticos",
     exportProjectTex: "Exportar proyecto como .tex",
     compileLatexPdf: "Compilar PDF con LaTeX local",
+    compileWasmPdf: "Compilar PDF (motor WASM)",
     viewLabels: "Ver labels",
     viewQuality: "Diagnóstico de documento",
+    openDailyNote: "Abrir nota diaria de hoy",
+    showOnboarding: "Mostrar tour de bienvenida",
+    viewPdf: "Ver PDF compilado",
+    addComment: "Añadir comentario en el cursor",
+    viewComments: "Ver comentarios",
+    toggleCommentResolved: "Marcar comentario como resuelto/sin resolver",
   },
 
   ankiExport: {
@@ -869,6 +1040,8 @@ const es: T = {
     symbols: "Símbolos",
     labels: "Labels",
     quality: "Diagnóstico",
+    pdfPreview: "PDF",
+    comments: "Comentarios",
   },
 
   todo: {
@@ -1032,6 +1205,10 @@ const es: T = {
     htmlExported: "HTML exportado",
     replaceError: (err) => `Error al reemplazar: ${err}`,
     closeSplitPane: "Cerrar panel dividido",
+    dailyNoteCreated: (name) => `Nota diaria creada: ${name}`,
+    dailyNoteOpened: (name) => `Nota diaria abierta: ${name}`,
+    dailyNoteError: (err) => `Error al abrir nota diaria: ${err}`,
+    dailyNoteNoVault: "Abre un vault para usar las notas diarias",
   },
 
   welcome: {
@@ -1300,6 +1477,13 @@ const es: T = {
     resetView: "Reiniciar vista",
     graphInfo: (n, e) => `${n} nodos · ${e} enlaces`,
     root: "raíz",
+    searchPlaceholder: "Buscar archivo…",
+    filterPlaceholder: "tag:nombre",
+  },
+
+  preview: {
+    hoverLoading: "Cargando vista previa…",
+    hoverNotFound: "Nota no encontrada",
   },
 
   frontmatterPanel: {
@@ -1367,6 +1551,21 @@ const es: T = {
     all: "Todos",
   },
 
+  pdfPreview: {
+    title: "Vista previa PDF",
+    loading: "Cargando PDF…",
+    noPdf: "Aún no hay PDF compilado. Usa «Exportar PDF» o «Compilar PDF con LaTeX local».",
+    error: "Error al cargar el PDF",
+    zoomIn: "Acercar",
+    zoomOut: "Alejar",
+    fitWidth: "Ajustar al ancho",
+    previousPage: "Página anterior",
+    nextPage: "Página siguiente",
+    page: "Página",
+    jumpedToHeading: (heading) => `Saltado a «${heading}»`,
+    headingNotFound: (heading) => `No se encontró «${heading}» en la fuente`,
+  },
+
   latexErrors: {
     title: "Error al exportar PDF",
     noDetails: "No se encontraron detalles del error.",
@@ -1430,6 +1629,36 @@ const es: T = {
   searchReplace: {
     searchAriaLabel: "Término de búsqueda",
     replaceAriaLabel: "Texto de reemplazo",
+  },
+
+  comments: {
+    title: "Comentarios",
+    addAriaLabel: "Añadir comentario en el cursor",
+    addAtCursor: "Añadir",
+    addPlaceholder: "Escribe tu comentario…",
+    save: "Guardar",
+    cancel: "Cancelar",
+    resolved: "Resuelto",
+    unresolved: "Sin resolver",
+    all: "Todos",
+    deleteAriaLabel: "Eliminar comentario",
+    noComments: "No hay comentarios",
+    noResolved: "No hay comentarios resueltos",
+    noUnresolved: "No hay comentarios sin resolver",
+    atLine: (line) => `Línea ${line}`,
+    jumpTitle: (line) => `Ir a línea ${line}`,
+    count: (n) => `${n} comentario${n !== 1 ? "s" : ""}`,
+    markResolved: "Marcar como resuelto",
+    markUnresolved: "Marcar como sin resolver",
+    editTitle: "Click para editar",
+    emptyBody: "(sin texto)",
+    filterAriaLabel: "Filtrar comentarios",
+    promptForBody: "Comentario:",
+    addedToast: "Comentario añadido",
+    deletedToast: "Comentario eliminado",
+    noVault: "Abre un vault para usar comentarios",
+    noFile: "Abre un archivo para añadir comentarios",
+    noCommentAtCursor: "No hay comentario en la línea actual",
   },
 }
 
@@ -1535,6 +1764,19 @@ const en: T = {
     syncScroll: "Sync editor↔preview scroll", previewVisible: "Show preview",
     closeAriaLabel: "Close settings",
     sectionEditor: "Editor", sectionPreview: "Preview", sectionGeneral: "General",
+    sectionDailyNotes: "Daily notes",
+    dailyNotesEnabled: "Enable daily notes",
+    dailyNotesFolder: "Folder",
+    dailyNotesFolderPlaceholder: "daily",
+    dailyNotesTemplate: "Template",
+    dailyNotesTemplateHint: "Variables: {{date:YYYY-MM-DD}}, {{date}}, {{time}}, {{datetime}}",
+    sectionPdf: "PDF compilation",
+    useWasmTex: "Use built-in LaTeX engine (WASM)",
+    useWasmTexDesc: "Compile PDF without installing pandoc or xelatex. Falls back to local LaTeX if the engine is unavailable.",
+    wasmTexInitializing: "Initializing LaTeX engine (WASM)…",
+    wasmTexCompiling: "Compiling LaTeX (WASM)…",
+    wasmTexFallback: "WASM engine unavailable — trying local LaTeX",
+    wasmTexUnavailable: "WASM LaTeX engine not bundled in this build",
   },
 
   help: {
@@ -1553,6 +1795,47 @@ const en: T = {
     autoMatrix: "Auto-dimensioned matrix",
     fixedMatrix: "Fixed-dimension matrix",
     markdownTable: "Markdown table",
+    searchPlaceholder: "Search shortcuts…",
+    noMatches: "No matches",
+    dailyNote: "Open today's daily note",
+  },
+
+  onboarding: {
+    title: "Welcome to ComdTeX",
+    step: (current, total) => `Step ${current} of ${total}`,
+    skip: "Skip",
+    next: "Next",
+    back: "Back",
+    done: "Done",
+    step1Title: "Sidebar tabs",
+    step1Text: "Switch between files, search, outline, backlinks, tags, and more using the vertical tabs on the left.",
+    step2Title: "Editor and preview",
+    step2Text: "Write Markdown + LaTeX on the left and watch the rendered output update instantly on the right.",
+    step3Title: "Command palette",
+    step3Text: "Press Ctrl+P at any time to search files and run quick actions.",
+    step4Title: "Settings",
+    step4Text: "Use the gear icon in the title bar to change theme, language, fonts, and more.",
+  },
+
+  emptyStates: {
+    todoIcon: "✓",
+    todoMessage: "No tasks yet. Add `- [ ]` in any note.",
+    backlinksIcon: "←",
+    backlinksMessage: "No notes link here yet. Use `[[name]]` in another note.",
+    equationsIcon: "∑",
+    equationsMessage: "No equations yet. Use `$$ … $$` blocks.",
+    environmentsIcon: "∀",
+    environmentsMessage: "No theorems/proofs/etc. Use `:::theorem` blocks.",
+    labelsIcon: "⌁",
+    labelsMessage: "No labels yet. Use `{#sec:name}`, `{#eq:name}`, etc.",
+    tagsIcon: "#",
+    tagsMessage: "No tags. Add `tags: [foo, bar]` in YAML frontmatter.",
+    outlineIcon: "≡",
+    outlineMessage: "No headings. Use `# Title`, `## Section`, etc.",
+    bookmarksIcon: "★",
+    bookmarksMessage: "No bookmarks. Press Ctrl+Shift+1..9 to set bookmarks.",
+    closedTabsIcon: "↺",
+    closedTabsMessage: "No recently closed tabs.",
   },
 
   templateModal: {
@@ -1583,6 +1866,10 @@ const en: T = {
     modeMarkdown: "Markdown", modeTex: "LaTeX",
     ln: "Ln", col: "Col", goToLineTitle: "Click to go to line",
     wordGoalTitle: (c, g) => `${c} / ${g} words`,
+    texEngineWasm: "TeX: WASM",
+    texEngineLocal: "TeX: local",
+    texEngineCompiling: "TeX: compiling…",
+    texEngineTitle: "LaTeX engine used for PDF export",
   },
 
   palette: {
@@ -1619,8 +1906,15 @@ const en: T = {
     symbolPicker: "Math symbol picker",
     exportProjectTex: "Export project as .tex",
     compileLatexPdf: "Compile PDF with local LaTeX",
+    compileWasmPdf: "Compile PDF (WASM engine)",
     viewLabels: "View labels",
     viewQuality: "Document diagnostics",
+    openDailyNote: "Open today's daily note",
+    showOnboarding: "Show onboarding tour",
+    viewPdf: "View compiled PDF",
+    addComment: "Add comment at cursor",
+    viewComments: "View comments",
+    toggleCommentResolved: "Toggle comment resolved",
   },
 
   ankiExport: {
@@ -1646,6 +1940,8 @@ const en: T = {
     symbols: "Symbols",
     labels: "Labels",
     quality: "Diagnostics",
+    pdfPreview: "PDF",
+    comments: "Comments",
   },
 
   todo: {
@@ -1808,6 +2104,10 @@ const en: T = {
     htmlExported: "HTML exported",
     replaceError: (err) => `Replace error: ${err}`,
     closeSplitPane: "Close split pane",
+    dailyNoteCreated: (name) => `Daily note created: ${name}`,
+    dailyNoteOpened: (name) => `Daily note opened: ${name}`,
+    dailyNoteError: (err) => `Daily note error: ${err}`,
+    dailyNoteNoVault: "Open a vault to use daily notes",
   },
 
   welcome: {
@@ -2076,6 +2376,13 @@ const en: T = {
     resetView: "Reset view",
     graphInfo: (n, e) => `${n} nodes · ${e} links`,
     root: "root",
+    searchPlaceholder: "Search file…",
+    filterPlaceholder: "tag:name",
+  },
+
+  preview: {
+    hoverLoading: "Loading preview…",
+    hoverNotFound: "Note not found",
   },
 
   frontmatterPanel: {
@@ -2143,6 +2450,21 @@ const en: T = {
     all: "All",
   },
 
+  pdfPreview: {
+    title: "PDF preview",
+    loading: "Loading PDF…",
+    noPdf: "No compiled PDF yet. Use “Export PDF” or “Compile PDF with local LaTeX”.",
+    error: "Failed to load PDF",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    fitWidth: "Fit to width",
+    previousPage: "Previous page",
+    nextPage: "Next page",
+    page: "Page",
+    jumpedToHeading: (heading) => `Jumped to “${heading}”`,
+    headingNotFound: (heading) => `“${heading}” not found in source`,
+  },
+
   latexErrors: {
     title: "PDF Export Failed",
     noDetails: "No error details available.",
@@ -2206,6 +2528,36 @@ const en: T = {
   searchReplace: {
     searchAriaLabel: "Search term",
     replaceAriaLabel: "Replacement text",
+  },
+
+  comments: {
+    title: "Comments",
+    addAriaLabel: "Add comment at cursor",
+    addAtCursor: "Add",
+    addPlaceholder: "Write your comment…",
+    save: "Save",
+    cancel: "Cancel",
+    resolved: "Resolved",
+    unresolved: "Unresolved",
+    all: "All",
+    deleteAriaLabel: "Delete comment",
+    noComments: "No comments yet",
+    noResolved: "No resolved comments",
+    noUnresolved: "No unresolved comments",
+    atLine: (line) => `Line ${line}`,
+    jumpTitle: (line) => `Jump to line ${line}`,
+    count: (n) => `${n} comment${n !== 1 ? "s" : ""}`,
+    markResolved: "Mark as resolved",
+    markUnresolved: "Mark as unresolved",
+    editTitle: "Click to edit",
+    emptyBody: "(no text)",
+    filterAriaLabel: "Filter comments",
+    promptForBody: "Comment:",
+    addedToast: "Comment added",
+    deletedToast: "Comment deleted",
+    noVault: "Open a vault to use comments",
+    noFile: "Open a file to add comments",
+    noCommentAtCursor: "No comment on the current line",
   },
 }
 

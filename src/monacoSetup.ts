@@ -801,3 +801,77 @@ export function setupEditorCommands(
     })
   })
 }
+
+// ── Per-line comment decorations (gutter glyphs) ─────────────────────────────
+
+export interface CommentMarker {
+  /** Stable comment id (used to fire onClick callbacks). */
+  id: string
+  /** 1-based line number to anchor the glyph on. */
+  line: number
+  /** Comment body for the hover tooltip. */
+  body: string
+  /** Whether the comment is resolved (used for muted styling). */
+  resolved: boolean
+  /** Optional: line snippet at the time of creation (used for drift hint). */
+  lineSnippet?: string
+  /** Optional: true if `lineSnippet` no longer matches the current line. */
+  drifted?: boolean
+}
+
+export interface CommentDecorationsHandle extends monacoApi.IDisposable {
+  /**
+   * Replace the current set of glyphs. Cheap to call on every change —
+   * Monaco reconciles the decoration deltas internally.
+   */
+  update(markers: CommentMarker[]): void
+}
+
+/**
+ * Attach gutter glyphs for per-line comments and dispatch a click callback
+ * when the user clicks on one of them. Returns an `update()` method so the
+ * host can refresh the marker list whenever the underlying comments change.
+ */
+export function setupCommentDecorations(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  monaco: typeof monacoApi,
+  onClickMarker: (id: string) => void,
+): CommentDecorationsHandle {
+  // Make sure the glyph margin is enabled — otherwise the gutter is hidden.
+  editor.updateOptions({ glyphMargin: true })
+
+  const collection = editor.createDecorationsCollection([])
+  let markers: CommentMarker[] = []
+
+  const buildDecorations = (items: CommentMarker[]): monacoApi.editor.IModelDeltaDecoration[] =>
+    items.map((m) => ({
+      range: new monaco.Range(m.line, 1, m.line, 1),
+      options: {
+        isWholeLine: false,
+        glyphMarginClassName: `comment-glyph${m.resolved ? " resolved" : ""}${m.drifted ? " drifted" : ""}`,
+        glyphMarginHoverMessage: { value: m.body || "(empty)" },
+      },
+    }))
+
+  const update = (next: CommentMarker[]) => {
+    markers = next
+    collection.set(buildDecorations(markers))
+  }
+
+  const clickDisposable = editor.onMouseDown((e) => {
+    if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) return
+    const lineNumber = e.target.position?.lineNumber
+    if (!lineNumber) return
+    // Line might host multiple comments — fire for the first one we find.
+    const hit = markers.find((m) => m.line === lineNumber)
+    if (hit) onClickMarker(hit.id)
+  })
+
+  return {
+    update,
+    dispose() {
+      clickDisposable.dispose()
+      collection.clear()
+    },
+  }
+}

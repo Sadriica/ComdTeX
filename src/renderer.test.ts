@@ -110,4 +110,12 @@ describe("renderMarkdown", () => {
       expect(annotated).toMatch(/<p[^>]*data-source-line="3"[^>]*>Another line/)
     })
   })
+
+  describe("block ids", () => {
+    it("renders a paragraph trailing ^id with id='block-id' and removes the marker", () => {
+      const html = renderMarkdown("Important paragraph. ^key-finding")
+      expect(html).toMatch(/id="block-key-finding"/)
+      expect(html).not.toContain("^key-finding")
+    })
+  })
 })

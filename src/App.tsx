@@ -9,7 +9,19 @@ import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
-import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions } from "./monacoSetup"
+import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker } from "./monacoSetup"
+import {
+  loadComments,
+  addComment as addCommentToVault,
+  updateComment as updateCommentInVault,
+  deleteComment as deleteCommentInVault,
+  generateCommentId,
+  isCommentInSync,
+  makeLineSnippet,
+  toAbsolutePath as commentToAbsolute,
+  toRelativePath as commentToRelative,
+  type Comment,
+} from "./comments"
 import { lintFileSummary, type LintSummary } from "./contentLinter"
 import { useVault } from "./useVault"
 import { useSettings } from "./useSettings"
@@ -42,7 +54,7 @@ import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from 
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { exportToTex, exportReveal } from "./exporter"
-import { exportPdf as exportPdfAction, exportAnkiCardsToFile } from "./exportActions"
+import { exportPdf as exportPdfAction, exportAnkiCardsToFile, compileLatexPdf as compileLatexPdfAction } from "./exportActions"
 import type { LatexDiagnostic } from "./latexErrors"
 import LatexErrorModal from "./LatexErrorModal"
 import { exportToObsidianMarkdown } from "./obsidianExport"
@@ -67,6 +79,8 @@ import { showToast } from "./toastService"
 import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
+import OnboardingTour from "./OnboardingTour"
+import { processTemplateVariables } from "./templates"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
@@ -74,7 +88,7 @@ const RECENT_KEY = "comdtex_recent"
 const BOOKMARKS_KEY = "comdtex_bookmarks"
 const CURSOR_KEY = "comdtex_cursor_positions"
 const MAX_RECENT = 10
-type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols"
+type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -92,6 +106,10 @@ function loadBookmarks(): Record<number, number> {
 
 function saveBookmarks(bookmarks: Record<number, number>) {
   localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks))
+}
+
+function escapeHoverText(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
 function renderErrorHtml(error: unknown): string {
@@ -253,11 +271,13 @@ const EquationsPanel = lazy(() => import("./EquationsPanel"))
 const EnvironmentsPanel = lazy(() => import("./EnvironmentsPanel"))
 const VaultStatsPanel = lazy(() => import("./VaultStatsPanel"))
 const CitationManager = lazy(() => import("./CitationManager"))
+const CommentsPanel = lazy(() => import("./CommentsPanel"))
 const SettingsModal = lazy(() => import("./SettingsModal"))
 const HelpModal = lazy(() => import("./HelpModal"))
 const TemplateModal = lazy(() => import("./TemplateModal"))
 const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
 const UpdateChecker = lazy(() => import("./UpdateChecker"))
+const PdfPreviewPanel = lazy(() => import("./PdfPreviewPanel"))
 const MonacoEditor = lazy(async () => {
   await import("./monacoRuntime")
   const mod = await import("@monaco-editor/react")
@@ -304,6 +324,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
   const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
   const [bibMap, setBibMap] = useState<Map<string, BibEntry>>(new Map())
   const [deps, setDeps] = useState<DepStatus | null>(null)
@@ -324,6 +345,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [citationManagerOpen, setCitationManagerOpen] = useState(false)
   const [tableEditorOpen, setTableEditorOpen] = useState(false)
   const [latexDiagnostics, setLatexDiagnostics] = useState<LatexDiagnostic[] | null>(null)
+  const [pdfPath, setPdfPath] = useState<string | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const commentDecorationsRef = useRef<CommentDecorationsHandle | null>(null)
+  const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">("idle")
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
@@ -733,6 +758,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   useEffect(() => () => {
     linterDisposableRef.current?.dispose()
     mathHoverDisposableRef.current?.dispose()
+    commentDecorationsRef.current?.dispose()
     if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
   }, [])
@@ -789,6 +815,36 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       loadBib(vault.vaultPath)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.openFile?.isDirty])
+
+  // ── Per-line comments: load on vault change ──────────────────────────────
+  useEffect(() => {
+    if (!vault.vaultPath) { setComments([]); return }
+    let cancelled = false
+    loadComments(vault.vaultPath)
+      .then((loaded) => { if (!cancelled) setComments(loaded) })
+      .catch(() => { if (!cancelled) setComments([]) })
+    return () => { cancelled = true }
+  }, [vault.vaultPath])
+
+  // ── Per-line comments: refresh gutter glyphs whenever comments / file change
+  useEffect(() => {
+    const handle = commentDecorationsRef.current
+    if (!handle) return
+    const activePath = vault.openFile?.path ?? null
+    if (!activePath || !vault.vaultPath) { handle.update([]); return }
+    const activeContent = vault.openFile?.content ?? ""
+    const markers: CommentMarker[] = comments
+      .filter((c) => commentToAbsolute(c.filePath, vault.vaultPath!) === activePath)
+      .map((c) => ({
+        id: c.id,
+        line: c.line,
+        body: c.body,
+        resolved: c.resolved,
+        lineSnippet: c.lineSnippet,
+        drifted: !isCommentInSync(c, activeContent),
+      }))
+    handle.update(markers)
+  }, [comments, vault.vaultPath, vault.openFile?.path, vault.openFile?.content])
 
   // ── Hot-reload macros.md / references.bib whenever they hit disk ──────────
   // Fires from any code path: autosave of an unfocused tab, manual Ctrl+S,
@@ -1026,6 +1082,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       () => mathPreviewEnabledRef.current,
     )
 
+    // Per-line comment gutter glyphs
+    commentDecorationsRef.current?.dispose()
+    commentDecorationsRef.current = setupCommentDecorations(editor, monaco, () => {
+      // Click on a glyph: surface the comments panel.
+      setSidebarMode("comments")
+    })
+
     // ── Editor → Preview double-click sync ───────────────────────────────────
     editor.onMouseDown((e) => {
       if (e.event.detail !== 2) return // only double-click
@@ -1127,17 +1190,189 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     vault.openFileNode(node)
   }, [navFuture, vault])
 
+  // ── Per-line comment handlers ─────────────────────────────────────────────
+  const handleAddCommentAtCursor = useCallback(async () => {
+    if (!vault.vaultPath) { showToast(t.comments.noVault, "error"); return }
+    const editor = editorRef.current
+    const file = vault.openFile
+    if (!editor || !file) { showToast(t.comments.noFile, "error"); return }
+    const pos = editor.getPosition()
+    if (!pos) return
+    const line = pos.lineNumber
+    const lineText = file.content.split("\n")[line - 1] ?? ""
+    // Use a native prompt — keeps the implementation tiny and matches other
+    // quick text-input flows (e.g. file rename) elsewhere in the app.
+    const body = window.prompt(t.comments.promptForBody, "")
+    if (body === null) return
+    const trimmed = body.trim()
+    if (!trimmed) return
+    const comment: Comment = {
+      id: generateCommentId(),
+      filePath: commentToRelative(file.path, vault.vaultPath),
+      line,
+      lineSnippet: makeLineSnippet(lineText),
+      body: trimmed,
+      author: "user",
+      createdAt: new Date().toISOString(),
+      resolved: false,
+    }
+    setComments((prev) => [...prev, comment])
+    try {
+      await addCommentToVault(vault.vaultPath, comment)
+      showToast(t.comments.addedToast, "success")
+      setSidebarMode("comments")
+    } catch (e) {
+      // Roll back on failure to keep state in sync with disk.
+      setComments((prev) => prev.filter((c) => c.id !== comment.id))
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [vault.vaultPath, vault.openFile, t])
+
+  const handleDeleteComment = useCallback(async (id: string) => {
+    if (!vault.vaultPath) return
+    const removed = comments.find((c) => c.id === id)
+    setComments((prev) => prev.filter((c) => c.id !== id))
+    try {
+      await deleteCommentInVault(vault.vaultPath, id)
+      showToast(t.comments.deletedToast, "info")
+    } catch (e) {
+      // Roll back if write failed.
+      if (removed) setComments((prev) => [...prev, removed])
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [vault.vaultPath, comments, t])
+
+  const handleToggleCommentResolved = useCallback(async (id: string) => {
+    if (!vault.vaultPath) return
+    const target = comments.find((c) => c.id === id)
+    if (!target) return
+    const next = !target.resolved
+    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: next } : c)))
+    try {
+      await updateCommentInVault(vault.vaultPath, id, { resolved: next })
+    } catch (e) {
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: !next } : c)))
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [vault.vaultPath, comments])
+
+  const handleEditCommentBody = useCallback(async (id: string, body: string) => {
+    if (!vault.vaultPath) return
+    const original = comments.find((c) => c.id === id)
+    if (!original) return
+    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body } : c)))
+    try {
+      await updateCommentInVault(vault.vaultPath, id, { body })
+    } catch (e) {
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body: original.body } : c)))
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [vault.vaultPath, comments])
+
+  const handleToggleCommentAtCursor = useCallback(() => {
+    if (!vault.vaultPath) return
+    const editor = editorRef.current
+    const file = vault.openFile
+    if (!editor || !file) return
+    const pos = editor.getPosition()
+    if (!pos) return
+    const filePath = file.path
+    const match = comments.find((c) =>
+      commentToAbsolute(c.filePath, vault.vaultPath!) === filePath && c.line === pos.lineNumber,
+    )
+    if (!match) { showToast(t.comments.noCommentAtCursor, "info"); return }
+    void handleToggleCommentResolved(match.id)
+  }, [vault.vaultPath, vault.openFile, comments, handleToggleCommentResolved, t])
+
+  const handleJumpToComment = useCallback((absolutePath: string, line: number) => {
+    const editor = editorRef.current
+    const targetTab = vault.openTabs.find((tab) => tab.path === absolutePath)
+    if (targetTab) {
+      vault.switchTab(absolutePath)
+      // Wait a tick for the tab switch to mount the new model.
+      setTimeout(() => {
+        editor?.revealLineInCenter(line)
+        editor?.setPosition({ lineNumber: line, column: 1 })
+        editor?.focus()
+      }, 50)
+      return
+    }
+    // File not open — open via the vault.
+    const node = flatFiles(vault.tree).find((f) => f.path === absolutePath)
+    if (node) {
+      pendingJumpRef.current = line
+      vault.openFileNode(node)
+    } else {
+      // Out-of-vault — just show the line in the current editor when paths match.
+      if (vault.openFile?.path === absolutePath) {
+        editor?.revealLineInCenter(line)
+        editor?.setPosition({ lineNumber: line, column: 1 })
+        editor?.focus()
+      }
+    }
+  }, [vault])
+
   // ── Navigation keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.altKey && e.key === "ArrowLeft")  { e.preventDefault(); goBack() }
       if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); goForward() }
+      // Ctrl/Cmd + Shift + M → add a comment on the current line.
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault()
+        void handleAddCommentAtCursor()
+      }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [goBack, goForward])
+  }, [goBack, goForward, handleAddCommentAtCursor])
 
   const searchVault = useCallback(() => setSidebarMode("search"), [])
+
+  // ── PDF preview: click-to-source (heading-based shim) ─────────────────────
+  // Real synctex needs xelatex's .synctex.gz output and a parser; the
+  // simplified version below finds the heading text nearest to the click and
+  // jumps the editor to that line. Good enough for the 80% case (clicking
+  // section headings in the rendered PDF).
+  const handlePdfClickSource = useCallback((page: number, _x: number, _y: number, nearestText: string) => {
+    void page; void _x; void _y
+    const editor = editorRef.current
+    if (!editor || !nearestText) return
+    const model = editor.getModel()
+    if (!model) return
+    // Walk the document for a heading that matches the nearest text snippet.
+    const needle = nearestText.toLowerCase().trim()
+    if (needle.length < 2) return
+    const lineCount = model.getLineCount()
+    let bestLine = -1
+    for (let i = 1; i <= lineCount; i++) {
+      const line = model.getLineContent(i)
+      const m = /^#{1,6}\s+(.+)$/.exec(line)
+      if (!m) continue
+      const heading = m[1].trim().toLowerCase()
+      if (heading === needle || heading.startsWith(needle) || needle.startsWith(heading)) {
+        bestLine = i
+        break
+      }
+    }
+    if (bestLine === -1) {
+      // Fallback: any line containing the snippet.
+      for (let i = 1; i <= lineCount; i++) {
+        if (model.getLineContent(i).toLowerCase().includes(needle)) {
+          bestLine = i
+          break
+        }
+      }
+    }
+    if (bestLine > 0) {
+      editor.revealLineInCenter(bestLine)
+      editor.setPosition({ lineNumber: bestLine, column: 1 })
+      editor.focus()
+      showToast(t.pdfPreview.jumpedToHeading(nearestText), "success", 2000)
+    } else {
+      showToast(t.pdfPreview.headingNotFound(nearestText), "info", 2000)
+    }
+  }, [t])
 
   const goToDefinition = useCallback(() => {
     const editor = editorRef.current
@@ -1270,6 +1505,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       return
     }
 
+    // ── Transclusion: click header / block to jump to source file ──────────
+    const transclusion = el.closest(".transclusion") as HTMLElement | null
+    if (transclusion && el.closest(".transclusion-header")) {
+      const source = transclusion.dataset.source
+      if (source) {
+        const node = findByName(vault.tree, source)
+        if (node) handleOpenFileNode(node)
+      }
+      return
+    }
+
     // ── Fallback: jump editor to the source line of any annotated block ────
     // Single click anywhere inside an element (or descendant) carrying
     // `data-source-line` reveals that line in the editor and focuses it.
@@ -1285,6 +1531,91 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       }
     }
   }, [vault, vaultFiles, handleOpenFileNode, t.app.copiedLatex])
+
+  // ── Wikilink hover preview ────────────────────────────────────────────────
+  // Show a floating preview card with the first ~10 non-empty lines of the
+  // target note when the user hovers (~300ms) over a rendered [[wikilink]].
+  useEffect(() => {
+    const pane = previewPaneRef.current
+    if (!pane) return
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let card: HTMLDivElement | null = null
+    let currentLink: HTMLElement | null = null
+
+    const removeCard = () => {
+      if (timer) { clearTimeout(timer); timer = null }
+      if (card && card.parentNode) card.parentNode.removeChild(card)
+      card = null
+      currentLink = null
+    }
+
+    const showCard = (link: HTMLElement, x: number, y: number) => {
+      const target = link.dataset.target
+      if (!target) return
+      const isBroken = link.classList.contains("wikilink-broken")
+      card = document.createElement("div")
+      card.className = "wikilink-hover-card"
+      // Position near cursor; clamp to viewport.
+      const W = 400, H = 300
+      const left = Math.min(x + 12, window.innerWidth - W - 8)
+      const top = Math.min(y + 16, window.innerHeight - H - 8)
+      card.style.left = `${Math.max(8, left)}px`
+      card.style.top = `${Math.max(8, top)}px`
+
+      let html = ""
+      if (isBroken) {
+        html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverNotFound)}</div>`
+      } else {
+        const node = findByName(vault.tree, target)
+        const fileEntry = node ? vaultFiles.find((f) => f.path === node.path) : undefined
+        const content = fileEntry?.content
+        if (content == null || content === "") {
+          html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverLoading)}</div>`
+        } else {
+          const parsed = extractFrontmatter(content)
+          const body = parsed?.content ?? content
+          const lines = body.split("\n").filter((l) => l.trim() !== "").slice(0, 10).join("\n")
+          try {
+            const rendered = renderMarkdown(lines, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+            html = sanitizeRenderedHtml(rendered)
+          } catch {
+            html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverNotFound)}</div>`
+          }
+        }
+      }
+      card.innerHTML = html
+      document.body.appendChild(card)
+    }
+
+    const onOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      const link = target?.closest(".wikilink") as HTMLElement | null
+      if (!link) return
+      if (link === currentLink) return
+      removeCard()
+      currentLink = link
+      const x = e.clientX, y = e.clientY
+      timer = setTimeout(() => { timer = null; showCard(link, x, y) }, 300)
+    }
+
+    const onOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      const link = target?.closest(".wikilink") as HTMLElement | null
+      if (!link) return
+      const related = e.relatedTarget as HTMLElement | null
+      if (related && link.contains(related)) return
+      removeCard()
+    }
+
+    pane.addEventListener("mouseover", onOver)
+    pane.addEventListener("mouseout", onOut)
+    return () => {
+      pane.removeEventListener("mouseover", onOver)
+      pane.removeEventListener("mouseout", onOut)
+      removeCard()
+    }
+  }, [vault.tree, vaultFiles, vault.vaultPath, macros, wikiNames, bibMap, transclusionResolver, t.preview.hoverLoading, t.preview.hoverNotFound])
 
   // ── Preview → Editor double-click sync ───────────────────────────────────
   const handlePreviewDblClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -1389,10 +1720,62 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     await writeTextFile(path, tex)
   }, [vault.vaultPath, vault.activeTabPath, vault.openFile, vaultFiles, t])
 
-  const handleCompileLatexPdf = useCallback(async () => {
+  const handleCompileLatexPdf = useCallback(async (opts?: { forceWasm?: boolean }) => {
+    await compileLatexPdfAction({
+      activeFile: vault.openFile,
+      vaultPath: vault.vaultPath,
+      activePath: vault.activeTabPath,
+      vaultFiles,
+      deps,
+      dialogs: {
+        saveAs: "Save as",
+        exportMd: t.app.dialogExportMd,
+        exportTex: t.app.dialogExportTex,
+        exportPdf: t.app.dialogExportPdf,
+        exportReveal: "Export Reveal.js",
+      },
+      messages: {
+        pandocMissing: t.app.pandocMissing,
+        generatingPdf: t.app.generatingPdf,
+        pdfDone: t.app.pdfDone,
+        pandocError: t.app.pandocError,
+        exportDocxSuccess: t.app.exportDocxSuccess,
+        exportDocxError: t.app.exportDocxError,
+        exportBeamerSuccess: t.app.exportBeamerSuccess,
+        exportBeamerError: t.app.exportBeamerError,
+        backupSuccess: t.app.backupSuccess,
+        backupError: t.app.backupError,
+        copiedLatex: t.app.copiedLatex,
+        copyError: t.app.copyError,
+        revealExportSuccess: t.app.revealExportSuccess,
+        revealExportError: t.app.revealExportError,
+        noMainDocument: t.app.noMainDocument,
+        pdfCompiledLocal: t.app.pdfCompiledLocal,
+        compilationFailed: t.app.compilationFailed,
+        zipMissing: t.app.zipMissing,
+        wasmTexInitializing: t.settings.wasmTexInitializing,
+        wasmTexCompiling: t.settings.wasmTexCompiling,
+        wasmTexFallback: t.settings.wasmTexFallback,
+        wasmTexUnavailable: t.settings.wasmTexUnavailable,
+      },
+      readEditorContent: () => editorRef.current?.getValue() ?? null,
+      reloadVault: async () => { await vault.loadVault?.() },
+      resolveTransclusion: transclusionResolver,
+      toast: showToast,
+      writeClipboard: (text) => navigator.clipboard.writeText(text),
+      onLatexError: (diags) => setLatexDiagnostics(diags),
+      useWasmTex: opts?.forceWasm ?? settings.useWasmTex,
+      onPdfSaved: setPdfPath,
+      onWasmStatus: (state) => setTexEngineState(state),
+    })
+  }, [vault, t, deps, vaultFiles, transclusionResolver, settings.useWasmTex])
+
+  // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
+  // We recompile to the existing pdfPath, no dialog. Skips silently on error.
+  const rebuildPdfInPlace = useCallback(async () => {
     const editor = editorRef.current
     const currentFile = vault.openFile
-    if (!editor || !currentFile) return
+    if (!editor || !currentFile || !pdfPath) return
     let macrosText = ""
     if (vault.vaultPath) {
       try {
@@ -1405,47 +1788,49 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
-    const outPath = await save({
-      title: t.palette.compileLatexPdf,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-      defaultPath: currentFile.name.replace(/\.[^.]+$/, ".pdf"),
-    })
-    if (!outPath) return
-
     const dir = currentFile.path.split("/").slice(0, -1).join("/") || "."
     const base = currentFile.name.replace(/\.[^.]+$/, "")
-    const tmpTex = `${dir}/${base}.comdtex-compile.tex`
-    const tmpPdf = `${dir}/${base}.comdtex-compile.pdf`
-    await writeTextFile(tmpTex, tex)
-    const attempts: Array<[string, string[]]> = [
-      ["tectonic", [tmpTex, "--outdir", dir]],
-      ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
-      ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
-    ]
-    let lastError = ""
+    const tmpTex = `${dir}/${base}.comdtex-rebuild.tex`
+    const tmpPdf = `${dir}/${base}.comdtex-rebuild.pdf`
     try {
+      await writeTextFile(tmpTex, tex)
+      const attempts: Array<[string, string[]]> = [
+        ["tectonic", [tmpTex, "--outdir", dir]],
+        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
+        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
+      ]
       for (const [cmdName, args] of attempts) {
         try {
           const result = await Command.create(cmdName, args, { cwd: dir }).execute()
           if (result.code === 0 && await exists(tmpPdf)) {
-            await copyFile(tmpPdf, outPath)
-            await openPath(outPath)
-            showToast(t.app.pdfCompiledLocal, "success")
+            await copyFile(tmpPdf, pdfPath)
+            // Force PdfPreviewPanel to reload by re-setting the same path with a
+            // cache-busting suffix is awkward (Tauri convertFileSrc); instead we
+            // toggle the path through null then back so the effect re-runs.
+            const restore = pdfPath
+            setPdfPath(null)
+            setTimeout(() => setPdfPath(restore), 0)
             return
           }
-          lastError = result.stderr || result.stdout || `${cmdName} falló`
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : String(err)
-        }
+        } catch { /* try next engine */ }
       }
-      showToast(t.app.compilationFailed(lastError), "error", 8000)
     } finally {
       await remove(tmpTex).catch(() => {})
       await remove(tmpPdf).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-compile.aux`).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-compile.log`).catch(() => {})
+      await remove(`${dir}/${base}.comdtex-rebuild.aux`).catch(() => {})
+      await remove(`${dir}/${base}.comdtex-rebuild.log`).catch(() => {})
     }
-  }, [vault.openFile, vault.vaultPath, transclusionResolver, t])
+  }, [vault.openFile, vault.vaultPath, pdfPath, transclusionResolver])
+
+  // Debounced: when autoRebuildPdf is on, the PDF panel is active, and there
+  // is an existing pdfPath, recompile ~3s after content changes.
+  useEffect(() => {
+    if (!settings.autoRebuildPdf) return
+    if (sidebarMode !== "pdfPreview") return
+    if (!pdfPath) return
+    const timer = setTimeout(() => { rebuildPdfInPlace() }, 3000)
+    return () => clearTimeout(timer)
+  }, [settings.autoRebuildPdf, sidebarMode, pdfPath, vault.openFile?.content, rebuildPdfInPlace])
 
   const handleExportPdf = useCallback(async () => {
     await exportPdfAction({
@@ -1462,6 +1847,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       toast: showToast,
       writeClipboard: (text) => navigator.clipboard.writeText(text),
       onLatexError: (diags) => setLatexDiagnostics(diags),
+      onPdfSaved: (path) => setPdfPath(path),
     })
   }, [vault, t, deps, vaultFiles, transclusionResolver])
 
@@ -1977,6 +2363,75 @@ ${html}
     return () => clearTimeout(timer)
   }, [])
 
+  // ── First-launch onboarding tour ────────────────────────────────────────
+  useEffect(() => {
+    if (!vault.vaultPath) return
+    try {
+      const seen = localStorage.getItem("comdtex_onboarding_seen") === "true"
+      if (!seen) {
+        // small delay so the layout settles before the modal appears
+        const timer = setTimeout(() => setOnboardingOpen(true), 600)
+        return () => clearTimeout(timer)
+      }
+    } catch { /* localStorage unavailable */ }
+  }, [vault.vaultPath])
+
+  const handleOnboardingClose = useCallback(() => {
+    setOnboardingOpen(false)
+    try { localStorage.setItem("comdtex_onboarding_seen", "true") } catch { /* ignore */ }
+  }, [])
+
+  // ── Daily notes ─────────────────────────────────────────────────────────
+  const handleOpenDailyNote = useCallback(async () => {
+    if (!vault.vaultPath) {
+      showToast(t.app.dailyNoteNoVault, "error")
+      return
+    }
+    try {
+      const date = new Date()
+      const pad = (n: number) => String(n).padStart(2, "0")
+      const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+      const folder = (settings.dailyNotesFolder || "").trim()
+      const filename = `${dateStr}.md`
+
+      let filePath: string
+      if (folder) {
+        const dir = await pathJoin(vault.vaultPath, folder)
+        if (!(await exists(dir))) await mkdir(dir, { recursive: true })
+        filePath = await pathJoin(dir, filename)
+      } else {
+        filePath = await pathJoin(vault.vaultPath, filename)
+      }
+
+      const fileExists = await exists(filePath)
+      if (!fileExists) {
+        const tplRaw = settings.dailyNotesTemplate || "# {{date:YYYY-MM-DD}}\n\n"
+        const content = processTemplateVariables(tplRaw, filename)
+        await writeTextFile(filePath, content)
+        await vault.loadVault()
+        showToast(t.app.dailyNoteCreated(filename), "success")
+      } else {
+        showToast(t.app.dailyNoteOpened(filename), "info")
+      }
+      await vault.openFilePath(filePath)
+    } catch (err) {
+      showToast(t.app.dailyNoteError(err instanceof Error ? err.message : String(err)), "error")
+    }
+  }, [vault, t, settings.dailyNotesFolder, settings.dailyNotesTemplate])
+
+  // Daily notes shortcut (Ctrl+Shift+D)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+        if (!settings.dailyNotesEnabled) return
+        e.preventDefault()
+        void handleOpenDailyNote()
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [settings.dailyNotesEnabled, handleOpenDailyNote])
+
   const handleInstallUpdate = async () => {
     setInstalling(true)
     await downloadAndInstallUpdate()
@@ -1988,7 +2443,8 @@ ${html}
     { id: "saveAs",     label: t.palette.saveAs,                                        action: handleSaveAs },
     { id: "exportTex",  label: t.palette.exportTex,                                    action: handleExportTex },
     { id: "exportProjectTex", label: t.palette.exportProjectTex,                        action: handleExportProjectTex },
-    { id: "compileLatexPdf", label: t.palette.compileLatexPdf,                         action: handleCompileLatexPdf },
+    { id: "compileLatexPdf", label: t.palette.compileLatexPdf,                         action: () => handleCompileLatexPdf({ forceWasm: false }) },
+    { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,                          action: () => handleCompileLatexPdf({ forceWasm: true }) },
     { id: "exportPdf",  label: t.palette.exportPdf,                                    action: handleExportPdf },
     { id: "find",       label: t.palette.findInFile,      description: "Ctrl+F",       action: handleFind },
     { id: "findVault",  label: t.palette.searchVault,     description: "Ctrl+Shift+F", action: () => setSidebarMode("search") },
@@ -2031,6 +2487,12 @@ ${html}
     { id: "exportReveal",    label: t.palette.exportReveal,                            action: handleExportReveal },
     { id: "checkUpdates",    label: t.palette.checkUpdates,                             action: () => checkForUpdate().then(info => { setUpdateInfo(info); if (!info.available) showToast(t.app.upToDate) }) },
     { id: "symbols",         label: t.palette.symbolPicker,                             action: () => setSidebarMode("symbols") },
+    { id: "dailyNote",       label: t.palette.openDailyNote,   description: "Ctrl+Shift+D", action: handleOpenDailyNote },
+    { id: "onboarding",      label: t.palette.showOnboarding,                            action: () => setOnboardingOpen(true) },
+    { id: "viewPdf",         label: t.palette.viewPdf,                                  action: () => setSidebarMode("pdfPreview") },
+    { id: "addComment",      label: t.palette.addComment,      description: "Ctrl+Shift+M", action: () => { void handleAddCommentAtCursor() } },
+    { id: "viewComments",    label: t.palette.viewComments,                              action: () => setSidebarMode("comments") },
+    { id: "toggleCommentResolved", label: t.palette.toggleCommentResolved,               action: handleToggleCommentAtCursor },
   ]
 
   // ── Menu ──────────────────────────────────────────────────────────────────
@@ -2064,7 +2526,7 @@ ${html}
         { label: t.menus.exportMd,         disabled: !hasFile, action: handleExportMd },
         { label: t.menus.exportTex,        disabled: !hasFile, action: handleExportTex },
         { label: t.palette.exportProjectTex, disabled: !hasVault, action: handleExportProjectTex },
-        { label: t.palette.compileLatexPdf, disabled: !hasFile, action: handleCompileLatexPdf },
+        { label: t.palette.compileLatexPdf, disabled: !hasFile, action: () => handleCompileLatexPdf() },
         { label: t.menus.exportPdf,        disabled: !hasFile, action: handleExportPdf },
         { label: t.menus.exportDocx,       disabled: !hasFile, action: handleExportDocx },
         { label: t.menus.exportBeamer,     disabled: !hasFile, action: handleExportBeamer },
@@ -2151,7 +2613,11 @@ ${html}
         <GitBar vaultPath={vault.vaultPath} />
       </MenuBar>
       {deps && !depsWarningDismissed && (!deps.pandoc || !deps.zip) && (
-        <DepsWarning deps={deps} onDismiss={() => setDepsWarningDismissed(true)} />
+        <DepsWarning
+          deps={deps}
+          useWasmTex={settings.useWasmTex}
+          onDismiss={() => setDepsWarningDismissed(true)}
+        />
       )}
       <Toolbar
         editorRef={editorRef}
@@ -2174,7 +2640,7 @@ ${html}
           {!sidebarCollapsed && (
             <>
           <div className="sidebar-tabs" role="tablist" aria-label="Panel lateral">
-            {(["files", "search", "searchReplace", "outline", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "equations", "environments", "stats", "help", "symbols"] as const).map((mode) => {
+            {(["files", "search", "searchReplace", "outline", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "equations", "environments", "stats", "comments", "help", "symbols", "pdfPreview"] as const).map((mode) => {
               const labels: Record<string, string> = {
                 files: t.sidebar.files, search: t.sidebar.search, outline: t.sidebar.outline,
                 backlinks: t.sidebar.backlinks, help: t.sidebar.help,
@@ -2184,6 +2650,8 @@ ${html}
                 searchReplace: t.sidebar.searchReplace,
                 quality: t.sidebar.quality,
                 symbols: t.sidebar.symbols,
+                pdfPreview: t.sidebar.pdfPreview,
+                comments: t.sidebar.comments,
               }
               const icons: Record<string, string> = {
                 files: "☰", search: "⌕", outline: "≡", backlinks: "←",
@@ -2192,6 +2660,8 @@ ${html}
                 searchReplace: "⇄",
                 quality: "✓",
                 symbols: "∑",
+                pdfPreview: "📑",
+                comments: "💬",
               }
               return (
                 <button
@@ -2402,6 +2872,29 @@ ${html}
                 editor.trigger("keyboard", "type", { text: latex })
               }} />
             )}
+            {sidebarMode === "pdfPreview" && (
+              <Suspense fallback={null}>
+                <PdfPreviewPanel
+                  pdfPath={pdfPath}
+                  onClickSource={handlePdfClickSource}
+                  invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
+                />
+              </Suspense>
+            )}
+            {sidebarMode === "comments" && (
+              <Suspense fallback={null}>
+                <CommentsPanel
+                  comments={comments}
+                  vaultPath={vault.vaultPath}
+                  activeFilePath={vault.openFile?.path ?? null}
+                  onJumpTo={handleJumpToComment}
+                  onAdd={() => { void handleAddCommentAtCursor() }}
+                  onToggleResolved={(id) => { void handleToggleCommentResolved(id) }}
+                  onDelete={(id) => { void handleDeleteComment(id) }}
+                  onEditBody={(id, body) => { void handleEditCommentBody(id, body) }}
+                />
+              </Suspense>
+            )}
           </div>
           </>
           )}
@@ -2526,6 +3019,8 @@ ${html}
         macroCount={Object.keys(macros).length}
         selectedWords={selectedWords}
         wordGoal={settings.wordGoal > 0 ? settings.wordGoal : undefined}
+        texEngine={settings.useWasmTex ? "wasm" : "local"}
+        texEngineState={texEngineState}
         onGoToLine={(line) => {
           const editor = editorRef.current
           editor?.setPosition({ lineNumber: line, column: 1 })
@@ -2574,6 +3069,8 @@ ${html}
         onRemove={(slot) => setBookmarks((prev) => { const next = { ...prev }; delete next[slot]; saveBookmarks(next); return next })}
         onClose={() => setBookmarksOpen(false)}
       />
+
+      <OnboardingTour open={onboardingOpen} onClose={handleOnboardingClose} />
 
       <Suspense fallback={null}>
         <SettingsModal
