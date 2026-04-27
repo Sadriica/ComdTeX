@@ -5,10 +5,16 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     permissions:
       contents: write
+
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
@@ -25,6 +31,39 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify version consistency
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
+          CARGO_VERSION=$(grep -m1 '^version = ' src-tauri/Cargo.toml | cut -d'"' -f2)
+          TAURI_VERSION=$(python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+
+          echo "Tag version:         $TAG_VERSION"
+          echo "package.json:        $PKG_VERSION"
+          echo "Cargo.toml:          $CARGO_VERSION"
+          echo "tauri.conf.json:     $TAURI_VERSION"
+
+          FAIL=0
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            FAIL=1
+          fi
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::src-tauri/Cargo.toml version ($CARGO_VERSION) does not match tag ($TAG_VERSION)"
+            FAIL=1
+          fi
+          if [ "$TAURI_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::src-tauri/tauri.conf.json version ($TAURI_VERSION) does not match tag ($TAG_VERSION)"
+            FAIL=1
+          fi
+          if [ "$FAIL" -ne 0 ]; then
+            echo "::error::Version mismatch detected. Bump all three files to $TAG_VERSION before tagging."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,8 +95,49 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          if PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null); then
+            echo "Previous tag: $PREV_TAG"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..HEAD")
+          else
+            echo "No previous tag found; using full git log"
+            COMMITS=$(git log --pretty=format:"- %s (%h)")
+          fi
+
+          {
+            echo "## Installation"
+            echo ""
+            echo "| Platform | File |"
+            echo "|---|---|"
+            echo "| Linux (all distros, including Arch) | \`.AppImage\` — portable, no installation required |"
+            echo "| Linux Debian/Ubuntu | \`.deb\` |"
+            echo "| Windows | \`.exe\` (NSIS installer) |"
+            echo ""
+            echo "> The \`.AppImage\` is patched to work on Arch / Mesa 24+ (no \`EGL_BAD_PARAMETER\` crash)."
+            echo ""
+            echo "### Auto-update"
+            echo "ComdTeX checks for updates automatically on startup and installs them with one click."
+            echo ""
+            echo "### Optional dependencies"
+            echo "- \`pandoc\` — required for PDF, DOCX and Beamer export"
+            echo "- \`zip\` — required for vault backup"
+            echo ""
+            echo "## Changes"
+            echo ""
+            echo "$COMMITS"
+          } > RELEASE_NOTES.md
+
+          {
+            echo "body<<EOF"
+            cat RELEASE_NOTES.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build release (draft)
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@action-v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -65,24 +145,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ComdTeX ${{ github.ref_name }}
-          releaseBody: |
-            ## Installation
-
-            | Platform | File |
-            |---|---|
-            | Linux (all distros) | `.AppImage` — portable, no installation required |
-            | Linux Debian/Ubuntu | `.deb` |
-            | Arch Linux / Manjaro | `.pkg.tar.zst` — `sudo pacman -U comdtex-*.pkg.tar.zst` |
-            | Windows | `.exe` (NSIS installer) |
-
-            > **Note for Arch/Mesa 24+ users:** The AppImage crashes with `EGL_BAD_PARAMETER` on systems with Mesa 24+. Use the `.pkg.tar.zst` package instead — it links against the system webkit2gtk and is fully compatible.
-
-            ### Auto-update
-            ComdTeX checks for updates automatically on startup and installs them with one click.
-
-            ### Optional dependencies
-            - `pandoc` — required for PDF, DOCX and Beamer export
-            - `zip` — required for vault backup
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
@@ -136,60 +199,57 @@ jobs:
             --clobber \
             --repo "${{ github.repository }}"
 
-  arch-release:
-    needs: build
-    permissions:
-      contents: write
-    runs-on: ubuntu-22.04
-    container:
-      image: archlinux:latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Arch system dependencies
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm \
-            base-devel git curl wget \
-            nodejs npm \
-            rust \
-            webkit2gtk-4.1 \
-            libappindicator-gtk3 \
-            librsvg \
-            patchelf \
-            openssl \
-            appmenu-gtk-module \
-            github-cli
-
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Install tauri-cli
-        run: cargo install tauri-cli --locked
-
-      - name: Build pacman package
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: cargo tauri build --bundles pacman
-
-      - name: Upload pacman package to release
+      - name: Generate SHA256 checksums (Linux)
+        if: matrix.os == 'ubuntu-22.04'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PKG=$(find src-tauri/target -name "*.pkg.tar.zst" | head -1)
-          gh release upload "${{ github.ref_name }}" "$PKG" \
-            --clobber \
-            --repo "${{ github.repository }}"
+          mkdir -p checksums
+          cd checksums
+          # Find all bundle artifacts (AppImage, deb) but skip sig/zsync/sha256 sidecars.
+          find ../src-tauri/target/*/release/bundle/ -type f \
+            \( -name "*.AppImage" -o -name "*.deb" \) | while read -r f; do
+            BASENAME=$(basename "$f")
+            (cd "$(dirname "$f")" && sha256sum "$BASENAME") > "${BASENAME}.sha256"
+            echo "Wrote ${BASENAME}.sha256"
+            cat "${BASENAME}.sha256"
+          done
+          if ls *.sha256 >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" *.sha256 \
+              --clobber --repo "${{ github.repository }}"
+          else
+            echo "::warning::No bundle artifacts found for checksum generation"
+          fi
+
+      - name: Generate SHA256 checksums (Windows)
+        if: matrix.os == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path checksums | Out-Null
+          Set-Location checksums
+          $files = Get-ChildItem -Path ../src-tauri/target/*/release/bundle/ -Recurse -Include *.exe, *.msi
+          foreach ($f in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $f.FullName).Hash.ToLower()
+            $line = "$hash  $($f.Name)"
+            $outFile = "$($f.Name).sha256"
+            Set-Content -Path $outFile -Value $line -NoNewline
+            Write-Host "Wrote $outFile"
+            Write-Host $line
+          }
+          $shaFiles = Get-ChildItem -Filter *.sha256
+          if ($shaFiles.Count -gt 0) {
+            gh release upload "${{ github.ref_name }}" $shaFiles.Name `
+              --clobber --repo "${{ github.repository }}"
+          } else {
+            Write-Host "::warning::No bundle artifacts found for checksum generation"
+          }
 
   publish:
-    needs: [build, arch-release]
+    needs: [build]
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

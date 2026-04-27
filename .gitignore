@@ -44,3 +44,7 @@ Thumbs.db
 # ── Claude ───────────────────────────────────────────────────────────────────
 CLAUDE.md
 .claude/*
+
+# Playwright outputs
+test-results/
+playwright-report/

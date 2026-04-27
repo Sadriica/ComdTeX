@@ -1,0 +1,113 @@
+name: Security audit
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "package-lock.json"
+      - "src-tauri/Cargo.lock"
+
+jobs:
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capture npm audit JSON report
+        run: npm audit --audit-level=high --json > npm-audit.json || true
+
+      - name: Run npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+          retention-days: 30
+
+  cargo-audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Capture cargo audit JSON report
+        working-directory: src-tauri
+        run: cargo audit --json > cargo-audit.json || true
+
+      - name: Run cargo audit (fail on findings)
+        working-directory: src-tauri
+        run: cargo audit
+
+      - name: Upload cargo audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-audit-report
+          path: src-tauri/cargo-audit.json
+          retention-days: 30
+
+  notify-on-failure:
+    name: Notify on scheduled failure
+    needs: [npm-audit, cargo-audit]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure security label exists
+        run: |
+          gh label create security --color B60205 --description "Security vulnerabilities or audit findings" --repo "${{ github.repository }}" 2>/dev/null || true
+
+      - name: Open security audit issue
+        run: |
+          gh issue create \
+            --title "Security audit found vulnerabilities ($(date +%Y-%m-%d))" \
+            --body "The scheduled security audit workflow detected vulnerabilities in project dependencies.
+
+          **Workflow run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Please download the \`npm-audit-report\` and \`cargo-audit-report\` artifacts from the workflow run for the full vulnerability details, then triage and patch the affected dependencies.
+
+          - Frontend (npm) audit: see \`npm-audit.json\`
+          - Rust (cargo) audit: see \`cargo-audit.json\`
+
+          This issue was opened automatically by the \`Security audit\` workflow on its scheduled run." \
+            --label security
