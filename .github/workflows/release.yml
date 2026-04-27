@@ -152,6 +152,7 @@ jobs:
           pacman -S --noconfirm \
             base-devel git curl wget \
             nodejs npm \
+            rust \
             webkit2gtk-4.1 \
             libappindicator-gtk3 \
             librsvg \
@@ -159,11 +160,6 @@ jobs:
             openssl \
             appmenu-gtk-module \
             github-cli
-
-      - name: Install Rust stable
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          echo "/root/.cargo/bin" >> $GITHUB_PATH
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
