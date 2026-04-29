@@ -131,6 +131,28 @@ describe("preprocess — decorators", () => {
   })
 })
 
+describe("preprocess — whitespace tolerance in argument lists", () => {
+  it("lim(x, 0) with single space after comma", () => {
+    expect(preprocess("lim(x, 0)")).toBe("$\\lim_{x \\to 0}$")
+  })
+
+  it("lim(x,0) with no whitespace", () => {
+    expect(preprocess("lim(x,0)")).toBe("$\\lim_{x \\to 0}$")
+  })
+
+  it("lim( x , 0 ) with whitespace everywhere", () => {
+    expect(preprocess("lim( x , 0 )")).toBe("$\\lim_{x \\to 0}$")
+  })
+
+  it("nested with spaces: frac(sin(x), cos( x ))", () => {
+    expect(preprocess("frac(sin(x), cos( x ))")).toBe("$\\frac{\\sin(x)}{\\cos(x)}$")
+  })
+
+  it("lim at end of inline text expands", () => {
+    expect(preprocess("trailing lim(x, 0)")).toBe("trailing $\\lim_{x \\to 0}$")
+  })
+})
+
 describe("preprocess — robustness", () => {
   it("unclosed paren: does not throw, copies as-is", () => {
     expect(() => preprocess("frac(a, b")).not.toThrow()
@@ -185,5 +207,19 @@ describe("preprocess — code regions are skipped", () => {
     const input = "~~~\nfrac(a,b)\n~~~"
     const out = preprocess(input)
     expect(out).toBe("~~~\nfrac(a,b)\n~~~")
+  })
+
+  it(":::code body is NOT shorthand-expanded", () => {
+    const input = ":::code\nfrac(1,2)\n:::"
+    const out = preprocess(input)
+    expect(out).toContain("frac(1,2)")
+    expect(out).not.toContain("\\frac{1}{2}")
+  })
+
+  it(":::code python body is NOT shorthand-expanded", () => {
+    const input = ":::code python\nsqrt(x)\n:::"
+    const out = preprocess(input)
+    expect(out).toContain("sqrt(x)")
+    expect(out).not.toContain("\\sqrt{x}")
   })
 })

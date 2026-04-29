@@ -277,6 +277,15 @@ export function parsePlotBlock(title: string, content: string): PlotSpec {
       continue
     }
 
+    // xmin = N  /  xmax = N  (more readable per-line form)
+    const boundMatch = line.match(/^(xmin|xmax)\s*=\s*(-?[\d.eE+]+)\s*$/)
+    if (boundMatch) {
+      const v = parseFloat(boundMatch[2])
+      if (boundMatch[1] === "xmin") xMin = v
+      else xMax = v
+      continue
+    }
+
     // Named: f(x) = expr  or  name(x) = expr
     const namedMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*x\s*\)\s*=\s*(.+)$/)
     if (namedMatch) {

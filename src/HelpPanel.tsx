@@ -284,8 +284,15 @@ export default function HelpPanel() {
       {/* ── Wikilinks & backlinks ── */}
       <Section title={hp.wikilinks}>
         <Row code="[[nombre-nota]]"   desc={hp.wikilinkRow} />
+        <Row code={hp.transclusionFile}    desc={hp.transclusionFileDesc} />
+        <Row code={hp.transclusionHeading} desc={hp.transclusionHeadingDesc} />
+        <Row code={hp.transclusionBlock}   desc={hp.transclusionBlockDesc} />
+        <Row code={hp.blockIdRow}          desc={hp.blockIdDesc} />
         <p className="hp-intro" style={{ marginTop: "0.4em" }}>
           {hp.wikilinkDesc}
+        </p>
+        <p className="hp-intro" style={{ marginTop: "0.3em" }}>
+          {hp.wikilinkHoverDesc}
         </p>
       </Section>
 

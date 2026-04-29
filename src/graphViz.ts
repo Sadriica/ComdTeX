@@ -72,28 +72,7 @@ export function parseGraph(content: string): ParsedGraph {
 
 const CANVAS_W = 400
 const CANVAS_H = 350
-const CENTER_X = 200
-const CENTER_Y = 175
-const RADIUS = 140
 const NODE_R = 18
-
-function circularLayout(nodes: string[]): Map<string, { x: number; y: number }> {
-  const positions = new Map<string, { x: number; y: number }>()
-  const n = nodes.length
-  if (n === 0) return positions
-  if (n === 1) {
-    positions.set(nodes[0], { x: CENTER_X, y: CENTER_Y })
-    return positions
-  }
-  nodes.forEach((node, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2
-    positions.set(node, {
-      x: CENTER_X + RADIUS * Math.cos(angle),
-      y: CENTER_Y + RADIUS * Math.sin(angle),
-    })
-  })
-  return positions
-}
 
 function gridLayout(nodes: string[]): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>()
@@ -114,7 +93,10 @@ function gridLayout(nodes: string[]): Map<string, { x: number; y: number }> {
 }
 
 function computeLayout(nodes: string[]): Map<string, { x: number; y: number }> {
-  return nodes.length <= 12 ? circularLayout(nodes) : gridLayout(nodes)
+  // Always use a left-to-right, top-to-bottom grid: predictable reading order
+  // and avoids the "edges going backwards" effect that a circular layout
+  // produces for small graphs (5–8 nodes wrap awkwardly across the bottom).
+  return gridLayout(nodes)
 }
 
 // ── SVG helpers ───────────────────────────────────────────────────────────────

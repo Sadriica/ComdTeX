@@ -112,7 +112,7 @@ function FileNodeRow({
     )
   }
 
-  const icon = node.ext === "tex" ? "τ" : node.ext === "bib" ? "β" : "M"
+  const icon = node.ext === "tex" ? "τ" : node.ext === "bib" ? "β" : node.ext === "pdf" ? "P" : "M"
 
   return (
     <div

@@ -1,7 +1,7 @@
 import { useT } from "./i18n"
 
 interface StatusBarProps {
-  mode: "md" | "tex" | null
+  mode: "md" | "tex" | "pdf" | null
   line: number
   col: number
   content: string
@@ -43,7 +43,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
     <div className="status-bar">
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
-        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : t.statusBar.modeMarkdown}</span>}
+        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : t.statusBar.modeMarkdown}</span>}
         {showTexEngine && (
           <span
             className="status-item status-tex-engine"

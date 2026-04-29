@@ -64,6 +64,41 @@ describe("renderMarkdown", () => {
       )
       expect(refNumbers).toEqual(["1", "2", "3"])
     })
+
+    it("indexes labels and resolves @eq:refs on the first call even when macros are not loaded yet", () => {
+      // Regression: on the first render after opening a vault, `App.tsx` used
+      // to compute `previewHtml` before `loadMacros` had resolved. Equations
+      // that referenced user-defined macros rendered as red `\macro` source
+      // text (KaTeX `throwOnError: false` fallback). The fix gates the preview
+      // on `macrosReady`, but the renderer itself must also remain correct
+      // when called with an empty macros object — the label-indexing pass
+      // must precede the @eq resolution pass on every call so that the
+      // textually-first equation gets number 1, etc.
+      const text = [
+        `$$ \\limgeom{x_n} = 0 $$ {#eq:limite}`,
+        ``,
+        `$$ e^{i\\pi}+1=0 $$ {#eq:euler}`,
+        ``,
+        `See @eq:euler and @eq:limite.`,
+      ].join("\n")
+
+      // Render twice with empty macros (mirrors first-paint state) and again
+      // with macros populated (mirrors post-load state). Equation numbering
+      // and reference resolution must be identical and never produce (?).
+      const cases: Record<string, string>[] = [{}, { limgeom: "\\lim" }]
+      for (const macros of cases) {
+        const html = renderMarkdown(text, macros)
+        expect(html).not.toContain("(?)")
+        expect(html).not.toContain("eq-ref-broken")
+
+        const eqNumbers = [...html.matchAll(/class="eq-number">\((\d+)\)/g)].map((m) => m[1])
+        expect(eqNumbers).toEqual(["1", "2"])
+
+        const refNumbers = [...html.matchAll(/class="eq-ref">\((\d+)\)/g)].map((m) => m[1])
+        // Refs appear in source order: @eq:euler then @eq:limite → (2), (1).
+        expect(refNumbers).toEqual(["2", "1"])
+      }
+    })
   })
 
   describe("source-line annotations (preview ↔ editor sync)", () => {
@@ -116,6 +151,36 @@ describe("renderMarkdown", () => {
       const html = renderMarkdown("Important paragraph. ^key-finding")
       expect(html).toMatch(/id="block-key-finding"/)
       expect(html).not.toContain("^key-finding")
+    })
+  })
+
+  describe(":::code environment", () => {
+    it(":::code python yields class=\"language-python\"", () => {
+      const html = renderMarkdown(":::code python\nx = 1\n:::")
+      expect(html).toContain('<code class="language-python">x = 1</code>')
+    })
+
+    it(":::code without language has no class on <code>", () => {
+      const html = renderMarkdown(":::code\nplain text\n:::")
+      expect(html).toMatch(/<pre><code>plain text<\/code><\/pre>/)
+      expect(html).not.toContain("language-")
+    })
+
+    it(":::code body is HTML-escaped (XSS-safe)", () => {
+      const html = renderMarkdown(":::code\n<script>alert(1)</script>\n:::")
+      expect(html).not.toContain("<script>alert(1)</script>")
+      expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
+    })
+
+    it(":::code wraps in env-wrap with data-source-line", () => {
+      const html = renderMarkdown("line1\n\n:::code\nbody\n:::")
+      expect(html).toMatch(/<div class="env-wrap" data-source-line="\d+"><pre><code>body<\/code><\/pre><\/div>/)
+    })
+
+    it("triple-backtick fences still render normally (regression)", () => {
+      const html = renderMarkdown("```python\nx = 1\n```")
+      expect(html).toContain("language-python")
+      expect(html).toContain("x = 1")
     })
   })
 })

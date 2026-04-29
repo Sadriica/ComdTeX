@@ -29,19 +29,43 @@ export function nextEqNumber(): number {
 // `renderer.ts` so prescan and render strip the same `{#label}` suffix.
 export const DISPLAY_MATH_RE = /\$\$([\s\S]+?)\$\$(?:\s*\{#([\w:.-]+)\})?/g
 
+// Match inline math followed by a REQUIRED `{#label}` annotation. Inline math
+// without a label is normal text and should NOT be auto-numbered.
+//   1: inline math expression (between the single $ delimiters)
+//   2: label (without leading `#`)
+export const INLINE_LABELED_MATH_RE = /\$([^\$\n]+?)\$\s*\{#([\w:.-]+)\}/g
+
+// Combined regex used by prescan and pre-render to walk display + labeled
+// inline math in textual order. Groups:
+//   1: display body, 2: display label (optional)
+//   3: inline body,  4: inline label (required for inline)
+export const NUMBERED_MATH_RE =
+  /\$\$([\s\S]+?)\$\$(?:\s*\{#([\w:.-]+)\})?|\$([^\$\n]+?)\$\s*\{#([\w:.-]+)\}/g
+
 function stripCodeFences(text: string): string {
   return text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, "")
+}
+
+/**
+ * Replace inline-code spans (`...`, ``...``) with whitespace placeholders so a
+ * subsequent regex pass does not match `$$...$$` or `$..$ {#eq:label}`
+ * patterns that appear inside a Markdown code span. Length is preserved so
+ * line/column positions are unaffected.
+ */
+function blankInlineCode(text: string): string {
+  return text.replace(/(`+)([^`\n]*?)\1/g, (m) => " ".repeat(m.length))
 }
 
 export function prescanEquations(text: string): Map<string, number> {
   const labels = new Map<string, number>()
   let n = 0
-  const stripped = stripCodeFences(text)
-  DISPLAY_MATH_RE.lastIndex = 0
+  const stripped = blankInlineCode(stripCodeFences(text))
+  NUMBERED_MATH_RE.lastIndex = 0
   let m: RegExpExecArray | null
-  while ((m = DISPLAY_MATH_RE.exec(stripped)) !== null) {
+  while ((m = NUMBERED_MATH_RE.exec(stripped)) !== null) {
     n++
-    if (m[2]) labels.set(m[2], n)
+    const label = m[2] ?? m[4]
+    if (label) labels.set(label, n)
   }
   return labels
 }
@@ -63,4 +87,9 @@ export function resolveEqRefs(text: string, labels: Map<string, number>): string
 
 export function wrapNumbered(katexHtml: string, n: number): string {
   return `<div class="eq-block">${katexHtml}<span class="eq-number">(${n})</span></div>`
+}
+
+/** Inline numbered math: keeps the math inline but appends a `(N)` marker. */
+export function wrapInlineNumbered(katexHtml: string, n: number): string {
+  return `<span class="eq-inline">${katexHtml}<span class="eq-number-inline">(${n})</span></span>`
 }

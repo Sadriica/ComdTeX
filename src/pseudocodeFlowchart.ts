@@ -230,15 +230,33 @@ function generate(ast: ASTNode[]): string {
     return tails
   }
 
+  // Drop a trailing structural `END` (closing an ALGORITHM/FUNCTION/PROCEDURE) —
+  // it would render as a stadium node disconnected from the flow because
+  // genOne returns no tails for terminals. The closing token has no semantic
+  // role in the diagram.
+  while (
+    ast.length > 0 &&
+    (() => {
+      const last = ast[ast.length - 1]
+      return last.t === "simple" && last.kind === "terminal" && /^\s*END\b/i.test(last.text)
+    })()
+  ) {
+    ast = ast.slice(0, -1)
+  }
+
   // Seed: virtual start
   const startId = uid()
   defs.push(`${startId}(["Start"])`)
   const finalTails = gen(ast, [startId])
 
-  // Virtual end
-  const endId = uid()
-  defs.push(`${endId}(["End"])`)
-  finalTails.forEach(t => addEdge(t, endId))
+  // Only add a virtual End when the program leaves open tails. If the body
+  // ends with RETURN / STOP, every path already terminates and an extra End
+  // node would float disconnected at the bottom (or top, in mermaid's layout).
+  if (finalTails.length > 0) {
+    const endId = uid()
+    defs.push(`${endId}(["End"])`)
+    finalTails.forEach(t => addEdge(t, endId))
+  }
 
   return ["flowchart TD", ...defs, ...edges].join("\n")
 }

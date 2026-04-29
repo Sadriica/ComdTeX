@@ -113,7 +113,7 @@ function getMainGroups(t: T): Group[] {
         { label: t.toolbar.lbl_orderedList, title: t.toolbar.orderedList, snippet: "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}" },
         { label: t.toolbar.lbl_taskList,    title: t.toolbar.taskList,    snippet: "- [ ] ${1:tarea}\n- [ ] ${2:tarea}" },
         { label: t.toolbar.lbl_link,        title: t.toolbar.link,        snippet: "[${1:texto}](${2:url})" },
-        { label: t.toolbar.lbl_codeBlock,   title: t.toolbar.codeBlock,   snippet: "\\`\\`\\`${1:lenguaje}\n${2:código}\n\\`\\`\\`" },
+        { label: t.toolbar.lbl_codeBlock,   title: t.toolbar.codeBlock,   snippet: "```${1:lenguaje}\n${2:código}\n```\n$0" },
         { label: t.toolbar.lbl_table,       title: t.toolbar.table,       snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
         { label: t.toolbar.lbl_quote,       title: t.toolbar.quote,       snippet: "> ${1:cita}" },
         { label: t.toolbar.lbl_separator,   title: t.toolbar.separator,   snippet: "\n---\n" },
@@ -470,17 +470,91 @@ function MoreDropdown({
   )
 }
 
+// ── Promoted inline shortcuts (frequently-used items per dropdown) ───────────
+
+interface PromotedBtn {
+  label: string
+  title: string
+  snippet: string
+  hideAt?: "sm" | "md" // viewport-based hide class
+}
+
+function getPromotedHeadings(t: T): PromotedBtn[] {
+  return [
+    { label: "H1", title: t.toolbar.heading1, snippet: "# ${1:Título}" },
+    { label: "H2", title: t.toolbar.heading2, snippet: "## ${1:Título}", hideAt: "md" },
+  ]
+}
+
+function getPromotedInsert(t: T): PromotedBtn[] {
+  return [
+    { label: "•",   title: t.toolbar.list,      snippet: "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}" },
+    { label: "⊞",   title: t.toolbar.table,     snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})", hideAt: "md" },
+    { label: "</>", title: t.toolbar.codeBlock, snippet: "```${1:lenguaje}\n${2:código}\n```\n$0", hideAt: "md" },
+  ]
+}
+
+// Promoted from "More" — the most-used math operators
+const PROMOTED_MATH: PromotedBtn[] = [
+  { label: "frac", title: "frac", snippet: "frac(${1:a}, ${2:b})" },
+  { label: "√",    title: "sqrt", snippet: "sqrt(${1:x})" },
+  { label: "∑",    title: "sum",  snippet: "sum(${1:i=0}, ${2:n})", hideAt: "md" },
+  { label: "∫",    title: "int",  snippet: "int(${1:a}, ${2:b})", hideAt: "md" },
+]
+
+// Promoted environment shortcut
+function getPromotedEnv(t: T): PromotedBtn[] {
+  return [
+    { label: "thm", title: t.toolbar.theorem, snippet: ":::theorem[${1:título}]\n${2:enunciado}\n:::", hideAt: "md" },
+  ]
+}
+
+// Promoted from symbol picker
+const PROMOTED_SYMBOLS: PromotedBtn[] = [
+  { label: "α", title: "alpha", snippet: "$\\alpha$", hideAt: "sm" },
+  { label: "π", title: "pi",    snippet: "$\\pi$",    hideAt: "sm" },
+  { label: "∑", title: "Sigma", snippet: "$\\Sigma$", hideAt: "sm" },
+]
+
+function PromotedButtons({ items, onInsert }: { items: PromotedBtn[]; onInsert: (s: string) => void }) {
+  return (
+    <>
+      {items.map((btn) => (
+        <button
+          key={btn.title}
+          title={btn.title}
+          className={`toolbar-btn${btn.hideAt ? ` toolbar-btn-hide-${btn.hideAt}` : ""}`}
+          onMouseDown={(e) => { e.preventDefault(); onInsert(btn.snippet) }}
+        >
+          {btn.label}
+        </button>
+      ))}
+    </>
+  )
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: ToolbarProps) {
   const t = useT()
   const mainGroups = getMainGroups(t)
   const moreSections = getMoreSections(t)
+  const promotedHeadings = getPromotedHeadings(t)
+  const promotedInsert = getPromotedInsert(t)
+  const promotedEnv = getPromotedEnv(t)
 
   const insert = (snippet: string) => {
     const editor = editorRef.current
     if (!editor) return
     editor.focus()
+    // Block-level snippets (fenced code, display math, horizontal rules, tables)
+    // must start at column 1 to be valid Markdown. If the cursor is mid-line we
+    // prepend a newline so the construct opens on its own line.
+    const isBlockSnippet = /^(```|~~~|\$\$|---|\|)/.test(snippet)
+    if (isBlockSnippet) {
+      const pos = editor.getPosition()
+      if (pos && pos.column > 1) snippet = "\n" + snippet
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ctrl = editor.getContribution<any>("snippetController2")
     if (ctrl) {
@@ -494,37 +568,48 @@ export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: 
 
   return (
     <div className="toolbar">
-      {mainGroups.map((group, gi) => (
-        <div key={gi} className="toolbar-group">
-          {group.kind === "buttons"
-            ? group.items.map((btn) => (
-                <button
-                  key={btn.title}
-                  title={btn.title}
-                  className="toolbar-btn"
-                  onMouseDown={(e) => { e.preventDefault(); insert(btn.snippet) }}
-                >
-                  {btn.label}
-                </button>
-              ))
-            : (
-                <Dropdown
-                  label={group.label}
-                  title={group.title}
-                  items={group.items}
-                  onInsert={insert}
-                />
-              )}
-        </div>
-      ))}
+      {mainGroups.map((group, gi) => {
+        // Inject promoted buttons BEFORE the matching dropdown
+        const promoted: PromotedBtn[] | null =
+          group.kind === "dropdown" && group.label === "H" ? promotedHeadings :
+          group.kind === "dropdown" && group.label === "⊕" ? promotedInsert :
+          null
+        return (
+          <div key={gi} className="toolbar-group">
+            {promoted && <PromotedButtons items={promoted} onInsert={insert} />}
+            {group.kind === "buttons"
+              ? group.items.map((btn) => (
+                  <button
+                    key={btn.title}
+                    title={btn.title}
+                    className="toolbar-btn"
+                    onMouseDown={(e) => { e.preventDefault(); insert(btn.snippet) }}
+                  >
+                    {btn.label}
+                  </button>
+                ))
+              : (
+                  <Dropdown
+                    label={group.label}
+                    title={group.title}
+                    items={group.items}
+                    onInsert={insert}
+                  />
+                )}
+          </div>
+        )
+      })}
 
-      {/* Symbol picker */}
+      {/* Symbol picker — with promoted Greek/math symbols inline */}
       <div className="toolbar-group">
+        <PromotedButtons items={PROMOTED_SYMBOLS} onInsert={insert} />
         <SymbolPicker onInsert={insert} />
       </div>
 
-      {/* "More" dropdown — collapses math/symbol categories */}
+      {/* "More" dropdown — promoted math ops + environment shortcut inline */}
       <div className="toolbar-group">
+        <PromotedButtons items={PROMOTED_MATH} onInsert={insert} />
+        <PromotedButtons items={promotedEnv} onInsert={insert} />
         <MoreDropdown title={t.toolbar.more} sections={moreSections} onInsert={insert} />
       </div>
 

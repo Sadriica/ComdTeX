@@ -1,15 +1,22 @@
-import { openPath } from "@tauri-apps/plugin-opener"
+import { openUrl } from "@tauri-apps/plugin-opener"
 import type { DepStatus } from "./checkDeps"
+
+const DOCS_BASE = "https://github.com/sadriica/comdtex/blob/main/docs/installing-deps.md"
+
+export type DepName = "pandoc" | "zip"
 
 interface DepsWarningProps {
   deps: DepStatus
   /** When true, PDF export uses the bundled WASM engine and pandoc is only
    * required for DOCX/Beamer/MD→PDF — the message below reflects that. */
   useWasmTex?: boolean
-  onDismiss: () => void
+  /** Names of deps the user has dismissed persistently. */
+  dismissed: DepName[]
+  /** Called with the dep name to dismiss that specific dep persistently. */
+  onDismiss: (name: DepName) => void
 }
 
-function getOsHint(tool: "pandoc" | "zip"): string {
+function getOsHint(tool: DepName): string {
   const ua = navigator.userAgent.toLowerCase()
   if (tool === "pandoc") {
     return "pandoc.org/installing.html"
@@ -19,30 +26,26 @@ function getOsHint(tool: "pandoc" | "zip"): string {
   return "sudo apt install zip"
 }
 
-export default function DepsWarning({ deps, useWasmTex, onDismiss }: DepsWarningProps) {
-  const missing: Array<{ name: "pandoc" | "zip"; label: string; feature: string; url: string }> = []
+export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: DepsWarningProps) {
+  const missing: Array<{ name: DepName; label: string; feature: string; url: string }> = []
 
-  if (!deps.pandoc) {
+  if (!deps.pandoc && !dismissed.includes("pandoc")) {
     missing.push({
       name: "pandoc",
       label: "pandoc",
       feature: useWasmTex
         ? "necesario para exportar DOCX, Beamer y Markdown→PDF (no para PDF normal)"
         : "necesario para exportar PDF, DOCX, Beamer",
-      url: "https://pandoc.org/installing.html",
+      url: `${DOCS_BASE}#pandoc`,
     })
   }
 
-  if (!deps.zip) {
+  if (!deps.zip && !dismissed.includes("zip")) {
     missing.push({
       name: "zip",
       label: "zip",
-      feature: "necesario para backup del vault",
-      url: (() => {
-        const ua = navigator.userAgent.toLowerCase()
-        if (ua.includes("mac")) return "https://brew.sh"
-        return "https://packages.ubuntu.com/zip"
-      })(),
+      feature: "necesario para backup del vault y export a .cmdx",
+      url: `${DOCS_BASE}#zip`,
     })
   }
 
@@ -50,14 +53,18 @@ export default function DepsWarning({ deps, useWasmTex, onDismiss }: DepsWarning
 
   const handleInstall = async (item: (typeof missing)[number]) => {
     const ua = navigator.userAgent.toLowerCase()
-    // For zip on Linux/Mac, show the hint as a toast-style note rather than opening a terminal URL
+    // For zip on Linux/Mac, also copy the install hint so the user can paste it
+    // in a terminal — convenience on top of opening the docs page.
     if (item.name === "zip" && !ua.includes("win")) {
-      // Copy install hint to clipboard as a convenience
       try {
         await navigator.clipboard.writeText(getOsHint("zip"))
       } catch {}
     }
-    await openPath(item.url).catch(() => {})
+    try {
+      await openUrl(item.url)
+    } catch (err) {
+      console.error("Failed to open install guide:", err)
+    }
   }
 
   return (
@@ -78,12 +85,16 @@ export default function DepsWarning({ deps, useWasmTex, onDismiss }: DepsWarning
             >
               Instalar
             </button>
+            <button
+              className="deps-warning-dismiss"
+              onClick={() => onDismiss(item.name)}
+              title={`Ignorar ${item.label}`}
+            >
+              Ignorar
+            </button>
           </span>
         ))}
       </span>
-      <button className="deps-warning-dismiss" onClick={onDismiss}>
-        Ignorar
-      </button>
     </div>
   )
 }

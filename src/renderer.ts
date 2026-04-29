@@ -6,7 +6,7 @@ import { preprocess } from "./preprocessor"
 import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs } from "./environments"
 import { processWikilinks } from "./wikilinks"
 import type { KatexMacros } from "./macros"
-import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, DISPLAY_MATH_RE } from "./equations"
+import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, wrapInlineNumbered, NUMBERED_MATH_RE } from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
@@ -108,21 +108,55 @@ function preRenderDisplayMath(
 ): { text: string; slots: string[] } {
   const slots: string[] = []
   let n = 0
-  DISPLAY_MATH_RE.lastIndex = 0
-  const replaced = text.replace(DISPLAY_MATH_RE, (_full, expr: string) => {
-    n++
-    const html = wrapNumbered(renderKatex(expr, true, macros), n)
-    slots.push(html)
-    return `\x02DMATH${slots.length - 1}\x03`
+
+  // Mask inline-code spans before scanning so that `$$...$$` or `$..$ {#eq:..}`
+  // appearing inside backticks (e.g. documentation about the syntax itself) is
+  // NOT treated as numbered math. We mask with whitespace of identical length
+  // so positions are preserved, then re-overlay the original code spans.
+  const codeSpans: Array<{ start: number; end: number; text: string }> = []
+  const masked = text.replace(/(`+)([^`\n]*?)\1/g, (m, _t, _c, offset: number) => {
+    codeSpans.push({ start: offset, end: offset + m.length, text: m })
+    return " ".repeat(m.length)
   })
-  return { text: replaced, slots }
+
+  // Walk the masked text, building a result where matched math is replaced
+  // with placeholders and surrounding (masked) text is replaced with the
+  // ORIGINAL text from the same byte range — restoring inline code spans.
+  const out: string[] = []
+  let cursor = 0
+  NUMBERED_MATH_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = NUMBERED_MATH_RE.exec(masked)) !== null) {
+    if (m.index > cursor) out.push(text.slice(cursor, m.index))
+    n++
+    const isDisplay = m[1] !== undefined
+    const expr = isDisplay ? m[1] : m[3]
+    const rendered = renderKatex(expr, isDisplay, macros)
+    const html = isDisplay
+      ? wrapNumbered(rendered, n)
+      : wrapInlineNumbered(rendered, n)
+    slots.push(html)
+    out.push(`\x02DMATH${slots.length - 1}\x03`)
+    cursor = m.index + m[0].length
+  }
+  if (cursor < text.length) out.push(text.slice(cursor))
+  // Re-overlay was implicit — slices were taken from the ORIGINAL `text`, so
+  // backticked content is preserved automatically.
+  void codeSpans
+  return { text: out.join(""), slots }
 }
 
-function renderInner(raw: string, macros: KatexMacros): string {
+function renderInner(raw: string, macros: KatexMacros, rootSource?: string): string {
   let text = preprocess(raw)
 
-  const { text: withEnvs, slots: envSlots } = extractEnvironments(text, (inner) =>
-    renderInner(inner, macros)
+  // Pass the editor's raw text down so env source-lines can be resolved against
+  // the original document — preprocessCallouts and preRenderDisplayMath collapse
+  // multi-line constructs to placeholders, which would otherwise misalign lines.
+  const sourceForLines = rootSource ?? raw
+  const { text: withEnvs, slots: envSlots } = extractEnvironments(
+    text,
+    (inner) => renderInner(inner, macros),
+    sourceForLines,
   )
   text = withEnvs
 
@@ -134,9 +168,12 @@ function renderInner(raw: string, macros: KatexMacros): string {
 
   // Display math is pre-rendered before `renderInner` is called and survives
   // here as `\x02DMATH<n>\x03` placeholders. Only inline math is processed.
-  text = text.replace(/\$([^\$\n]+?)\$/g, (_, expr) =>
-    saveMath(renderKatex(expr, false, macros))
-  )
+  // Skip `$..$` that appears inside an inline-code span (`...`) so docs that
+  // talk about math syntax don't render as actual math.
+  text = text.replace(/(`+)([^`\n]*?)\1|\$([^\$\n]+?)\$/g, (full, _t, _c, expr) => {
+    if (expr === undefined) return full
+    return saveMath(renderKatex(expr, false, macros))
+  })
 
   let html = md.render(text)
 
@@ -239,7 +276,8 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
   return map
 }
 
-const ANNOTATABLE_SELECTOR = "h1, h2, h3, h4, h5, h6, p, li, blockquote, figure.tbl-block, div.callout"
+const ANNOTATABLE_SELECTOR =
+  "h1, h2, h3, h4, h5, h6, p, li, blockquote, figure.tbl-block, div.callout, div.env-wrap"
 
 /**
  * Walk the rendered HTML and add `data-source-line="N"` to block elements
@@ -344,7 +382,7 @@ export function renderMarkdown(
   // equation numbers match prescan-based references.
   const dmath = preRenderDisplayMath(withRefs, macros)
 
-  let html = renderInner(dmath.text, macros)
+  let html = renderInner(dmath.text, macros, raw)
   // Restore display-math placeholders left intact through markdown-it and
   // recursive environment extraction.
   html = html.replace(/\x02DMATH(\d+)\x03/g, (_, i) => dmath.slots[parseInt(i)] ?? "")

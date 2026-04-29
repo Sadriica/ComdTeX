@@ -19,6 +19,7 @@ export default function WelcomeScreen({
     { icon: "📚", name: t.welcome.featureBib,    desc: t.welcome.featureBibDesc },
     { icon: "∀",  name: t.welcome.featureEnv,    desc: t.welcome.featureEnvDesc },
     { icon: "⎘",  name: t.welcome.featureExport, desc: t.welcome.featureExportDesc },
+    { icon: "⚙",  name: t.welcome.featureWasmTex, desc: t.welcome.featureWasmTexDesc },
   ]
 
   return (

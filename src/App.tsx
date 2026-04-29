@@ -26,7 +26,7 @@ import { lintFileSummary, type LintSummary } from "./contentLinter"
 import { useVault } from "./useVault"
 import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
-import { LanguageContext, LANGS, useT } from "./i18n"
+import { LanguageContext, LANGS, useT, type T } from "./i18n"
 import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import TitleBar from "./TitleBar"
@@ -60,7 +60,7 @@ import LatexErrorModal from "./LatexErrorModal"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import { checkDependencies, type DepStatus } from "./checkDeps"
-import DepsWarning from "./DepsWarning"
+import DepsWarning, { type DepName } from "./DepsWarning"
 import TableEditor from "./TableEditor"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
@@ -81,6 +81,7 @@ import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
 import { processTemplateVariables } from "./templates"
+import { setFlowchartSvg } from "./environments"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
@@ -208,6 +209,14 @@ Los shorthands funcionan **dentro y fuera** de \`$...$\`. Fuera se envuelven aut
 
 La fracción frac(1, n+1) tiende a $0$ cuando $n \\to \\infty$.
 
+El límite fundamental: lim(x, 0) sin(x)/x = 1.
+
+La suma de Basel: sum(n=1, \\infty) frac(1, sup(n, 2)) = frac(sup(\\pi, 2), 6).
+
+La integral de Gauss: int(-\\infty, \\infty) sup(e, -sup(x, 2)) \\, dx = sqrt(\\pi).
+
+La derivada de una composición: der(f(g(x)), x) = der(f, g) \\cdot der(g, x).
+
 La norma de un vector: norm(vec(v)) = sqrt(sup(v,T) \\cdot v)
 
 La derivada parcial del calor: pder(u, t) = pder(sup(u, 2), x)
@@ -278,6 +287,35 @@ const TemplateModal = lazy(() => import("./TemplateModal"))
 const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
 const UpdateChecker = lazy(() => import("./UpdateChecker"))
 const PdfPreviewPanel = lazy(() => import("./PdfPreviewPanel"))
+
+// Singleton mermaid loader — `import("mermaid")` is a ~600KB chunk; cache the
+// resolved module + the (idempotent) `initialize()` call so the per-keystroke
+// re-render path doesn't re-do the work.
+type MermaidModule = { render: (id: string, src: string) => Promise<{ svg: string }> }
+let _mermaidPromise: Promise<MermaidModule> | null = null
+function getMermaid(): Promise<MermaidModule> {
+  if (_mermaidPromise) return _mermaidPromise
+  _mermaidPromise = import("mermaid").then((mod) => {
+    const m = (mod as { default: { initialize: (cfg: unknown) => void } & MermaidModule }).default
+    m.initialize({
+      startOnLoad: false,
+      theme: "dark",
+      // `loose` is required for the `↺` and similar special chars in our
+      // pseudocode-derived flowcharts. We escape body text already and the
+      // sanitizer strips dangerous tags from the SVG before injection.
+      securityLevel: "loose",
+      themeVariables: {
+        background: "transparent",
+        mainBkg: "transparent",
+        primaryColor: "transparent",
+        secondaryColor: "transparent",
+        tertiaryColor: "transparent",
+      },
+    })
+    return m
+  })
+  return _mermaidPromise
+}
 const MonacoEditor = lazy(async () => {
   await import("./monacoRuntime")
   const mod = await import("@monaco-editor/react")
@@ -326,9 +364,34 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
+  // Tracks whether `loadMacros` has resolved at least once for the current
+  // vault. The preview render uses KaTeX with `throwOnError: false` — when an
+  // equation references a user macro that isn't loaded yet, KaTeX falls back
+  // to a red `\macro` source rendering and the user sees what looks like raw
+  // LaTeX at the top of the document until macros finish loading and a
+  // re-render fires. Gating the preview on this flag avoids that flash.
+  const [macrosReady, setMacrosReady] = useState(false)
   const [bibMap, setBibMap] = useState<Map<string, BibEntry>>(new Map())
   const [deps, setDeps] = useState<DepStatus | null>(null)
-  const [depsWarningDismissed, setDepsWarningDismissed] = useState(false)
+  const [depsDismissed, setDepsDismissed] = useState<DepName[]>(() => {
+    try {
+      const raw = localStorage.getItem("comdtex_deps_dismissed")
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) return []
+      return parsed.filter((x): x is DepName => x === "pandoc" || x === "zip")
+    } catch {
+      return []
+    }
+  })
+  const dismissDep = useCallback((name: DepName) => {
+    setDepsDismissed((prev) => {
+      if (prev.includes(name)) return prev
+      const next = [...prev, name]
+      try { localStorage.setItem("comdtex_deps_dismissed", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }, [])
   const [customCss, setCustomCss] = useState("")
   const [vaultTextCache, setVaultTextCache] = useState<Map<string, string>>(new Map())
   const [previewContent, setPreviewContent] = useState("")
@@ -371,6 +434,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const activeFilePathRef = useRef<string | null>(null)
   activeFilePathRef.current = vault.openFile?.path ?? null
   const previewPaneRef = useRef<HTMLDivElement>(null)
+  // Set when the cursor change originates from a preview click. The preview
+  // scroll-sync effect reads + clears this so a click in the preview moves the
+  // editor without yanking the preview back up to the section's heading.
+  const suppressPreviewScrollOnce = useRef(false)
   const splitPreviewRef = useRef<HTMLDivElement>(null)
 
   // ── Wikilink file names (memoized — stable reference for effects) ─────────
@@ -387,14 +454,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       }))
   }, [vault.tree, vault.openTabs, vaultTextCache])
 
+  // Keep a ref to vaultFiles so the resolver below has STABLE identity.
+  // Without this, `vaultFiles` changes on every keystroke (via `vault.openTabs`
+  // → `vaultFiles` memo → resolver re-creation → `renderPreviewHtml` callback
+  // recreated → `previewHtml` useMemo re-runs the entire markdown + KaTeX +
+  // Mermaid pipeline on every character). On a 6KB README that's ~50% sustained
+  // CPU on the WebView process.
+  const vaultFilesRef = useRef(vaultFiles)
+  useEffect(() => { vaultFilesRef.current = vaultFiles }, [vaultFiles])
+
   const transclusionResolver = useCallback((target: string): string | null => {
+    const files = vaultFilesRef.current
     const lower = target.replace(/\.[^.]+$/, "").toLowerCase()
-    const found = vaultFiles.find((file) =>
+    const found = files.find((file) =>
       file.name.replace(/\.[^.]+$/, "").toLowerCase() === lower ||
       file.name.toLowerCase() === target.toLowerCase() ||
       file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`))
     return found?.content || null
-  }, [vaultFiles])
+  }, [])
 
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
   const currentHeading = useMemo(() => {
@@ -427,16 +504,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })))
   }, [vaultFiles])
 
+  // Build a vault-wide text cache (used by transclusion + wikilink resolution).
+  // Depends only on the SET OF FILES (paths joined) — not on every keystroke.
+  // Without this guard, every character in the active tab refires the
+  // `Promise.all(readTextFile(...))` walk over the entire vault → tens of MBs
+  // re-read per keystroke for users with large vaults. Live tab content is
+  // overlaid via vault.openTabs, but we read it through a ref so the effect
+  // doesn't itself depend on per-keystroke content changes.
+  const openTabsRef = useRef(vault.openTabs)
+  useEffect(() => { openTabsRef.current = vault.openTabs }, [vault.openTabs])
+  const vaultFilePathsKey = useMemo(
+    () => flatFiles(vault.tree).filter((f) => f.ext === "md" || f.ext === "tex").map((f) => f.path).sort().join("\x00"),
+    [vault.tree],
+  )
   useEffect(() => {
     let cancelled = false
-    const files = flatFiles(vault.tree).filter((file) => file.ext === "md" || file.ext === "tex")
-    Promise.all(files.map(async (file) => {
-      const openTab = vault.openTabs.find((tab) => tab.path === file.path)
-      if (openTab) return [file.path, openTab.content] as const
+    const paths = vaultFilePathsKey ? vaultFilePathsKey.split("\x00") : []
+    Promise.all(paths.map(async (path) => {
+      const openTab = openTabsRef.current.find((tab) => tab.path === path)
+      if (openTab) return [path, openTab.content] as const
       try {
-        return [file.path, toEditorContent(file.path, await readTextFile(file.path))] as const
+        return [path, toEditorContent(path, await readTextFile(path))] as const
       } catch {
-        return [file.path, ""] as const
+        return [path, ""] as const
       }
     })).then((entries) => {
       if (!cancelled) setVaultTextCache(new Map(entries))
@@ -444,7 +534,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (!cancelled) setVaultTextCache(new Map())
     })
     return () => { cancelled = true }
-  }, [vault.tree, vault.openTabs])
+  }, [vaultFilePathsKey])
 
   useEffect(() => { macrosRef.current = macros }, [macros])
   useEffect(() => { mathPreviewEnabledRef.current = settings.mathPreview ?? true }, [settings.mathPreview])
@@ -495,6 +585,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Preview scroll sync + active heading highlight ───────────────────────────
   useEffect(() => {
+    // The reset MUST run before any early-return: if the effect bails out
+    // because the preview is hidden / the doc is empty / the heading list is
+    // empty, the flag set by a prior preview-click would otherwise persist
+    // and silently swallow the next legitimate sync.
+    const wasSuppressed = suppressPreviewScrollOnce.current
+    suppressPreviewScrollOnce.current = false
     if (!settings.previewVisible) return
     const content = vault.openFile?.content
     if (!content) return
@@ -522,8 +618,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       // Add active class
       target?.classList.add("active-heading")
 
-      // Scroll only if syncScroll is enabled
-      if (syncScroll) {
+      // Scroll only if syncScroll is enabled — and not when the cursor move
+      // came from a preview click (otherwise the preview yanks back up to the
+      // heading the user is already looking at). The flag was already cleared
+      // at the top of the effect; we use the captured `wasSuppressed` value.
+      if (syncScroll && !wasSuppressed) {
         target?.scrollIntoView({ behavior: "smooth", block: "start" })
       }
     }
@@ -558,8 +657,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault.openTabs, wikiNames, bibKeys])
 
   // ── Close warning ─────────────────────────────────────────────────────────
-  const openTabsRef = useRef(vault.openTabs)
-  openTabsRef.current = vault.openTabs
+  // (openTabsRef declared earlier; reused here to read latest tabs from
+  // the close-request callback without subscribing to every keystroke)
 
   // Without onCloseRequested, Tauri closes by default on WM signal
   // The X button handles the unsaved-changes warning
@@ -784,6 +883,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         if (!signal?.cancelled) { setMacros({}); updateMacroCompletions([]) }
       }
     } catch { if (!signal?.cancelled) { setMacros({}); updateMacroCompletions([]) } }
+    finally { if (!signal?.cancelled) setMacrosReady(true) }
   }, [])
 
   const loadBib = useCallback(async (vaultPath: string, signal?: { cancelled: boolean }) => {
@@ -800,7 +900,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   useEffect(() => {
-    if (!vault.vaultPath) { setMacros({}); setBibMap(new Map()); return }
+    if (!vault.vaultPath) { setMacros({}); setBibMap(new Map()); setMacrosReady(true); return }
+    setMacrosReady(false)
     const signal = { cancelled: false }
     loadMacros(vault.vaultPath, signal)
     loadBib(vault.vaultPath, signal)
@@ -860,7 +961,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return () => { afterSaveRef.current = undefined }
   }, [vault.vaultPath, loadMacros, loadBib])
 
+  // Bump on each successful mermaid render so the next memoized previewHtml
+  // re-runs and picks up the cached SVGs (embedded inline by environments.ts).
+  const [mermaidVersion, setMermaidVersion] = useState(0)
+
   const renderPreviewHtml = useCallback((content: string) => {
+    // Defer rendering until the macros file has been loaded once for this
+    // vault. Without this gate the first paint of a freshly-opened file uses
+    // `macros = {}`, so any equation that relies on a user-defined macro
+    // renders as red `\macro` source text (KaTeX's `throwOnError: false`
+    // fallback). The async `loadMacros` then completes and triggers a second
+    // render that fixes things — exactly the "top renders raw, scroll/edit
+    // makes it correct" symptom users were reporting.
+    if (!macrosReady) return ""
     try {
       return sanitizeRenderedHtml(
         renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
@@ -868,7 +981,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     } catch (e) {
       return renderErrorHtml(e)
     }
-  }, [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver])
+    // mermaidVersion: included so re-renders that follow a mermaid SVG cache
+    // population read the freshly-stored SVGs and embed them inline.
+  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, mermaidVersion])
 
   const deferredPreviewContent = useDeferredValue(previewContent)
 
@@ -900,6 +1015,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   )
 
   // ── Mermaid diagram rendering ─────────────────────────────────────────────
+  // Singleton init: importing mermaid is a ~600KB chunk and `initialize` is
+  // not free. Cache both the module and the init promise so subsequent
+  // re-renders (one per debounced keystroke!) don't redo this work.
+  // (`mermaidVersion` is declared earlier so `renderPreviewHtml` can read it.)
   useEffect(() => {
     let cancelled = false
 
@@ -910,18 +1029,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const blocks = [...container.querySelectorAll<HTMLElement>("pre code.language-mermaid")]
       if (blocks.length === 0) return
 
-      const { default: mermaid } = await import("mermaid")
+      const mermaid = await getMermaid()
       if (cancelled) return
 
-      mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict" })
-
+      let storedAny = false
       await Promise.all(blocks.map(async (el, index) => {
         const pre = el.parentElement
         if (!pre) return
 
         const diagram = el.textContent ?? ""
+        const sourceAttr = pre.getAttribute("data-mermaid-source-b64") ?? ""
         const div = document.createElement("div")
         div.className = "mermaid-diagram"
+        if (sourceAttr) div.setAttribute("data-mermaid-source-b64", sourceAttr)
         pre.replaceWith(div)
 
         try {
@@ -930,14 +1050,28 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             diagram,
           )
           if (cancelled) return
-          div.innerHTML = sanitizeRenderedHtml(svg)
+          const safe = sanitizeRenderedHtml(svg)
+          div.innerHTML = safe
+          // Populate the cache so future re-renders embed the SVG inline.
+          setFlowchartSvg(diagram, safe)
+          storedAny = true
         } catch (err) {
           console.warn("Mermaid render failed", err)
           const fallback = document.createElement("pre")
           fallback.textContent = diagram
-          div.replaceChildren(fallback)
+          const button = document.createElement("button")
+          button.className = "mermaid-rerender-btn"
+          button.textContent = "↻ Re-render"
+          button.onclick = () => setMermaidVersion((v) => v + 1)
+          div.replaceChildren(button, fallback)
         }
       }))
+
+      // If we stored at least one fresh SVG, bump the version so the next
+      // render of `previewHtml` (already debounced) reads the cache and
+      // embeds the SVG directly into the markup — eliminating the flash of
+      // source code that used to appear on every keystroke.
+      if (storedAny) setMermaidVersion((v) => v + 1)
     }
 
     Promise.all([
@@ -947,6 +1081,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     return () => { cancelled = true }
   }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid])
+  // mermaidVersion participates only as a trigger for renderPreviewHtml deps
+  // (read below), not as a dep of this effect — it would cause a re-render loop.
+  void mermaidVersion
 
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1013,7 +1150,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const f = vault.openFile
-      if (f) vault.saveFile(f.path, editor.getValue())
+      // PDF tabs are read-only — Ctrl+S would otherwise call saveFile with the
+      // empty placeholder content and destroy the underlying PDF.
+      if (f && f.mode !== "pdf") vault.saveFile(f.path, editor.getValue())
     })
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
@@ -1455,7 +1594,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         return match?.[1].trim().toLowerCase() === headingText
       })
       if (targetLine >= 0) {
-        editor.revealLineInCenter(targetLine + 1)
+        suppressPreviewScrollOnce.current = true
+        editor.revealLineInCenter(targetLine + 1, 0) // smooth
         editor.setPosition({ lineNumber: targetLine + 1, column: 1 })
         editor.focus()
         return
@@ -1524,7 +1664,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (sourceEl) {
         const lineNum = parseInt(sourceEl.dataset.sourceLine ?? "", 10)
         if (Number.isFinite(lineNum) && lineNum > 0) {
-          editor.revealLineInCenter(lineNum)
+          // Mark the cursor change as preview-originated so the scroll-sync
+          // effect doesn't yank the preview back up to the section heading.
+          suppressPreviewScrollOnce.current = true
+          // ScrollType.Smooth = 0 (vs default Immediate = 1).
+          editor.revealLineInCenter(lineNum, 0)
           editor.setPosition({ lineNumber: lineNum, column: 1 })
           editor.focus()
         }
@@ -1535,6 +1679,35 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Wikilink hover preview ────────────────────────────────────────────────
   // Show a floating preview card with the first ~10 non-empty lines of the
   // target note when the user hovers (~300ms) over a rendered [[wikilink]].
+  // The handler reads everything through refs so the effect's dep list stays
+  // small — without this guard the listeners detach + reattach on every
+  // keystroke (vaultFiles → macros → bibMap → transclusionResolver all churn
+  // when the active tab content changes).
+  const wikiHoverDataRef = useRef({
+    tree: vault.tree,
+    vaultFiles,
+    vaultPath: vault.vaultPath,
+    macros,
+    wikiNames,
+    bibMap,
+    transclusionResolver,
+    hoverLoading: t.preview.hoverLoading,
+    hoverNotFound: t.preview.hoverNotFound,
+  })
+  useEffect(() => {
+    wikiHoverDataRef.current = {
+      tree: vault.tree,
+      vaultFiles,
+      vaultPath: vault.vaultPath,
+      macros,
+      wikiNames,
+      bibMap,
+      transclusionResolver,
+      hoverLoading: t.preview.hoverLoading,
+      hoverNotFound: t.preview.hoverNotFound,
+    }
+  })
+
   useEffect(() => {
     const pane = previewPaneRef.current
     if (!pane) return
@@ -1553,10 +1726,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const showCard = (link: HTMLElement, x: number, y: number) => {
       const target = link.dataset.target
       if (!target) return
+      const data = wikiHoverDataRef.current
       const isBroken = link.classList.contains("wikilink-broken")
       card = document.createElement("div")
       card.className = "wikilink-hover-card"
-      // Position near cursor; clamp to viewport.
       const W = 400, H = 300
       const left = Math.min(x + 12, window.innerWidth - W - 8)
       const top = Math.min(y + 16, window.innerHeight - H - 8)
@@ -1565,22 +1738,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       let html = ""
       if (isBroken) {
-        html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverNotFound)}</div>`
+        html = `<div class="wikilink-hover-empty">${escapeHoverText(data.hoverNotFound)}</div>`
       } else {
-        const node = findByName(vault.tree, target)
-        const fileEntry = node ? vaultFiles.find((f) => f.path === node.path) : undefined
+        const node = findByName(data.tree, target)
+        const fileEntry = node ? data.vaultFiles.find((f) => f.path === node.path) : undefined
         const content = fileEntry?.content
         if (content == null || content === "") {
-          html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverLoading)}</div>`
+          html = `<div class="wikilink-hover-empty">${escapeHoverText(data.hoverLoading)}</div>`
         } else {
           const parsed = extractFrontmatter(content)
           const body = parsed?.content ?? content
           const lines = body.split("\n").filter((l) => l.trim() !== "").slice(0, 10).join("\n")
           try {
-            const rendered = renderMarkdown(lines, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+            const rendered = renderMarkdown(lines, data.macros, data.vaultPath ?? undefined, data.wikiNames, data.bibMap, data.transclusionResolver)
             html = sanitizeRenderedHtml(rendered)
           } catch {
-            html = `<div class="wikilink-hover-empty">${escapeHoverText(t.preview.hoverNotFound)}</div>`
+            html = `<div class="wikilink-hover-empty">${escapeHoverText(data.hoverNotFound)}</div>`
           }
         }
       }
@@ -1615,7 +1788,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       pane.removeEventListener("mouseout", onOut)
       removeCard()
     }
-  }, [vault.tree, vaultFiles, vault.vaultPath, macros, wikiNames, bibMap, transclusionResolver, t.preview.hoverLoading, t.preview.hoverNotFound])
+  }, [])
 
   // ── Preview → Editor double-click sync ───────────────────────────────────
   const handlePreviewDblClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -1638,7 +1811,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── File actions ──────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     const f = vault.openFile; const editor = editorRef.current
-    if (f && editor) vault.saveFile(f.path, editor.getValue())
+    // PDF tabs render via PdfPreviewPanel, not the Monaco editor — calling
+    // editor.getValue() on a PDF tab returns the text-tab placeholder content
+    // ("") and writing that back overwrites the user's PDF. Block save.
+    if (f && f.mode !== "pdf" && editor) vault.saveFile(f.path, editor.getValue())
   }, [vault])
 
   const handleSaveAs = useCallback(async () => {
@@ -2619,11 +2795,12 @@ ${html}
       <MenuBar menus={menus}>
         <GitBar vaultPath={vault.vaultPath} />
       </MenuBar>
-      {deps && !depsWarningDismissed && (!deps.pandoc || !deps.zip) && (
+      {deps && (!deps.pandoc || !deps.zip) && (
         <DepsWarning
           deps={deps}
           useWasmTex={settings.useWasmTex}
-          onDismiss={() => setDepsWarningDismissed(true)}
+          dismissed={depsDismissed}
+          onDismiss={dismissDep}
         />
       )}
       <Toolbar
@@ -2646,45 +2823,11 @@ ${html}
           </div>
           {!sidebarCollapsed && (
             <>
-          <div className="sidebar-tabs" role="tablist" aria-label="Panel lateral">
-            {(["files", "search", "searchReplace", "outline", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "equations", "environments", "stats", "comments", "help", "symbols", "pdfPreview"] as const).map((mode) => {
-              const labels: Record<string, string> = {
-                files: t.sidebar.files, search: t.sidebar.search, outline: t.sidebar.outline,
-                backlinks: t.sidebar.backlinks, help: t.sidebar.help,
-                tags: t.sidebar.tags, labels: t.sidebar.labels, properties: t.sidebar.properties, graph: t.sidebar.graph,
-                todo: t.sidebar.todo, equations: t.sidebar.equations, stats: t.sidebar.stats,
-                environments: t.sidebar.environments,
-                searchReplace: t.sidebar.searchReplace,
-                quality: t.sidebar.quality,
-                symbols: t.sidebar.symbols,
-                pdfPreview: t.sidebar.pdfPreview,
-                comments: t.sidebar.comments,
-              }
-              const icons: Record<string, string> = {
-                files: "☰", search: "⌕", outline: "≡", backlinks: "←",
-                tags: "#", labels: "⌁", properties: "≋", graph: "⬡", help: "?",
-                todo: "☑", equations: "∑", environments: "∀", stats: "◈",
-                searchReplace: "⇄",
-                quality: "✓",
-                symbols: "∑",
-                pdfPreview: "📑",
-                comments: "💬",
-              }
-              return (
-                <button
-                  key={mode}
-                  role="tab"
-                  aria-selected={sidebarMode === mode}
-                  aria-label={labels[mode]}
-                  className={`sidebar-tab ${sidebarMode === mode ? "active" : ""}`}
-                  onClick={() => setSidebarMode(mode)}
-                  title={labels[mode]}
-                >
-                  {icons[mode]}
-                </button>
-              )
-            })}
-          </div>
+          <SidebarTabs
+            sidebarMode={sidebarMode}
+            setSidebarMode={setSidebarMode}
+            t={t}
+          />
           <div className="sidebar-content">
             {sidebarMode === "files" && (
               <FileTree
@@ -2943,32 +3086,44 @@ ${html}
             onGoForward={goForward}
             onNavigate={handleBreadcrumbNavigate}
           />
-          <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
-            <MonacoEditor
-              key={vault.activeTabPath ?? "welcome"}
-              defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
-              value={currentContent}
-              onChange={handleChange}
-              beforeMount={handleBeforeMount}
-              onMount={handleEditorMount}
-              theme={settings.theme}
-              options={{
-                fontSize: settings.fontSize,
-                lineHeight: Math.round(settings.fontSize * 1.6),
-                wordWrap: wordWrap ? "on" : "off",
-                minimap: { enabled: minimapEnabled },
-                scrollBeyondLastLine: false,
-                renderWhitespace: "none",
-                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                padding: { top: 16, bottom: 16 },
-                readOnly: !vault.openFile,
-                quickSuggestions: { other: true, comments: false, strings: true },
-                suggestOnTriggerCharacters: true,
-                snippetSuggestions: "top",
-                cursorSmoothCaretAnimation: "on",
-              }}
-            />
-          </Suspense>
+          {vault.openFile?.mode === "pdf" ? (
+            <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+              <PdfPreviewPanel pdfPath={vault.openFile.path} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+              <MonacoEditor
+                key={vault.activeTabPath ?? "welcome"}
+                defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
+                value={currentContent}
+                onChange={handleChange}
+                beforeMount={handleBeforeMount}
+                onMount={handleEditorMount}
+                theme={settings.theme}
+                options={{
+                  fontSize: settings.fontSize,
+                  lineHeight: Math.round(settings.fontSize * 1.6),
+                  wordWrap: wordWrap ? "on" : "off",
+                  minimap: { enabled: minimapEnabled },
+                  scrollBeyondLastLine: false,
+                  renderWhitespace: "none",
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  padding: { top: 16, bottom: 16 },
+                  readOnly: !vault.openFile,
+                  quickSuggestions: { other: true, comments: false, strings: true },
+                  suggestOnTriggerCharacters: true,
+                  snippetSuggestions: "top",
+                  // Smooth caret animation keeps the GPU compositor busy (~6% CPU
+                // on Linux/WebKitGTK). The visual gain isn't worth it.
+                cursorSmoothCaretAnimation: "off",
+                // Default "blink" repaints the cursor every 500 ms which keeps
+                // the compositor thread alive. "solid" eliminates that idle
+                // repaint without harming usability.
+                cursorBlinking: "solid",
+                }}
+              />
+            </Suspense>
+          )}
           {/* Vim mode status bar */}
           <div
             ref={vimStatusRef}
@@ -2976,10 +3131,10 @@ ${html}
           />
         </div>
 
-        {settings.previewVisible && <Resizer onDrag={handleEditorResize} />}
+        {settings.previewVisible && vault.openFile?.mode !== "pdf" && <Resizer onDrag={handleEditorResize} />}
 
-        {/* ── Preview ── */}
-        {settings.previewVisible && (
+        {/* ── Preview (suppressed for PDF tabs — the PDF viewer takes the full pane) ── */}
+        {settings.previewVisible && vault.openFile?.mode !== "pdf" && (
           <div
             className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
             id="preview-pane"
@@ -3128,6 +3283,125 @@ ${html}
           />
         </Suspense>
       )}
+    </div>
+  )
+}
+
+// ── Sidebar tab strip with overflow popup ────────────────────────────────────
+
+const SIDEBAR_ESSENTIALS: SidebarMode[] = ["files", "search", "outline", "equations", "symbols", "pdfPreview"]
+const SIDEBAR_OVERFLOW: SidebarMode[] = ["searchReplace", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "environments", "stats", "comments", "help"]
+
+const SIDEBAR_ICONS: Record<SidebarMode, string> = {
+  files: "☰", search: "⌕", outline: "≡", backlinks: "←",
+  tags: "#", labels: "⌁", properties: "≋", graph: "⬡", help: "?",
+  todo: "☑", equations: "∑", environments: "∀", stats: "◈",
+  searchReplace: "⇄",
+  quality: "✓",
+  symbols: "∑",
+  pdfPreview: "📑",
+  comments: "💬",
+}
+
+function sidebarLabel(mode: SidebarMode, t: T): string {
+  const map: Record<SidebarMode, string> = {
+    files: t.sidebar.files, search: t.sidebar.search, outline: t.sidebar.outline,
+    backlinks: t.sidebar.backlinks, help: t.sidebar.help,
+    tags: t.sidebar.tags, labels: t.sidebar.labels, properties: t.sidebar.properties, graph: t.sidebar.graph,
+    todo: t.sidebar.todo, equations: t.sidebar.equations, stats: t.sidebar.stats,
+    environments: t.sidebar.environments,
+    searchReplace: t.sidebar.searchReplace,
+    quality: t.sidebar.quality,
+    symbols: t.sidebar.symbols,
+    pdfPreview: t.sidebar.pdfPreview,
+    comments: t.sidebar.comments,
+  }
+  return map[mode]
+}
+
+function SidebarTabs({
+  sidebarMode,
+  setSidebarMode,
+  t,
+}: {
+  sidebarMode: SidebarMode
+  setSidebarMode: (m: SidebarMode) => void
+  t: T
+}) {
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const overflowRef = useRef<HTMLDivElement>(null)
+  const overflowActive = SIDEBAR_OVERFLOW.includes(sidebarMode)
+
+  useEffect(() => {
+    if (!overflowOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!overflowRef.current?.contains(e.target as Node)) setOverflowOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOverflowOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [overflowOpen])
+
+  return (
+    <div className="sidebar-tabs" role="tablist" aria-label="Panel lateral">
+      {SIDEBAR_ESSENTIALS.map((mode) => {
+        const label = sidebarLabel(mode, t)
+        return (
+          <button
+            key={mode}
+            role="tab"
+            aria-selected={sidebarMode === mode}
+            aria-label={label}
+            className={`sidebar-tab ${sidebarMode === mode ? "active" : ""}`}
+            onClick={() => setSidebarMode(mode)}
+            title={label}
+          >
+            {SIDEBAR_ICONS[mode]}
+          </button>
+        )
+      })}
+      <div className="sidebar-tabs-overflow" ref={overflowRef}>
+        <button
+          type="button"
+          aria-label={t.sidebar.more}
+          aria-haspopup="menu"
+          aria-expanded={overflowOpen}
+          className={`sidebar-tab sidebar-tabs-overflow-btn ${overflowActive ? "active" : ""}`}
+          onClick={() => setOverflowOpen((o) => !o)}
+          title={t.sidebar.more}
+        >
+          ⋯
+        </button>
+        {overflowOpen && (
+          <div className="sidebar-tabs-overflow-popup" role="menu">
+            {SIDEBAR_OVERFLOW.map((mode) => {
+              const label = sidebarLabel(mode, t)
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="menuitem"
+                  className={`sidebar-overflow-item ${sidebarMode === mode ? "active" : ""}`}
+                  onClick={() => {
+                    setSidebarMode(mode)
+                    setOverflowOpen(false)
+                  }}
+                  title={label}
+                >
+                  <span className="sidebar-overflow-item-icon">{SIDEBAR_ICONS[mode]}</span>
+                  <span className="sidebar-overflow-item-label">{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

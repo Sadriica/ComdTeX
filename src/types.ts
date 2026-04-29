@@ -11,7 +11,7 @@ export interface OpenFile {
   name: string
   content: string
   isDirty: boolean
-  mode: "md" | "tex"
+  mode: "md" | "tex" | "pdf"
   cachedMtime?: number // timestamp for conflict detection
 }
 

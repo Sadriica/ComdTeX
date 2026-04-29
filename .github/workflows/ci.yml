@@ -96,6 +96,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Informational until we mock Tauri APIs (or migrate to tauri-driver).
+    # The app calls getCurrentWindow() etc. on mount; without a Tauri runtime
+    # the React tree never renders, so the .welcome-logo locator times out.
+    continue-on-error: true
 
     steps:
       - name: Checkout

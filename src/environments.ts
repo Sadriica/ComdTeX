@@ -26,9 +26,29 @@ export const NUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
 }
 
 export const UNNUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
-  proof:  { es: "Demostración", latex: "proof" },
-  remark: { es: "Observación",  latex: "remark" },
-  note:   { es: "Nota",         latex: "note" },
+  proof:     { es: "Demostración", latex: "proof" },
+  remark:    { es: "Observación",  latex: "remark" },
+  note:      { es: "Nota",         latex: "note" },
+  // Callout-style environments (no numbering, themed icon via CSS class)
+  tip:       { es: "Consejo",      latex: "tip" },
+  hint:      { es: "Pista",        latex: "hint" },
+  info:      { es: "Información",  latex: "info" },
+  warning:   { es: "Advertencia",  latex: "warning" },
+  caution:   { es: "Precaución",   latex: "caution" },
+  attention: { es: "Atención",     latex: "attention" },
+  important: { es: "Importante",   latex: "important" },
+  danger:    { es: "Peligro",      latex: "danger" },
+  error:     { es: "Error",        latex: "error" },
+  failure:   { es: "Fallo",        latex: "failure" },
+  success:   { es: "Éxito",        latex: "success" },
+  check:     { es: "Verificado",   latex: "check" },
+  done:      { es: "Hecho",        latex: "done" },
+  question:  { es: "Pregunta",     latex: "question" },
+  help:      { es: "Ayuda",        latex: "help" },
+  faq:       { es: "FAQ",          latex: "faq" },
+  quote:     { es: "Cita",         latex: "quote" },
+  cite:      { es: "Referencia",   latex: "cite" },
+  abstract:  { es: "Resumen",      latex: "abstract" },
 }
 
 export const FOLDED_ENV: { es: string; latex: string } = { es: "Colapsado", latex: "folded" }
@@ -65,6 +85,18 @@ import { renderCommDiagSVG } from "./commDiag"
 
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+// ── Mermaid SVG cache for `:::flowchart` ─────────────────────────────────────
+// Pre-rendered SVGs keyed by their mermaid source. Populated by App.tsx after
+// mermaid finishes; consumed below so subsequent re-renders embed the SVG
+// inline (no flash of source code, no async wait, no GPU repaint loop).
+const flowchartSvgCache = new Map<string, string>()
+export function setFlowchartSvg(source: string, svg: string): void {
+  flowchartSvgCache.set(source, svg)
+}
+export function clearFlowchartSvgCache(): void {
+  flowchartSvgCache.clear()
 }
 
 function buildPseudocodeHTML(title: string, number: string, content: string): string {
@@ -152,52 +184,123 @@ export function buildEnvHTML(
  */
 export function extractEnvironments(
   text: string,
-  renderFn: (inner: string) => string
+  renderFn: (inner: string) => string,
+  rawSource?: string
 ): { text: string; slots: string[] } {
   const slots: string[] = []
   const labelOccurrences: Record<string, number> = {}
 
-  // Process iteratively from innermost outward to support nested environments
-  let current = text
+  // Resolve the source line of each block from the EDITOR's raw text so that
+  // editor → preview click-sync targets the right place. `text` (the post-
+  // preprocess input) has different line counts from `raw` because callouts
+  // and display-math collapse to single-line placeholders. We look up each
+  // env's opening line `:::name[title]` in `rawSource` (advancing a cursor
+  // so multiple envs with identical openings still resolve in document order)
+  // and fall back to the local-text line when raw isn't provided.
+  const haveRaw = typeof rawSource === "string" && rawSource.length > 0
+  let rawCursor = 0
+  const lineOfInRaw = (opening: string): number => {
+    const idx = rawSource!.indexOf(opening, rawCursor)
+    if (idx === -1) return 1
+    rawCursor = idx + opening.length
+    return rawSource!.slice(0, idx).split("\n").length
+  }
+  const lineOfInText = (idx: number): number =>
+    text.slice(0, idx).split("\n").length
+
+  const wrapWithSourceLine = (html: string, line: number): string =>
+    `<div class="env-wrap" data-source-line="${line}">${html}</div>`
+
+  // Pre-pass: extract `:::code [language]` blocks before the generic ENV_RE.
+  // The body must be preserved verbatim (HTML-escaped, no shorthand expansion,
+  // no markdown formatting). Language goes after a SPACE, e.g. `:::code python`.
+  // Supports `:::code` with no language (no class on <code>).
+  const CODE_ENV_RE = /^:::code(?:[ \t]+(\S+))?[ \t]*\n([\s\S]*?)^:::[ \t]*$/gm
+  let current = text.replace(CODE_ENV_RE, (_match, lang: string | undefined, body: string, offset: number) => {
+    const opening = lang ? `:::code ${lang}` : `:::code`
+    const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
+    // Body is verbatim — preserve the trailing newline that closes its last line
+    // by NOT trimming. But strip the single trailing newline produced by `\n:::`.
+    const verbatim = body.endsWith("\n") ? body.slice(0, -1) : body
+    const cls = lang ? ` class="language-${escHtml(lang)}"` : ""
+    const html = `<pre><code${cls}>${escHtml(verbatim)}</code></pre>`
+    slots.push(wrapWithSourceLine(html, srcLine))
+    return `\x02ENV${slots.length - 1}\x03`
+  })
+
   let changed = true
   while (changed) {
     const before = current
-    current = current.replace(ENV_RE(), (match, size, rawName, title, label, content) => {
+    current = current.replace(ENV_RE(), (match, size, rawName, title, label, content, offset: number) => {
       const envName = rawName.toLowerCase()
+      // Build the exact opening as it appears in source: `:::[size ]name[title][{#label}]`
+      const sizeStr = size ? `${size} ` : ""
+      const titleStr = title !== undefined ? `[${title}]` : ""
+      const labelStr = label !== undefined ? `{#${label}}` : ""
+      const opening = `:::${sizeStr}${rawName}${titleStr}${labelStr}`
+      const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
 
       if (envName === "pseudocode") {
         counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
         const pcNumber = String(counters["pseudocode"])
         const html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim())
-        slots.push(html)
+        slots.push(wrapWithSourceLine(html, srcLine))
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "flowchart") {
+        counters["flowchart"] = (counters["flowchart"] ?? 0) + 1
+        const fcNumber = String(counters["flowchart"])
+        const mermaidChart = pseudocodeToFlowchart(content.trim())
+        const headerHtml = title
+          ? `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}: ${escHtml(title)}</span></div>`
+          : `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}</span></div>`
+        // Cache hit: embed pre-rendered SVG inline so the next React paint
+        // shows the diagram immediately — no flash of source, no async wait.
+        // The source is base64-encoded into a data attribute so the mermaid
+        // effect can re-render via the toolbar button if the user requests it.
+        const cachedSvg = flowchartSvgCache.get(mermaidChart)
+        const sourceB64 = typeof btoa !== "undefined"
+          ? btoa(unescape(encodeURIComponent(mermaidChart)))
+          : ""
+        const body = cachedSvg
+          ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
+          : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
+        const html = [
+          `<div class="flowchart-block">`,
+          headerHtml,
+          body,
+          `</div>`,
+        ].join("")
+        slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "truth") {
         counters["truth"] = (counters["truth"] ?? 0) + 1
         const html = renderTruthTableHTML(title ?? "", content.trim())
-        slots.push(html)
+        slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "graph") {
         counters["graph"] = (counters["graph"] ?? 0) + 1
         const html = renderGraphSVG(title ?? "", content.trim())
-        slots.push(html)
+        slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "plot") {
         counters["plot"] = (counters["plot"] ?? 0) + 1
         const html = renderPlotHTML(title ?? "", content.trim())
-        slots.push(html)
+        slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "commdiag") {
         counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
         const html = renderCommDiagSVG(title ?? "", content.trim())
-        slots.push(html)
+        slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
@@ -224,7 +327,7 @@ export function extractEnvironments(
       }
 
       const html = buildEnvHTML(envName, title ?? "", number, innerHTML, size ?? undefined, renderedLabel)
-      slots.push(html)
+      slots.push(wrapWithSourceLine(html, srcLine))
       return `\x02ENV${slots.length - 1}\x03`
     })
     changed = current !== before

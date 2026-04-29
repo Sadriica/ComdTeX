@@ -242,10 +242,25 @@ function applyMatrixShorthand(text: string): string {
 const FENCED_CODE_RE = /(^|\n)([ \t]{0,3})(```+|~~~+)([^\n]*)\n([\s\S]*?)\n\2\3[ \t]*(?=\n|$)/g
 const INLINE_CODE_RE = /(`+)(?!`)([\s\S]+?)\1(?!`)/g
 
+// Special environments whose bodies must NOT undergo shorthand expansion: their
+// own parsers handle the body verbatim. Without this masking, inputs like
+//   :::plot
+//   f(x) = exp(-x^2/2) / sqrt(2*pi)
+//   :::
+// have `exp(...)` and `sqrt(...)` expanded + auto-wrapped in `$...$`, then the
+// plot parser chokes on the literal `$`. Same hazard for graph/truth/commdiag/
+// pseudocode/flowchart blocks.
+const SPECIAL_ENV_RE = /^:::(plot|graph|truth|commdiag|pseudocode|flowchart|code)(?:\[[^\]]*\]|\s+\S+)?\s*\n[\s\S]*?^:::\s*$/gm
+
 function maskCode(text: string): { masked: string; slots: string[] } {
   const slots: string[] = []
-  // Fenced first so inline backticks inside a fence don't get double-masked.
-  let masked = text.replace(FENCED_CODE_RE, (full, lead) => {
+  // Special envs first so backticks inside their bodies aren't taken as code.
+  let masked = text.replace(SPECIAL_ENV_RE, (full) => {
+    slots.push(full)
+    return `\x02CODE${slots.length - 1}\x03`
+  })
+  // Fenced code so inline backticks inside a fence don't get double-masked.
+  masked = masked.replace(FENCED_CODE_RE, (full, lead) => {
     slots.push(full.slice(lead.length))
     return `${lead}\x02CODE${slots.length - 1}\x03`
   })

@@ -39,7 +39,8 @@ function saveRecentVault(path: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
 }
 
-function editorModeForPath(path: string): "md" | "tex" {
+function editorModeForPath(path: string): "md" | "tex" | "pdf" {
+  if (path.toLowerCase().endsWith(".pdf")) return "pdf"
   return storageFormatForPath(path) === "tex" ? "tex" : "md"
 }
 
@@ -53,7 +54,7 @@ function showConversionWarnings(path: string, content: string, phase: "opening" 
   showToast(`CMDX: ${warnings.length} advertencia(s) al ${verb} ${displayBasename(path)}. Línea ${first.line}: ${first.message}`, "info", 7000)
 }
 
-export const README_FILENAME = "README.md"
+export const README_FILENAME = "comdtex.md"
 
 export const README_CONTENT = `# Mi Vault — ComdTeX
 
@@ -62,61 +63,254 @@ export const README_CONTENT = `# Mi Vault — ComdTeX
 
 ---
 
+## Shorthands — escribe y pulsa Tab
+
+Los shorthands son funciones cortas que se expanden a LaTeX. Cada uno se
+auto-envuelve en math, así que no necesitas escribir \`$\` para los más comunes:
+
+La fracción frac(1, n+1) se hace pequeña cuando n crece.
+
+La raíz sqrt(2) es irracional.
+
+El límite fundamental: lim(x, 0) — escrito así, sin nada alrededor.
+
+La sumatoria sum(n=1, 100) llega a 5050.
+
+La integral int(0, 1) tiene un valor entre 0 y 1.
+
+La derivada parcial pder(u, t) aparece en la ecuación del calor.
+
+La derivada total der(f, x) y la inversa inv(A).
+
+La matriz identidad 3×3:
+
+mat(1,0,0, 0,1,0, 0,0,1)
+
+Letras de pizarra: bb(R), bb(N), bb(Z). Caligrafía: cal(L), cal(F).
+
+> **Tip:** para una fórmula completa con varios símbolos conectados (igualdades,
+> operadores como \`\\cdot\` o \`\\implies\`, letras griegas como \`\\varepsilon\`),
+> envuelve **todo el bloque** en \`$...$\` y los shorthands siguen funcionando dentro:
+>
+> \`$frac(1, sqrt(2 \\pi)) sup(e, -sup(x, 2)/2)$\`
+>
+> renderiza la densidad gaussiana entera como una sola expresión matemática.
+
+---
+
 ## Entornos matemáticos
 
 Escribe \`:::tipo[Título]\` para abrir un entorno y \`:::\` para cerrarlo.
 Añade \`sm\` o \`lg\` antes del tipo para cambiar el tamaño.
 
-:::lg definition[Límite de una función]
-Sea $f: \\mathbb{R} \\to \\mathbb{R}$. Decimos que $\\lim_{x \\to a} f(x) = L$ si
-para todo $\\varepsilon > 0$ existe $\\delta > 0$ tal que
+:::definition[Función continua]
+Una función f es **continua** en un punto x₀ cuando el límite existe y coincide
+con el valor de la función:
 
-$$0 < |x - a| < \\delta \\implies |f(x) - L| < \\varepsilon$$ {#eq:limite}
+$$lim(x, x_0) f(x) = f(x_0)$$ {#eq:continua}
 :::
 
-:::theorem[Unicidad del límite]
-Si $\\lim_{x \\to a} f(x) = L$ y $\\lim_{x \\to a} f(x) = M$, entonces $L = M$.
+:::theorem[Suma de continuas]
+Si f y g son continuas en x₀, entonces f + g también lo es.
 :::
 
 :::proof
-Supón $L \\neq M$ y toma $\\varepsilon = |L - M|/2$ en @eq:limite. Contradicción. $\\square$
+Aplica @eq:continua a cada función y suma los límites. $\\square$
 :::
 
-:::sm remark
+:::remark
 Los entornos \`proof\`, \`remark\` y \`note\` no llevan número automático.
+Los demás (\`theorem\`, \`lemma\`, \`corollary\`, \`proposition\`, \`definition\`,
+\`example\`, \`exercise\`) sí.
 :::
-
----
-
-## Shorthands — escribe y pulsa Tab
-
-Los shorthands funcionan dentro y fuera de \`$...$\`. Pruébalos aquí:
-
-La serie armónica: $sum(n=1, \\infty) frac(1, n)$ diverge.
-
-Norma de un vector: norm(vec(v)) = sqrt(sup(v,T) v)
-
-Derivada parcial: pder(u, t) = pder(sup(u,2), x) (ecuación del calor)
-
-Matriz identidad 3×3: mat(1,0,0, 0,1,0, 0,0,1)
 
 ---
 
 ## Ecuaciones y referencias cruzadas
 
-$$\\sum_{n=0}^{\\infty} x^n = \\frac{1}{1-x}, \\quad |x| < 1$$ {#eq:geom}
+Usa \`$$...$$\` para ecuaciones en bloque (display math). Se numeran solas, y con
+\`{#eq:etiqueta}\` puedes referenciarlas desde el texto:
 
-$$e^{i\\pi} + 1 = 0$$ {#eq:euler}
+$$sum(n=0, \\infty) sup(x, n) = frac(1, 1-x)$$ {#eq:geom}
+
+$$sup(e, i\\pi) + 1 = 0$$ {#eq:euler}
 
 La serie geométrica (@eq:geom) y la identidad de Euler (@eq:euler) son dos de las
 fórmulas más elegantes de las matemáticas.
 
+**Etiquetas en línea:** también puedes etiquetar matemáticas inline:
+
+$lim(x, 0) frac(sin(x), x) = 1$ {#eq:limite-fundamental}
+
+y referenciar el resultado en (@eq:limite-fundamental) desde cualquier párrafo.
+
 ---
 
-## Wikilinks
+## Bloques de código
+
+Tres backticks abren un bloque con resaltado. El idioma va después de los backticks:
+
+\`\`\`python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+\`\`\`
+
+\`\`\`haskell
+factorial :: Integer -> Integer
+factorial 0 = 1
+factorial n = n * factorial (n - 1)
+\`\`\`
+
+Para código en línea usa una sola backtick: \`O(n log n)\`.
+
+También puedes usar la sintaxis uniforme \`:::code\` (con o sin lenguaje):
+
+:::code python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+:::
+
+:::code
+texto plano sin resaltado
+:::
+
+---
+
+## Pseudocódigo → flowchart automático
+
+Escribe el algoritmo en pseudocódigo y ComdTeX lo convierte en un diagrama de
+flujo Mermaid:
+
+El bloque \`:::pseudocode\` muestra código numerado con sintaxis resaltada y
+un flowchart Mermaid plegable. Para un **flowchart visual directamente** usa
+\`:::flowchart\` con la misma sintaxis:
+
+:::flowchart[Búsqueda binaria]
+ALGORITHM BinarySearch(A, target)
+    INPUT array A ordenado, valor target
+    lo ← 0
+    hi ← length(A) - 1
+    WHILE lo ≤ hi
+        mid ← (lo + hi) / 2
+        IF A[mid] = target
+            RETURN mid
+        ELSE IF A[mid] < target
+            lo ← mid + 1
+        ELSE
+            hi ← mid - 1
+        ENDIF
+    ENDWHILE
+    RETURN -1
+END
+:::
+
+Versión con código numerado:
+
+:::pseudocode[Búsqueda binaria]
+ALGORITHM BinarySearch(A, target)
+    INPUT array A ordenado, valor target
+    lo ← 0
+    hi ← length(A) - 1
+    WHILE lo ≤ hi
+        mid ← (lo + hi) / 2
+        IF A[mid] = target
+            RETURN mid
+        ELSE IF A[mid] < target
+            lo ← mid + 1
+        ELSE
+            hi ← mid - 1
+        ENDIF
+    ENDWHILE
+    RETURN -1
+END
+:::
+
+---
+
+## Tablas de verdad
+
+Pasa una expresión lógica y ComdTeX genera la tabla con todas las combinaciones:
+
+:::truth[Equivalencia: contrapositiva]
+(p → q) ↔ (¬q → ¬p)
+:::
+
+Operadores soportados: \`¬\` \`∧\` \`∨\` \`→\` \`↔\` (también \`!\`, \`&&\`, \`||\`, \`->\`, \`<->\`).
+
+---
+
+## Grafos
+
+Sintaxis simple para grafos dirigidos / no dirigidos / con pesos:
+
+:::graph[Camino mínimo]
+A -- B : 4
+A -- C : 2
+B -- C : 1
+B -- D : 5
+C -- D : 8
+D -- E : 3
+:::
+
+\`--\` es no dirigido, \`->\` dirigido, \`: peso\` añade etiqueta numérica.
+
+---
+
+## Plot de funciones
+
+Sin dependencias externas — el parser está integrado y NO usa \`eval\`:
+
+:::plot[Densidad gaussiana]
+f(x) = exp(-x^2 / 2) / sqrt(2 * pi)
+xmin = -4
+xmax = 4
+:::
+
+Funciones disponibles: \`sin\`, \`cos\`, \`tan\`, \`exp\`, \`ln\`, \`log\`, \`sqrt\`,
+\`abs\`. Constantes: \`e\`, \`pi\`.
+
+---
+
+## Diagramas conmutativos
+
+Para teoría de categorías, álgebra homológica o cualquier diagrama con flechas etiquetadas:
+
+:::commdiag[Pullback]
+A -> B [f]
+A -> C [g]
+B -> D [h]
+C -> D [k]
+:::
+
+Estilos de flecha: \`->\` \`<-\` \`<->\` \`->>\` (epi) \`>->\` (mono) \`==>\` (doble).
+
+---
+
+## Wikilinks y transclusión
 
 Enlaza otras notas del vault con \`[[nombre-de-nota]]\`. Haz clic en el preview para navegar.
 La pestaña **←** de la barra lateral muestra qué notas enlazan a la activa.
+
+Para **incrustar** el contenido de otra nota, usa \`![[otra-nota]]\` — se expande en línea
+durante el render. Ideal para tesis con un archivo principal y capítulos separados.
+
+---
+
+## Callouts
+
+> [!note]
+> Los callouts son bloques destacados con icono. Tipos disponibles:
+> \`note\` \`tip\` \`warning\` \`important\` \`danger\` \`success\` \`question\` \`quote\`.
+
+> [!tip] Atajo
+> Pulsa \`Ctrl+P\` para el palette de comandos, \`Ctrl+Shift+F\` para búsqueda
+> en todo el vault, \`Ctrl+Tab\` para navegar pestañas.
 
 ---
 
@@ -132,6 +326,7 @@ table(Concepto, Definición, Ejemplo)
 - Añade entradas en \`references.bib\` y cita con \`[@clave]\`
 - Crea nuevas notas con el botón **+** en la barra lateral
 - Explora las plantillas en **Archivo → Nuevo desde plantilla**
+- Compila a PDF con \`Ctrl+Shift+B\` (motor WASM integrado, sin LaTeX en el sistema)
 `
 
 // Extensions that are never plain text
@@ -162,7 +357,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
         nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (ext === "md" || ext === "tex" || ext === "bib")
+      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "pdf")
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }
@@ -284,8 +479,13 @@ export function useVault(options: UseVaultOptions | number = {}) {
       for (const path of savedPaths) {
         // Only restore files from the current vault
         if (!isPathInsideVault(path, vaultP)) continue
-        // Skip binary files
         const ext = path.split(".").pop()?.toLowerCase() ?? ""
+        // PDFs restore as preview-mode tabs, no text content
+        if (ext === "pdf") {
+          tabs.push({ path, name: displayBasename(path), content: "", isDirty: false, mode: "pdf" })
+          continue
+        }
+        // Skip other binary files
         if (BINARY_EXTS.has(ext)) continue
         try {
           const name = displayBasename(path)
@@ -323,6 +523,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
     let content: string
     try {
       content = await readTextFile(readmePath)
+      // Migration: older template versions wrote literal `\`` (backslash-backtick)
+      // sequences inside the code-block examples — they rendered as `\\\`\\\`\\\``
+      // in the preview. Rewrite those to plain backticks. Safe: no real Markdown
+      // pairs `\` immediately with a `` ` ``.
+      if (/\\`/.test(content)) {
+        content = content.replace(/\\`/g, "`")
+        try { await writeTextFile(readmePath, content) }
+        catch { /* migration is best-effort; preview will still be correct */ }
+      }
     } catch {
       // Doesn't exist — create it
       content = README_CONTENT
@@ -401,6 +610,13 @@ export function useVault(options: UseVaultOptions | number = {}) {
       setActiveTabPath(node.path)
       return
     }
+    // PDFs open as a preview-mode tab — no text read, rendered by PdfPreviewPanel.
+    if (node.ext === "pdf") {
+      const pdfTab: OpenFile = { path: node.path, name: node.name, content: "", isDirty: false, mode: "pdf" }
+      setOpenTabs((tabs) => tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, pdfTab])
+      setActiveTabPath(node.path)
+      return
+    }
     // Skip binaries
     if (BINARY_EXTS.has(node.ext ?? "")) {
       showToast(t.vault.binaryFile(node.name), "error")
@@ -433,6 +649,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
     const name = displayBasename(path)
     const ext = name.split(".").pop()?.toLowerCase() ?? ""
+    if (ext === "pdf") {
+      const pdfTab: OpenFile = { path, name, content: "", isDirty: false, mode: "pdf" }
+      setOpenTabs((tabs) => tabs.find((tb) => tb.path === path) ? tabs : [...tabs, pdfTab])
+      setActiveTabPath(path)
+      return
+    }
     if (BINARY_EXTS.has(ext)) {
       showToast(t.vault.binaryFile(name), "error")
       return
@@ -509,6 +731,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
   ): Promise<boolean> => {
     try {
       const openTab = openTabs.find((tab) => tab.path === path)
+      // Read-only modes (currently just PDF) must never write to disk —
+      // doing so would overwrite the binary file with text content.
+      if (openTab?.mode === "pdf") return false
       if (!saveOpts.force && openTab?.cachedMtime) {
         try {
           const info = await stat(path)
@@ -603,6 +828,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const updateContent = useCallback((content: string) => {
     const path = activeTabPathRef.current
     if (!path) return
+    // Hard guard: PDF tabs are read-only previews. Without this, a stray
+    // editor onChange (e.g. when an extension fires) would queue an autosave
+    // that overwrites the binary PDF file with empty/text content, destroying
+    // the user's document.
+    const tab = openTabs.find((t) => t.path === path)
+    if (tab?.mode === "pdf") return
     setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, content, isDirty: true } : t))
     pendingContent.current.set(path, content)
     saveDraft(path, content)
@@ -616,7 +847,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       saveTimers.current.delete(path)
       void saveFile(path, content)
     }, autoSaveMs))
-  }, [saveFile, autoSaveMs])
+  }, [saveFile, autoSaveMs, openTabs])
 
   const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return

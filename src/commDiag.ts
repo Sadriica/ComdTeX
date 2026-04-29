@@ -191,9 +191,10 @@ export function layoutDAG(graph: CDGraph): Map<string, Point> {
     }
   }
 
-  // Expose canvas size in the map via a sentinel key (won't conflict with \w+ node ids)
+  // Expose canvas size in the map via a sentinel key (won't conflict with \w+ node ids).
+  // The reader uses `.x` for width and `.y` for height — match that convention.
   positions.set("__width__", { x: width, y: 0 })
-  positions.set("__height__", { x: height, y: 0 })
+  positions.set("__height__", { x: 0, y: height })
 
   return positions
 }

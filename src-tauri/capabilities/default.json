@@ -23,8 +23,18 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-confirm",
-    "shell:allow-execute",
     "shell:allow-open",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "pandoc",   "cmd": "pandoc",   "args": true },
+        { "name": "zip",      "cmd": "zip",      "args": true },
+        { "name": "git",      "cmd": "git",      "args": true },
+        { "name": "tectonic", "cmd": "tectonic", "args": true },
+        { "name": "xelatex",  "cmd": "xelatex",  "args": true },
+        { "name": "pdflatex", "cmd": "pdflatex", "args": true }
+      ]
+    },
     "updater:default",
     "process:allow-restart",
     "core:window:allow-minimize",

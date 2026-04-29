@@ -107,6 +107,13 @@ export interface T {
     useWasmTex: string; useWasmTexDesc: string
     wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
     wasmTexUnavailable: string
+    sections: {
+      general: string
+      editor: string
+      preview: string
+      dailyNotes: string
+      pdf: string
+    }
   }
 
   help: {
@@ -233,6 +240,7 @@ export interface T {
     quality: string
     pdfPreview: string
     comments: string
+    more: string
   }
 
   todo: {
@@ -391,6 +399,7 @@ export interface T {
     featureBib: string; featureBibDesc: string
     featureEnv: string; featureEnvDesc: string
     featureExport: string; featureExportDesc: string
+    featureWasmTex: string; featureWasmTexDesc: string
   }
 
   vault: {
@@ -466,6 +475,11 @@ export interface T {
     fmTitle: string; fmAuthor: string; fmDate: string; fmTags: string
     // wikilinks
     wikilinkRow: string; wikilinkDesc: string
+    transclusionFile: string; transclusionFileDesc: string
+    transclusionHeading: string; transclusionHeadingDesc: string
+    transclusionBlock: string; transclusionBlockDesc: string
+    blockIdRow: string; blockIdDesc: string
+    wikilinkHoverDesc: string
     // templates
     templatesDesc: string
     tplArticle: string; tplArticleDesc: string
@@ -879,6 +893,13 @@ const es: T = {
     wasmTexCompiling: "Compilando LaTeX (WASM)…",
     wasmTexFallback: "Motor WASM no disponible — intentando LaTeX local",
     wasmTexUnavailable: "Motor LaTeX WASM no incluido en esta build",
+    sections: {
+      general: "General",
+      editor: "Editor",
+      preview: "Vista previa",
+      dailyNotes: "Notas diarias",
+      pdf: "Compilación PDF",
+    },
   },
 
   help: {
@@ -1044,6 +1065,7 @@ const es: T = {
     quality: "Diagnóstico",
     pdfPreview: "PDF",
     comments: "Comentarios",
+    more: "Más",
   },
 
   todo: {
@@ -1225,6 +1247,7 @@ const es: T = {
     featureBib: "BibTeX", featureBibDesc: "Citas y bibliografía automática",
     featureEnv: "Entornos", featureEnvDesc: "theorem, proof, definition…",
     featureExport: "Exportar", featureExportDesc: "PDF, LaTeX, HTML, DOCX",
+    featureWasmTex: "LaTeX integrado", featureWasmTexDesc: "Compila PDF con motor WASM, sin instalar TeX",
   },
 
   vault: {
@@ -1331,6 +1354,11 @@ const es: T = {
     fmDate: "Fecha del documento", fmTags: "Lista: [t1, t2] o - bullet",
     wikilinkRow: "Enlace — clic en preview para navegar",
     wikilinkDesc: 'La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.',
+    transclusionFile: "![[nota]]", transclusionFileDesc: "Transclusión: incrusta el contenido completo de la nota en línea",
+    transclusionHeading: "![[nota#Encabezado]]", transclusionHeadingDesc: "Transcluye solo la sección bajo ese encabezado",
+    transclusionBlock: "![[nota#^id]]", transclusionBlockDesc: "Transcluye un bloque marcado con ^id",
+    blockIdRow: "Texto del bloque ^miid", blockIdDesc: "Marca un bloque con un ID al final de la línea para enlazarlo o transcluirlo",
+    wikilinkHoverDesc: "Pasa el cursor sobre [[nota]] en el editor para ver una vista previa del contenido sin abrirla.",
     templatesDesc: 'Archivo → Nuevo desde plantilla · o Ctrl+P → "plantilla". Puedes guardar plantillas propias con variables {{title}}, {{filename}}, {{date}} y {{datetime}}.',
     tplArticle: "Artículo", tplArticleDesc: "Abstract + secciones + BibTeX",
     tplNotes: "Apuntes de clase", tplNotesDesc: "Defs, teoremas, demostraciones",
@@ -1781,6 +1809,13 @@ const en: T = {
     wasmTexCompiling: "Compiling LaTeX (WASM)…",
     wasmTexFallback: "WASM engine unavailable — trying local LaTeX",
     wasmTexUnavailable: "WASM LaTeX engine not bundled in this build",
+    sections: {
+      general: "General",
+      editor: "Editor",
+      preview: "Preview",
+      dailyNotes: "Daily notes",
+      pdf: "PDF compilation",
+    },
   },
 
   help: {
@@ -1946,6 +1981,7 @@ const en: T = {
     quality: "Diagnostics",
     pdfPreview: "PDF",
     comments: "Comments",
+    more: "More",
   },
 
   todo: {
@@ -2126,6 +2162,7 @@ const en: T = {
     featureBib: "BibTeX", featureBibDesc: "Citations and bibliography",
     featureEnv: "Environments", featureEnvDesc: "theorem, proof, definition…",
     featureExport: "Export", featureExportDesc: "PDF, LaTeX, HTML, DOCX",
+    featureWasmTex: "Built-in LaTeX", featureWasmTexDesc: "Compile PDFs with the WASM engine — no TeX install required",
   },
 
   vault: {
@@ -2232,6 +2269,11 @@ const en: T = {
     fmDate: "Document date", fmTags: "List: [t1, t2] or - bullet",
     wikilinkRow: "Link — click in preview to navigate",
     wikilinkDesc: "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
+    transclusionFile: "![[note]]", transclusionFileDesc: "Transclusion: embeds the full note's content inline",
+    transclusionHeading: "![[note#Heading]]", transclusionHeadingDesc: "Transcludes only the section under that heading",
+    transclusionBlock: "![[note#^id]]", transclusionBlockDesc: "Transcludes a single block tagged with ^id",
+    blockIdRow: "Block text ^myid", blockIdDesc: "Tag a block with an ID at end of line so it can be linked or transcluded",
+    wikilinkHoverDesc: "Hover over a [[note]] in the editor to see a content preview without opening it.",
     templatesDesc: 'File → New from template · or Ctrl+P → "template". You can save custom templates with {{title}}, {{filename}}, {{date}}, and {{datetime}} variables.',
     tplArticle: "Article", tplArticleDesc: "Abstract + sections + BibTeX",
     tplNotes: "Class notes", tplNotesDesc: "Defs, theorems, proofs",

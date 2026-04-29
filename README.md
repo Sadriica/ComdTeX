@@ -41,6 +41,8 @@ On first launch, click **Open Vault** and select any folder. Four special files 
 
 None of these files are required — ComdTeX works without them.
 
+ComdTeX also writes a `.comdtex-comments.json` in the vault root to persist per-line comments out-of-band, so your `.md` and `.tex` files stay clean.
+
 ### 2. Vault Structure
 
 A typical math student's vault:
@@ -256,7 +258,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ### Math & Writing
 - Shorthand system — expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
-- Auto-numbered math environments: `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered: `proof`, `remark`, `note`
+- Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
 - Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
 - Structural labels for headings, equations, figures, tables, and theorem-like environments — plus `@...` cross-references
@@ -273,6 +275,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Monaco Editor with syntax highlighting
 - Vim mode (toggle in Settings)
 - Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers
+- Per-line comments — annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
 - Clickable checkboxes in preview
 - Visual table editor (Ctrl+P → "Table Editor")
@@ -280,16 +283,24 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Autosave (debounced) with crash recovery via drafts
 - Session restore (tabs, active file, pinned tabs)
 
+### Preview
+- Live PDF preview pane (pdf.js, virtualized for fast scrolling on large documents)
+- Wikilink hover preview — peek at the contents of `[[note]]` without leaving the file
+- Transclusion: embed an entire note with `![[note]]`, a single section with `![[note#heading]]`, or a tagged block via block IDs (`^id` / `![[note#^id]]`)
+- Custom preview CSS via `custom.css`
+- First-render correctness — macros are loaded before the initial render (no flash of unrendered math)
+
 ### Navigation & Panels
-- Command palette (Ctrl+P): fuzzy file + command search
+- Command palette (Ctrl+P): fuzzy file + command search, vertically centered for ergonomics
 - Quick switcher (Ctrl+;): fast file switching
+- Daily notes (Ctrl+Shift+D): create or jump to today's dated note
 - Outline panel (document headings)
 - Backlinks panel (incoming `[[wikilinks]]`)
 - Wikilinks with `[[note-name]]` autocomplete
 - Tag panel (browse files by frontmatter tag)
 - Labels panel (structural labels, broken references, duplicate labels, unused labels)
 - Quality panel (diagnostics, export compatibility, project plan, academic structure, math backlinks)
-- Graph panel (visual wikilink map)
+- Graph panel — improved visual wikilink map with clustering and filtering
 - Environments panel (all theorem/lemma/etc. blocks across vault)
 - Equations panel (all numbered equations in current file)
 - Frontmatter panel (GUI editor for YAML fields)
@@ -299,6 +310,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Git panel (branch, staged/unstaged changes, commit, push)
 - Navigation history (Alt+Left / Alt+Right)
 - Breadcrumb bar
+- Sidebar with 6 essential tab buttons + overflow `⋯` menu for the remaining 12 panels
 
 ### Vault & Files
 - Vault = a regular folder on disk; open any folder
@@ -306,14 +318,12 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - File tree with context menu (rename, delete, drag-to-move)
 - Vault-wide full-text search and search-and-replace
 - Vault backup (exports as `.zip`)
-- Custom preview CSS via `custom.css`
 
 ### Export
-- **PDF via built-in WASM LaTeX engine** — works out of the box, no pandoc / xelatex install needed (see [docs/wasm-tex.md](docs/wasm-tex.md))
-- PDF via pandoc (Markdown → PDF pipeline; falls back to `window.print()` if pandoc is absent)
+- **PDF via built-in WASM LaTeX engine (SwiftLaTeX)** — bundled at v1.3.0; compiles real LaTeX to PDF in-process, no `pandoc` / `xelatex` install required. Status bar shows `TeX: WASM | local`. See [docs/wasm-tex.md](docs/wasm-tex.md).
+- Local LaTeX PDF fallback: if the WASM engine fails, ComdTeX automatically tries `tectonic`, then `xelatex`, then `pdflatex`
 - LaTeX (`.tex`) with preamble, environments, and macros — Overleaf-compatible
 - Project export: compose a multi-file project from a main document with `![[transclusions]]`
-- Local LaTeX PDF compile via `tectonic`, `xelatex`, or `pdflatex` (used as fallback when the WASM engine isn't bundled or fails)
 - Reveal.js presentation
 - DOCX and Beamer via pandoc
 - Obsidian-friendly Markdown export
@@ -321,9 +331,12 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
 
 ### App
-- English and Spanish UI — switch at runtime via Settings → **Language** (no restart needed)
+- Themes: light, dark, and high-contrast variants — switch at runtime in Settings
+- Settings modal with left-tabbed sections (General, Appearance, Editor, PDF compilation, Advanced)
+- First-launch onboarding tour with polished empty states throughout the UI
+- English and Spanish UI with full parity — switch at runtime via Settings → **Language** (no restart needed)
 - Auto-updater with in-app banner and one-click install
-- Dependency warnings when pandoc or zip are missing
+- Dependency warnings when pandoc or zip are missing — dismissible per-dep, persisted in localStorage
 
 ---
 
@@ -336,10 +349,17 @@ All cited entries are collected into a bibliography at the bottom of the preview
 | `Ctrl+O` | Open vault |
 | `Ctrl+P` | Command palette |
 | `Ctrl+;` | Quick switcher |
+| `Ctrl+Shift+D` | Open or create today's daily note |
 | `Ctrl+F` | Find in file |
 | `Ctrl+Shift+F` | Search across vault |
+| `Ctrl+D` | Select next occurrence |
 | `Ctrl+Shift+P` | Toggle preview |
+| `Ctrl++` / `Ctrl+-` | Zoom in / out |
+| `Ctrl+0` | Reset zoom |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
+| `Ctrl+W` | Close tab |
 | `F11` | Focus mode |
+| `Escape` | Exit focus mode |
 | `Alt+Left` | Navigate back |
 | `Alt+Right` | Navigate forward |
 | `Tab` | Expand shorthand / advance snippet placeholder |
@@ -350,7 +370,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ## Installation
 
-### Linux — AppImage
+### Linux — AppImage (universal)
 
 Download the `.AppImage` from the [latest release](https://github.com/sadriica/comdtex/releases/latest), make it executable, and run it:
 
@@ -359,10 +379,9 @@ chmod +x ComdTeX_*.AppImage
 ./ComdTeX_*.AppImage
 ```
 
-> **Mesa 24+ crash (Arch, Fedora, and other rolling distros)**
-> The AppImage bundles Ubuntu 22.04's webkit2gtk, which calls `eglGetDisplay()` during init. Mesa 24 returns `EGL_BAD_PARAMETER` before any environment variable overrides take effect, causing an immediate abort. Use the native `.pkg.tar.zst` on Arch/Manjaro, or build from source on other rolling distros (see [Development](#development)).
+The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Arch, Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros — no system install required.
 
-### Linux — Debian/Ubuntu
+### Linux — Debian/Ubuntu (.deb)
 
 Download the `.deb` from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and install it:
 
@@ -377,19 +396,9 @@ If the app does not launch after installation:
 sudo apt install libwebkit2gtk-4.1-0
 ```
 
-### Linux — Arch/Manjaro
+### Linux — Arch / Manjaro / Fedora / other rolling distros
 
-Download the `.pkg.tar.zst` from the [latest release](https://github.com/sadriica/comdtex/releases/latest):
-
-```bash
-sudo pacman -U comdtex-*.pkg.tar.zst
-```
-
-This package links against the system webkit2gtk-4.1 and is fully compatible with Mesa 24+. It is the recommended install method on Arch-based systems.
-
-### Linux — Other rolling distros
-
-Pre-built AppImages are not compatible with Mesa 24+. Build from source instead — see [Development](#development).
+Use the `.AppImage` above — it is already patched for Mesa 24+ and is the recommended way to install on rolling distros.
 
 ### Windows
 
@@ -397,12 +406,15 @@ Download the `.exe` (NSIS installer) from the [latest release](https://github.co
 
 ### Optional dependencies
 
+Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM LaTeX engine — no external tools required.
+
 | Tool | Purpose | Install |
 |---|---|---|
-| `pandoc` | PDF, DOCX, Beamer export | [pandoc.org/installing.html](https://pandoc.org/installing.html) |
+| `pandoc` | DOCX and Beamer export only (PDF no longer needs it) | [pandoc.org/installing.html](https://pandoc.org/installing.html) |
 | `zip` | Vault backup | `apt install zip` / `pacman -S zip` / `dnf install zip` |
+| `tectonic` / `xelatex` / `pdflatex` | Optional local LaTeX fallback if the WASM engine fails | distro package manager |
 
-If either tool is missing, ComdTeX shows an amber warning banner on startup.
+If any tool is missing, ComdTeX shows an amber warning banner on startup. The banner is dismissible per-tool and the choice persists across sessions.
 
 ---
 
@@ -416,9 +428,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 
 | Limitation | Notes |
 |---|---|
-| AppImage + Mesa 24+ | `EGL_BAD_PARAMETER` crash on Arch, Fedora, and other Mesa 24+ systems. Use `.pkg.tar.zst` on Arch; build from source elsewhere. |
-| No native package for non-Arch rolling distros | No pre-built package for Gentoo, Void, or openSUSE Tumbleweed — build from source. |
-| PDF export requires pandoc | Falls back to `window.print()` if pandoc is not found. |
+| DOCX / Beamer export requires pandoc | PDF no longer needs pandoc (WASM engine bundled), but DOCX and Beamer still do. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
 | No mobile support | Desktop only (Linux, Windows). |
 | No cloud sync | The vault is a local folder. Sync with any file sync tool (Syncthing, rclone, etc.). |
@@ -457,7 +467,6 @@ After `npm run tauri build`, bundles are written to `src-tauri/target/release/bu
 |---|---|
 | AppImage | `appimage/ComdTeX_*.AppImage` |
 | .deb | `deb/comdtex_*.deb` |
-| .pkg.tar.zst | `pacman/comdtex-*.pkg.tar.zst` |
 | .exe (Windows) | `nsis/ComdTeX_*_x64-setup.exe` |
 
 To build a specific format:
@@ -468,12 +477,15 @@ npm run tauri build -- --bundles deb
 npm run tauri build -- --bundles nsis       # Windows only
 ```
 
-On Arch Linux, `@tauri-apps/cli` does not support the `pacman` bundler. Use `cargo tauri build` instead:
+### Building the AppImage on Arch Linux
+
+The bundled `linuxdeploy` ships an old `strip` that cannot handle modern `.relr.dyn` ELF sections, so AppImage creation fails on Arch unless stripping is disabled:
 
 ```bash
-cargo install tauri-cli --locked            # one-time install
-cargo tauri build --bundles pacman
+NO_STRIP=true npm run tauri build -- --bundles appimage
 ```
+
+This is only relevant when building locally on Arch — release artifacts downloaded from GitHub already work everywhere.
 
 ---
 
@@ -490,8 +502,8 @@ This triggers the GitHub Actions release workflow:
 
 | Job | Runner | Output |
 |---|---|---|
-| `build` | `ubuntu-22.04` | `.AppImage`, `.deb` (Linux) + `.exe` (Windows) |
-| `arch-release` | `archlinux:latest` container | `.pkg.tar.zst` |
+| `build-linux` | `ubuntu-22.04` | `.AppImage` (patched for Mesa 24+) and `.deb` |
+| `build-windows` | `windows-latest` | `.exe` (NSIS installer) |
 | `publish` | `ubuntu-22.04` | Removes draft status after all jobs succeed |
 
 > The repository must have `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` set in **Settings → Secrets and variables → Actions**.
@@ -500,31 +512,21 @@ This triggers the GitHub Actions release workflow:
 
 ## Troubleshooting
 
-### AppImage crashes with `EGL_BAD_PARAMETER`
+### AppImage fails to start on a Mesa 24+ system
 
-**Cause:** Mesa 24 (Arch, Fedora, rolling distros) is incompatible with the Ubuntu 22.04 webkit2gtk bundled in the AppImage.
+Released AppImages are already patched in CI (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1`) and should run on Arch, Fedora, and other rolling distros without intervention. If you self-build an AppImage and hit `EGL_BAD_PARAMETER`, replicate the CI patch or use the system webkit2gtk-4.1 instead.
 
-**Fix:**
-- **Arch/Manjaro:** Install the `.pkg.tar.zst` package.
-- **Other rolling distros:** Build from source (see [Development](#development)).
+### Local AppImage build on Arch fails with strip errors
 
-### pandoc not detected
+The bundled `linuxdeploy` ships an old `strip`. Set `NO_STRIP=true` before running `npm run tauri build` (see [Development](#development)).
 
-**Symptom:** Amber banner on startup; PDF export uses `window.print()`.
+### pandoc / zip / git not detected
 
-**Fix:** Install pandoc from [pandoc.org/installing.html](https://pandoc.org/installing.html) and restart ComdTeX.
+**Symptom:** Amber banner on startup, or "Scoped command X not found" in the dev console.
 
-### zip not detected
+ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. Since v1.3.2 the scope includes `pandoc`, `zip`, `git`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Instalar** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
 
-**Symptom:** Amber banner on startup; vault backup is disabled.
-
-**Fix:**
-
-```bash
-sudo apt install zip    # Debian/Ubuntu
-sudo pacman -S zip      # Arch
-sudo dnf install zip    # Fedora
-```
+PDF compilation no longer needs any of these — the WASM engine is bundled. Pandoc is only required for DOCX / Beamer / Markdown→PDF (non-LaTeX path); zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
 
 ### .deb package: app does not launch
 

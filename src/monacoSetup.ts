@@ -89,6 +89,10 @@ export const COMPLETIONS: Completion[] = [
   { label: "log",   detail: "log(x) → \\log(x)",                                  snippet: "log(${1:x})" },
 ]
 
+// ── Precomputed lowercase labels for fast prefix matching ────────────────────
+// Avoids re-lowercasing on every keystroke and fixes mixed-case label comparison.
+const COMPLETIONS_LC: string[] = COMPLETIONS.map((c) => c.label.toLowerCase())
+
 // ── LaTeX command list for \ autocomplete ─────────────────────────────────────
 
 const LATEX_COMMANDS: [string, string][] = [
@@ -114,6 +118,17 @@ const LATEX_COMMANDS: [string, string][] = [
   ["ℝ","\\mathbb{R}"],["ℕ","\\mathbb{N}"],["ℤ","\\mathbb{Z}"],
   ["ℚ","\\mathbb{Q}"],["ℂ","\\mathbb{C}"],
 ]
+
+// Precomputed: command name without leading `\` (matched against the user's
+// typed suffix). Done once at module load instead of `cmd.slice(1)` per call.
+const LATEX_COMMAND_NAMES: string[] = LATEX_COMMANDS.map(([, cmd]) => cmd.slice(1))
+
+// Precomputed footnote label strings ("1".."50") — avoids allocating new
+// strings + per-keystroke `padStart` calls inside the provider.
+const FOOTNOTE_LABELS: { label: string; sort: string }[] = Array.from({ length: 50 }, (_, i) => {
+  const n = (i + 1).toString()
+  return { label: n, sort: n.padStart(3, "0") }
+})
 
 // ── User snippets ─────────────────────────────────────────────────────────────
 
@@ -202,16 +217,20 @@ export function setupMonaco(monaco: typeof monacoApi) {
         return {
           suggestions: [
             ...macroSuggestions,
-            ...LATEX_COMMANDS
-              .filter(([, cmd]) => cmd.slice(1).startsWith(typedSuffix))
-              .map(([glyph, cmd]) => ({
-                label: cmd.slice(1),
-                detail: glyph,
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: cmd,
-                range: latexRange,
-                sortText: "0" + cmd.slice(1),
-              })),
+            ...LATEX_COMMANDS.reduce<monacoApi.languages.CompletionItem[]>((acc, [glyph, cmd], i) => {
+              const name = LATEX_COMMAND_NAMES[i]
+              if (name.startsWith(typedSuffix)) {
+                acc.push({
+                  label: name,
+                  detail: glyph,
+                  kind: monaco.languages.CompletionItemKind.Keyword,
+                  insertText: cmd,
+                  range: latexRange,
+                  sortText: "0" + name,
+                })
+              }
+              return acc
+            }, []),
           ],
         }
       }
@@ -319,43 +338,49 @@ export function setupMonaco(monaco: typeof monacoApi) {
           startColumn: position.column - partial.length - 2,
           endColumn: position.column,
         }
-        const suggestions = []
-        for (let i = 1; i <= 50; i++) {
+        const suggestions: monacoApi.languages.CompletionItem[] = []
+        for (let i = 0; i < FOOTNOTE_LABELS.length; i++) {
+          const f = FOOTNOTE_LABELS[i]
+          if (!f.label.startsWith(partial)) continue
           suggestions.push({
-            label: i.toString(),
+            label: f.label,
             kind: monaco.languages.CompletionItemKind.Value,
-            insertText: `${i}]`,
+            insertText: f.label + "]",
             range: footnoteRange,
-            sortText: i.toString().padStart(3, "0"),
+            sortText: f.sort,
           })
         }
-        return {
-          suggestions: suggestions.filter((s) => s.label.startsWith(partial)),
-        }
+        return { suggestions }
       }
 
       const wordLower = word.word.toLowerCase()
-      const userSnippetSuggestions = userSnippets
-        .filter((c) => c.label.startsWith(wordLower))
-        .map((c) => ({
+      const userSnippetSuggestions: monacoApi.languages.CompletionItem[] = []
+      for (let i = 0; i < userSnippets.length; i++) {
+        const c = userSnippets[i]
+        if (!c.label.toLowerCase().startsWith(wordLower)) continue
+        userSnippetSuggestions.push({
           label: { label: c.label, description: c.detail },
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: c.snippet,
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range,
           sortText: "00" + c.label,
-        }))
+        })
+      }
 
-      const builtinSuggestions = COMPLETIONS
-        .filter((c) => c.label.startsWith(wordLower))
-        .map((c) => ({
+      const builtinSuggestions: monacoApi.languages.CompletionItem[] = []
+      for (let i = 0; i < COMPLETIONS.length; i++) {
+        if (!COMPLETIONS_LC[i].startsWith(wordLower)) continue
+        const c = COMPLETIONS[i]
+        builtinSuggestions.push({
           label: { label: c.label, description: c.detail },
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: c.snippet,
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range,
           sortText: "0" + c.label,
-        }))
+        })
+      }
 
       return {
         suggestions: [...userSnippetSuggestions, ...builtinSuggestions],
