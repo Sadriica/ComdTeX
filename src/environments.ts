@@ -121,13 +121,28 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
 
   const mermaidChart = pseudocodeToFlowchart(content)
 
+  // Read the same cache used by `:::flowchart`. Without this, every preview
+  // re-render re-emits a `<pre><code class="language-mermaid">` block, which
+  // makes the mermaid effect re-run, bump `mermaidVersion`, recompute
+  // `previewHtml`, and re-fire the effect — an infinite loop that pegs the
+  // WebView at >100% CPU until it OOMs. With the cache hit, the second pass
+  // emits a `<div class="mermaid-diagram">` (no `language-mermaid`), the
+  // effect's "needs mermaid" gate goes false, and the loop terminates.
+  const cachedSvg = flowchartSvgCache.get(mermaidChart)
+  const sourceB64 = typeof btoa !== "undefined"
+    ? btoa(unescape(encodeURIComponent(mermaidChart)))
+    : ""
+  const flowchartBody = cachedSvg
+    ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
+    : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
+
   return [
     `<div class="pseudocode-block">`,
     `<div class="pc-header">${header}</div>`,
     `<div class="pc-body">${renderedLines.join("")}</div>`,
     `<details class="pc-flowchart-section">`,
     `<summary class="pc-flowchart-toggle">Flowchart</summary>`,
-    `<div class="pc-flowchart"><pre><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre></div>`,
+    `<div class="pc-flowchart">${flowchartBody}</div>`,
     `</details>`,
     `</div>`,
   ].join("\n")
