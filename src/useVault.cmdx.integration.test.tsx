@@ -81,6 +81,7 @@ vi.mock("./toastService", () => ({
 }))
 
 import { useVault } from "./useVault"
+import { readTextFile } from "@tauri-apps/plugin-fs"
 
 const VAULT = "/vault"
 
@@ -184,5 +185,36 @@ describe("useVault CMDX integration", () => {
     })
 
     expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Lemma: Changed")
+  })
+
+  it("does not read binary preview files during vault search or replace", async () => {
+    const mdPath = `${VAULT}/note.md`
+    const pdfPath = `${VAULT}/paper.pdf`
+    fsMock.touch(mdPath, "needle")
+    fsMock.touch(pdfPath, "%PDF-1.7 binary-ish needle")
+
+    const { result } = renderHook(() => useVault())
+
+    await act(async () => {
+      await result.current.selectVault(VAULT)
+    })
+    await waitFor(() => expect(result.current.tree.length).toBeGreaterThan(0))
+
+    vi.mocked(readTextFile).mockClear()
+    const hits = await result.current.search("needle")
+
+    expect(hits).toHaveLength(1)
+    expect(hits[0].filePath).toBe(mdPath)
+    expect(vi.mocked(readTextFile)).not.toHaveBeenCalledWith(pdfPath)
+
+    vi.mocked(readTextFile).mockClear()
+    await act(async () => {
+      const count = await result.current.replaceInVault("needle", "changed")
+      expect(count).toBe(1)
+    })
+
+    expect(fsMock.files.get(mdPath)?.content).toBe("changed")
+    expect(fsMock.files.get(pdfPath)?.content).toBe("%PDF-1.7 binary-ish needle")
+    expect(vi.mocked(readTextFile)).not.toHaveBeenCalledWith(pdfPath)
   })
 })

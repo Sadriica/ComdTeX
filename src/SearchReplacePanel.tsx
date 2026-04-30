@@ -18,6 +18,8 @@ interface SearchReplacePanelProps {
   onReplaceInFile: (path: string, search: string, replace: string, opts: SearchReplaceOptions, target?: SearchReplaceTarget) => Promise<number>
 }
 
+const IGNORED_SEARCH_DIRS = new Set(["node_modules"])
+
 function highlightMatch(content: string, matchStart: number, matchEnd: number): { before: string; match: string; after: string } {
   const RADIUS = 40
   const start = Math.max(0, matchStart - RADIUS)
@@ -65,6 +67,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
           return
         }
         for (const entry of entries) {
+          if (!entry.name || entry.name.startsWith(".") || IGNORED_SEARCH_DIRS.has(entry.name)) continue
           const fullPath = `${dirPath}/${entry.name}`
           if (entry.isDirectory) {
             await scanDir(fullPath)

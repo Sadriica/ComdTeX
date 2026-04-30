@@ -124,6 +124,11 @@ function renderErrorHtml(error: unknown): string {
   return `<pre style="color:red;padding:1rem">Error al renderizar: ${msg}</pre>`
 }
 
+function currentTauriWindow() {
+  try { return getCurrentWindow() }
+  catch { return null }
+}
+
 const BIB_TEMPLATE = `% references.bib — BibTeX references for ComdTeX
 % Cite with [@key] in your markdown, e.g. [@knuth84]
 
@@ -459,16 +464,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Wikilink file names (memoized — stable reference for effects) ─────────
   const wikiNames = useMemo(() => getFileNameSet(vault.tree), [vault.tree])
   const bibKeys = useMemo(() => new Set(bibMap.keys()), [bibMap])
+  const vaultFileNodes = useMemo(() => flatFiles(vault.tree), [vault.tree])
+  const vaultFileNodeByPath = useMemo(
+    () => new Map(vaultFileNodes.map((file) => [file.path, file])),
+    [vaultFileNodes],
+  )
+  const findVaultNodeByPath = useCallback(
+    (path: string) => vaultFileNodeByPath.get(path) ?? null,
+    [vaultFileNodeByPath],
+  )
   const vaultFiles = useMemo(() => {
     const openContent = new Map(vault.openTabs.map((tab) => [tab.path, tab.content]))
-    return flatFiles(vault.tree)
+    return vaultFileNodes
       .filter((file) => file.ext === "md" || file.ext === "tex")
       .map((file) => ({
         path: file.path,
         name: file.name,
         content: openContent.get(file.path) ?? vaultTextCache.get(file.path) ?? "",
       }))
-  }, [vault.tree, vault.openTabs, vaultTextCache])
+  }, [vaultFileNodes, vault.openTabs, vaultTextCache])
 
   // Keep a ref to vaultFiles so the resolver below has STABLE identity.
   // Without this, `vaultFiles` changes on every keystroke (via `vault.openTabs`
@@ -564,8 +578,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const openTabsRef = useRef(vault.openTabs)
   useEffect(() => { openTabsRef.current = vault.openTabs }, [vault.openTabs])
   const vaultFilePathsKey = useMemo(
-    () => flatFiles(vault.tree).filter((f) => f.ext === "md" || f.ext === "tex").map((f) => f.path).sort().join("\x00"),
-    [vault.tree],
+    () => vaultFileNodes.filter((f) => f.ext === "md" || f.ext === "tex").map((f) => f.path).sort().join("\x00"),
+    [vaultFileNodes],
   )
   useEffect(() => {
     let cancelled = false
@@ -713,7 +727,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Without onCloseRequested, Tauri closes by default on WM signal
   // The X button handles the unsaved-changes warning
   const handleCloseRequest = useCallback(async () => {
-    const win = getCurrentWindow()
+    const win = currentTauriWindow()
+    if (!win) return
     const dirtyTabs = openTabsRef.current.filter((t) => t.isDirty)
     if (dirtyTabs.length === 0) { await win.close(); return }
     const names = dirtyTabs.map((t) => t.name).join(", ")
@@ -730,7 +745,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Auto-refresh vault on window focus ────────────────────────────────────
   useEffect(() => {
-    const win = getCurrentWindow()
+    const win = currentTauriWindow()
+    if (!win) return
     let unlisten: (() => void) | undefined
     let cancelled = false
     win.onFocusChanged(({ payload: focused }) => {
@@ -747,7 +763,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Window state persistence (size + position) ───────────────────────────
   useEffect(() => {
-    const win = getCurrentWindow()
+    const win = currentTauriWindow()
+    if (!win) return
     let cancelled = false
     const unlisteners: Array<() => void> = []
     let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -1362,22 +1379,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const goBack = useCallback(() => {
     if (navHistory.length === 0) return
     const prev = navHistory[navHistory.length - 1]
-    const node = flatFiles(vault.tree).find((f) => f.path === prev)
+    const node = findVaultNodeByPath(prev)
     if (!node) return
     setNavHistory((h) => h.slice(0, -1))
     if (vault.activeTabPath) setNavFuture((f) => [vault.activeTabPath!, ...f.slice(0, 49)])
     vault.openFileNode(node)
-  }, [navHistory, vault])
+  }, [navHistory, vault, findVaultNodeByPath])
 
   const goForward = useCallback(() => {
     if (navFuture.length === 0) return
     const next = navFuture[0]
-    const node = flatFiles(vault.tree).find((f) => f.path === next)
+    const node = findVaultNodeByPath(next)
     if (!node) return
     setNavFuture((f) => f.slice(1))
     if (vault.activeTabPath) setNavHistory((h) => [...h.slice(-49), vault.activeTabPath!])
     vault.openFileNode(node)
-  }, [navFuture, vault])
+  }, [navFuture, vault, findVaultNodeByPath])
 
   // ── Per-line comment handlers ─────────────────────────────────────────────
   const handleAddCommentAtCursor = useCallback(async () => {
@@ -1487,7 +1504,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       return
     }
     // File not open — open via the vault.
-    const node = flatFiles(vault.tree).find((f) => f.path === absolutePath)
+    const node = findVaultNodeByPath(absolutePath)
     if (node) {
       pendingJumpRef.current = line
       vault.openFileNode(node)
@@ -1499,7 +1516,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         editor?.focus()
       }
     }
-  }, [vault])
+  }, [vault, findVaultNodeByPath])
 
   // ── Navigation keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
@@ -1578,7 +1595,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const wikiMatch = /\[\[([^\]]+)\]\]/.exec(line)
     if (wikiMatch) {
       const targetName = wikiMatch[1].trim()
-      const targetNode = flatFiles(vault.tree).find((f) => f.name === targetName || f.name === targetName + ".md")
+      const targetNode = vaultFileNodes.find((f) => f.name === targetName || f.name === targetName + ".md")
       if (targetNode) { handleOpenFileNode(targetNode); return }
     }
 
@@ -1588,7 +1605,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // Try structural label
     const labelMatch = /@([a-zA-Z0-9_-]+):/.exec(line)
     if (labelMatch) { setSidebarMode("labels"); return }
-  }, [vault, handleOpenFileNode])
+  }, [handleOpenFileNode, vaultFileNodes])
 
   useTouchpadGestures({
     openCommandPalette: () => setPaletteOpen(true),
@@ -1602,11 +1619,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, settings.touchpadGestures && !!vault.vaultPath)
 
   const handleOpenRecent = useCallback((path: string) => {
-    const node = flatFiles(vault.tree).find((f) => f.path === path)
+    const node = findVaultNodeByPath(path)
     if (node) { handleOpenFileNode(node); return }
     // File not in current tree — show a helpful message
     showToast(t.app.fileNotInVault(displayBasename(path)), "error")
-  }, [vault.tree, handleOpenFileNode, t])
+  }, [findVaultNodeByPath, handleOpenFileNode, t])
 
   const clearRecent = useCallback(() => {
     setRecentFiles([])
@@ -2277,13 +2294,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault, t])
 
   const handleBreadcrumbNavigate = useCallback((path: string) => {
-    const node = flatFiles(vault.tree).find((f) => f.path === path)
+    const node = findVaultNodeByPath(path)
     if (node) {
       handleOpenFileNode(node)
       return
     }
     setSidebarMode("files")
-  }, [vault.tree, handleOpenFileNode])
+  }, [findVaultNodeByPath, handleOpenFileNode])
 
   // ── Table editor: insert markdown at cursor ───────────────────────────────
   const handleInsertTable = useCallback((markdown: string) => {
@@ -2388,13 +2405,13 @@ ${html}
   // ── Rename with wikilink refactor ─────────────────────────────────────────
   // ── Todo panel handlers ────────────────────────────────────────────────────
   const handleTodoNavigate = useCallback((path: string, line: number) => {
-    const node = flatFiles(vault.tree).find((f) => f.path === path)
+    const node = findVaultNodeByPath(path)
     if (node) {
       pendingJumpRef.current = line
       handleOpenFileNode(node)
       setSidebarMode("files")
     }
-  }, [vault.tree, handleOpenFileNode])
+  }, [findVaultNodeByPath, handleOpenFileNode])
 
   const handleTodoToggle = useCallback((path: string, newContent: string) => {
     vault.patchTabContent(path, newContent)
@@ -2409,7 +2426,7 @@ ${html}
     // Only offer refactor for .md files where the base name actually changes
     if (oldBasename !== newBasename && oldPath.endsWith(".md")) {
       const re = new RegExp(`\\[\\[${oldBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}((?:#[^\\]|]+)?)((?:\\|[^\\]]+)?)\\]\\]`, "g")
-      const markdownFiles = flatFiles(vault.tree)
+      const markdownFiles = vaultFileNodes
         .filter((file) => file.path !== oldPath && file.ext === "md")
       const filesWithLinks: { path: string; content: string }[] = []
 
@@ -2444,7 +2461,7 @@ ${html}
     }
 
     await vault.renameFile(oldPath, newName)
-  }, [vault, t])
+  }, [vault, t, vaultFileNodes])
 
   const handleOpenBib = useCallback(async () => {
     if (!vault.vaultPath) return
@@ -2903,7 +2920,7 @@ ${html}
               <SearchPanel
                 onSearch={vault.search}
                 onOpenResult={(path, line) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  const node = findVaultNodeByPath(path)
                   if (!node) return
                   if (line !== undefined) pendingJumpRef.current = line
                   handleOpenFileNode(node)
@@ -2921,7 +2938,7 @@ ${html}
                 <SearchReplacePanel
                   vaultPath={vault.vaultPath}
                   onOpenFile={(path, line) => {
-                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    const node = findVaultNodeByPath(path)
                     if (!node) return
                     if (line !== undefined) pendingJumpRef.current = line
                     handleOpenFileNode(node)
@@ -2949,7 +2966,7 @@ ${html}
               <TagPanel
                 files={vaultFiles}
                 onOpenFile={(path, line) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  const node = findVaultNodeByPath(path)
                   if (node) {
                     if (line !== undefined) pendingJumpRef.current = line
                     handleOpenFileNode(node)
@@ -2962,7 +2979,7 @@ ${html}
               <LabelsPanel
                 files={vaultFiles}
                 onOpenFile={(path, line) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  const node = findVaultNodeByPath(path)
                   if (node) {
                     if (line !== undefined) pendingJumpRef.current = line
                     handleOpenFileNode(node)
@@ -2977,7 +2994,7 @@ ${html}
                 activePath={vault.activeTabPath}
                 activeContent={vault.openFile?.content ?? ""}
                 onOpenFile={(path, line) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  const node = findVaultNodeByPath(path)
                   if (node) {
                     if (line !== undefined) pendingJumpRef.current = line
                     handleOpenFileNode(node)
@@ -2999,7 +3016,7 @@ ${html}
                   openTabs={vault.openTabs}
                   activePath={vault.activeTabPath}
                   onOpenFile={(path) => {
-                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    const node = findVaultNodeByPath(path)
                     if (node) handleOpenFileNode(node)
                   }}
                 />
@@ -3026,7 +3043,7 @@ ${html}
                   editorRef={editorRef}
                   activeTabPath={vault.activeTabPath}
                   onOpenFile={(path) => {
-                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    const node = findVaultNodeByPath(path)
                     if (node) handleOpenFileNode(node)
                   }}
                 />
@@ -3039,7 +3056,7 @@ ${html}
                   openTabs={vault.openTabs}
                   wikiNames={wikiNames}
                   onOpenFile={(path, line) => {
-                    const node = flatFiles(vault.tree).find((f) => f.path === path)
+                    const node = findVaultNodeByPath(path)
                     if (!node) return
                     if (line !== undefined) pendingJumpRef.current = line
                     handleOpenFileNode(node)
@@ -3090,7 +3107,7 @@ ${html}
               <CloudSyncPanel
                 conflicts={cloudConflicts}
                 onOpenFile={(path) => {
-                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  const node = findVaultNodeByPath(path)
                   if (node) handleOpenFileNode(node)
                 }}
                 onResolved={() => { if (vault.vaultPath) vault.refreshTree(vault.vaultPath) }}
@@ -3278,10 +3295,10 @@ ${html}
 
       <QuickSwitcher
         open={quickSwitcherOpen}
-        files={flatFiles(vault.tree).map((f) => ({ path: f.path, name: f.name }))}
+        files={vaultFileNodes.map((f) => ({ path: f.path, name: f.name }))}
         recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
         onSelect={(path) => {
-          const node = flatFiles(vault.tree).find((f) => f.path === path)
+          const node = findVaultNodeByPath(path)
           if (node) handleOpenFileNode(node)
         }}
         onClose={() => setQuickSwitcherOpen(false)}

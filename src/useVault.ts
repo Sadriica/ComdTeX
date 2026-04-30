@@ -342,6 +342,14 @@ const BINARY_EXTS = new Set([
 // ── File tree ────────────────────────────────────────────────────────────────
 
 const MAX_TREE_DEPTH = 10
+const IGNORED_TREE_DIRS = new Set([
+  "node_modules",
+])
+
+function isTextVaultFile(node: FileNode): boolean {
+  const ext = (node.ext ?? "").toLowerCase()
+  return ext === "md" || ext === "tex" || ext === "bib"
+}
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
   if (depth > MAX_TREE_DEPTH) return []
@@ -352,6 +360,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
     if (!entry.name || entry.name.startsWith(".")) continue
     const fullPath = await pathJoin(dirPath, entry.name)
     if (entry.isDirectory) {
+      if (IGNORED_TREE_DIRS.has(entry.name)) continue
       const children = await buildTree(fullPath, depth + 1)
       if (children.length > 0)
         nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
@@ -1108,7 +1117,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         if (token.cancelled || results.length >= MAX_RESULTS) return
         if (node.type === "dir" && node.children) {
           await searchIn(node.children)
-        } else if (node.type === "file") {
+        } else if (node.type === "file" && isTextVaultFile(node)) {
           try {
             if (filters.exts.length > 0 && !filters.exts.includes((node.ext ?? "").toLowerCase())) continue
             if (filters.paths.length > 0 && !filters.paths.some((path) => node.path.toLowerCase().includes(path))) continue
@@ -1166,7 +1175,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       for (const node of nodes) {
         if (node.type === "dir" && node.children) {
           await replaceIn(node.children)
-        } else if (node.type === "file") {
+        } else if (node.type === "file" && isTextVaultFile(node)) {
           try {
             const content = await readTextFile(node.path)
             const editorContent = toEditorContent(node.path, content)
