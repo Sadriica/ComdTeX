@@ -1,4 +1,5 @@
 import { useT } from "./i18n"
+import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 
 interface StatusBarProps {
   mode: "md" | "tex" | "pdf" | null
@@ -14,6 +15,12 @@ interface StatusBarProps {
   texEngine?: "wasm" | "local"
   /** "compiling" briefly displaces the engine label while a build is running. */
   texEngineState?: "idle" | "initializing" | "compiling"
+  /** Cloud-sync provider that owns the current vault, if any. */
+  cloudSync?: CloudSyncInfo | null
+  /** Click handler for the sync badge — typically opens the conflicts panel. */
+  onCloudSyncClick?: () => void
+  /** Number of unresolved conflict files; turns the badge into a warning. */
+  cloudConflictCount?: number
 }
 
 function wordCount(text: string): number {
@@ -29,7 +36,7 @@ function readingMinutes(text: string): number {
   return Math.max(1, Math.ceil(wc / 200))
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState }: StatusBarProps) {
+export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount }: StatusBarProps) {
   const t = useT()
   const wc = wordCount(content)
   const showTexEngine = texEngine !== undefined || (texEngineState && texEngineState !== "idle")
@@ -53,6 +60,23 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
             {texEngineLabel}
           </span>
         )}
+        {cloudSync && (() => {
+          const label = providerLabel(cloudSync.provider)
+          const hasConflicts = (cloudConflictCount ?? 0) > 0
+          return (
+            <button
+              className="status-item status-cloud-sync"
+              data-provider={cloudSync.provider}
+              data-conflicts={hasConflicts ? "true" : "false"}
+              title={t.cloudSync.statusBadgeTitle(label, cloudSync.rootPath)}
+              onClick={onCloudSyncClick}
+            >
+              {hasConflicts ? "⚠ " : "☁ "}
+              {t.cloudSync.statusBadge(label)}
+              {hasConflicts && ` (${cloudConflictCount})`}
+            </button>
+          )
+        })()}
       </span>
       <span className="status-right">
         {macroCount > 0 && (

@@ -17,6 +17,10 @@ interface FileTreeProps {
   onDeleteFile: (path: string) => void
   onRenameFile: (oldPath: string, newName: string) => void
   onMoveFile?: (from: string, toFolder: string) => void
+  /** Absolute paths that should display the cloud-sync conflict marker. */
+  conflictPaths?: Set<string>
+  /** Click handler for the conflict marker — typically opens the conflicts panel. */
+  onConflictClick?: (path: string) => void
 }
 
 interface CtxState {
@@ -36,6 +40,8 @@ function FileNodeRow({
   onContextMenu,
   onFocus,
   onMoveFile,
+  conflictPaths,
+  onConflictClick,
 }: {
   node: FileNode
   depth: number
@@ -47,6 +53,8 @@ function FileNodeRow({
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void
   onFocus: (path: string) => void
   onMoveFile?: (from: string, toFolder: string) => void
+  conflictPaths?: Set<string>
+  onConflictClick?: (path: string) => void
 }) {
   const t = useT()
   const [open, setOpen] = useState(true)
@@ -106,6 +114,8 @@ function FileNodeRow({
             onContextMenu={onContextMenu}
             onFocus={onFocus}
             onMoveFile={onMoveFile}
+            conflictPaths={conflictPaths}
+            onConflictClick={onConflictClick}
           />
         ))}
       </div>
@@ -113,12 +123,13 @@ function FileNodeRow({
   }
 
   const icon = node.ext === "tex" ? "τ" : node.ext === "bib" ? "β" : node.ext === "pdf" ? "P" : "M"
+  const hasConflict = conflictPaths?.has(node.path) ?? false
 
   return (
     <div
       role="treeitem"
       aria-selected={isActive}
-      className={`tree-row tree-file ${isActive ? "tree-active" : ""} ${isFocused ? "tree-focused" : ""}`}
+      className={`tree-row tree-file ${isActive ? "tree-active" : ""} ${isFocused ? "tree-focused" : ""}${hasConflict ? " tree-conflict" : ""}`}
       style={{ paddingLeft: 8 + indent }}
       tabIndex={isFocused ? 0 : -1}
       onClick={() => !renaming && onOpenFile(node)}
@@ -147,6 +158,14 @@ function FileNodeRow({
         />
       ) : (
         <span className="tree-name">{node.name}</span>
+      )}
+      {hasConflict && (
+        <span
+          className="tree-conflict-badge"
+          title="Cloud-sync conflict"
+          aria-label="Cloud-sync conflict"
+          onClick={(e) => { e.stopPropagation(); onConflictClick?.(node.path) }}
+        >⚠</span>
       )}
     </div>
   )
@@ -192,6 +211,8 @@ export default function FileTree({
   onDeleteFile,
   onRenameFile,
   onMoveFile,
+  conflictPaths,
+  onConflictClick,
 }: FileTreeProps) {
   const t = useT()
   const [sortAsc, setSortAsc] = useState(true)
@@ -379,6 +400,8 @@ export default function FileTree({
               onContextMenu={handleContextMenu}
               onFocus={setFocusedPath}
               onMoveFile={onMoveFile}
+              conflictPaths={conflictPaths}
+              onConflictClick={onConflictClick}
             />
           ))
         )}

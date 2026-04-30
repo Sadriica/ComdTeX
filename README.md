@@ -431,7 +431,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | DOCX / Beamer export requires pandoc | PDF no longer needs pandoc (WASM engine bundled), but DOCX and Beamer still do. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
 | No mobile support | Desktop only (Linux, Windows). |
-| No cloud sync | The vault is a local folder. Sync with any file sync tool (Syncthing, rclone, etc.). |
+| Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel — see [docs/cloud-sync.md](docs/cloud-sync.md). |
 
 ---
 

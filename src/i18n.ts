@@ -240,6 +240,7 @@ export interface T {
     quality: string
     pdfPreview: string
     comments: string
+    cloudSync: string
     more: string
   }
 
@@ -427,6 +428,9 @@ export interface T {
     replaceSuccess: (n: number) => string
     replaceError: string
     closeTabSaveError: (name: string, err: string) => string
+    invalidPath: (path: string) => string
+    invalidPathSystem: string
+    selectVaultError: (err: string) => string
   }
 
   helpPanel: {
@@ -776,6 +780,30 @@ export interface T {
     jumpedToHeading: (heading: string) => string
     headingNotFound: (heading: string) => string
   }
+
+  cloudSync: {
+    statusBadge: (provider: string) => string
+    statusBadgeTitle: (provider: string, root: string) => string
+    bannerTitle: (provider: string) => string
+    bannerBody: string
+    bannerOpenFolder: string
+    bannerDismiss: string
+    panelTitle: string
+    panelEmpty: string
+    panelHelp: string
+    conflictWith: (provider: string) => string
+    conflictMissingOriginal: string
+    actionOpenBoth: string
+    actionKeepMine: string
+    actionKeepCopy: string
+    actionDeleteCopy: string
+    actionRevealInFolder: string
+    confirmDeleteCopy: (name: string) => string
+    confirmKeepCopy: (name: string) => string
+    deletedToast: (name: string) => string
+    keptCopyToast: (name: string) => string
+    errorAction: (err: string) => string
+  }
 }
 
 // ── Spanish ───────────────────────────────────────────────────────────────────
@@ -1065,6 +1093,7 @@ const es: T = {
     quality: "Diagnóstico",
     pdfPreview: "PDF",
     comments: "Comentarios",
+    cloudSync: "Sincronización",
     more: "Más",
   },
 
@@ -1281,6 +1310,9 @@ const es: T = {
     replaceSuccess: (n) => `${n} reemplazos realizados`,
     replaceError: "Error al reemplazar",
     closeTabSaveError: (name, err) => `No se pudo guardar "${name}" — pestaña no cerrada: ${err}`,
+    invalidPath: (path) => `Ruta inválida para vault: «${path}». Elige una carpeta dentro de tu directorio personal.`,
+    invalidPathSystem: "No puedes usar una carpeta del sistema (/, /etc, /usr, /proc, etc.) como vault.",
+    selectVaultError: (err) => `No se pudo abrir el selector de carpeta: ${err}`,
   },
 
   helpPanel: {
@@ -1692,6 +1724,30 @@ const es: T = {
     noFile: "Abre un archivo para añadir comentarios",
     noCommentAtCursor: "No hay comentario en la línea actual",
   },
+
+  cloudSync: {
+    statusBadge: (provider) => `Sync: ${provider}`,
+    statusBadgeTitle: (provider, root) => `Vault sincronizado con ${provider}\n${root}`,
+    bannerTitle: (provider) => `${provider} detectado`,
+    bannerBody: "Tu vault no está dentro de la carpeta sincronizada. Muévelo allí para que se sincronice automáticamente entre dispositivos.",
+    bannerOpenFolder: "Abrir carpeta",
+    bannerDismiss: "Ignorar",
+    panelTitle: "Conflictos de sincronización",
+    panelEmpty: "No hay conflictos detectados.",
+    panelHelp: "Tu cliente de nube creó copias en conflicto. Revisa cuál versión conservar.",
+    conflictWith: (provider) => `Conflicto de ${provider}`,
+    conflictMissingOriginal: "Original no encontrado",
+    actionOpenBoth: "Abrir ambos",
+    actionKeepMine: "Mantener mío",
+    actionKeepCopy: "Usar la copia",
+    actionDeleteCopy: "Borrar copia",
+    actionRevealInFolder: "Mostrar en carpeta",
+    confirmDeleteCopy: (name) => `¿Eliminar la copia en conflicto «${name}»? Esta acción no se puede deshacer.`,
+    confirmKeepCopy: (name) => `¿Reemplazar el original con la copia «${name}»? El archivo original se eliminará.`,
+    deletedToast: (name) => `Copia eliminada: ${name}`,
+    keptCopyToast: (name) => `Copia promovida a original: ${name}`,
+    errorAction: (err) => `Error al resolver el conflicto: ${err}`,
+  },
 }
 
 // ── English ───────────────────────────────────────────────────────────────────
@@ -1981,6 +2037,7 @@ const en: T = {
     quality: "Diagnostics",
     pdfPreview: "PDF",
     comments: "Comments",
+    cloudSync: "Sync",
     more: "More",
   },
 
@@ -2196,6 +2253,9 @@ const en: T = {
     replaceSuccess: (n) => `${n} replacements made`,
     replaceError: "Error replacing",
     closeTabSaveError: (name, err) => `Couldn't save "${name}" — tab kept open: ${err}`,
+    invalidPath: (path) => `Invalid vault path: "${path}". Pick a folder inside your home directory.`,
+    invalidPathSystem: "You cannot use a system folder (/, /etc, /usr, /proc, etc.) as a vault.",
+    selectVaultError: (err) => `Could not open folder picker: ${err}`,
   },
 
   helpPanel: {
@@ -2606,6 +2666,30 @@ const en: T = {
     noVault: "Open a vault to use comments",
     noFile: "Open a file to add comments",
     noCommentAtCursor: "No comment on the current line",
+  },
+
+  cloudSync: {
+    statusBadge: (provider) => `Sync: ${provider}`,
+    statusBadgeTitle: (provider, root) => `Vault is synced with ${provider}\n${root}`,
+    bannerTitle: (provider) => `${provider} detected`,
+    bannerBody: "Your vault is not inside the synced folder. Move it there to sync automatically across devices.",
+    bannerOpenFolder: "Open folder",
+    bannerDismiss: "Dismiss",
+    panelTitle: "Sync conflicts",
+    panelEmpty: "No conflicts detected.",
+    panelHelp: "Your cloud client created conflict copies. Review which version to keep.",
+    conflictWith: (provider) => `${provider} conflict`,
+    conflictMissingOriginal: "Original missing",
+    actionOpenBoth: "Open both",
+    actionKeepMine: "Keep mine",
+    actionKeepCopy: "Use the copy",
+    actionDeleteCopy: "Delete copy",
+    actionRevealInFolder: "Reveal in folder",
+    confirmDeleteCopy: (name) => `Delete the conflict copy "${name}"? This cannot be undone.`,
+    confirmKeepCopy: (name) => `Replace the original with the copy "${name}"? The original will be deleted.`,
+    deletedToast: (name) => `Copy deleted: ${name}`,
+    keptCopyToast: (name) => `Copy promoted to original: ${name}`,
+    errorAction: (err) => `Failed to resolve conflict: ${err}`,
   },
 }
 

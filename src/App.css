@@ -5336,3 +5336,61 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
   border-color: #ffffff; color: #ffffff; background: #000;
 }
 .app[data-theme="hc"] .comments-edit-save:hover { background: #ffff00; color: #000; }
+
+/* ── Cloud Sync (BYO cloud) ─────────────────────────────────────────────── */
+.cloud-sync-banner {
+  background: #1d2d3d; border-bottom: 1px solid #2c4a6a; color: #9ec5ff;
+  padding: 6px 16px; font-size: 12px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.cloud-sync-banner-icon { font-size: 14px; }
+.cloud-sync-banner-text { flex: 1; }
+.cloud-sync-banner-btn {
+  padding: 2px 10px; background: #2c4a6a; border: 1px solid #4a78a8;
+  color: #c5dcf2; border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+.cloud-sync-banner-btn:hover { background: #355781; }
+.cloud-sync-banner-dismiss {
+  padding: 2px 8px; background: transparent; border: 1px solid #2c4a6a;
+  color: #6a8aa8; border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+
+.status-cloud-sync {
+  background: transparent; border: 1px solid transparent; cursor: pointer;
+  color: var(--status-fg, #aaa);
+}
+.status-cloud-sync:hover { color: #fff; }
+.status-cloud-sync[data-conflicts="true"] { color: #ffaa44; }
+
+.tree-conflict-badge {
+  margin-left: auto; padding: 0 6px; color: #ffaa44; cursor: pointer;
+  font-size: 11px;
+}
+.tree-conflict-badge:hover { color: #ffcc66; }
+.tree-row.tree-conflict .tree-name { color: #ffcc88; }
+
+.cloud-sync-panel { padding: 8px 12px; font-size: 13px; }
+.cloud-sync-panel .panel-help { color: #888; font-size: 11px; margin: 4px 0 12px; }
+.cloud-sync-list { list-style: none; padding: 0; margin: 0; }
+.cloud-sync-item {
+  border: 1px solid #333; border-radius: 4px; padding: 8px;
+  margin-bottom: 8px; background: #1a1a1a;
+}
+.cloud-sync-item-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cloud-sync-name { color: #fff; word-break: break-all; }
+.cloud-sync-provider { font-size: 10px; color: #999; padding: 1px 6px; border: 1px solid #444; border-radius: 10px; }
+.cloud-sync-conflict-name { font-size: 11px; color: #ffaa44; margin: 4px 0; word-break: break-all; }
+.cloud-sync-warning { font-size: 11px; color: #ff6666; margin-bottom: 4px; }
+.cloud-sync-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cloud-sync-actions button {
+  padding: 3px 10px; background: #2a2a2a; border: 1px solid #444;
+  color: #ddd; border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+.cloud-sync-actions button:hover { background: #333; }
+.cloud-sync-actions button.danger { color: #ff8866; border-color: #663333; }
+
+.app[data-theme="light"] .cloud-sync-banner { background: #e6f2ff; border-bottom-color: #b8d4f0; color: #1d4a78; }
+.app[data-theme="light"] .cloud-sync-banner-btn { background: #c5dcf2; border-color: #7fa8d8; color: #1d4a78; }
+.app[data-theme="light"] .cloud-sync-item { background: #f7f7f7; border-color: #ddd; }
+.app[data-theme="light"] .cloud-sync-name { color: #222; }
+.app[data-theme="light"] .cloud-sync-actions button { background: #f0f0f0; border-color: #bbb; color: #333; }

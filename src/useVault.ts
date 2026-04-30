@@ -379,6 +379,42 @@ function getDrafts(): Draft[] {
 
 const DRAFT_MAX_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days
 
+/**
+ * Reject obviously-bad vault paths before we try to walk them. Picking `/` or
+ * a system folder as the vault recursively reads `/proc`, `/sys`, etc. and
+ * locks up the WebView (it tries to render millions of nodes).
+ *
+ * Returns a translation key (`invalidPathSystem` or null) so the caller can
+ * surface the right message in the active language.
+ */
+const SYSTEM_PATHS_UNIX = [
+  "/", "/proc", "/sys", "/dev", "/run", "/boot", "/etc", "/var", "/usr", "/lib", "/lib64",
+  "/sbin", "/bin", "/srv", "/opt", "/tmp", "/mnt", "/media",
+]
+const SYSTEM_PATHS_WIN = [
+  "c:\\", "c:\\windows", "c:\\program files", "c:\\program files (x86)",
+  "c:\\programdata", "c:\\users",
+]
+
+export function validateVaultPath(path: string): { valid: boolean; reason?: "empty" | "tooShort" | "system" } {
+  if (!path || typeof path !== "string") return { valid: false, reason: "empty" }
+  const trimmed = path.replace(/[\\/]+$/, "").trim()
+  if (trimmed.length === 0) return { valid: false, reason: "empty" }
+  // `/` collapses to `` after the trailing-slash strip — catch it.
+  if (path.replace(/\\/g, "/").replace(/\/+$/, "") === "") return { valid: false, reason: "system" }
+  // Length sanity: a real user path is virtually never under 4 chars.
+  if (trimmed.length < 4) return { valid: false, reason: "tooShort" }
+  const norm = trimmed.toLowerCase().replace(/\\/g, "/")
+  for (const sys of SYSTEM_PATHS_UNIX) {
+    const sysNorm = sys.toLowerCase()
+    if (norm === sysNorm) return { valid: false, reason: "system" }
+  }
+  for (const sys of SYSTEM_PATHS_WIN) {
+    if (norm === sys.toLowerCase().replace(/\\/g, "/")) return { valid: false, reason: "system" }
+  }
+  return { valid: true }
+}
+
 function isPathInsideVault(path: string, vaultPath: string): boolean {
   const normalizedPath = path.replace(/\\/g, "/")
   const normalizedVault = vaultPath.replace(/\\/g, "/").replace(/\/+$/, "")
@@ -429,9 +465,17 @@ export function useVault(options: UseVaultOptions | number = {}) {
     return { valid: true }
   }, [t])
 
-  const [vaultPath, setVaultPath] = useState<string | null>(
-    () => localStorage.getItem(VAULT_KEY)
-  )
+  const [vaultPath, setVaultPath] = useState<string | null>(() => {
+    // Defensive: if a previous run somehow stored a system path (e.g. "/"),
+    // refuse to load it on startup so we don't tree-walk the whole filesystem.
+    const stored = localStorage.getItem(VAULT_KEY)
+    if (!stored) return null
+    if (!validateVaultPath(stored).valid) {
+      try { localStorage.removeItem(VAULT_KEY) } catch {}
+      return null
+    }
+    return stored
+  })
   const [recentVaults, setRecentVaults] = useState<string[]>(() => loadRecentVaults())
   const [tree, setTree] = useState<FileNode[]>([])
   const [openTabs, setOpenTabs] = useState<OpenFile[]>([])
@@ -549,12 +593,28 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const selectVault = useCallback(async (preselected?: string) => {
     let selected: string | null | string[]
-    if (preselected) {
+    // Guard against accidental event-object invocation (e.g. `onClick={selectVault}`
+    // — React passes a SyntheticEvent which would silently skip the dialog).
+    if (typeof preselected === "string" && preselected.length > 0) {
       selected = preselected
     } else {
-      selected = await open({ directory: true, multiple: false, title: "Seleccionar carpeta del vault" })
+      try {
+        selected = await open({ directory: true, multiple: false, title: "Seleccionar carpeta del vault" })
+      } catch (e) {
+        showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
+        return
+      }
     }
     if (!selected || typeof selected !== "string") return
+    const validation = validateVaultPath(selected)
+    if (!validation.valid) {
+      showToast(
+        validation.reason === "system" ? t.vault.invalidPathSystem : t.vault.invalidPath(selected),
+        "error",
+        7000,
+      )
+      return
+    }
     localStorage.setItem(VAULT_KEY, selected)
     localStorage.removeItem(TABS_KEY)
     localStorage.removeItem(ACTIVE_KEY)
@@ -573,11 +633,26 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const createVault = useCallback(async () => {
     // Ask for the new folder path via a save-style dialog
-    const chosen = await save({
-      title: "Crear nueva carpeta de vault",
-      defaultPath: "mi-vault",
-    })
+    let chosen: string | null
+    try {
+      chosen = await save({
+        title: "Crear nueva carpeta de vault",
+        defaultPath: "mi-vault",
+      })
+    } catch (e) {
+      showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
+      return
+    }
     if (!chosen) return
+    const validation = validateVaultPath(chosen)
+    if (!validation.valid) {
+      showToast(
+        validation.reason === "system" ? t.vault.invalidPathSystem : t.vault.invalidPath(chosen),
+        "error",
+        7000,
+      )
+      return
+    }
     await mkdir(chosen, { recursive: true })
     localStorage.setItem(VAULT_KEY, chosen)
     localStorage.removeItem(TABS_KEY)
@@ -1116,7 +1191,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     vaultPath, recentVaults, tree, isLoading,
     openTabs, activeTabPath, openFile,
     pinnedPaths, togglePin, reorderTabs,
-    selectVault, createVault, loadVault,
+    selectVault, createVault, loadVault, refreshTree,
     openFileNode, openFilePath, closeTab, switchTab,
     reopenTab, getClosedTabs,
     updateContent, saveFile, patchTabContent,

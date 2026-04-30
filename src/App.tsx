@@ -61,6 +61,9 @@ import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import { checkDependencies, type DepStatus } from "./checkDeps"
 import DepsWarning, { type DepName } from "./DepsWarning"
+import { findCloudFolders, findConflicts, isPathInside, type CloudSyncInfo, type ConflictEntry } from "./cloudSync"
+import CloudSyncPanel from "./CloudSyncPanel"
+import CloudSyncBanner from "./CloudSyncBanner"
 import TableEditor from "./TableEditor"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
@@ -89,7 +92,7 @@ const RECENT_KEY = "comdtex_recent"
 const BOOKMARKS_KEY = "comdtex_bookmarks"
 const CURSOR_KEY = "comdtex_cursor_positions"
 const MAX_RECENT = 10
-type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments"
+type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -384,6 +387,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       return []
     }
   })
+  // ── Cloud sync (BYO cloud, Option A) ──────────────────────────────────────
+  // The native cloud client (Dropbox / Drive / OneDrive) handles file sync
+  // transparently. We just detect the situation and surface UI hints.
+  const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo | null>(null)
+  const [cloudSuggestion, setCloudSuggestion] = useState<CloudSyncInfo | null>(null)
+  const [cloudBannerDismissed, setCloudBannerDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem("comdtex_cloud_banner_dismissed") === "1" } catch { return false }
+  })
+  const dismissCloudBanner = useCallback(() => {
+    setCloudBannerDismissed(true)
+    try { localStorage.setItem("comdtex_cloud_banner_dismissed", "1") } catch {}
+  }, [])
+
   const dismissDep = useCallback((name: DepName) => {
     setDepsDismissed((prev) => {
       if (prev.includes(name)) return prev
@@ -486,6 +502,40 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault.openFile?.content, cursorPos.line])
 
   useEffect(() => { checkDependencies().then(setDeps) }, [])
+
+  // Detect whether the current vault lives inside a cloud-sync folder, and
+  // (if not) whether one is available on this machine to suggest moving in.
+  // Single findCloudFolders() call covers both cases.
+  useEffect(() => {
+    let cancelled = false
+    const path = vault.vaultPath
+    if (!path) {
+      setCloudInfo(null)
+      setCloudSuggestion(null)
+      return
+    }
+    findCloudFolders().then((folders) => {
+      if (cancelled) return
+      const owner = folders.find((f) => isPathInside(path, f.rootPath)) ?? null
+      setCloudInfo(owner)
+      setCloudSuggestion(owner ? null : (folders[0] ?? null))
+    }).catch(() => { if (!cancelled) { setCloudInfo(null); setCloudSuggestion(null) } })
+    return () => { cancelled = true }
+  }, [vault.vaultPath])
+
+  const cloudConflicts: ConflictEntry[] = useMemo(
+    () => (cloudInfo ? findConflicts(vault.tree, cloudInfo.provider) : []),
+    [cloudInfo, vault.tree],
+  )
+
+  const cloudConflictPaths = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of cloudConflicts) {
+      set.add(c.conflictPath)
+      if (c.basePath) set.add(c.basePath)
+    }
+    return set
+  }, [cloudConflicts])
 
   useEffect(() => {
     updateVaultFileNames([...wikiNames])
@@ -2761,10 +2811,10 @@ ${html}
       <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
         <TitleBar filename={undefined} isDirty={false} onClose={handleCloseRequest} onSettingsClick={() => setSettingsOpen(true)} />
         <WelcomeScreen
-          onOpenVault={vault.selectVault}
-          onCreateVault={vault.createVault}
+          onOpenVault={() => { void vault.selectVault() }}
+          onCreateVault={() => { void vault.createVault() }}
           recentVaults={vault.recentVaults}
-          onOpenRecent={(path) => vault.selectVault(path)}
+          onOpenRecent={(path) => { void vault.selectVault(path) }}
         />
         <ToastContainer />
         <CommandPalette
@@ -2803,6 +2853,9 @@ ${html}
           onDismiss={dismissDep}
         />
       )}
+      {cloudSuggestion && !cloudBannerDismissed && vault.vaultPath && (
+        <CloudSyncBanner provider={cloudSuggestion} onDismiss={dismissCloudBanner} />
+      )}
       <Toolbar
         editorRef={editorRef}
         previewVisible={settings.previewVisible}
@@ -2835,13 +2888,15 @@ ${html}
                 tree={vault.tree}
                 activePath={vault.openFile?.path ?? null}
                 isLoading={vault.isLoading}
-                onSelectVault={vault.selectVault}
+                onSelectVault={() => { void vault.selectVault() }}
                 onOpenFile={handleOpenFileNode}
                 onCreateFile={vault.createFile}
                 onCreateFolder={vault.createFolder}
                 onDeleteFile={vault.deleteFile}
                 onRenameFile={handleRenameFile}
                 onMoveFile={vault.moveFile}
+                conflictPaths={cloudConflictPaths}
+                onConflictClick={() => setSidebarMode("cloudSync")}
               />
             )}
             {sidebarMode === "search" && (
@@ -3031,6 +3086,16 @@ ${html}
                 />
               </Suspense>
             )}
+            {sidebarMode === "cloudSync" && (
+              <CloudSyncPanel
+                conflicts={cloudConflicts}
+                onOpenFile={(path) => {
+                  const node = flatFiles(vault.tree).find((f) => f.path === path)
+                  if (node) handleOpenFileNode(node)
+                }}
+                onResolved={() => { if (vault.vaultPath) vault.refreshTree(vault.vaultPath) }}
+              />
+            )}
             {sidebarMode === "comments" && (
               <Suspense fallback={null}>
                 <CommentsPanel
@@ -3183,6 +3248,9 @@ ${html}
         wordGoal={settings.wordGoal > 0 ? settings.wordGoal : undefined}
         texEngine={settings.useWasmTex ? "wasm" : "local"}
         texEngineState={texEngineState}
+        cloudSync={cloudInfo}
+        cloudConflictCount={cloudConflicts.length}
+        onCloudSyncClick={() => setSidebarMode("cloudSync")}
         onGoToLine={(line) => {
           const editor = editorRef.current
           editor?.setPosition({ lineNumber: line, column: 1 })
@@ -3290,7 +3358,7 @@ ${html}
 // ── Sidebar tab strip with overflow popup ────────────────────────────────────
 
 const SIDEBAR_ESSENTIALS: SidebarMode[] = ["files", "search", "outline", "equations", "symbols", "pdfPreview"]
-const SIDEBAR_OVERFLOW: SidebarMode[] = ["searchReplace", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "environments", "stats", "comments", "help"]
+const SIDEBAR_OVERFLOW: SidebarMode[] = ["searchReplace", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "environments", "stats", "comments", "cloudSync", "help"]
 
 const SIDEBAR_ICONS: Record<SidebarMode, string> = {
   files: "☰", search: "⌕", outline: "≡", backlinks: "←",
@@ -3301,6 +3369,7 @@ const SIDEBAR_ICONS: Record<SidebarMode, string> = {
   symbols: "∑",
   pdfPreview: "📑",
   comments: "💬",
+  cloudSync: "☁",
 }
 
 function sidebarLabel(mode: SidebarMode, t: T): string {
@@ -3315,6 +3384,7 @@ function sidebarLabel(mode: SidebarMode, t: T): string {
     symbols: t.sidebar.symbols,
     pdfPreview: t.sidebar.pdfPreview,
     comments: t.sidebar.comments,
+    cloudSync: t.sidebar.cloudSync,
   }
   return map[mode]
 }
