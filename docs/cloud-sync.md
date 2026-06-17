@@ -50,7 +50,7 @@ Cloud sync triggers on every disk write. ComdTeX's autosave (Settings → *Autog
 |---|---|
 | **StatusBar badge** (`☁ Sync: <Provider>`) | Confirms the vault is inside a synced folder. Turns into `⚠ Sync: <Provider> (n)` when conflicts exist. |
 | **Suggestion banner** | If a provider is installed but your vault is **outside** its folder, a banner suggests opening the provider folder so you can move the vault in. ComdTeX never moves files for you. |
-| **Conflicts panel** (sidebar → ⋯ → *Sincronización / Sync*) | Lists every conflict copy the cloud client created, paired with its original. |
+| **Conflicts panel** (top menu bar → **Sync** button, or click the StatusBar badge) | Lists every conflict copy the cloud client created, paired with its original. |
 | **FileTree marker** (⚠) | Both the conflict copy and the original are flagged in the file tree. |
 
 ### Resolving a conflict
@@ -60,7 +60,7 @@ When two devices edit the same file before sync catches up, the cloud client cre
 - **Dropbox**: `note (conflicted copy 2026-04-29).md`
 - **OneDrive**: `note-MyLaptop.md`
 
-Open the **Sync** panel (status-bar badge or the ⋯ menu) and pick one of:
+Open the **Sync** panel (status-bar badge or the **Sync** button in the top menu bar) and pick one of:
 
 | Action | Effect |
 |---|---|
@@ -72,6 +72,17 @@ Open the **Sync** panel (status-bar badge or the ⋯ menu) and pick one of:
 Conflict resolution is **last-write-wins by your choice** — there is no automatic merge. For complex differences, "Open both" + manual edit is the safest path.
 
 ---
+
+## Settings
+
+Settings → **Sync** has two toggles:
+
+| Setting | Effect |
+|---|---|
+| **Detect cloud providers** (`cloudSyncDetectEnabled`, default on) | Turns the whole feature on/off — when off, no provider scan runs, the StatusBar badge and FileTree markers disappear, and no conflict detection happens. |
+| **Show "move into cloud" banner** (`cloudSyncBannerEnabled`, default on) | Controls only the suggestion banner shown when a provider is installed but the vault sits outside it. The conflicts panel and badge are unaffected. |
+
+The banner also remembers a one-time dismissal in `localStorage` under `comdtex_cloud_banner_dismissed` (no per-provider granularity).
 
 ## Per-provider notes
 

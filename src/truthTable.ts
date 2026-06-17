@@ -209,7 +209,7 @@ export function buildTruthTable(exprs: string[]): { vars: string[]; exprs: strin
 
 // ── HTML renderer ─────────────────────────────────────────────────────────────
 
-export function renderTruthTableHTML(title: string, content: string): string {
+export function renderTruthTableHTML(title: string, content: string, number = ""): string {
   try {
     const exprLines = content.split("\n").map(l => l.trim()).filter(l => l.length > 0)
     if (exprLines.length === 0) return `<div class="tt-error">Truth table error: no expressions provided</div>`
@@ -255,7 +255,10 @@ export function renderTruthTableHTML(title: string, content: string): string {
       return `<tr>${cells.join("")}</tr>`
     })
 
-    const titleHTML = title ? `<div class="tt-title">${escHtml(title)}</div>` : ""
+    const headerText = title
+      ? `Truth Table ${number}: ${escHtml(title)}`
+      : `Truth Table ${number}`
+    const titleHTML = `<div class="tt-title">${headerText}</div>`
 
     return [
       `<div class="truth-table-block">`,

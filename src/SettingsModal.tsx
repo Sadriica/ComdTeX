@@ -2,20 +2,30 @@ import { useRef, useState } from "react"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
 import { useFocusTrap } from "./useFocusTrap"
+import { PROVIDER_PRESETS, getPreset } from "./ai/aiProvider"
+import { providerLabel, type CloudProvider } from "./cloudSync"
+import { showToast } from "./toastService"
 
 interface SettingsModalProps {
   open: boolean
   settings: Settings
+  /** Optional section to jump to when opened (e.g. "ai"). */
+  initialSection?: string
+  /** Provider that owns the current vault, if detected. Read-only display. */
+  cloudProvider?: CloudProvider | null
   onClose: () => void
   onChange: (partial: Partial<Settings>) => void
 }
 
-type SectionId = "general" | "editor" | "preview" | "dailyNotes" | "pdf"
+type SectionId = "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "ai" | "sync"
 
-export default function SettingsModal({ open, settings, onClose, onChange }: SettingsModalProps) {
+export default function SettingsModal({ open, settings, initialSection, cloudProvider, onClose, onChange }: SettingsModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
-  const [section, setSection] = useState<SectionId>("general")
+  // Initialize from the requested section. The parent passes a `key` derived
+  // from `initialSection` so this component remounts (and re-runs this lazy
+  // initializer) whenever it should jump to a different section.
+  const [section, setSection] = useState<SectionId>(() => (initialSection as SectionId) ?? "general")
   useFocusTrap(modalRef, open, onClose)
   if (!open) return null
 
@@ -25,7 +35,16 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
     { id: "preview", label: t.settings.sections.preview },
     { id: "dailyNotes", label: t.settings.sections.dailyNotes },
     { id: "pdf", label: t.settings.sections.pdf },
+    { id: "sync", label: t.settings.sections.sync },
+    { id: "ai", label: t.aiSettings.section },
   ]
+
+  const aiPreset = getPreset(settings.aiProviderId)
+
+  const handleResetCloudHints = () => {
+    try { localStorage.removeItem("comdtex_cloud_banner_dismissed") } catch { /* ignore */ }
+    showToast(t.cloudSync.settings.resetDismissedDone, "success")
+  }
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -279,6 +298,141 @@ export default function SettingsModal({ open, settings, onClose, onChange }: Set
                     onChange={() => onChange({ useWasmTex: !settings.useWasmTex })}
                   />
                 </label>
+                <label className="setting-row">
+                  <span>
+                    {t.settings.autoRebuildPdf}
+                    <span className="setting-help"> — {t.settings.autoRebuildPdfDesc}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.autoRebuildPdf}
+                    onChange={() => onChange({ autoRebuildPdf: !settings.autoRebuildPdf })}
+                  />
+                </label>
+              </>
+            )}
+
+            {section === "sync" && (
+              <>
+                <p className="setting-hint">{t.cloudSync.settings.intro}</p>
+
+                <label className="setting-row">
+                  <span>
+                    {t.cloudSync.settings.bannerEnabled}
+                    <span className="setting-help"> — {t.cloudSync.settings.bannerEnabledDesc}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.cloudSyncBannerEnabled}
+                    onChange={() => onChange({ cloudSyncBannerEnabled: !settings.cloudSyncBannerEnabled })}
+                  />
+                </label>
+
+                <label className="setting-row">
+                  <span>
+                    {t.cloudSync.settings.detectEnabled}
+                    <span className="setting-help"> — {t.cloudSync.settings.detectEnabledDesc}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.cloudSyncDetectEnabled}
+                    onChange={() => onChange({ cloudSyncDetectEnabled: !settings.cloudSyncDetectEnabled })}
+                  />
+                </label>
+
+                <div className="setting-row">
+                  <span>
+                    {cloudProvider
+                      ? t.cloudSync.settings.providerDetected(providerLabel(cloudProvider))
+                      : t.cloudSync.settings.providerNone}
+                  </span>
+                </div>
+
+                <label className="setting-row">
+                  <span>
+                    {t.cloudSync.settings.resetDismissed}
+                    <span className="setting-help"> — {t.cloudSync.settings.resetDismissedDesc}</span>
+                  </span>
+                  <button className="setting-btn" onClick={handleResetCloudHints}>
+                    {t.cloudSync.settings.resetDismissed}
+                  </button>
+                </label>
+              </>
+            )}
+
+            {section === "ai" && (
+              <>
+                <label className="setting-row">
+                  <span>{t.aiSettings.enabled}</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.aiEnabled}
+                    onChange={() => onChange({ aiEnabled: !settings.aiEnabled })}
+                  />
+                </label>
+                <p className="setting-hint">{t.aiSettings.enabledDesc}</p>
+
+                <label className="setting-row">
+                  <span>{t.aiSettings.provider}</span>
+                  <select
+                    value={settings.aiProviderId}
+                    onChange={(e) => onChange({ aiProviderId: e.target.value })}
+                  >
+                    {PROVIDER_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {aiPreset.needsBaseUrl && (
+                  <label className="setting-row">
+                    <span>{t.aiSettings.baseUrl}</span>
+                    <input
+                      type="text"
+                      value={settings.aiBaseUrl}
+                      placeholder={t.aiSettings.baseUrlPlaceholder}
+                      onChange={(e) => onChange({ aiBaseUrl: e.target.value })}
+                    />
+                  </label>
+                )}
+
+                {aiPreset.isCli ? (
+                  <>
+                    <label className="setting-row">
+                      <span>{t.aiSettings.cliCommand}</span>
+                      <input
+                        type="text"
+                        value={settings.aiCliCommand}
+                        placeholder={t.aiSettings.cliCommandPlaceholder}
+                        onChange={(e) => onChange({ aiCliCommand: e.target.value })}
+                      />
+                    </label>
+                    <p className="setting-hint">{t.aiSettings.cliNote}</p>
+                  </>
+                ) : (
+                  <>
+                    <label className="setting-row">
+                      <span>{t.aiSettings.model}</span>
+                      <input
+                        type="text"
+                        value={settings.aiModel}
+                        placeholder={t.aiSettings.modelPlaceholder}
+                        onChange={(e) => onChange({ aiModel: e.target.value })}
+                      />
+                    </label>
+
+                    <label className="setting-row">
+                      <span>{t.aiSettings.apiKey}</span>
+                      <input
+                        type="password"
+                        value={settings.aiApiKey}
+                        placeholder={t.aiSettings.apiKeyPlaceholder}
+                        onChange={(e) => onChange({ aiApiKey: e.target.value })}
+                      />
+                    </label>
+                    <p className="setting-hint">{t.aiSettings.apiKeyNote}</p>
+                  </>
+                )}
               </>
             )}
           </div>

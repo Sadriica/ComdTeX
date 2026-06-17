@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it"
 import footnotePlugin from "markdown-it-footnote"
+import markPlugin from "markdown-it-mark"
 import katex from "katex"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { preprocess } from "./preprocessor"
@@ -12,11 +13,13 @@ import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preprocessFigureLabels } from "./figures"
 import { numberHeadings, resolveSectionRefs } from "./references"
+import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .use(footnotePlugin)
+  .use(markPlugin)
   .enable("table")
   .enable("strikethrough")
 
@@ -311,27 +314,83 @@ export function annotateSourceLines(html: string, raw: string): string {
   return root.innerHTML
 }
 
-function resolveFootnotes(html: string): string {
-  const footnoteRefs: Map<string, string> = new Map()
-  let counter = 1
+// A standalone `[[toc]]` or `[toc]` line (case-insensitive) → auto TOC.
+const TOC_MARKER_RE = /^[ \t]*\[\[?toc\]\]?[ \t]*$/gim
+// Placeholder the marker becomes before markdown-it runs; swapped for the
+// generated TOC after rendering. Same control-char scheme as the math/code
+// placeholders elsewhere in this file.
+const TOC_PLACEHOLDER = "\x02TOC\x03"
 
-  const withRefs = html.replace(/\[\^([^\]]+)\]/g, (_match, id) => {
-    if (!footnoteRefs.has(id)) {
-      footnoteRefs.set(id, `fn${counter++}`)
+/**
+ * Expand the `[[toc]]` placeholder into an auto-generated table of contents and
+ * give the h1–h3 headings stable `id`s so the TOC links navigate to them.
+ *
+ * Both the ids and the TOC links are derived from the SAME rendered headings
+ * (slug of each heading's own visible text, de-numbered, with collisions
+ * suffixed) — so they can never desync. Headings that live inside code blocks
+ * are not `<h*>` elements and so are correctly excluded; Setext headings,
+ * blockquote headings, etc. are all handled because we read the real DOM output
+ * rather than re-scanning the markdown source.
+ */
+function injectToc(html: string): string {
+  if (!html.includes(TOC_PLACEHOLDER)) return html
+
+  const used = new Set<string>()
+  const items: { level: number; text: string; slug: string }[] = []
+
+  const withIds = html.replace(/<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
+    // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
+    const text = inner.replace(/<[^>]+>/g, "").replace(/^\s*\d+(?:\.\d+)*\s+/, "").trim()
+    if (!text) return full
+    let slug = slugifyHeading(text) || "section"
+    if (used.has(slug)) {
+      let k = 2
+      while (used.has(`${slug}-${k}`)) k++
+      slug = `${slug}-${k}`
     }
-    const fnId = footnoteRefs.get(id) ?? `fn${counter}`
-    return `<sup class="footnote-ref"><a href="#fn-${fnId}" id="fnref-${fnId}">[${fnId.replace("fn", "")}]</a></sup>`
+    used.add(slug)
+    items.push({ level: Number(lvl), text, slug })
+    if (/\sid=/.test(attrs)) return full
+    return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
   })
 
-  if (footnoteRefs.size === 0) return html
+  // `text` is already HTML-escaped (it came out of rendered HTML), so it is
+  // safe to drop straight into the link.
+  const toc = items.length
+    ? `<nav class="md-toc"><ul>${items
+        .map((it) => `<li class="toc-l${it.level}"><a href="#${it.slug}">${it.text}</a></li>`)
+        .join("")}</ul></nav>`
+    : ""
 
-  const footnoteDefs: string[] = []
-  footnoteRefs.forEach((fnId, origId) => {
-    const content = html.match(new RegExp(`\\[\\^${origId}\\]:\\s*(.+)`))?.[1] || origId
-    footnoteDefs.push(`<li id="fn-${fnId}">${content} <a href="#fnref-${fnId}">↩</a></li>`)
-  })
+  return withIds
+    .replace(new RegExp(`<p>${TOC_PLACEHOLDER}</p>`, "g"), toc)
+    .replace(new RegExp(TOC_PLACEHOLDER, "g"), toc)
+}
 
-  return withRefs + `<ol class="footnotes">${footnoteDefs.join("")}</ol>`
+/**
+ * Replace fenced code blocks and inline-code spans with `\x02CODE<n>\x03`
+ * placeholders, returning a `restore` that puts the exact original text back.
+ * Unlike `blankInlineCode`/`stripCodeFences` (which destroy content), this
+ * preserves the code so it can be masked around a transform pass and restored.
+ */
+function maskCodeRegions(text: string): { masked: string; restore: (s: string) => string } {
+  // Hot path (runs on every render): skip the two regex passes entirely when
+  // the document has no code markers at all.
+  if (text.indexOf("`") < 0 && text.indexOf("~~~") < 0) {
+    return { masked: text, restore: (s) => s }
+  }
+  const slots: string[] = []
+  const stash = (m: string): string => {
+    slots.push(m)
+    return `\x02CODE${slots.length - 1}\x03`
+  }
+  // Fenced blocks first (so a ``` line isn't then seen as inline code), then
+  // inline-code spans.
+  let masked = text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, stash)
+  masked = masked.replace(/(`+)([^`\n]*?)\1/g, stash)
+  const restore = (s: string): string =>
+    s.replace(/\x02CODE(\d+)\x03/g, (_, i) => slots[parseInt(i)] ?? "")
+  return { masked, restore }
 }
 
 export function renderMarkdown(
@@ -352,6 +411,12 @@ export function renderMarkdown(
 
   content = resolveTransclusions(content, transclusionResolver)
   content = processBlockIds(content)
+
+  // Auto-generated table of contents: a standalone `[[toc]]` / `[toc]` line
+  // becomes a placeholder now and is expanded into a live list (always in sync
+  // with the current headings) after rendering, by `injectToc`.
+  content = content.replace(TOC_MARKER_RE, () => TOC_PLACEHOLDER)
+
   const numbered = numberHeadings(content)
   content = numbered.content
 
@@ -361,12 +426,19 @@ export function renderMarkdown(
   const eqLabels = prescanEquations(processed)
   const envLabels = prescanEnvironmentLabels(processed)
 
-  let withRefs = wikiNames ? processWikilinks(processed, wikiNames) : processed
+  // Mask fenced + inline code before resolving refs/wikilinks so that an
+  // `@eq:`, `@fig:`, `[@cite]` or `[[wikilink]]` written *inside a code sample*
+  // (common when documenting the syntax itself) is left verbatim instead of
+  // being turned into a live link. Restored right after, before markdown-it
+  // re-processes the code normally — line structure is preserved.
+  const { masked: maskedProcessed, restore: restoreCode } = maskCodeRegions(processed)
+  let withRefs = wikiNames ? processWikilinks(maskedProcessed, wikiNames) : maskedProcessed
   withRefs = resolveSectionRefs(withRefs, numbered.sections)
   withRefs = resolveEqRefs(withRefs, eqLabels)
   withRefs = resolveFigRefs(withRefs, figLabels)
   withRefs = resolveTableRefs(withRefs, tableLabels)
   withRefs = resolveEnvironmentRefs(withRefs, envLabels)
+  withRefs = restoreCode(withRefs)
 
   withRefs = withRefs.split('\n').map((line, i) => {
     if (/^(\s*)-\s\[ \]/.test(line))
@@ -387,7 +459,9 @@ export function renderMarkdown(
   // recursive environment extraction.
   html = html.replace(/\x02DMATH(\d+)\x03/g, (_, i) => dmath.slots[parseInt(i)] ?? "")
   if (vaultPath) html = resolveImages(html, vaultPath)
-  html = resolveFootnotes(html)
+  // Footnotes are fully handled by the markdown-it-footnote plugin during
+  // md.render (it emits `.footnote-ref` / `.footnotes` markup the preview CSS
+  // already styles). No post-pass is needed.
 
   html = wrapFigures(html, figLabels)
   html = wrapTables(html, tableLabels)
@@ -399,6 +473,9 @@ export function renderMarkdown(
     citedKeys = resolved.citedKeys
   }
   const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
+
+  // Expand the `[[toc]]` placeholder + assign heading ids for navigation.
+  html = injectToc(html)
 
   // Hoist block-id placeholders to their parent elements before sanitizer runs.
   html = attachBlockIds(html)

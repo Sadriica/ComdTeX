@@ -4,7 +4,8 @@ export interface ShortcutActionHandlers {
   openCommandPalette: () => void
   openQuickSwitcher: () => void
   togglePreview: () => void
-  toggleBookmark: () => void
+  toggleBookmark: (slot: number) => void
+  goToBookmark: (slot: number) => void
   showBookmarks: () => void
   zoomIn: () => void
   zoomOut: () => void
@@ -16,6 +17,9 @@ export interface ShortcutActionHandlers {
   prevTab: () => void
   closeTab: () => void
   reopenTab: () => void
+  openAiPanel: () => void
+  insertToc: () => void
+  toggleOutline: () => void
 }
 
 export interface ShortcutContext {
@@ -24,11 +28,15 @@ export interface ShortcutContext {
 }
 
 export function handleGlobalShortcut(
-  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "preventDefault">,
+  event: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault">,
   context: ShortcutContext,
   handlers: ShortcutActionHandlers,
 ) {
   const key = event.key.toLowerCase()
+  // Physical digit (1–9) of the key, layout-independent. Using `event.code`
+  // avoids the US-keyboard trap where Shift+3 yields `event.key === "#"`.
+  const digitMatch = /^(?:Digit|Numpad)([1-9])$/.exec(event.code)
+  const digit = digitMatch ? parseInt(digitMatch[1]) : null
 
   if (event.key === "F11") {
     event.preventDefault()
@@ -102,13 +110,44 @@ export function handleGlobalShortcut(
     handlers.openQuickSwitcher()
     return true
   }
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "b") {
+    event.preventDefault()
+    handlers.showBookmarks()
+    return true
+  }
+  // Ctrl/Cmd+Shift+A — open the AI assistant panel.
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "a") {
+    event.preventDefault()
+    handlers.openAiPanel()
+    return true
+  }
+  // Ctrl/Cmd+Shift+O — insert a table of contents at the cursor.
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "o") {
+    event.preventDefault()
+    handlers.insertToc()
+    return true
+  }
+  // Ctrl/Cmd+Shift+E — toggle the document outline panel.
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "e") {
+    event.preventDefault()
+    handlers.toggleOutline()
+    return true
+  }
 
-  // Bookmarks: Ctrl+Shift+1-9 to toggle, Ctrl+1-9 to go to
-  if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
-    const num = parseInt(key)
-    if (num >= 1 && num <= 9) {
+  // Bookmarks (digit slots 1–9):
+  //   Ctrl/Cmd+Shift+N      → set/clear slot N at the cursor line
+  //   Ctrl/Cmd+Alt+N        → jump to slot N
+  // Go-to uses Alt rather than bare Ctrl/Cmd+N because on macOS Cmd+1–9 is the
+  // near-universal tab/window switcher; hijacking it would fight muscle memory.
+  if (digit !== null && (event.ctrlKey || event.metaKey)) {
+    if (event.shiftKey && !event.altKey) {
       event.preventDefault()
-      handlers.toggleBookmark()
+      handlers.toggleBookmark(digit)
+      return true
+    }
+    if (event.altKey && !event.shiftKey) {
+      event.preventDefault()
+      handlers.goToBookmark(digit)
       return true
     }
   }

@@ -7,8 +7,11 @@ export type Lang = "en" | "es"
 export interface T {
   toolbar: {
     bold: string; italic: string; strikethrough: string; inlineCode: string
+    underline: string
+    highlight: string; hlDefault: string; hlGreen: string; hlBlue: string
+    hlPurple: string; hlOrange: string; hlRed: string; hlPink: string
     headings: string; heading1: string; heading2: string; heading3: string
-    insert: string; quote: string; separator: string; list: string
+    insert: string; quote: string; separator: string; list: string; insertToc: string
     orderedList: string; taskList: string; link: string; codeBlock: string
     mathInline: string; mathBlock: string
     mathOps: string; superscript: string; subscript: string
@@ -26,6 +29,7 @@ export interface T {
     proof: string; remark: string; note: string
     structures: string; table: string; matAuto: string; matFixed: string; matLiteral: string
     more: string
+    math: string
     togglePreview: string
     symbolPicker: string
     // labels inside dropdowns
@@ -43,6 +47,9 @@ export interface T {
     // trig / math functions
     sin: string; cos: string; tan: string; cot: string; sec: string; csc: string
     exp: string; ln: string; log: string
+    // unified menu bar section titles
+    secFiles: string; secTexts: string; secMath: string; secViews: string
+    symbols: string
   }
 
   fileTree: {
@@ -80,6 +87,7 @@ export interface T {
     lineTitle: (n: number) => string
     totalWords: string
     wordsAbbr: string
+    dragToReorder: string
   }
 
   backlinks: {
@@ -105,6 +113,7 @@ export interface T {
     dailyNotesTemplateHint: string
     sectionPdf: string
     useWasmTex: string; useWasmTexDesc: string
+    autoRebuildPdf: string; autoRebuildPdfDesc: string
     wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
     wasmTexUnavailable: string
     sections: {
@@ -113,6 +122,7 @@ export interface T {
       preview: string
       dailyNotes: string
       pdf: string
+      sync: string
     }
   }
 
@@ -129,6 +139,7 @@ export interface T {
     searchPlaceholder: string
     noMatches: string
     dailyNote: string
+    openAiAssistant: string; insertTocShortcut: string; toggleOutline: string
   }
 
   onboarding: {
@@ -217,6 +228,24 @@ export interface T {
     addComment: string
     viewComments: string
     toggleCommentResolved: string
+    importDoc: string
+    exportTypst: string
+    exportTypstPdf: string
+    insertExcalidraw: string
+    back: string
+    openPanel: (name: string) => string
+    insertCodeBlock: string
+    openAi: string
+    aiInlineEdit: string
+    exportObsidian: string
+  }
+
+  excalidraw: {
+    modalTitle: string
+    save: string
+    cancel: string
+    loading: string
+    placeholder: string
   }
 
   ankiExport: {
@@ -241,7 +270,82 @@ export interface T {
     pdfPreview: string
     comments: string
     cloudSync: string
+    focusTimer: string
+    ai: string
     more: string
+  }
+
+  ai: {
+    title: string
+    disabledTitle: string
+    disabledBody: string
+    openSettings: string
+    inputPlaceholder: string
+    send: string
+    sendHint: string
+    clearThread: string
+    settingsShortcut: string
+    stop: string
+    thinking: string
+    you: string
+    assistant: string
+    insertAtCursor: string
+    replaceSelection: string
+    copy: string
+    copied: string
+    noEditor: string
+    noSelection: string
+    emptyThread: string
+    ctxCurrentFile: string
+    ctxSelection: (n: number) => string
+    ctxNote: string
+    quickActions: string
+    errMissingApiKey: string
+    errMissingBaseUrl: string
+    errMissingModel: string
+    errMissingCli: string
+    errGeneric: (msg: string) => string
+    // Slash quick-actions: label + the instruction sent to the model.
+    actions: {
+      proofread: string;     proofreadInstr: string
+      shorten: string;       shortenInstr: string
+      latexify: string;      latexifyInstr: string
+      explain: string;       explainInstr: string
+      counterexample: string; counterexampleInstr: string
+      translate: string;     translateInstr: string
+      summarize: string;     summarizeInstr: string
+    }
+    // Ctrl/Cmd+K inline AI edit widget.
+    cmdk: {
+      placeholderEdit: string
+      placeholderInsert: string
+      disabledHint: string
+      generating: string
+      accept: string
+      reject: string
+      submit: string
+      cancel: string
+      original: string
+      proposed: string
+      emptyResult: string
+    }
+  }
+
+  aiSettings: {
+    section: string
+    enabled: string
+    enabledDesc: string
+    provider: string
+    baseUrl: string
+    baseUrlPlaceholder: string
+    model: string
+    modelPlaceholder: string
+    apiKey: string
+    apiKeyPlaceholder: string
+    apiKeyNote: string
+    cliCommand: string
+    cliCommandPlaceholder: string
+    cliNote: string
   }
 
   todo: {
@@ -264,6 +368,21 @@ export interface T {
     files: string; open: string; words: string; tags: string
     equations: string; figures: string; citations: string; wikilinks: string
     broken: (n: number) => string
+  }
+
+  focusTimer: {
+    title: string
+    phaseWork: string; phaseBreak: string; phaseLongBreak: string
+    start: string; pause: string; reset: string
+    cycles: string
+    durations: string; workMin: string; breakMin: string; longBreakMin: string; cyclesLabel: string
+    session: string
+    wordsThisSession: string
+    elapsed: string
+    wpm: string
+    goalProgress: string
+    noActiveDoc: string
+    phaseDone: (phase: string) => string
   }
 
   brokenLinks: {
@@ -346,7 +465,8 @@ export interface T {
     file: string; edit: string; view: string; vault: string
     openVault: string; newFromTemplate: string; save: string; saveAs: string
     exportMd: string; exportTex: string; exportPdf: string; exportDocx: string; exportBeamer: string
-    exportReveal: string
+    exportReveal: string; importDoc: string
+    exportTypst: string; exportTypstPdf: string
     recent: string; clearRecent: string
     findInFile: string; searchVault: string; commandPalette: string
     focusMode: string; files: string; search: string; outline: string
@@ -387,6 +507,20 @@ export interface T {
     dailyNoteError: (err: string) => string
     dailyNoteNoVault: string
     updateInstallFailed: (err: string) => string
+    importDocTitle: string
+    importing: string
+    importSuccess: (name: string) => string
+    importError: (err: string) => string
+    pandocMissingImport: string
+    typstExportTitle: string
+    typstGenerating: string
+    typstSuccess: string
+    typstError: (err: string) => string
+    typstPdfSuccess: string
+    typstPdfError: (err: string) => string
+    pandocMissingTypst: string
+    /** Spell-check marker message for an unknown word. */
+    spellError: (word: string) => string
   }
 
   welcome: {
@@ -437,6 +571,12 @@ export interface T {
     environments: string; shorthands: string; equations: string
     macros: string; bibtex: string; frontmatter: string; wikilinks: string
     templates: string; greekLetters: string; operators: string
+    // markdown formatting section
+    formatting: string; formattingIntro: string
+    fmtBoldDesc: string; fmtItalicDesc: string; fmtStrikeDesc: string
+    fmtUnderlineDesc: string; fmtHighlightDesc: string; fmtHighlightColorDesc: string
+    fmtInlineCodeDesc: string; fmtCommentDesc: string; fmtAnnotationDesc: string
+    fmtTocDesc: string
     // environment card labels
     theorem1: string; lemma1: string; corollary1: string; proposition1: string
     definition1: string; example1: string; exercise1: string
@@ -538,6 +678,7 @@ export interface T {
     htmlDetails: string; htmlDetailsDesc: string
     htmlMark: string; htmlMarkDesc: string
     htmlAllowed: string; htmlBlocked: string
+    specialBlocksNote: string
     // pseudocode section
     pseudocode: string; pseudocodeDesc: string
     pseudocodeExample: string; pseudocodeKeywords: string
@@ -550,6 +691,14 @@ export interface T {
     functionPlot: string; functionPlotDesc: string; functionPlotExample: string
     // commutative diagram section
     commDiag: string; commDiagDesc: string; commDiagExample: string
+    // flowchart section
+    flowchart: string; flowchartDesc: string
+    // excalidraw section
+    excalidraw: string; excalidrawDesc: string
+    // AI assistant section
+    aiAssistant: string; aiAssistantDesc: string
+    aiPanelRow: string; aiPanelRowDesc: string
+    aiInlineRow: string; aiInlineRowDesc: string
     // symbol picker / math preview section
     symbolPickerHelp: string; symbolPickerDesc: string
     mathPreviewHelp: string; mathPreviewDesc: string
@@ -598,6 +747,22 @@ export interface T {
     venueJournal: string
     venueBooktitle: string
     venueSource: string
+    doiPlaceholder: string
+    doiAdd: string
+    doiFetching: string
+    doiSuccess: (key: string) => string
+    doiError: string
+    doiExists: (key: string) => string
+    zoteroHeading: string
+    zoteroPlaceholder: string
+    zoteroSearch: string
+    zoteroSearching: string
+    zoteroFetching: string
+    zoteroNoResults: string
+    zoteroImportAll: string
+    zoteroUnavailable: string
+    zoteroImported: (n: number) => string
+    zoteroDuplicate: (key: string) => string
   }
 
   graphPanel: {
@@ -803,6 +968,18 @@ export interface T {
     deletedToast: (name: string) => string
     keptCopyToast: (name: string) => string
     errorAction: (err: string) => string
+    settings: {
+      intro: string
+      bannerEnabled: string
+      bannerEnabledDesc: string
+      detectEnabled: string
+      detectEnabledDesc: string
+      providerDetected: (provider: string) => string
+      providerNone: string
+      resetDismissed: string
+      resetDismissedDesc: string
+      resetDismissedDone: string
+    }
   }
 }
 
@@ -811,8 +988,11 @@ export interface T {
 const es: T = {
   toolbar: {
     bold: "Negrita", italic: "Itálica", strikethrough: "Tachado", inlineCode: "Código inline",
+    underline: "Subrayado",
+    highlight: "Resaltar", hlDefault: "Amarillo (==texto==)", hlGreen: "Verde", hlBlue: "Azul",
+    hlPurple: "Morado", hlOrange: "Naranja", hlRed: "Rojo", hlPink: "Rosa",
     headings: "Encabezados", heading1: "Encabezado 1", heading2: "Encabezado 2", heading3: "Encabezado 3",
-    insert: "Insertar", quote: "Cita", separator: "Separador", list: "Lista",
+    insert: "Insertar", quote: "Cita", separator: "Separador", list: "Lista", insertToc: "Insertar índice",
     orderedList: "Lista numerada", taskList: "Lista de tareas", link: "Enlace", codeBlock: "Bloque de código",
     mathInline: "Math inline", mathBlock: "Math bloque",
     mathOps: "Operaciones math", superscript: "Superíndice", subscript: "Subíndice",
@@ -830,6 +1010,7 @@ const es: T = {
     proof: "Demostración", remark: "Observación", note: "Nota",
     structures: "Estructuras", table: "Tabla", matAuto: "Matriz auto", matFixed: "Matriz fija", matLiteral: "Matriz literal",
     more: "Más",
+    math: "Math",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
     symbolPicker: "Selector de símbolos matemáticos",
     lbl_heading1: "H1  # Título", lbl_heading2: "H2  ## Título", lbl_heading3: "H3  ### Título",
@@ -849,6 +1030,8 @@ const es: T = {
     lbl_matFixed: "matf   matriz fija", lbl_matLiteral: "[[]]   matriz literal",
     sin: "Seno", cos: "Coseno", tan: "Tangente", cot: "Cotangente",
     sec: "Secante", csc: "Cosecante", exp: "Exponencial", ln: "Logaritmo natural", log: "Logaritmo",
+    secFiles: "Archivos", secTexts: "Textos", secMath: "Matemáticas", secViews: "Vistas",
+    symbols: "Símbolos",
   },
 
   fileTree: {
@@ -886,6 +1069,7 @@ const es: T = {
     lineTitle: (n) => `Línea ${n}`,
     totalWords: "Total",
     wordsAbbr: "pal",
+    dragToReorder: "Arrastra para reordenar",
   },
 
   backlinks: {
@@ -917,6 +1101,8 @@ const es: T = {
     sectionPdf: "Compilación PDF",
     useWasmTex: "Usar motor LaTeX integrado (WASM)",
     useWasmTexDesc: "Compila PDF sin necesidad de instalar pandoc o xelatex. Si falta el motor, se usa el LaTeX local.",
+    autoRebuildPdf: "Reconstruir PDF automáticamente",
+    autoRebuildPdfDesc: "Reconstruye la vista previa del PDF automáticamente al editar el documento.",
     wasmTexInitializing: "Inicializando motor LaTeX (WASM)…",
     wasmTexCompiling: "Compilando LaTeX (WASM)…",
     wasmTexFallback: "Motor WASM no disponible — intentando LaTeX local",
@@ -927,6 +1113,7 @@ const es: T = {
       preview: "Vista previa",
       dailyNotes: "Notas diarias",
       pdf: "Compilación PDF",
+      sync: "Sincronización",
     },
   },
 
@@ -949,6 +1136,9 @@ const es: T = {
     searchPlaceholder: "Buscar atajos…",
     noMatches: "Sin coincidencias",
     dailyNote: "Abrir nota diaria de hoy",
+    openAiAssistant: "Abrir asistente IA",
+    insertTocShortcut: "Insertar índice (TOC)",
+    toggleOutline: "Mostrar/ocultar panel de esquema",
   },
 
   onboarding: {
@@ -984,7 +1174,7 @@ const es: T = {
     outlineIcon: "≡",
     outlineMessage: "Sin encabezados. Usa `# Título`, `## Sección`, etc.",
     bookmarksIcon: "★",
-    bookmarksMessage: "Sin marcadores. Pulsa Ctrl+Shift+1..9 para crear uno.",
+    bookmarksMessage: "Sin marcadores. Ctrl+Shift+1..9 para crear, Ctrl+Alt+1..9 para ir.",
     closedTabsIcon: "↺",
     closedTabsMessage: "No hay pestañas cerradas recientemente.",
   },
@@ -1066,6 +1256,24 @@ const es: T = {
     addComment: "Añadir comentario en el cursor",
     viewComments: "Ver comentarios",
     toggleCommentResolved: "Marcar comentario como resuelto/sin resolver",
+    importDoc: "Importar documento (Pandoc)…",
+    exportTypst: "Exportar a Typst (.typ)",
+    exportTypstPdf: "Exportar a PDF (Typst)",
+    insertExcalidraw: "Insertar dibujo Excalidraw",
+    back: "Atrás",
+    openPanel: (name) => `Abrir ${name}`,
+    insertCodeBlock: "Insertar bloque de código",
+    openAi: "Abrir asistente IA",
+    aiInlineEdit: "Edición inline con IA",
+    exportObsidian: "Exportar a Obsidian (Markdown)",
+  },
+
+  excalidraw: {
+    modalTitle: "Dibujo Excalidraw",
+    save: "Guardar",
+    cancel: "Cancelar",
+    loading: "Cargando Excalidraw…",
+    placeholder: "Excalidraw — clic para editar",
   },
 
   ankiExport: {
@@ -1094,7 +1302,87 @@ const es: T = {
     pdfPreview: "PDF",
     comments: "Comentarios",
     cloudSync: "Sincronización",
+    focusTimer: "Enfoque",
+    ai: "Asistente IA",
     more: "Más",
+  },
+
+  ai: {
+    title: "Asistente IA",
+    disabledTitle: "El asistente IA está desactivado",
+    disabledBody: "Activa el asistente IA en Configuración y añade tu propia clave de API o comando de CLI para empezar.",
+    openSettings: "Abrir Configuración",
+    inputPlaceholder: "Escribe un mensaje… (Ctrl+Enter para enviar, «/» para acciones)",
+    send: "Enviar",
+    sendHint: "Ctrl+Enter para enviar",
+    clearThread: "Limpiar conversación",
+    settingsShortcut: "Configuración de IA",
+    stop: "Detener",
+    thinking: "Pensando…",
+    you: "Tú",
+    assistant: "Asistente",
+    insertAtCursor: "Insertar en el cursor",
+    replaceSelection: "Reemplazar selección",
+    copy: "Copiar",
+    copied: "Copiado",
+    noEditor: "No hay ningún editor activo",
+    noSelection: "No hay texto seleccionado",
+    emptyThread: "Aún no hay mensajes. Pregunta algo o usa una acción rápida.",
+    ctxCurrentFile: "Archivo actual",
+    ctxSelection: (n) => `Selección (${n} líneas)`,
+    ctxNote: "Solo se envía lo que esté activado arriba.",
+    quickActions: "Acciones rápidas",
+    errMissingApiKey: "Falta la clave de API. Añádela en Configuración → Asistente IA.",
+    errMissingBaseUrl: "Falta la URL base para el proveedor compatible con OpenAI.",
+    errMissingModel: "Falta el modelo. Indícalo en Configuración → Asistente IA.",
+    errMissingCli: "Falta el comando de CLI. Indícalo en Configuración → Asistente IA.",
+    errGeneric: (msg) => `Error del asistente IA: ${msg}`,
+    actions: {
+      proofread: "Corregir",
+      proofreadInstr: "Corrige la gramática, la ortografía y la puntuación del siguiente texto sin cambiar su significado. Conserva la sintaxis de Markdown y LaTeX. Devuelve solo el texto corregido.",
+      shorten: "Acortar",
+      shortenInstr: "Reescribe el siguiente texto de forma más concisa, conservando el significado, la sintaxis de Markdown y LaTeX. Devuelve solo el texto reescrito.",
+      latexify: "Convertir a LaTeX",
+      latexifyInstr: "Convierte las expresiones matemáticas del siguiente texto a LaTeX correcto (usando $...$ o $$...$$ según corresponda). Devuelve solo el texto resultante.",
+      explain: "Explicar",
+      explainInstr: "Explica de forma clara y rigurosa el siguiente texto o expresión matemática.",
+      counterexample: "Contraejemplo",
+      counterexampleInstr: "Da un contraejemplo a la siguiente afirmación, o explica por qué no existe ninguno.",
+      translate: "Traducir",
+      translateInstr: "Traduce el siguiente texto al inglés (si está en español) o al español (si está en inglés), conservando la sintaxis de Markdown y LaTeX. Devuelve solo la traducción.",
+      summarize: "Resumir",
+      summarizeInstr: "Resume el siguiente texto en pocas frases, conservando los resultados matemáticos clave.",
+    },
+    cmdk: {
+      placeholderEdit: "Instrucción… (editar la selección)",
+      placeholderInsert: "Instrucción… (insertar en el cursor)",
+      disabledHint: "Activa el asistente IA en Ajustes",
+      generating: "Generando…",
+      accept: "Aceptar",
+      reject: "Descartar",
+      submit: "Enter para enviar",
+      cancel: "Esc para cancelar",
+      original: "Original",
+      proposed: "Propuesta",
+      emptyResult: "El asistente no devolvió ningún texto.",
+    },
+  },
+
+  aiSettings: {
+    section: "Asistente IA",
+    enabled: "Activar asistente IA",
+    enabledDesc: "Opcional y con tu propia clave. Cuando está desactivado, ComdTeX no hace ninguna conexión de IA.",
+    provider: "Proveedor",
+    baseUrl: "URL base",
+    baseUrlPlaceholder: "https://api.deepseek.com/v1  •  http://localhost:11434/v1",
+    model: "Modelo",
+    modelPlaceholder: "p. ej. claude-3-5-sonnet-latest, gpt-4o-mini, gemini-1.5-flash",
+    apiKey: "Clave de API",
+    apiKeyPlaceholder: "Pega tu clave de API",
+    apiKeyNote: "Se guarda localmente en este dispositivo (localStorage). No se comparte con ComdTeX.",
+    cliCommand: "Comando de CLI",
+    cliCommandPlaceholder: "p. ej. opencode run  •  claude -p",
+    cliNote: "El nombre del comando debe estar permitido en capabilities/default.json.",
   },
 
   todo: {
@@ -1128,6 +1416,21 @@ const es: T = {
     tags: "Tags únicos", equations: "Ecuaciones", figures: "Figuras",
     citations: "Citas", wikilinks: "Wikilinks",
     broken: (n) => `${n} enlace${n !== 1 ? "s" : ""} roto${n !== 1 ? "s" : ""}`,
+  },
+
+  focusTimer: {
+    title: "Sesión de enfoque",
+    phaseWork: "Trabajo", phaseBreak: "Descanso", phaseLongBreak: "Descanso largo",
+    start: "Iniciar", pause: "Pausar", reset: "Reiniciar",
+    cycles: "Ciclos completados",
+    durations: "Duraciones (min)", workMin: "Trabajo", breakMin: "Descanso", longBreakMin: "Descanso largo", cyclesLabel: "Ciclos hasta descanso largo",
+    session: "Sesión de escritura",
+    wordsThisSession: "Palabras en la sesión",
+    elapsed: "Tiempo transcurrido",
+    wpm: "Palabras/min",
+    goalProgress: "Meta diaria",
+    noActiveDoc: "Abre un documento para registrar palabras",
+    phaseDone: (phase) => `Fase completada: ${phase}`,
   },
 
   brokenLinks: {
@@ -1197,6 +1500,9 @@ const es: T = {
     exportDocx: "Exportar a Word (.docx)",
     exportBeamer: "Exportar presentación Beamer (.pdf)",
     exportReveal: "Exportar Reveal.js",
+    exportTypst: "Exportar a Typst (.typ)",
+    exportTypstPdf: "Exportar a PDF (Typst)",
+    importDoc: "Importar documento (Pandoc)…",
     recent: "Recientes", clearRecent: "Limpiar recientes",
     findInFile: "Buscar en archivo", searchVault: "Buscar en vault",
     commandPalette: "Paleta de comandos", focusMode: "Modo enfoque",
@@ -1263,6 +1569,19 @@ const es: T = {
     dailyNoteError: (err) => `Error al abrir nota diaria: ${err}`,
     dailyNoteNoVault: "Abre un vault para usar las notas diarias",
     updateInstallFailed: (err) => `No se pudo instalar la actualización: ${err}`,
+    importDocTitle: "Importar documento",
+    importing: "Importando documento…",
+    importSuccess: (name) => `Documento importado: ${name}`,
+    importError: (err) => `Error al importar: ${err}`,
+    pandocMissingImport: "Pandoc no está instalado. Visita pandoc.org para instalarlo.",
+    typstExportTitle: "Exportar a Typst",
+    typstGenerating: "Generando Typst…",
+    typstSuccess: "Documento Typst exportado",
+    typstError: (err) => `Error al exportar Typst: ${err}`,
+    typstPdfSuccess: "PDF exportado con Typst",
+    typstPdfError: (err) => `Error al exportar PDF con Typst: ${err}`,
+    pandocMissingTypst: "Pandoc no está instalado. Visita pandoc.org para instalarlo.",
+    spellError: (word) => `Posible error ortográfico: ${word}`,
   },
 
   welcome: {
@@ -1317,6 +1636,18 @@ const es: T = {
 
   helpPanel: {
     environments: "Entornos matemáticos", shorthands: "Shorthands matemáticos — Tab",
+    formatting: "Formato de texto (Markdown)",
+    formattingIntro: "Marcado en línea para dar formato al texto. El resaltado por colores y el subrayado usan HTML, permitido en el preview.",
+    fmtBoldDesc: "Negrita",
+    fmtItalicDesc: "Itálica",
+    fmtStrikeDesc: "Tachado",
+    fmtUnderlineDesc: "Subrayado (HTML)",
+    fmtHighlightDesc: "Resaltado (amarillo por defecto)",
+    fmtHighlightColorDesc: "Resaltado de color: green, blue, purple, orange, red, pink",
+    fmtInlineCodeDesc: "Código en línea",
+    fmtCommentDesc: "Comentario oculto: no aparece en el preview ni al exportar",
+    fmtAnnotationDesc: "Anotación en la línea del cursor (panel de Comentarios) — Ctrl+Shift+M",
+    fmtTocDesc: "Índice autogenerado: se actualiza solo con tus encabezados",
     equations: "Ecuaciones numeradas y referencias",
     macros: "Macros personalizados (macros.md)", bibtex: "Citas BibTeX (references.bib)",
     frontmatter: "Frontmatter YAML", wikilinks: "Wikilinks y backlinks",
@@ -1459,6 +1790,7 @@ const es: T = {
     htmlAllowed: "Etiquetas permitidas: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (solo YouTube)",
     htmlBlocked: "Etiquetas bloqueadas: script, iframe (otros), object, embed, form, input, button",
     pseudocode: "Pseudocódigo",
+    specialBlocksNote: "Cada tipo se numera automáticamente y de forma independiente (Graph 1, Graph 2…, Plot 1…). El texto entre [ ] es un nombre opcional: :::graph[Mi grafo] → «Graph 1: Mi grafo».",
     pseudocodeDesc: "Bloque de algoritmo con numeración de líneas, palabras clave resaltadas y diagrama de flujo generado automáticamente.",
     pseudocodeSyntax: "#algo[Título] … #end",
     pseudocodeSyntaxAlt: "Alternativa: :::pseudocode[Título] … :::",
@@ -1476,6 +1808,16 @@ const es: T = {
     commDiag: "Diagrama conmutativo",
     commDiagDesc: "Diagrama de flechas para álgebra categórica. Nodos y aristas con etiquetas.",
     commDiagExample: ":::commdiag[Ejemplo]\nA -> B [f]\nA -> C [g]\nB -> D [h]\nC -> D [k]\n:::",
+    flowchart: "Diagrama de flujo",
+    flowchartDesc: "Bloque :::flowchart[título] que dibuja un diagrama de flujo (Mermaid) a partir de pseudocódigo. Se numera como «Diagrama de flujo N».",
+    excalidraw: "Dibujo (Excalidraw)",
+    excalidrawDesc: "Bloque :::excalidraw[título] con un editor de dibujo a mano alzada integrado (se carga bajo demanda). El dibujo se guarda íntegro dentro del archivo y se numera como «Excalidraw N».",
+    aiAssistant: "Asistente IA (opcional)",
+    aiAssistantDesc: "Desactivado por defecto. Tú aportas tu proveedor y clave (Anthropic, OpenAI, Gemini, cualquier endpoint compatible con OpenAI incluido Ollama local, o una CLI de agente local). Configúralo en Configuración → Asistente IA. Las ediciones se aplican a través del editor, así que cada cambio de la IA se puede deshacer con Ctrl+Z.",
+    aiPanelRow: "Ctrl+Shift+A",
+    aiPanelRowDesc: "Abrir el panel del asistente IA (también desde el botón IA del menú).",
+    aiInlineRow: "Ctrl+K",
+    aiInlineRowDesc: "Edición en línea con IA: describe un cambio y se aplica a la selección o en el cursor.",
     symbolPickerHelp: "Selector de símbolos (panel lateral)",
     symbolPickerDesc: "Abre el panel de símbolos matemáticos desde la paleta de comandos (Ctrl+P → 'Selector de símbolos'). Haz clic en cualquier símbolo para insertarlo en el cursor. Puedes buscar por nombre o categoría (griego, operadores, flechas, lógica…).",
     mathPreviewHelp: "Vista previa de matemáticas en línea",
@@ -1534,6 +1876,22 @@ const es: T = {
     venueJournal: "Revista (journal)",
     venueBooktitle: "Evento (booktitle)",
     venueSource: "Booktitle / Fuente",
+    doiPlaceholder: "DOI o ID de arXiv (p. ej. 10.1000/… o 2301.00001)",
+    doiAdd: "Buscar y añadir",
+    doiFetching: "Buscando…",
+    doiSuccess: (key) => `Entrada "${key}" añadida desde DOI`,
+    doiError: "No se pudo obtener la entrada BibTeX. Revisa el DOI o tu conexión.",
+    doiExists: (key) => `La entrada "${key}" ya existe`,
+    zoteroHeading: "Importar de Zotero",
+    zoteroPlaceholder: "Buscar en Zotero (título, autor…)",
+    zoteroSearch: "Buscar",
+    zoteroSearching: "Buscando…",
+    zoteroFetching: "Importando…",
+    zoteroNoResults: "Sin resultados en Zotero.",
+    zoteroImportAll: "Importar todos los resultados",
+    zoteroUnavailable: "Zotero/Better BibTeX no está disponible en localhost:23119. Abre Zotero e inténtalo de nuevo.",
+    zoteroImported: (n) => (n === 1 ? "1 entrada importada de Zotero" : `${n} entradas importadas de Zotero`),
+    zoteroDuplicate: (key) => `La entrada "${key}" ya existe`,
   },
 
   graphPanel: {
@@ -1747,6 +2105,18 @@ const es: T = {
     deletedToast: (name) => `Copia eliminada: ${name}`,
     keptCopyToast: (name) => `Copia promovida a original: ${name}`,
     errorAction: (err) => `Error al resolver el conflicto: ${err}`,
+    settings: {
+      intro: "ComdTeX usa tu propia nube (Dropbox / Google Drive / OneDrive). Instala el cliente nativo y coloca tu vault dentro de su carpeta sincronizada; ComdTeX solo detecta la situación y muestra avisos.",
+      bannerEnabled: "Mostrar avisos de sincronización",
+      bannerEnabledDesc: "Muestra el banner que sugiere mover tu vault dentro de la carpeta de tu nube.",
+      detectEnabled: "Detectar conflictos de sincronización",
+      detectEnabledDesc: "Busca copias en conflicto y muestra el indicador de sincronización en la barra de estado.",
+      providerDetected: (provider) => `Proveedor detectado: ${provider}`,
+      providerNone: "No se detectó ninguna nube en este equipo.",
+      resetDismissed: "Restablecer avisos descartados",
+      resetDismissedDesc: "Vuelve a mostrar los avisos de sincronización que ignoraste anteriormente.",
+      resetDismissedDone: "Avisos de sincronización restablecidos",
+    },
   },
 }
 
@@ -1755,8 +2125,11 @@ const es: T = {
 const en: T = {
   toolbar: {
     bold: "Bold", italic: "Italic", strikethrough: "Strikethrough", inlineCode: "Inline code",
+    underline: "Underline",
+    highlight: "Highlight", hlDefault: "Yellow (==text==)", hlGreen: "Green", hlBlue: "Blue",
+    hlPurple: "Purple", hlOrange: "Orange", hlRed: "Red", hlPink: "Pink",
     headings: "Headings", heading1: "Heading 1", heading2: "Heading 2", heading3: "Heading 3",
-    insert: "Insert", quote: "Quote", separator: "Separator", list: "List",
+    insert: "Insert", quote: "Quote", separator: "Separator", list: "List", insertToc: "Insert TOC",
     orderedList: "Numbered list", taskList: "Task list", link: "Link", codeBlock: "Code block",
     mathInline: "Inline math", mathBlock: "Block math",
     mathOps: "Math operations", superscript: "Superscript", subscript: "Subscript",
@@ -1774,6 +2147,7 @@ const en: T = {
     proof: "Proof", remark: "Remark", note: "Note",
     structures: "Structures", table: "Table", matAuto: "Auto matrix", matFixed: "Fixed matrix", matLiteral: "Literal matrix",
     more: "More",
+    math: "Math",
     togglePreview: "Toggle preview (Ctrl+Shift+P)",
     symbolPicker: "Math symbol picker",
     lbl_heading1: "H1  # Title", lbl_heading2: "H2  ## Title", lbl_heading3: "H3  ### Title",
@@ -1793,6 +2167,8 @@ const en: T = {
     lbl_matFixed: "matf   fixed matrix", lbl_matLiteral: "[[]]   literal matrix",
     sin: "Sine", cos: "Cosine", tan: "Tangent", cot: "Cotangent",
     sec: "Secant", csc: "Cosecant", exp: "Exponential", ln: "Natural log", log: "Logarithm",
+    secFiles: "Files", secTexts: "Texts", secMath: "Math", secViews: "Views",
+    symbols: "Symbols",
   },
 
   fileTree: {
@@ -1830,6 +2206,7 @@ const en: T = {
     lineTitle: (n) => `Line ${n}`,
     totalWords: "Total",
     wordsAbbr: "w",
+    dragToReorder: "Drag to reorder",
   },
 
   backlinks: {
@@ -1861,6 +2238,8 @@ const en: T = {
     sectionPdf: "PDF compilation",
     useWasmTex: "Use built-in LaTeX engine (WASM)",
     useWasmTexDesc: "Compile PDF without installing pandoc or xelatex. Falls back to local LaTeX if the engine is unavailable.",
+    autoRebuildPdf: "Auto-rebuild PDF",
+    autoRebuildPdfDesc: "Automatically rebuild the PDF preview as you edit the document.",
     wasmTexInitializing: "Initializing LaTeX engine (WASM)…",
     wasmTexCompiling: "Compiling LaTeX (WASM)…",
     wasmTexFallback: "WASM engine unavailable — trying local LaTeX",
@@ -1871,6 +2250,7 @@ const en: T = {
       preview: "Preview",
       dailyNotes: "Daily notes",
       pdf: "PDF compilation",
+      sync: "Sync",
     },
   },
 
@@ -1893,6 +2273,9 @@ const en: T = {
     searchPlaceholder: "Search shortcuts…",
     noMatches: "No matches",
     dailyNote: "Open today's daily note",
+    openAiAssistant: "Open AI assistant",
+    insertTocShortcut: "Insert table of contents (TOC)",
+    toggleOutline: "Toggle the outline panel",
   },
 
   onboarding: {
@@ -1928,7 +2311,7 @@ const en: T = {
     outlineIcon: "≡",
     outlineMessage: "No headings. Use `# Title`, `## Section`, etc.",
     bookmarksIcon: "★",
-    bookmarksMessage: "No bookmarks. Press Ctrl+Shift+1..9 to set bookmarks.",
+    bookmarksMessage: "No bookmarks. Ctrl+Shift+1..9 to set, Ctrl+Alt+1..9 to jump.",
     closedTabsIcon: "↺",
     closedTabsMessage: "No recently closed tabs.",
   },
@@ -2010,6 +2393,24 @@ const en: T = {
     addComment: "Add comment at cursor",
     viewComments: "View comments",
     toggleCommentResolved: "Toggle comment resolved",
+    importDoc: "Import document (Pandoc)…",
+    exportTypst: "Export to Typst (.typ)",
+    exportTypstPdf: "Export to PDF (Typst)",
+    insertExcalidraw: "Insert Excalidraw drawing",
+    back: "Back",
+    openPanel: (name) => `Open ${name}`,
+    insertCodeBlock: "Insert code block",
+    openAi: "Open AI assistant",
+    aiInlineEdit: "Inline AI edit",
+    exportObsidian: "Export to Obsidian (Markdown)",
+  },
+
+  excalidraw: {
+    modalTitle: "Excalidraw drawing",
+    save: "Save",
+    cancel: "Cancel",
+    loading: "Loading Excalidraw…",
+    placeholder: "Excalidraw — click to edit",
   },
 
   ankiExport: {
@@ -2038,7 +2439,87 @@ const en: T = {
     pdfPreview: "PDF",
     comments: "Comments",
     cloudSync: "Sync",
+    focusTimer: "Focus",
+    ai: "AI assistant",
     more: "More",
+  },
+
+  ai: {
+    title: "AI assistant",
+    disabledTitle: "AI assistant is off",
+    disabledBody: "Enable the AI assistant in Settings and add your own API key or CLI command to get started.",
+    openSettings: "Open Settings",
+    inputPlaceholder: "Type a message… (Ctrl+Enter to send, “/” for actions)",
+    send: "Send",
+    sendHint: "Ctrl+Enter to send",
+    clearThread: "Clear thread",
+    settingsShortcut: "AI settings",
+    stop: "Stop",
+    thinking: "Thinking…",
+    you: "You",
+    assistant: "Assistant",
+    insertAtCursor: "Insert at cursor",
+    replaceSelection: "Replace selection",
+    copy: "Copy",
+    copied: "Copied",
+    noEditor: "No active editor",
+    noSelection: "No text selected",
+    emptyThread: "No messages yet. Ask something or use a quick action.",
+    ctxCurrentFile: "Current file",
+    ctxSelection: (n) => `Selection (${n} lines)`,
+    ctxNote: "Only what is toggled above is sent.",
+    quickActions: "Quick actions",
+    errMissingApiKey: "Missing API key. Add it in Settings → AI assistant.",
+    errMissingBaseUrl: "Missing base URL for the OpenAI-compatible provider.",
+    errMissingModel: "Missing model. Set it in Settings → AI assistant.",
+    errMissingCli: "Missing CLI command. Set it in Settings → AI assistant.",
+    errGeneric: (msg) => `AI assistant error: ${msg}`,
+    actions: {
+      proofread: "Proofread",
+      proofreadInstr: "Proofread the following text for grammar, spelling and punctuation without changing its meaning. Preserve Markdown and LaTeX syntax. Return only the corrected text.",
+      shorten: "Shorten",
+      shortenInstr: "Rewrite the following text more concisely while preserving meaning, Markdown and LaTeX syntax. Return only the rewritten text.",
+      latexify: "Latexify",
+      latexifyInstr: "Convert the mathematical expressions in the following text into correct LaTeX (using $...$ or $$...$$ as appropriate). Return only the resulting text.",
+      explain: "Explain",
+      explainInstr: "Explain the following text or mathematical expression clearly and rigorously.",
+      counterexample: "Counterexample",
+      counterexampleInstr: "Give a counterexample to the following statement, or explain why none exists.",
+      translate: "Translate",
+      translateInstr: "Translate the following text to English (if it is in Spanish) or to Spanish (if it is in English), preserving Markdown and LaTeX syntax. Return only the translation.",
+      summarize: "Summarize",
+      summarizeInstr: "Summarize the following text in a few sentences, preserving key mathematical results.",
+    },
+    cmdk: {
+      placeholderEdit: "Instruction… (edit the selection)",
+      placeholderInsert: "Instruction… (insert at the cursor)",
+      disabledHint: "Enable the AI assistant in Settings",
+      generating: "Generating…",
+      accept: "Accept",
+      reject: "Discard",
+      submit: "Enter to submit",
+      cancel: "Esc to cancel",
+      original: "Original",
+      proposed: "Proposed",
+      emptyResult: "The assistant returned no text.",
+    },
+  },
+
+  aiSettings: {
+    section: "AI assistant",
+    enabled: "Enable AI assistant",
+    enabledDesc: "Optional and bring-your-own-key. When off, ComdTeX makes no AI network calls.",
+    provider: "Provider",
+    baseUrl: "Base URL",
+    baseUrlPlaceholder: "https://api.deepseek.com/v1  •  http://localhost:11434/v1",
+    model: "Model",
+    modelPlaceholder: "e.g. claude-3-5-sonnet-latest, gpt-4o-mini, gemini-1.5-flash",
+    apiKey: "API key",
+    apiKeyPlaceholder: "Paste your API key",
+    apiKeyNote: "Stored locally on this device (localStorage). Never shared with ComdTeX.",
+    cliCommand: "CLI command",
+    cliCommandPlaceholder: "e.g. opencode run  •  claude -p",
+    cliNote: "The command name must be allow-listed in capabilities/default.json.",
   },
 
   todo: {
@@ -2071,6 +2552,21 @@ const en: T = {
     files: "Files in vault", open: "Open files", words: "Words (open)", tags: "Unique tags",
     equations: "Equations", figures: "Figures", citations: "Citations", wikilinks: "Wikilinks",
     broken: (n) => `${n} broken link${n !== 1 ? "s" : ""}`,
+  },
+
+  focusTimer: {
+    title: "Focus session",
+    phaseWork: "Work", phaseBreak: "Break", phaseLongBreak: "Long break",
+    start: "Start", pause: "Pause", reset: "Reset",
+    cycles: "Completed cycles",
+    durations: "Durations (min)", workMin: "Work", breakMin: "Break", longBreakMin: "Long break", cyclesLabel: "Cycles before long break",
+    session: "Writing session",
+    wordsThisSession: "Words this session",
+    elapsed: "Elapsed",
+    wpm: "Words/min",
+    goalProgress: "Daily goal",
+    noActiveDoc: "Open a document to track words",
+    phaseDone: (phase) => `Phase complete: ${phase}`,
   },
 
   brokenLinks: {
@@ -2140,6 +2636,9 @@ const en: T = {
     exportDocx: "Export to Word (.docx)",
     exportBeamer: "Export Beamer slides (.pdf)",
     exportReveal: "Export Reveal.js",
+    exportTypst: "Export to Typst (.typ)",
+    exportTypstPdf: "Export to PDF (Typst)",
+    importDoc: "Import document (Pandoc)…",
     recent: "Recent", clearRecent: "Clear recent",
     findInFile: "Find in file", searchVault: "Search in vault",
     commandPalette: "Command palette", focusMode: "Focus mode",
@@ -2206,6 +2705,19 @@ const en: T = {
     dailyNoteError: (err) => `Daily note error: ${err}`,
     dailyNoteNoVault: "Open a vault to use daily notes",
     updateInstallFailed: (err) => `Update install failed: ${err}`,
+    importDocTitle: "Import document",
+    importing: "Importing document…",
+    importSuccess: (name) => `Document imported: ${name}`,
+    importError: (err) => `Import failed: ${err}`,
+    pandocMissingImport: "Pandoc is not installed. Visit pandoc.org to install it.",
+    typstExportTitle: "Export to Typst",
+    typstGenerating: "Generating Typst…",
+    typstSuccess: "Typst document exported",
+    typstError: (err) => `Typst export failed: ${err}`,
+    typstPdfSuccess: "PDF exported with Typst",
+    typstPdfError: (err) => `Typst PDF export failed: ${err}`,
+    pandocMissingTypst: "Pandoc is not installed. Visit pandoc.org to install it.",
+    spellError: (word) => `Possible spelling error: ${word}`,
   },
 
   welcome: {
@@ -2260,6 +2772,18 @@ const en: T = {
 
   helpPanel: {
     environments: "Math environments", shorthands: "Math shorthands — Tab",
+    formatting: "Text formatting (Markdown)",
+    formattingIntro: "Inline markup for formatting text. Coloured highlights and underline use HTML, which is allowed in the preview.",
+    fmtBoldDesc: "Bold",
+    fmtItalicDesc: "Italic",
+    fmtStrikeDesc: "Strikethrough",
+    fmtUnderlineDesc: "Underline (HTML)",
+    fmtHighlightDesc: "Highlight (default yellow)",
+    fmtHighlightColorDesc: "Coloured highlight: green, blue, purple, orange, red, pink",
+    fmtInlineCodeDesc: "Inline code",
+    fmtCommentDesc: "Hidden comment: not shown in the preview or on export",
+    fmtAnnotationDesc: "Annotation on the cursor line (Comments panel) — Ctrl+Shift+M",
+    fmtTocDesc: "Auto-generated table of contents: stays in sync with your headings",
     equations: "Numbered equations and references",
     macros: "Custom macros (macros.md)", bibtex: "BibTeX citations (references.bib)",
     frontmatter: "YAML frontmatter", wikilinks: "Wikilinks and backlinks",
@@ -2402,6 +2926,7 @@ const en: T = {
     htmlAllowed: "Allowed tags: div, span, p, img, video, audio, figure, figcaption, details, summary, table, mark, kbd, sub, sup, br, hr, blockquote, iframe (YouTube only)",
     htmlBlocked: "Blocked tags: script, iframe (others), object, embed, form, input, button",
     pseudocode: "Pseudocode",
+    specialBlocksNote: "Each type is auto-numbered independently (Graph 1, Graph 2…, Plot 1…). The text in [ ] is an optional name: :::graph[My graph] → “Graph 1: My graph”.",
     pseudocodeDesc: "Algorithm block with line numbers, highlighted keywords, and an auto-generated flowchart.",
     pseudocodeSyntax: "#algo[Title] … #end",
     pseudocodeSyntaxAlt: "Alternative: :::pseudocode[Title] … :::",
@@ -2419,6 +2944,16 @@ const en: T = {
     commDiag: "Commutative diagram",
     commDiagDesc: "Arrow diagram for category theory. Nodes and labeled edges, auto-laid out.",
     commDiagExample: ":::commdiag[Example]\nA -> B [f]\nA -> C [g]\nB -> D [h]\nC -> D [k]\n:::",
+    flowchart: "Flowchart",
+    flowchartDesc: "A :::flowchart[title] block that draws a flowchart (Mermaid) from pseudocode. Numbered as “Flowchart N”.",
+    excalidraw: "Drawing (Excalidraw)",
+    excalidrawDesc: "A :::excalidraw[title] block with a built-in freehand drawing editor (lazy-loaded on demand). The drawing is stored verbatim inside the file and numbered as “Excalidraw N”.",
+    aiAssistant: "AI assistant (optional)",
+    aiAssistantDesc: "Off by default. Bring your own provider and key (Anthropic, OpenAI, Gemini, any OpenAI-compatible endpoint including local Ollama, or a local agent CLI). Configure it in Settings → AI assistant. Edits are applied through the editor, so every AI change is undo-able with Ctrl+Z.",
+    aiPanelRow: "Ctrl+Shift+A",
+    aiPanelRowDesc: "Open the AI assistant panel (also from the AI menu-bar button).",
+    aiInlineRow: "Ctrl+K",
+    aiInlineRowDesc: "AI inline edit: describe a change and it is applied to the selection or at the cursor.",
     symbolPickerHelp: "Symbol picker (sidebar panel)",
     symbolPickerDesc: "Open the math symbol panel from the command palette (Ctrl+P → 'Math symbol picker'). Click any symbol to insert it at the cursor. Search by name or category (greek, operators, arrows, logic…).",
     mathPreviewHelp: "Inline math preview",
@@ -2477,6 +3012,22 @@ const en: T = {
     venueJournal: "Journal",
     venueBooktitle: "Event (booktitle)",
     venueSource: "Booktitle / Source",
+    doiPlaceholder: "DOI or arXiv id (e.g. 10.1000/… or 2301.00001)",
+    doiAdd: "Fetch & add",
+    doiFetching: "Fetching…",
+    doiSuccess: (key) => `Added entry "${key}" from DOI`,
+    doiError: "Couldn't fetch the BibTeX entry. Check the DOI or your connection.",
+    doiExists: (key) => `Entry "${key}" already exists`,
+    zoteroHeading: "Import from Zotero",
+    zoteroPlaceholder: "Search Zotero (title, author…)",
+    zoteroSearch: "Search",
+    zoteroSearching: "Searching…",
+    zoteroFetching: "Importing…",
+    zoteroNoResults: "No results in Zotero.",
+    zoteroImportAll: "Import all results",
+    zoteroUnavailable: "Zotero/Better BibTeX is not available on localhost:23119. Open Zotero and try again.",
+    zoteroImported: (n) => (n === 1 ? "Imported 1 entry from Zotero" : `Imported ${n} entries from Zotero`),
+    zoteroDuplicate: (key) => `Entry "${key}" already exists`,
   },
 
   graphPanel: {
@@ -2690,6 +3241,18 @@ const en: T = {
     deletedToast: (name) => `Copy deleted: ${name}`,
     keptCopyToast: (name) => `Copy promoted to original: ${name}`,
     errorAction: (err) => `Failed to resolve conflict: ${err}`,
+    settings: {
+      intro: "ComdTeX uses your own cloud (Dropbox / Google Drive / OneDrive). Install the native client and keep your vault inside its synced folder; ComdTeX only detects the situation and surfaces hints.",
+      bannerEnabled: "Show sync hints",
+      bannerEnabledDesc: "Shows the banner suggesting you move your vault into your cloud folder.",
+      detectEnabled: "Detect sync conflicts",
+      detectEnabledDesc: "Scans for conflict copies and shows the sync indicator in the status bar.",
+      providerDetected: (provider) => `Detected provider: ${provider}`,
+      providerNone: "No cloud provider detected on this machine.",
+      resetDismissed: "Reset dismissed hints",
+      resetDismissedDesc: "Show the sync hints you previously dismissed again.",
+      resetDismissedDone: "Sync hints reset",
+    },
   },
 }
 

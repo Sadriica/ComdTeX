@@ -27,17 +27,23 @@ exposes a small message protocol used by `WasmTexEngine` in
 
 ## Bundling the runtime
 
-The worker tries to `importScripts("/wasm-tex/swiftlatexpdftex.js")` at
-startup. If the file is missing, the engine reports `status: "unavailable"`
-to all compile requests and ComdTeX falls back to the local toolchain. To
-include the runtime in your build:
+At startup the worker `importScripts`-loads the **wrapper**
+`/wasm-tex/PdfTeXEngine.js`, which registers the global `PdfTeXEngine`
+class and in turn spawns the inner Emscripten worker
+(`/wasm-tex/swiftlatexpdftex.js`), which loads the WASM binary
+(`/wasm-tex/swiftlatexpdftex.wasm`). The default engine URL is
+`/wasm-tex/PdfTeXEngine.js` (`src/wasmTex.ts`). If the wrapper is missing,
+the engine reports `status: "unavailable"` to all compile requests and
+ComdTeX falls back to the local toolchain. To include the runtime in your
+build:
 
 1. Download the engine artefacts from
    <https://github.com/SwiftLaTeX/SwiftLaTeX> (MIT license):
+   - `PdfTeXEngine.js` (wrapper)
    - `swiftlatexpdftex.js`
    - `swiftlatexpdftex.wasm`
-2. Place both files in `public/wasm-tex/`. Vite serves the `public/`
-   directory verbatim, so `/wasm-tex/swiftlatexpdftex.js` becomes available
+2. Place all three files in `public/wasm-tex/`. Vite serves the `public/`
+   directory verbatim, so `/wasm-tex/PdfTeXEngine.js` becomes available
    at runtime with no further wiring.
 3. Rebuild — the bundled application now includes a full LaTeX compiler.
 
@@ -87,12 +93,19 @@ Behaviour:
   XeTeX features (e.g. system fonts via `fontspec`) need the XeTeX engine
   variant — drop `swiftlatexxetex.js` + `.wasm` into `public/wasm-tex/` and
   flip the engine URL in `src/wasmTex.ts`.
+- The bundled engine ships **without synctex output**, so forward/inverse
+  SyncTeX between the editor and the PDF preview is not available even though
+  the `.synctex` parser (`src/synctex.ts`) exists — no engine currently emits
+  the data it needs.
 
-## Honest scaffolding note
+## Bundled engine
 
-The current source tree intentionally does **not** ship the engine
-binaries — they are large, change with upstream SwiftLaTeX releases, and
-have their own license metadata. The integration is wired and tested
-end-to-end in the application code; what's missing is just the binary
-artefacts. Without them, `useWasmTex: true` is a no-op that always falls
-back to the local toolchain (and will say so via toast).
+The repository **ships the `pdftex` engine binaries** in `public/wasm-tex/`
+(`PdfTeXEngine.js` wrapper + `swiftlatexpdftex.js` + `swiftlatexpdftex.wasm`),
+so a fresh checkout compiles PDFs out of the box with `useWasmTex: true`.
+If those files are
+ever removed, the engine reports `status: "unavailable"` and ComdTeX
+silently falls back to the local toolchain (with a one-line toast). To
+update the engine, re-download the artefacts from
+<https://github.com/SwiftLaTeX/SwiftLaTeX> and drop them back into
+`public/wasm-tex/`.

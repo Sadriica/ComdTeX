@@ -286,8 +286,11 @@ export function preprocess(text: string): string {
   let cursor = 0
 
   // Detect existing math regions ($...$ and $$...$$)
-  // Display math: requires at least 1 char, but also matches literal $ (common in math notation)
-  const mathRe = /\$\$((?:.|\$(?!\$))+?)\$\$|\$([^\$\n]+?)\$/g
+  // Display math: `[\s\S]` (not `.`) so multi-line $$...$$ blocks are recognised;
+  // the lazy quantifier stops at the first closing `$$`, so an inner single `$`
+  // is still captured. Without this, shorthands inside a multi-line display
+  // block get wrongly auto-wrapped in extra `$...$`.
+  const mathRe = /\$\$([\s\S]+?)\$\$|\$([^\$\n]+?)\$/g
   let m: RegExpExecArray | null
 
   while ((m = mathRe.exec(masked)) !== null) {

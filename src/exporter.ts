@@ -394,15 +394,21 @@ export function exportReveal(markdown: string, title: string): string {
 
   const slides = body.split(/\n---\n/)
 
+  // Guard against breaking out of the <textarea data-template> wrapper: a literal
+  // </textarea> in slide content would end the template early. Reveal's markdown
+  // plugin still parses the escaped form correctly.
   const slideHtml = slides.map(slide =>
-    `  <section data-markdown>\n    <textarea data-template>\n${slide.trim()}\n    </textarea>\n  </section>`
+    `  <section data-markdown>\n    <textarea data-template>\n${slide.trim().replace(/<\/textarea>/gi, "&lt;/textarea>")}\n    </textarea>\n  </section>`
   ).join('\n')
+
+  // `title` is the filename; escape so a crafted name can't inject markup.
+  const safeTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${title}</title>
+  <title>${safeTitle}</title>
   <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
   <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/${theme}.css">
 </head>

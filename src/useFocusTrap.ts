@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react"
+import { useEffect, useRef, type RefObject } from "react"
 
 /**
  * Trap keyboard focus inside a modal container while it is open.
@@ -18,6 +18,14 @@ export function useFocusTrap(
   isOpen: boolean,
   onClose?: () => void,
 ): void {
+  // Keep the latest onClose in a ref so it is NOT an effect dependency. With
+  // onClose in the deps, a parent that passes an inline arrow re-creates it on
+  // every render → the trap effect re-runs on each keystroke → its cleanup
+  // restores focus to the pre-open element, yanking focus out of the field
+  // being typed in. Re-arm the trap only when `isOpen` changes.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+
   useEffect(() => {
     if (!isOpen) return
     const container = ref.current
@@ -48,9 +56,10 @@ export function useFocusTrap(
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (onClose) {
+        const cb = onCloseRef.current
+        if (cb) {
           e.stopPropagation()
-          onClose()
+          cb()
         }
         return
       }
@@ -86,5 +95,5 @@ export function useFocusTrap(
         try { previouslyFocused.focus() } catch { /* element gone */ }
       }
     }
-  }, [ref, isOpen, onClose])
+  }, [ref, isOpen])
 }

@@ -119,6 +119,8 @@ export default function HelpPanel() {
           {hp.headingsPurpose}
         </p>
 
+        <p className="hp-intro" style={{ marginTop: "0.6rem" }}>{hp.specialBlocksNote}</p>
+
         <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.pseudocode}</div>
         <p className="hp-intro">{hp.pseudocodeDesc}</p>
         <Row code={hp.pseudocodeSyntax} desc={hp.pseudocodeDesc} />
@@ -146,11 +148,34 @@ export default function HelpPanel() {
         <Row code=":::commdiag[title]" desc={hp.commDiagDesc} />
         <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.commDiagExample}</pre>
 
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.flowchart}</div>
+        <p className="hp-intro">{hp.flowchartDesc}</p>
+        <Row code=":::flowchart[title]" desc={hp.flowchartDesc} />
+
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.excalidraw}</div>
+        <p className="hp-intro">{hp.excalidrawDesc}</p>
+        <Row code=":::excalidraw[title]" desc={hp.excalidrawDesc} />
+
         <div className="hp-label" style={{ marginTop: "0.8rem" }}>{hp.symbolPickerHelp}</div>
         <p className="hp-intro">{hp.symbolPickerDesc}</p>
 
         <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.mathPreviewHelp}</div>
         <p className="hp-intro">{hp.mathPreviewDesc}</p>
+      </Section>
+
+      {/* ── Markdown text formatting ── */}
+      <Section title={hp.formatting}>
+        <p className="hp-intro">{hp.formattingIntro}</p>
+        <Row code="**texto**"                          desc={hp.fmtBoldDesc}           render="<strong>texto</strong>" />
+        <Row code="_texto_"                             desc={hp.fmtItalicDesc}         render="<em>texto</em>" />
+        <Row code="~~texto~~"                           desc={hp.fmtStrikeDesc}         render="<s>texto</s>" />
+        <Row code="<u>texto</u>"                         desc={hp.fmtUnderlineDesc}      render="<u>texto</u>" />
+        <Row code="==texto=="                           desc={hp.fmtHighlightDesc}      render="<mark>texto</mark>" />
+        <Row code={`<mark class="hl-green">texto</mark>`} desc={hp.fmtHighlightColorDesc} render={`<mark class="hl-green">texto</mark>`} />
+        <Row code="`código`"                            desc={hp.fmtInlineCodeDesc}     render="<code>código</code>" />
+        <Row code="<!-- comentario -->"                  desc={hp.fmtCommentDesc} />
+        <Row code="Ctrl+Shift+M"                         desc={hp.fmtAnnotationDesc} />
+        <Row code="[[toc]]"                              desc={hp.fmtTocDesc} />
       </Section>
 
       {/* ── Math shorthands ── */}
@@ -416,6 +441,13 @@ export default function HelpPanel() {
         <Row code={hp.panelEnvironments} desc={hp.panelEnvironmentsDesc} />
         <Row code={hp.panelLabels}       desc={hp.panelLabelsDesc} />
         <Row code={hp.panelQuality}      desc={hp.panelQualityDesc} />
+      </Section>
+
+      {/* ── AI assistant ── */}
+      <Section title={hp.aiAssistant}>
+        <p className="hp-intro">{hp.aiAssistantDesc}</p>
+        <Row code={hp.aiPanelRow}  desc={hp.aiPanelRowDesc} />
+        <Row code={hp.aiInlineRow} desc={hp.aiInlineRowDesc} />
       </Section>
 
     </div>

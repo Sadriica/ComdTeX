@@ -1,4 +1,4 @@
-import { save } from "@tauri-apps/plugin-dialog"
+import { open, save } from "@tauri-apps/plugin-dialog"
 import { copyFile, exists, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { Command } from "@tauri-apps/plugin-shell"
@@ -26,10 +26,6 @@ export interface ExportMessages {
   generatingPdf: string
   pdfDone: string
   pandocError: (message: string) => string
-  exportDocxSuccess: string
-  exportDocxError: string
-  exportBeamerSuccess: string
-  exportBeamerError: string
   backupSuccess: string
   backupError: string
   copiedLatex: string
@@ -65,7 +61,7 @@ export interface ExportActionsContext {
   vaultPath: string | null
   activePath: string | null
   vaultFiles: ProjectFile[]
-  deps: { pandoc?: boolean; zip?: boolean } | null
+  deps: { pandoc?: boolean; zip?: boolean; typst?: boolean } | null
   dialogs: ExportDialogTitles
   messages: ExportMessages
   readEditorContent: () => string | null
@@ -394,53 +390,6 @@ export async function exportPdf(ctx: ExportActionsContext) {
   }
 }
 
-export async function exportDocx(ctx: ExportActionsContext) {
-  const file = ctx.activeFile
-  if (!file) return
-  if (ctx.deps && !ctx.deps.pandoc) {
-    ctx.toast(ctx.messages.pandocMissing, "error", 6000)
-    return
-  }
-  const outPath = await save({ filters: [{ name: "Word Document", extensions: ["docx"] }] })
-  if (!outPath) return
-  const tmpPath = outPath.replace(/\.docx$/i, "_tmp.md")
-  try {
-    await writeTextFile(tmpPath, toPandocMarkdownInput(file.content))
-    const result = await Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"]).execute()
-    if (result.code !== 0) throw new Error(result.stderr)
-    await remove(tmpPath)
-    ctx.toast(ctx.messages.exportDocxSuccess, "success")
-  } catch (e) {
-    try { await remove(tmpPath) } catch {}
-    ctx.toast(ctx.messages.exportDocxError, "error")
-    console.error(e)
-  }
-}
-
-export async function exportBeamer(ctx: ExportActionsContext) {
-  const file = ctx.activeFile
-  if (!file) return
-  if (ctx.deps && !ctx.deps.pandoc) {
-    ctx.toast(ctx.messages.pandocMissing, "error", 6000)
-    return
-  }
-  const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
-  if (!outPath) return
-  const tmpPath = outPath.replace(/\.pdf$/i, "_tmp.md")
-  try {
-    await writeTextFile(tmpPath, toPandocMarkdownInput(file.content))
-    const result = await Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"]).execute()
-    if (result.code !== 0) throw new Error(result.stderr)
-    await remove(tmpPath)
-    ctx.toast(ctx.messages.exportBeamerSuccess, "success")
-    await openPath(outPath)
-  } catch (e) {
-    try { await remove(tmpPath) } catch {}
-    ctx.toast(ctx.messages.exportBeamerError, "error")
-    console.error(e)
-  }
-}
-
 export async function backupVault(ctx: ExportActionsContext) {
   if (!ctx.vaultPath) return
   if (ctx.deps && !ctx.deps.zip) {
@@ -490,6 +439,191 @@ export async function exportRevealHtml(ctx: ExportActionsContext) {
     await openPath(path)
   } catch {
     ctx.toast(ctx.messages.revealExportError, "error")
+  }
+}
+
+export interface ImportMessages {
+  pandocMissing: string
+  importing: string
+  importSuccess: (name: string) => string
+  importError: (err: string) => string
+}
+
+export interface ImportActionsContext {
+  vaultPath: string | null
+  deps: { pandoc?: boolean; zip?: boolean } | null
+  dialogTitle: string
+  messages: ImportMessages
+  toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void
+  /** Refresh the file tree so the freshly written file appears. */
+  reloadVault: () => Promise<void>
+  /** Open the imported file in a new tab. */
+  openFilePath: (path: string) => Promise<void>
+}
+
+// Map a source extension to an explicit pandoc input format. When a format is
+// not listed pandoc infers it from the extension, which works for docx/odt/epub
+// etc. — we only pin the ambiguous ones.
+const PANDOC_INPUT_FORMATS: Record<string, string> = {
+  tex: "latex",
+  htm: "html",
+  rst: "rst",
+  org: "org",
+}
+
+/**
+ * Import an external document via pandoc, converting it to GitHub-flavored
+ * Markdown and dropping the result into the vault root as a new `.md` file,
+ * then opening it.
+ *
+ * For DOCX/ODT/EPUB sources pandoc can embed images; we extract them to a
+ * sibling media folder so links resolve. If extraction fails for any reason
+ * pandoc still emits the text+math, so the import is never blocked by media.
+ */
+export async function importDocument(ctx: ImportActionsContext) {
+  if (!ctx.vaultPath) return
+  if (ctx.deps && !ctx.deps.pandoc) {
+    ctx.toast(ctx.messages.pandocMissing, "error", 6000)
+    return
+  }
+
+  const source = await open({
+    title: ctx.dialogTitle,
+    multiple: false,
+    directory: false,
+    filters: [{ name: "Documentos", extensions: ["docx", "odt", "tex", "html", "htm", "epub", "rtf", "md", "markdown", "rst", "org"] }],
+  })
+  if (!source || typeof source !== "string") return
+
+  const srcName = pathBasename(source)
+  const ext = (srcName.match(/\.([^.]+)$/)?.[1] ?? "").toLowerCase()
+  const stem = srcName.replace(/\.[^.]+$/, "") || "imported"
+
+  // Pick a safe, unique target name in the vault root (append a counter on collision).
+  let outName = `${stem}.md`
+  let outPath = await pathJoin(ctx.vaultPath, outName)
+  let counter = 1
+  while (await exists(outPath)) {
+    outName = `${stem}-${counter}.md`
+    outPath = await pathJoin(ctx.vaultPath, outName)
+    counter++
+  }
+
+  // Extract embedded images alongside the new file so links resolve.
+  const mediaDir = await pathJoin(ctx.vaultPath, `${stem}-media`)
+
+  const args: string[] = [source, "-t", "gfm", "-o", outPath, "--extract-media", mediaDir]
+  const inputFormat = PANDOC_INPUT_FORMATS[ext]
+  if (inputFormat) args.unshift("-f", inputFormat) // pandoc reads flags before the input path too
+
+  try {
+    ctx.toast(ctx.messages.importing, "info")
+    const result = await Command.create("pandoc", args).execute()
+    if (result.code !== 0) throw new Error(result.stderr || result.stdout || "pandoc failed")
+    await ctx.reloadVault()
+    await ctx.openFilePath(outPath)
+    ctx.toast(ctx.messages.importSuccess(outName), "success")
+  } catch (e) {
+    ctx.toast(ctx.messages.importError(e instanceof Error ? e.message : String(e)), "error", 8000)
+    console.error(e)
+  }
+}
+
+export interface TypstMessages {
+  pandocMissing: string
+  generating: string
+  typstSuccess: string
+  typstError: (err: string) => string
+  typstPdfSuccess: string
+  typstPdfError: (err: string) => string
+}
+
+export interface TypstExportContext {
+  activeFile: ActiveDocument | null
+  deps: { pandoc?: boolean; zip?: boolean; typst?: boolean } | null
+  dialogTitle: string
+  messages: TypstMessages
+  readEditorContent: () => string | null
+  toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void
+}
+
+/**
+ * Export the current document to a Typst markup file (`.typ`).
+ *
+ * We deliberately reuse pandoc's `-t typst` writer rather than hand-rolling a
+ * Markdown→Typst converter: Typst's math syntax differs substantially from
+ * LaTeX, and pandoc already handles the conversion well. Guards on pandoc being
+ * present; never crashes when it is missing.
+ */
+export async function exportTypst(ctx: TypstExportContext) {
+  const file = ctx.activeFile
+  const content = ctx.readEditorContent()
+  if (content === null || !file) return
+  if (ctx.deps && !ctx.deps.pandoc) {
+    ctx.toast(ctx.messages.pandocMissing, "error", 6000)
+    return
+  }
+  const outPath = await save({
+    title: ctx.dialogTitle,
+    filters: [{ name: "Typst", extensions: ["typ"] }],
+    defaultPath: file.name.replace(/\.[^.]+$/, ".typ"),
+  })
+  if (!outPath) return
+  const tmpPath = await pathJoin(pathDirname(outPath) || ".", `${pathBasename(outPath)}.comdtex-typst.tmp.md`)
+  try {
+    ctx.toast(ctx.messages.generating, "info")
+    await writeTextFile(tmpPath, toPandocMarkdownInput(content))
+    const result = await Command.create("pandoc", [tmpPath, "-t", "typst", "--standalone", "-o", outPath]).execute()
+    if (result.code !== 0) throw new Error(result.stderr || result.stdout || "pandoc failed")
+    ctx.toast(ctx.messages.typstSuccess, "success")
+  } catch (e) {
+    ctx.toast(ctx.messages.typstError(e instanceof Error ? e.message : String(e)), "error", 8000)
+    console.error(e)
+  } finally {
+    await remove(tmpPath).catch(() => {})
+  }
+}
+
+/**
+ * Export the current document to PDF by piping pandoc's Typst output through
+ * the `typst compile` binary. Only meaningful when both pandoc and typst are
+ * installed; callers gate the action's visibility on `deps.typst`. Guards on
+ * both tools so the action can never crash when one is missing.
+ */
+export async function exportTypstPdf(ctx: TypstExportContext) {
+  const file = ctx.activeFile
+  const content = ctx.readEditorContent()
+  if (content === null || !file) return
+  if (ctx.deps && !ctx.deps.pandoc) {
+    ctx.toast(ctx.messages.pandocMissing, "error", 6000)
+    return
+  }
+  if (ctx.deps && !ctx.deps.typst) return
+  const outPath = await save({
+    title: ctx.dialogTitle,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    defaultPath: file.name.replace(/\.[^.]+$/, ".pdf"),
+  })
+  if (!outPath) return
+  const dir = pathDirname(outPath) || "."
+  const base = pathBasename(outPath).replace(/\.[^.]+$/, "")
+  const tmpMd = await pathJoin(dir, `${base}.comdtex-typst.tmp.md`)
+  const tmpTyp = await pathJoin(dir, `${base}.comdtex-typst.tmp.typ`)
+  try {
+    ctx.toast(ctx.messages.generating, "info")
+    await writeTextFile(tmpMd, toPandocMarkdownInput(content))
+    const pandoc = await Command.create("pandoc", [tmpMd, "-t", "typst", "--standalone", "-o", tmpTyp]).execute()
+    if (pandoc.code !== 0) throw new Error(pandoc.stderr || pandoc.stdout || "pandoc failed")
+    const typst = await Command.create("typst", ["compile", tmpTyp, outPath]).execute()
+    if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
+    ctx.toast(ctx.messages.typstPdfSuccess, "success")
+    await openPath(outPath)
+  } catch (e) {
+    ctx.toast(ctx.messages.typstPdfError(e instanceof Error ? e.message : String(e)), "error", 8000)
+    console.error(e)
+  } finally {
+    await remove(tmpMd).catch(() => {})
+    await remove(tmpTyp).catch(() => {})
   }
 }
 

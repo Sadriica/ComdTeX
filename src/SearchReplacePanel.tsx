@@ -184,19 +184,28 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
         />
       </div>
 
-      <div className="search-replace-options">
-        <label>
-          <input type="checkbox" checked={caseSensitive} onChange={e => setCaseSensitive(e.target.checked)} />
-          Aa
-        </label>
-        <label>
-          <input type="checkbox" checked={wholeWord} onChange={e => setWholeWord(e.target.checked)} />
-          \b
-        </label>
-        <label>
-          <input type="checkbox" checked={regexMode} onChange={e => setRegexMode(e.target.checked)} />
-          .*
-        </label>
+      <div className="search-replace-options" role="group">
+        <button
+          type="button"
+          className={`search-replace-toggle${caseSensitive ? " active" : ""}`}
+          aria-pressed={caseSensitive}
+          title={t.search.caseSensitiveTitle}
+          onClick={() => setCaseSensitive(v => !v)}
+        >Aa</button>
+        <button
+          type="button"
+          className={`search-replace-toggle${wholeWord ? " active" : ""}`}
+          aria-pressed={wholeWord}
+          title="\b"
+          onClick={() => setWholeWord(v => !v)}
+        >&#x2502;ab&#x2502;</button>
+        <button
+          type="button"
+          className={`search-replace-toggle${regexMode ? " active" : ""}`}
+          aria-pressed={regexMode}
+          title={t.search.regexTitle}
+          onClick={() => setRegexMode(v => !v)}
+        >.&#x2217;</button>
       </div>
 
       <div className="search-replace-btns">
@@ -208,14 +217,14 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
         </button>
       </div>
 
-      {error && <div className="panel-empty" style={{ color: "#e88" }}>{error}</div>}
+      {error && <div className="panel-empty search-replace-error">{error}</div>}
 
       {!error && query && results.length === 0 && !searching && (
         <div className="panel-empty">{t.search.noResults}</div>
       )}
 
       {results.length >= 500 && (
-        <div className="panel-empty" style={{ color: "#888" }}>{t.search.limit}</div>
+        <div className="panel-empty">{t.search.limit}</div>
       )}
 
       <div style={{ overflowY: "auto", flex: 1 }}>

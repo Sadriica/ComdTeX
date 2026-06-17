@@ -1,4 +1,4 @@
-import { remove, rename } from "@tauri-apps/plugin-fs"
+import { remove, rename, exists } from "@tauri-apps/plugin-fs"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
@@ -37,12 +37,31 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
 
   const handleKeepCopy = async (c: ConflictEntry) => {
     if (!c.basePath) return
+    const basePath = c.basePath
     try {
       const ok = await tauriConfirm(t.cloudSync.confirmKeepCopy(c.conflictName), { kind: "warning" })
       if (!ok) return
-      // Replace original with the copy: remove original, then rename copy to original.
-      await remove(c.basePath)
-      await rename(c.conflictPath, c.basePath)
+      // Crash-safe replace: never delete the original before the copy is in
+      // place. Move the original aside to a temp backup, promote the copy, then
+      // drop the backup. If promotion fails, restore the original so a failed
+      // rename can't lose BOTH versions of the user's file.
+      // Pick a backup name that doesn't already exist, so we never silently
+      // clobber a stray `.comdtex-bak` left by a prior interrupted run.
+      let backupPath = `${basePath}.comdtex-bak`
+      for (let i = 2; await exists(backupPath); i++) {
+        backupPath = `${basePath}.comdtex-bak-${i}`
+      }
+      await rename(basePath, backupPath)
+      try {
+        await rename(c.conflictPath, basePath)
+      } catch (promoteErr) {
+        // Promotion failed — put the original back and surface the error.
+        await rename(backupPath, basePath)
+        throw promoteErr
+      }
+      // Replacement succeeded; removing the backup is best-effort (a leftover
+      // backup is harmless, and not worth failing the whole action over).
+      try { await remove(backupPath) } catch { /* leave stray backup */ }
       showToast(t.cloudSync.keptCopyToast(c.baseName), "success")
       onResolved()
     } catch (err) {

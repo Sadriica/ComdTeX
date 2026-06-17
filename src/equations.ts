@@ -42,7 +42,7 @@ export const INLINE_LABELED_MATH_RE = /\$([^\$\n]+?)\$\s*\{#([\w:.-]+)\}/g
 export const NUMBERED_MATH_RE =
   /\$\$([\s\S]+?)\$\$(?:\s*\{#([\w:.-]+)\})?|\$([^\$\n]+?)\$\s*\{#([\w:.-]+)\}/g
 
-function stripCodeFences(text: string): string {
+export function stripCodeFences(text: string): string {
   return text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, "")
 }
 
@@ -52,7 +52,7 @@ function stripCodeFences(text: string): string {
  * patterns that appear inside a Markdown code span. Length is preserved so
  * line/column positions are unaffected.
  */
-function blankInlineCode(text: string): string {
+export function blankInlineCode(text: string): string {
   return text.replace(/(`+)([^`\n]*?)\1/g, (m) => " ".repeat(m.length))
 }
 

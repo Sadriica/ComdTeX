@@ -61,8 +61,15 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
     })
   }),
   mkdir: vi.fn(),
-  remove: vi.fn(),
-  rename: vi.fn(),
+  remove: vi.fn(async (path: string) => {
+    fsMock.files.delete(path)
+  }),
+  rename: vi.fn(async (from: string, to: string) => {
+    const file = fsMock.files.get(from)
+    if (!file) throw new Error(`missing file: ${from}`)
+    fsMock.files.delete(from)
+    fsMock.touch(to, file.content)
+  }),
 }))
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -185,6 +192,73 @@ describe("useVault CMDX integration", () => {
     })
 
     expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Lemma: Changed")
+  })
+
+  it("migrates a pending autosave across renameFile (no orphaned old file)", async () => {
+    const oldPath = `${VAULT}/draft.md`
+    const newPath = `${VAULT}/final.md`
+    fsMock.touch(oldPath, "original")
+
+    const { result } = renderHook(() => useVault({ autoSaveMs: 20 }))
+
+    await act(async () => {
+      await result.current.selectVault(VAULT)
+    })
+    await act(async () => {
+      await result.current.openFilePath(oldPath)
+    })
+    await waitFor(() => expect(result.current.openFile?.path).toBe(oldPath))
+
+    // Queue a debounced autosave keyed to the OLD path...
+    act(() => {
+      result.current.updateContent("edited in flight")
+    })
+    // ...then rename before the timer fires.
+    await act(async () => {
+      await result.current.renameFile(oldPath, "final.md")
+    })
+
+    // Wait past the debounce so any queued save actually fires.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60))
+    })
+
+    // The stale save must NOT recreate the old file...
+    expect(fsMock.files.has(oldPath)).toBe(false)
+    // ...and the in-flight edit must land on the new path.
+    expect(fsMock.files.get(newPath)?.content).toBe("edited in flight")
+    expect(result.current.openTabs.find((tab) => tab.path === newPath)).toBeTruthy()
+  })
+
+  it("cancels a pending autosave when replaceInVault rewrites an open file", async () => {
+    const mdPath = `${VAULT}/note.md`
+    fsMock.touch(mdPath, "alpha beta")
+
+    const { result } = renderHook(() => useVault({ autoSaveMs: 20 }))
+
+    await act(async () => {
+      await result.current.selectVault(VAULT)
+    })
+    await act(async () => {
+      await result.current.openFilePath(mdPath)
+    })
+    await waitFor(() => expect(result.current.openFile?.path).toBe(mdPath))
+
+    // Queue a stale autosave that would clobber the replacement if not cancelled.
+    act(() => {
+      result.current.updateContent("alpha beta STALE")
+    })
+    await act(async () => {
+      const count = await result.current.replaceInVault("beta", "gamma")
+      expect(count).toBe(1)
+    })
+
+    // Wait past the debounce; the cancelled stale save must not fire.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60))
+    })
+
+    expect(fsMock.files.get(mdPath)?.content).toBe("alpha gamma")
   })
 
   it("does not read binary preview files during vault search or replace", async () => {

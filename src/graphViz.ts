@@ -125,7 +125,7 @@ function shortenEndpoints(
 
 // ── Main SVG renderer ─────────────────────────────────────────────────────────
 
-export function renderGraphSVG(title: string, content: string): string {
+export function renderGraphSVG(title: string, content: string, number = ""): string {
   graphCounter++
   const uid = `g${graphCounter}`
 
@@ -256,9 +256,10 @@ export function renderGraphSVG(title: string, content: string): string {
     )
   }
 
-  const titleDiv = title
-    ? `<div class="graph-title">${esc(title)}</div>`
-    : ""
+  const headerText = title
+    ? `Graph ${number}: ${esc(title)}`
+    : `Graph ${number}`
+  const titleDiv = `<div class="graph-title">${headerText}</div>`
 
   const svg =
     `<svg viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" width="100%" style="max-width:500px">` +

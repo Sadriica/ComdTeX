@@ -35,15 +35,24 @@ export default defineConfig(async () => ({
   },
 
   build: {
+    // Vite 8 defaults the CSS minifier to lightningcss, which rejects the
+    // paged-media `@page { @header ... }` / `running()` rules used for the
+    // print/PDF export headers in App.css. Keep esbuild (the Vite 7 default).
+    cssMinify: "esbuild",
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Monaco is huge — split it so the initial chunk loads faster
-          "monaco-editor": ["monaco-editor"],
-          // Keep react in its own chunk
-          "react-vendor": ["react", "react-dom"],
-          // Math rendering
-          "katex": ["katex"],
+        // Vite 8 / rolldown replaces `manualChunks` (object form) with
+        // `codeSplitting.groups`; each group's `test` matches the module id.
+        // `[\\/]` keeps the separator Windows-safe.
+        codeSplitting: {
+          groups: [
+            // Monaco is huge — split it so the initial chunk loads faster
+            { name: "monaco-editor", test: /[\\/]node_modules[\\/]monaco-editor/ },
+            // Keep react in its own chunk
+            { name: "react-vendor", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },
+            // Math rendering
+            { name: "katex", test: /[\\/]node_modules[\\/]katex/ },
+          ],
         },
       },
     },

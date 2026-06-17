@@ -615,11 +615,20 @@ const LINTER_DEBOUNCE_MS = 600
  *
  * @param getContext  Called on each lint pass to get the current vault state.
  */
+export interface ContentLinterHandle extends monacoApi.IDisposable {
+  /**
+   * Force an immediate re-lint of the current model. Use when external linter
+   * state changes (e.g. the spell-check setting is toggled, the active
+   * spell-check language changes, or a dictionary finishes loading async).
+   */
+  relint(): void
+}
+
 export function setupContentLinter(
   editor: monacoApi.editor.IStandaloneCodeEditor,
   monaco: typeof monacoApi,
   getContext: () => LintContext,
-): monacoApi.IDisposable {
+): ContentLinterHandle {
   let debounce: ReturnType<typeof setTimeout> | null = null
 
   const run = () => {
@@ -643,6 +652,7 @@ export function setupContentLinter(
   setTimeout(run, 0)
 
   return {
+    relint: run,
     dispose() {
       contentDisposable.dispose()
       modelDisposable.dispose()
@@ -661,6 +671,7 @@ export function setupContentLinter(
 export function setupMathHover(
   editor: monacoApi.editor.IStandaloneCodeEditor,
   getMacros: () => Record<string, string>,
+  isEnabled: () => boolean = () => true,
 ): monacoApi.IDisposable {
   let currentWidget: monacoApi.editor.IOverlayWidget | null = null
 
@@ -672,6 +683,9 @@ export function setupMathHover(
   }
 
   const disposable = editor.onDidChangeCursorPosition((e) => {
+    // Gated by the same "Math preview" setting as the display-math view zones,
+    // so turning the setting off hides the floating overlay too.
+    if (!isEnabled()) { removeWidget(); return }
     const model = editor.getModel()
     if (!model) { removeWidget(); return }
 

@@ -20,6 +20,7 @@ Desktop editor for `Markdown + LaTeX` aimed at mathematics and science, built wi
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
+- [Third-party / Acknowledgements](#third-party--acknowledgements)
 - [License](#license)
 
 ---
@@ -267,6 +268,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - User-defined text snippets via `snippets.md`
 - YAML frontmatter (title, author, date, abstract, tags)
 - Callout blocks (`> [!NOTE]`, `> [!WARNING]`, `> [!TIP]`, etc.)
+- Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor) — each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
+- Text formatting: `==highlight==`, coloured highlights (`<mark class="hl-green">…</mark>` and friends), `<u>underline</u>`
+- Live auto table of contents — drop a `[[toc]]` line and it expands into a navigable, always-current heading list
 - Mermaid diagrams
 - Footnotes
 - HTML embed with sanitizer (YouTube iframes allowed; `<script>` and `<form>` blocked)
@@ -274,6 +278,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 ### Editor
 - Monaco Editor with syntax highlighting
 - Vim mode (toggle in Settings)
+- Offline spellcheck (Hunspell dictionaries via `nspell`, Spanish + English) — gated by a Settings toggle; no network required
 - Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers
 - Per-line comments — annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
@@ -291,10 +296,10 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-render correctness — macros are loaded before the initial render (no flash of unrendered math)
 
 ### Navigation & Panels
-- Command palette (Ctrl+P): fuzzy file + command search, vertically centered for ergonomics
+- Command palette (Ctrl+P): a categorized, selection-aware universal launcher — eight categories (Edición / Insertar / Matemáticas / Vista / Exportar / IA / Vault / Navegación), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
 - Quick switcher (Ctrl+;): fast file switching
 - Daily notes (Ctrl+Shift+D): create or jump to today's dated note
-- Outline panel (document headings)
+- Outline panel (document headings) — drag headings to reorder sections in the source
 - Backlinks panel (incoming `[[wikilinks]]`)
 - Wikilinks with `[[note-name]]` autocomplete
 - Tag panel (browse files by frontmatter tag)
@@ -310,7 +315,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Git panel (branch, staged/unstaged changes, commit, push)
 - Navigation history (Alt+Left / Alt+Right)
 - Breadcrumb bar
-- Sidebar with 6 essential tab buttons + overflow `⋯` menu for the remaining 12 panels
+- Focus timer panel — Pomodoro (work/break/long-break cycles) plus live writing-session stats (word delta, words-per-minute, daily-goal progress)
+- AI assistant panel — optional, bring-your-own provider (see [AI assistant](#ai-assistant) below)
+- Unified top menu bar — a classic dropdown bar (Archivo/Edición/Vista/Vault) plus a sectioned **Archivos / Textos / Matemáticas / Vistas** menu with direct **Enfoque / IA / Sync / Ayuda** buttons. Opening a panel un-collapses the sidebar; the old sidebar tab strip is gone
 
 ### Vault & Files
 - Vault = a regular folder on disk; open any folder
@@ -326,17 +333,31 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Project export: compose a multi-file project from a main document with `![[transclusions]]`
 - Reveal.js presentation
 - DOCX and Beamer via pandoc
+- Typst export (`.typ` via pandoc); Typst → PDF when the `typst` binary is installed
 - Obsidian-friendly Markdown export
+- Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, … → Markdown, with embedded images extracted)
 - Copy as HTML or LaTeX
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
 
 ### App
-- Themes: light, dark, and high-contrast variants — switch at runtime in Settings
-- Settings modal with left-tabbed sections (General, Appearance, Editor, PDF compilation, Advanced)
+- Themes: light, dark, and high-contrast — driven by CSS variables (`data-theme`), switchable at runtime in Settings
+- Settings modal with left-tabbed sections: General, Editor, Preview, Daily notes, PDF compilation, Sync, AI assistant
 - First-launch onboarding tour with polished empty states throughout the UI
 - English and Spanish UI with full parity — switch at runtime via Settings → **Language** (no restart needed)
 - Auto-updater with in-app banner and one-click install
-- Dependency warnings when pandoc or zip are missing — dismissible per-dep, persisted in localStorage
+- Dependency warnings when pandoc, zip, git, or typst are missing — dismissible per-dep, persisted in localStorage
+
+### AI assistant
+- Optional and **off by default** — bring your own provider and API key; ComdTeX ships none and makes no requests until you enable it
+- Providers: Anthropic, OpenAI, Google Gemini, any OpenAI-compatible endpoint (including local **Ollama** / LM Studio / OpenRouter / DeepSeek), or a local agent **CLI** (e.g. `claude` / `opencode`)
+- Two entry points: the **panel** (`Ctrl+Shift+A`, or the **IA** menu-bar button) and **inline edit** (`Ctrl+K`) — describe a change and it is applied to the selection or at the cursor
+- Edits are applied through the editor, so every AI change is fully **undo-able** (Ctrl+Z) and never silently rewrites your files
+- Base URLs are validated to `https://` or loopback (`http://localhost`) as an SSRF guard; ComdTeX ships no keys and makes no requests until you enable it
+- Configured in Settings → **AI assistant**
+
+### Citations
+- DOI / arXiv → BibTeX: paste a DOI or arXiv ID in the Citation Manager and ComdTeX fetches the entry from CrossRef / DataCite
+- Zotero import: pull entries directly from a running Zotero with the Better BibTeX plugin (local JSON-RPC API at `http://localhost:23119`) — no export step required
 
 ---
 
@@ -358,6 +379,10 @@ All cited entries are collected into a bibliography at the bottom of the preview
 | `Ctrl+0` | Reset zoom |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+W` | Close tab |
+| `Ctrl+Shift+A` | Open AI assistant panel |
+| `Ctrl+K` | AI inline edit (applies to selection or at cursor) |
+| `Ctrl+Shift+O` | Insert table of contents (`[[toc]]`) |
+| `Ctrl+Shift+E` | Toggle Outline panel |
 | `F11` | Focus mode |
 | `Escape` | Exit focus mode |
 | `Alt+Left` | Navigate back |
@@ -410,8 +435,10 @@ Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM La
 
 | Tool | Purpose | Install |
 |---|---|---|
-| `pandoc` | DOCX and Beamer export only (PDF no longer needs it) | [pandoc.org/installing.html](https://pandoc.org/installing.html) |
-| `zip` | Vault backup | `apt install zip` / `pacman -S zip` / `dnf install zip` |
+| `pandoc` | DOCX, Beamer, Typst export, and document import (PDF no longer needs it) | [pandoc.org/installing.html](https://pandoc.org/installing.html) |
+| `typst` | Typst → PDF export | [github.com/typst/typst](https://github.com/typst/typst) |
+| `zip` | Vault backup, `.cmdx` archive | `apt install zip` / `pacman -S zip` / `dnf install zip` |
+| `git` | In-app Git panel | distro package manager |
 | `tectonic` / `xelatex` / `pdflatex` | Optional local LaTeX fallback if the WASM engine fails | distro package manager |
 
 If any tool is missing, ComdTeX shows an amber warning banner on startup. The banner is dismissible per-tool and the choice persists across sessions.
@@ -428,10 +455,13 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 
 | Limitation | Notes |
 |---|---|
-| DOCX / Beamer export requires pandoc | PDF no longer needs pandoc (WASM engine bundled), but DOCX and Beamer still do. |
+| DOCX / Beamer / Typst export & import require pandoc | PDF no longer needs pandoc (WASM engine bundled); DOCX, Beamer, Typst, and document import still do. Typst → PDF additionally needs the `typst` binary. |
+| AI assistant is bring-your-own | Off by default; you supply your own provider and API key. ComdTeX ships no keys and makes no AI requests until enabled. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
 | No mobile support | Desktop only (Linux, Windows). |
 | Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel — see [docs/cloud-sync.md](docs/cloud-sync.md). |
+| Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js assets from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
+| SyncTeX forward/inverse sync is not available yet | The `.synctex` parser exists, but the bundled WASM LaTeX engine ships without synctex output, so no engine currently emits the data it needs. |
 
 ---
 
@@ -524,9 +554,9 @@ The bundled `linuxdeploy` ships an old `strip`. Set `NO_STRIP=true` before runni
 
 **Symptom:** Amber banner on startup, or "Scoped command X not found" in the dev console.
 
-ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. Since v1.3.2 the scope includes `pandoc`, `zip`, `git`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Instalar** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
+ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Instalar** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
 
-PDF compilation no longer needs any of these — the WASM engine is bundled. Pandoc is only required for DOCX / Beamer / Markdown→PDF (non-LaTeX path); zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
+PDF compilation no longer needs any of these — the WASM engine is bundled. Pandoc is required for DOCX / Beamer / Typst / document import / Markdown→PDF (non-LaTeX path); typst is additionally needed for Typst→PDF; zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
 
 ### .deb package: app does not launch
 
@@ -563,7 +593,7 @@ Requires updating **all five** of the following — omitting any causes inconsis
 
 1. `src/preprocessor.ts` — add a handler to `HANDLERS`
 2. `src/monacoSetup.ts` — add a completion entry to `COMPLETIONS`
-3. `src/Toolbar.tsx` — add an entry to the appropriate group in `getGroups(t)`
+3. `src/Toolbar.tsx` — add an entry to the appropriate section in `getSections(t)` (the unified menu bar)
 4. `src/HelpPanel.tsx` — add a `<Row>` entry in the corresponding section
 5. `src/i18n.ts` — add the label to `T.toolbar` and `T.helpPanel` in **both** `en` and `es`
 
@@ -600,6 +630,11 @@ Requires updating **all five** of the following — omitting any causes inconsis
 | `environments.ts` | Renders `:::type[title]{#label}` blocks |
 | `figures.ts` | Figure numbering and `@fig:label` cross-references |
 | `bibtex.ts` | BibTeX parser and `[@key]` citation resolver |
+| `doiFetch.ts` | DOI / arXiv → BibTeX fetch (CrossRef / DataCite) used by the Citation Manager |
+| `ai/aiProvider.ts` | BYO AI provider layer (Anthropic / OpenAI / Gemini / OpenAI-compatible / CLI) |
+| `ai/comdtex-context.md` | Built-in AI system prompt (ComdTeX syntax) bundled at build time |
+| `pomodoro.ts` | Pomodoro state machine + writing-session stats (backs `FocusTimerPanel`) |
+| `synctex.ts` | SyncTeX parsing for forward/inverse sync between source and PDF |
 | `frontmatter.ts` | Extracts and renders YAML frontmatter |
 | `macros.ts` | Parses `\newcommand` from `macros.md` |
 | `exporter.ts` | Exports Overleaf-compatible `.tex`; Reveal.js HTML |
@@ -631,6 +666,22 @@ Requires updating **all five** of the following — omitting any causes inconsis
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
+---
+
+## Third-party / Acknowledgements
+
+ComdTeX bundles open-source components. Notable ones with their own licenses:
+
+| Component | Use | License |
+|---|---|---|
+| [SwiftLaTeX](https://github.com/SwiftLaTeX/SwiftLaTeX) (`pdftex` WASM engine) | Built-in PDF compilation | MIT |
+| [`nspell`](https://github.com/wooorm/nspell) | Offline spellcheck engine | MIT |
+| [`dictionary-en`](https://github.com/wooorm/dictionaries) | English spellcheck dictionary | MIT AND BSD |
+| [`dictionary-es`](https://github.com/wooorm/dictionaries) | Spanish spellcheck dictionary | GPL-3.0 OR LGPL-3.0 OR MPL-1.1 |
+| [KaTeX](https://katex.org/), [Monaco Editor](https://microsoft.github.io/monaco-editor/), [Mermaid](https://mermaid.js.org/), [Excalidraw](https://excalidraw.com/), [pdf.js](https://mozilla.github.io/pdf.js/) | Rendering and editing | MIT / Apache-2.0 |
+
+**Spanish dictionary data:** `dictionary-es` is tri-licensed `(GPL-3.0 OR LGPL-3.0 OR MPL-1.1)`. ComdTeX **elects the MPL-1.1** option for its use of the Spanish dictionary data. The English dictionary (`dictionary-en`) is `MIT AND BSD`.
 
 ---
 

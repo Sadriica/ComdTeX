@@ -183,4 +183,138 @@ describe("renderMarkdown", () => {
       expect(html).toContain("x = 1")
     })
   })
+
+  describe("text highlighting (==mark==)", () => {
+    it("wraps ==text== in a <mark> element", () => {
+      const html = renderMarkdown("Esto es ==importante== aquí.")
+      expect(html).toContain("<mark>importante</mark>")
+    })
+
+    it("does not highlight a single = or unmatched ==", () => {
+      const html = renderMarkdown("a = b and c == d unmatched")
+      expect(html).not.toContain("<mark>")
+    })
+
+    it("leaves == inside inline code untouched", () => {
+      const html = renderMarkdown("`a ==b== c`")
+      expect(html).not.toContain("<mark>")
+      expect(html).toContain("<code>a ==b== c</code>")
+    })
+
+    it("leaves == inside a fenced code block untouched", () => {
+      const html = renderMarkdown("```\nx ==y== z\n```")
+      expect(html).not.toContain("<mark>")
+      expect(html).toContain("x ==y== z")
+    })
+
+    it("does not treat == inside inline math as a highlight", () => {
+      const html = renderMarkdown("$a == b$")
+      expect(html).not.toContain("<mark>")
+    })
+
+    it("keeps coloured <mark class> raw HTML through the sanitizer", () => {
+      const html = renderMarkdown('Un <mark class="hl-green">verde</mark> y un <u>subrayado</u>.')
+      expect(html).toContain('<mark class="hl-green">verde</mark>')
+      expect(html).toContain("<u>subrayado</u>")
+    })
+  })
+
+  describe("auto-generated table of contents ([[toc]])", () => {
+    it("expands a standalone [[toc]] line into a list linking to headings", () => {
+      const text = "[[toc]]\n\n# Intro\n\n## Details\n\n# Conclusion"
+      const html = renderMarkdown(text)
+      // The marker itself must not survive as literal text.
+      expect(html).not.toContain("[[toc]]")
+      // Links to the heading slugs.
+      expect(html).toContain('href="#intro"')
+      expect(html).toContain('href="#details"')
+      expect(html).toContain('href="#conclusion"')
+      // Matching ids assigned to the rendered headings for navigation.
+      expect(html).toMatch(/<h1[^>]*id="intro"[^>]*>1 Intro<\/h1>/)
+      expect(html).toMatch(/<h2[^>]*id="details"[^>]*>1\.1 Details<\/h2>/)
+    })
+
+    it("also accepts the single-bracket [toc] form, case-insensitively", () => {
+      const html = renderMarkdown("[TOC]\n\n# A\n\n# B")
+      expect(html).not.toContain("[TOC]")
+      expect(html).toContain('href="#a"')
+      expect(html).toContain('href="#b"')
+    })
+
+    it("leaves [[toc]] with no headings as an empty expansion (no marker leak)", () => {
+      const html = renderMarkdown("[[toc]]\n\nJust prose, no headings.")
+      expect(html).not.toContain("[[toc]]")
+    })
+
+    it("assigns the right id to a Setext heading (no index-desync)", () => {
+      // Setext h1 ('Title One' underlined with ===) is not an ATX heading, yet
+      // markdown-it renders it as <h1>. Ids derive from rendered text, so the
+      // following ## must still get its own correct id.
+      const html = renderMarkdown("[[toc]]\n\nTitle One\n========\n\n## Sub Section")
+      expect(html).toMatch(/<h1[^>]*id="title-one"[^>]*>/)
+      expect(html).toMatch(/<h2[^>]*id="sub-section"[^>]*>/)
+      expect(html).toContain('href="#title-one"')
+      expect(html).toContain('href="#sub-section"')
+    })
+
+    it("ignores a heading inside a code block when assigning TOC ids", () => {
+      const html = renderMarkdown("[[toc]]\n\n```\n# not a heading\n```\n\n# Real Heading")
+      // The code-block '# not a heading' is not an <h*>, so the real heading
+      // keeps its own id and TOC link.
+      expect(html).toMatch(/<h1[^>]*id="real-heading"[^>]*>/)
+      expect(html).toContain('href="#real-heading"')
+      expect(html).not.toContain('href="#not-a-heading"')
+    })
+
+    it("disambiguates duplicate heading titles with suffixed ids", () => {
+      const html = renderMarkdown("[[toc]]\n\n# Notes\n\n# Notes")
+      expect(html).toMatch(/id="notes"/)
+      expect(html).toMatch(/id="notes-2"/)
+      expect(html).toContain('href="#notes"')
+      expect(html).toContain('href="#notes-2"')
+    })
+  })
+
+  describe("regression fixes", () => {
+    it("renders footnotes via the plugin without a duplicate post-pass", () => {
+      const html = renderMarkdown("Texto con nota[^1].\n\n[^1]: El cuerpo de la nota.")
+      expect(html).toContain('class="footnote-ref"')
+      expect(html).toContain("El cuerpo de la nota.")
+      // The old hand-rolled pass emitted a second <ol class="footnotes">.
+      expect(html.match(/footnote-ref/g)?.length).toBe(1)
+    })
+
+    it("does not crash on a footnote ref whose id contains regex metachars", () => {
+      // Orphan ref (no definition) with regex-special chars used to throw via
+      // `new RegExp(origId)` in the removed resolveFootnotes pass.
+      expect(() => renderMarkdown("See[^a.b(c] here.")).not.toThrow()
+    })
+
+    it("leaves a @eq ref and [[wikilink]] inside inline code untouched", () => {
+      const text = "$$ x = 1 $$ {#eq:foo}\n\nUse `@eq:foo` and `[[Note]]` literally; ref @eq:foo links."
+      const html = renderMarkdown(text, {}, undefined, new Set(["Note"]))
+      // Inside code: kept verbatim, not turned into a link.
+      expect(html).toContain("<code>@eq:foo</code>")
+      expect(html).toContain("<code>[[Note]]</code>")
+      // Outside code: the real reference still resolves.
+      expect(html).toContain('class="eq-ref">(1)')
+    })
+
+    it("does not count an ![](...) inside a code block toward figure numbering", () => {
+      const text = [
+        "```",
+        "![not a real figure](fake.png)",
+        "```",
+        "",
+        "![Real one](real.png){#fig:r}",
+        "",
+        "See @fig:r.",
+      ].join("\n")
+      const html = renderMarkdown(text)
+      // The real figure must be number 1, not 2.
+      expect(html).toContain("Figura 1")
+      expect(html).toContain('class="fig-ref"')
+      expect(html).not.toContain("Figura (?)")
+    })
+  })
 })

@@ -6,9 +6,11 @@
 // valid bundle and gracefully report "unavailable" at runtime.
 //
 // SwiftLaTeX exposes a `PdfTeXEngine` class (via the global scope) once its
-// glue script is loaded. We re-create that surface here and translate it to
-// our message protocol. If the glue fails to load, we keep the worker alive
-// and answer all compile requests with `status: "unavailable"`.
+// wrapper script (`/wasm-tex/PdfTeXEngine.js`) is loaded. That wrapper in turn
+// spawns the inner Emscripten worker (`/wasm-tex/swiftlatexpdftex.js`). We
+// translate that surface to our message protocol. If the wrapper fails to load
+// or does not register the constructor, we keep the worker alive and answer all
+// compile requests with `status: "unavailable"`.
 //
 // Message protocol — see `wasmTex.ts` for the canonical shapes.
 
@@ -21,10 +23,18 @@ interface SwiftLatexEngine {
   makeMemFSFolder(path: string): void
   flushCache(): void
   closeWorker?(): void
+  /**
+   * Read a file back out of the engine's virtual filesystem. Optional: present
+   * on SyncTeX-capable engine builds, used to recover the `.synctex(.gz)`
+   * companion file. Absent on the bundled SwiftLaTeX pdftex build.
+   */
+  readMemFSFile?(filename: string): Uint8Array
   compileLaTeX(): Promise<{
     status: number
     log: string
     pdf?: Uint8Array
+    /** Some engine forks return the synctex bytes directly on the result. */
+    synctex?: Uint8Array
   }>
 }
 
@@ -74,9 +84,11 @@ async function init(engineUrl: string | null): Promise<void> {
     return
   }
   try {
-    // SwiftLaTeX glue scripts are classic scripts that register a global
-    // constructor (e.g. `PdfTeXEngine`). importScripts is the cleanest way
-    // to load them inside a module worker on Chromium-based webviews.
+    // SwiftLaTeX wrapper scripts are classic scripts that register a global
+    // constructor (e.g. `PdfTeXEngine`). importScripts loads them. This worker
+    // is created as a *classic* worker (see wasmTex.ts) precisely because
+    // importScripts is disabled inside module workers on Chromium-based
+    // webviews.
     const scope = self as unknown as { importScripts?: (url: string) => void }
     if (typeof scope.importScripts !== "function") {
       throw new Error("importScripts not supported")
@@ -96,6 +108,55 @@ async function init(engineUrl: string | null): Promise<void> {
     // resolve with status: "unavailable".
     post({ type: "ready" })
   }
+}
+
+// Decode synctex bytes to text. SyncTeX may be plain (`.synctex`) or gzip'd
+// (`.synctex.gz`); gzip starts with the magic bytes 0x1f 0x8b. We use the
+// platform DecompressionStream (present on Chromium-based webviews) to gunzip,
+// falling back to treating the bytes as already-plain text on any failure.
+async function decodeSyncTex(bytes: Uint8Array): Promise<string> {
+  const isGzip = bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
+  if (isGzip && typeof (globalThis as { DecompressionStream?: unknown }).DecompressionStream === "function") {
+    try {
+      const DS = (globalThis as unknown as { DecompressionStream: new (f: string) => GenericTransformStream }).DecompressionStream
+      const stream = new Response(new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip")))
+      return await stream.text()
+    } catch {
+      // fall through to plain decode
+    }
+  }
+  try {
+    return new TextDecoder().decode(bytes)
+  } catch {
+    return ""
+  }
+}
+
+// Best-effort recovery of the SyncTeX companion produced by a compile. Returns
+// null when the engine produced none (the bundled pdftex WASM build has SyncTeX
+// disabled, so this is null in practice today — by design, no faking).
+async function extractSyncTex(
+  eng: SwiftLatexEngine,
+  result: { synctex?: Uint8Array },
+  mainFile: string,
+): Promise<string | null> {
+  // 1) Engine returned synctex bytes directly.
+  if (result.synctex && result.synctex.byteLength > 0) {
+    return await decodeSyncTex(result.synctex)
+  }
+  // 2) Engine exposes a memfs read — try the conventional output names.
+  if (typeof eng.readMemFSFile === "function") {
+    const base = mainFile.replace(/\.tex$/i, "")
+    for (const name of [`${base}.synctex.gz`, `${base}.synctex`]) {
+      try {
+        const bytes = eng.readMemFSFile(name)
+        if (bytes && bytes.byteLength > 0) return await decodeSyncTex(bytes)
+      } catch {
+        // file not present — try the next candidate
+      }
+    }
+  }
+  return null
 }
 
 async function compile(msg: CompileMessage): Promise<void> {
@@ -124,6 +185,8 @@ async function compile(msg: CompileMessage): Promise<void> {
     post({ type: "progress", id, message: "Compiling LaTeX" })
     const result = await engine.compileLaTeX()
     if (result.status === 0 && result.pdf && result.pdf.byteLength > 0) {
+      // Best-effort SyncTeX recovery (null on the bundled SyncTeX-less build).
+      const synctex = await extractSyncTex(engine, result, mainFile)
       // Transfer the underlying buffer to avoid copying.
       const buf = result.pdf.buffer
       post({
@@ -132,6 +195,7 @@ async function compile(msg: CompileMessage): Promise<void> {
         status: "ok",
         pdf: result.pdf,
         log: result.log ?? "",
+        synctex,
       }, [buf as ArrayBuffer])
     } else {
       post({
@@ -140,6 +204,7 @@ async function compile(msg: CompileMessage): Promise<void> {
         status: "error",
         pdf: null,
         log: result.log ?? "compilation failed",
+        synctex: null,
       })
     }
   } catch (err) {

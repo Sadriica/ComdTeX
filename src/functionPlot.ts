@@ -364,7 +364,7 @@ const COLORS = ["#7ca0d0", "#e8875a", "#6dbb8a", "#c37ece", "#e8c85a", "#e07070"
 /**
  * Renders a static SVG plot for one or more functions.
  */
-export function renderPlotHTML(title: string, content: string): string {
+export function renderPlotHTML(title: string, content: string, number = ""): string {
   let spec: PlotSpec
   try {
     spec = parsePlotBlock(title, content)
@@ -490,9 +490,10 @@ export function renderPlotHTML(title: string, content: string): string {
   // Border around plot area
   svgLines.push(`<rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" fill="none" stroke="#444" stroke-width="0.5"/>`)
 
-  const titleHtml = spec.title
-    ? `<div class="plot-title">${escHtml(spec.title)}</div>`
-    : ""
+  const headerText = spec.title
+    ? `Plot ${number}: ${escHtml(spec.title)}`
+    : `Plot ${number}`
+  const titleHtml = `<div class="plot-title">${headerText}</div>`
 
   const svgContent = `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" style="max-width:600px;cursor:crosshair" xmlns="http://www.w3.org/2000/svg">
 ${svgLines.join("\n")}

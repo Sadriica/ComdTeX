@@ -3,6 +3,38 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.9.0] - 2026-06-17
+
+### Added
+- **AI assistant (bring-your-own, off by default):** multi-provider support — Anthropic, OpenAI, Google Gemini, any OpenAI-compatible endpoint (incl. local **Ollama** / LM Studio / OpenRouter / DeepSeek), and a local agent **CLI** bridge (e.g. `claude` / `opencode`). Chat panel (`Ctrl+Shift+A`, or the **IA** menu button) plus **inline edit** (`Ctrl+K`). All edits are applied through Monaco `executeEdits()`, so every change is undo-safe. Base URLs are SSRF-guarded (`https://` or loopback only). ComdTeX ships no keys and makes no requests until enabled
+- **`:::excalidraw` special block:** a built-in, lazy-loaded freehand drawing editor; the drawing is stored verbatim in the file and auto-numbered per type, like the other special blocks
+- **Offline spellcheck:** Hunspell dictionaries (Spanish + English) via `nspell`, gated by a Settings toggle — no network access
+- **Zotero import in the Citation Manager:** pulls entries from a running Zotero with the Better BibTeX plugin via its local JSON-RPC API (`http://localhost:23119`)
+- **Typst export:** `.typ` source via pandoc, plus **Typst → PDF** when the `typst` binary is installed
+- **Pandoc document import:** `.docx` / `.odt` / `.tex` / `.html` / `.epub` / `.rst` / `.org` → Markdown, with embedded images extracted
+- **Live auto table of contents:** a standalone `[[toc]]` (or `[toc]`) line expands into a navigable, always-current heading list (`Ctrl+Shift+O` inserts the marker)
+- **Text formatting:** `==highlight==` (yellow), coloured highlights via `<mark class="hl-green|hl-blue|hl-purple|hl-orange|hl-red|hl-pink">…</mark>`, and `<u>underline</u>`
+- **Outline panel drag-reorder:** drag headings to reorder sections in the source
+- **New global keyboard shortcuts:** `Ctrl/Cmd+Shift+A` (open AI assistant), `Ctrl/Cmd+Shift+O` (insert TOC), `Ctrl/Cmd+Shift+E` (toggle Outline panel), `Ctrl/Cmd+K` (AI inline edit)
+- **Third-party license notice:** README now lists bundled dictionary licenses; ComdTeX elects MPL-1.1 for the `dictionary-es` data
+
+### Changed
+- **Unified sectioned menu bar:** a classic dropdown bar (Archivo/Edición/Vista/Vault) plus a sectioned **Archivos / Textos / Matemáticas / Vistas** menu with direct **Enfoque / IA / Sync / Ayuda** buttons (monochrome icons). Replaced the old toolbar and the sidebar tab strip; opening a panel un-collapses the sidebar
+- **Enriched Command Palette (`Ctrl+P`):** now a categorized, selection-aware universal launcher with eight categories (Edición / Insertar / Matemáticas / Vista / Exportar / IA / Vault / Navegación). Each command shows an icon and a keyboard-shortcut chip; commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; format commands wrap the current selection
+- **Word wrap is now on by default**
+- **Build:** migrated to Vite 8 (rolldown backend); manual chunks now use `output.codeSplitting.groups`
+
+### Fixed
+- **WASM LaTeX `PdfTeXEngine.js` wrapper:** fix landed so PDF compilation works with no system LaTeX installed (fallback chain WASM → `tectonic` → `xelatex` → `pdflatex`)
+- **Data safety — masking bypass:** several write paths (todo-checkbox toggle, wikilink rename refactor, backlink removal) wrote editor content to disk without the special-block masking, corrupting `.tex` files; all now route through the masked, autosave-race-safe write path. `:::excalidraw` blocks are now stored verbatim like the other special blocks
+- **Save As / Export:** *Save As* no longer applies a lossy Obsidian transform (it now saves the document faithfully); *Export Markdown* now produces clean Markdown; DOCX/Beamer export convert the live editor content through the pandoc input pipeline
+- **Quit safety:** closing the app (window manager, `Cmd+Q`) now flushes pending autosaves and warns about unsaved changes instead of silently dropping the last edits
+- **Panels opened from the palette/menu/shortcut/status bar** now un-collapse the sidebar instead of changing the panel invisibly
+- **Autosave interval setting** is now actually applied (was always 800 ms); added an **Auto-rebuild PDF** Settings control that previously had no UI
+- **Settings inputs** no longer lose focus after each keystroke (focus-trap fix)
+- **Theming:** added light / high-contrast overrides for the focus timer, AI panel, and cloud-sync UI; defined the previously-undefined `--muted` variable; replaced colour-emoji icons (folder, sparkle, trash) with monochrome inline SVGs that render correctly in WebKitGTK
+- **Reveal.js export** escapes the document title and guards against content breaking out of the slide template
+
 ## [1.3.2] - 2026-04-29
 
 ### Added

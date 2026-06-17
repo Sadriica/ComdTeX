@@ -207,7 +207,7 @@ function escSvg(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
-export function renderCommDiagSVG(title: string, content: string): string {
+export function renderCommDiagSVG(title: string, content: string, number = ""): string {
   let graph: CDGraph
   try {
     graph = parseCommDiag(content)
@@ -413,9 +413,10 @@ export function renderCommDiagSVG(title: string, content: string): string {
     `</svg>`,
   ].join("\n")
 
-  const titleHtml = title
-    ? `<div class="commdiag-title">${escSvg(title)}</div>`
-    : ""
+  const headerText = title
+    ? `Diagram ${number}: ${escSvg(title)}`
+    : `Diagram ${number}`
+  const titleHtml = `<div class="commdiag-title">${headerText}</div>`
 
   return [
     `<div class="commdiag-block">`,

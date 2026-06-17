@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, useCallback, type ReactNode } from "react"
 import type * as monaco from "monaco-editor"
 import type { T } from "./i18n"
 import { useT } from "./i18n"
+import { insertSnippet } from "./editorInsert"
 
 // ── Symbol groups ─────────────────────────────────────────────────────────────
 
@@ -39,590 +40,504 @@ const ARROWS = [
   ["↗","\\nearrow"],["↘","\\searrow"],["↙","\\swarrow"],["↖","\\nwarrow"],
 ] as const
 
+// Panel modes the menu can switch to (mirror of App.tsx SidebarMode subset used here).
+export type PanelMode =
+  | "files" | "search" | "searchReplace" | "backlinks" | "pdfPreview"
+  | "outline" | "tags" | "labels" | "properties" | "comments" | "todo"
+  | "equations" | "environments" | "graph"
+  | "stats" | "quality"
+  | "focusTimer" | "ai" | "cloudSync" | "help"
+
 interface ToolbarProps {
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
-  previewVisible: boolean
-  onTogglePreview: () => void
+  sidebarMode: PanelMode | string
+  setSidebarMode: (m: PanelMode) => void
 }
 
-// ── Tipos ────────────────────────────────────────────────────────────────────
+// ── Menu item model ───────────────────────────────────────────────────────────
 
-interface Btn {
+type MenuItem =
+  | { kind: "action"; label: string; title?: string; snippet: string }
+  | { kind: "panel"; label: string; mode: PanelMode }
+  | { kind: "submenu"; label: string; items: MenuItem[] }
+  | { kind: "symbols" } // special: embeds the SymbolPicker grid
+  | { kind: "sep" }
+
+interface MenuSection {
+  id: string
+  icon: ReactNode
   label: string
-  title: string
-  snippet: string
+  items: MenuItem[]
 }
 
-interface DropdownItem {
-  label: string
-  title: string
-  snippet: string
+// Monochrome folder icon (inline SVG with currentColor — emoji folder glyphs
+// render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
+const FolderIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
+    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+  </svg>
+)
+
+// All panel modes contained (recursively) in a section's items — used to mark
+// the section button active when one of its panels is the active sidebar mode.
+function collectPanelModes(items: MenuItem[]): PanelMode[] {
+  const out: PanelMode[] = []
+  for (const it of items) {
+    if (it.kind === "panel") out.push(it.mode)
+    else if (it.kind === "submenu") out.push(...collectPanelModes(it.items))
+  }
+  return out
 }
 
-interface BtnGroup {
-  kind: "buttons"
-  items: Btn[]
-}
+// ── Menu data ─────────────────────────────────────────────────────────────────
 
-interface DropdownGroup {
-  kind: "dropdown"
-  label: string
-  title: string
-  items: DropdownItem[]
-}
+function getSections(t: T): MenuSection[] {
+  const p = (label: string, mode: PanelMode): MenuItem => ({ kind: "panel", label, mode })
+  const a = (label: string, snippet: string, title?: string): MenuItem =>
+    ({ kind: "action", label, snippet, title })
 
-interface MoreSection {
-  label: string
-  items: DropdownItem[]
-}
-
-type Group = BtnGroup | DropdownGroup
-
-// ── Main toolbar (always visible) ────────────────────────────────────────────
-
-function getMainGroups(t: T): Group[] {
   return [
-    // ── Format: B, I, `, link
+    // 1. Archivos
     {
-      kind: "buttons",
+      id: "files",
+      icon: FolderIcon,
+      label: t.toolbar.secFiles,
       items: [
-        { label: "B",   title: t.toolbar.bold,        snippet: "**${1:texto}**" },
-        { label: "I",   title: t.toolbar.italic,      snippet: "_${1:texto}_" },
-        { label: "`",   title: t.toolbar.inlineCode,  snippet: "`${1:código}`" },
-        { label: "🔗",  title: t.toolbar.link,        snippet: "[${1:texto}](${2:url})" },
+        p(t.sidebar.files, "files"),
+        p(t.sidebar.search, "search"),
+        p(t.sidebar.searchReplace, "searchReplace"),
+        p(t.sidebar.backlinks, "backlinks"),
+        p(t.sidebar.pdfPreview, "pdfPreview"),
       ],
     },
-    // ── Headings dropdown
+    // 2. Textos
     {
-      kind: "dropdown",
-      label: "H",
-      title: t.toolbar.headings,
+      id: "texts",
+      icon: "✎",
+      label: t.toolbar.secTexts,
       items: [
-        { label: t.toolbar.lbl_heading1, title: t.toolbar.heading1, snippet: "# ${1:Título}" },
-        { label: t.toolbar.lbl_heading2, title: t.toolbar.heading2, snippet: "## ${1:Título}" },
-        { label: t.toolbar.lbl_heading3, title: t.toolbar.heading3, snippet: "### ${1:Título}" },
+        a(t.toolbar.bold, "**${1:texto}**", t.toolbar.bold),
+        a(t.toolbar.italic, "_${1:texto}_", t.toolbar.italic),
+        a(t.toolbar.underline, "<u>${1:texto}</u>", t.toolbar.underline),
+        a(t.toolbar.strikethrough, "~~${1:texto}~~", t.toolbar.strikethrough),
+        a(t.toolbar.inlineCode, "`${1:código}`", t.toolbar.inlineCode),
+        a(t.toolbar.link, "[${1:texto}](${2:url})", t.toolbar.link),
+        {
+          kind: "submenu",
+          label: t.toolbar.highlight,
+          items: [
+            a(`🟨 ${t.toolbar.hlDefault}`, "==${1:texto}=="),
+            a(`🟩 ${t.toolbar.hlGreen}`,  '<mark class="hl-green">${1:texto}</mark>'),
+            a(`🟦 ${t.toolbar.hlBlue}`,   '<mark class="hl-blue">${1:texto}</mark>'),
+            a(`🟪 ${t.toolbar.hlPurple}`, '<mark class="hl-purple">${1:texto}</mark>'),
+            a(`🟧 ${t.toolbar.hlOrange}`, '<mark class="hl-orange">${1:texto}</mark>'),
+            a(`🟥 ${t.toolbar.hlRed}`,    '<mark class="hl-red">${1:texto}</mark>'),
+            a(`🌸 ${t.toolbar.hlPink}`,   '<mark class="hl-pink">${1:texto}</mark>'),
+          ],
+        },
+        {
+          kind: "submenu",
+          label: t.toolbar.headings,
+          items: [
+            a(t.toolbar.lbl_heading1, "# ${1:Título}"),
+            a(t.toolbar.lbl_heading2, "## ${1:Título}"),
+            a(t.toolbar.lbl_heading3, "### ${1:Título}"),
+          ],
+        },
+        {
+          kind: "submenu",
+          label: t.toolbar.list,
+          items: [
+            a(t.toolbar.lbl_list,        "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}"),
+            a(t.toolbar.lbl_orderedList, "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}"),
+            a(t.toolbar.lbl_taskList,    "- [ ] ${1:tarea}\n- [ ] ${2:tarea}"),
+          ],
+        },
+        a(t.toolbar.quote, "> ${1:cita}", t.toolbar.quote),
+        a(t.toolbar.separator, "\n---\n", t.toolbar.separator),
+        a(t.toolbar.insertToc, "[[toc]]\n", t.toolbar.insertToc),
+        { kind: "sep" },
+        p(t.sidebar.outline, "outline"),
+        p(t.sidebar.tags, "tags"),
+        p(t.sidebar.labels, "labels"),
+        p(t.sidebar.properties, "properties"),
+        p(t.sidebar.comments, "comments"),
+        p(t.sidebar.todo, "todo"),
       ],
     },
-    // ── Insert dropdown (list, link, image, code block, table, math block)
+    // 3. Matemáticas
     {
-      kind: "dropdown",
-      label: "⊕",
-      title: t.toolbar.insert,
+      id: "math",
+      icon: "∑",
+      label: t.toolbar.secMath,
       items: [
-        { label: t.toolbar.lbl_list,        title: t.toolbar.list,        snippet: "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}" },
-        { label: t.toolbar.lbl_orderedList, title: t.toolbar.orderedList, snippet: "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}" },
-        { label: t.toolbar.lbl_taskList,    title: t.toolbar.taskList,    snippet: "- [ ] ${1:tarea}\n- [ ] ${2:tarea}" },
-        { label: t.toolbar.lbl_link,        title: t.toolbar.link,        snippet: "[${1:texto}](${2:url})" },
-        { label: t.toolbar.lbl_codeBlock,   title: t.toolbar.codeBlock,   snippet: "```${1:lenguaje}\n${2:código}\n```\n$0" },
-        { label: t.toolbar.lbl_table,       title: t.toolbar.table,       snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})" },
-        { label: t.toolbar.lbl_quote,       title: t.toolbar.quote,       snippet: "> ${1:cita}" },
-        { label: t.toolbar.lbl_separator,   title: t.toolbar.separator,   snippet: "\n---\n" },
+        a(t.toolbar.mathInline, "\\$${1}\\$", t.toolbar.mathInline),
+        a(t.toolbar.mathBlock, "\\$\\$\n${1}\n\\$\\$", t.toolbar.mathBlock),
+        { kind: "submenu", label: t.toolbar.symbols, items: [{ kind: "symbols" }] },
+        {
+          kind: "submenu",
+          label: t.toolbar.mathOps,
+          items: [
+            a(t.toolbar.lbl_superscript, "sup(${1:x}, ${2:n})"),
+            a(t.toolbar.lbl_subscript,   "sub(${1:x}, ${2:n})"),
+            a(t.toolbar.lbl_fraction,    "frac(${1:a}, ${2:b})"),
+            a(t.toolbar.lbl_sqrt,        "sqrt(${1:x})"),
+            a(t.toolbar.lbl_nthRoot,     "root(${1:n}, ${2:x})"),
+            a(t.toolbar.lbl_sum,         "sum(${1:i=0}, ${2:n})"),
+            a(t.toolbar.lbl_integral,    "int(${1:a}, ${2:b})"),
+            a(t.toolbar.lbl_limit,       "lim(${1:x}, ${2:0})"),
+            a(t.toolbar.lbl_partialDer,  "pder(${1:f}, ${2:x})"),
+            a(t.toolbar.lbl_derivative,  "der(${1:f}, ${2:x})"),
+            a(t.toolbar.lbl_gradient,    "\\$\\\\nabla ${1:f}\\$"),
+            a(t.toolbar.lbl_inverse,     "inv(${1:A})"),
+            a(t.toolbar.lbl_transpose,   "trans(${1:A})"),
+            a(t.toolbar.lbl_matAuto,     "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})"),
+            a(t.toolbar.lbl_matFixed,    "matf(${1:2}, ${2:2})"),
+            a(t.toolbar.lbl_matLiteral,  "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
+          ],
+        },
+        {
+          kind: "submenu",
+          label: t.toolbar.decorators,
+          items: [
+            a("x̂  hat",   "hat(${1:x})"),
+            a("x̄  bar",   "bar(${1:x})"),
+            a("x̃  tilde", "tilde(${1:x})"),
+            a("ẍ  ddot",  "ddot(${1:x})"),
+            a("v⃗  vec",   "vec(${1:v})"),
+          ],
+        },
+        {
+          kind: "submenu",
+          label: t.toolbar.mathFonts,
+          items: [
+            a("𝐱  bf",  "bf(${1:x})"),
+            a("𝒜  cal", "cal(${1:A})"),
+            a("ℝ  bb",  "bb(${1:R})"),
+          ],
+        },
+        {
+          kind: "submenu",
+          label: t.toolbar.environments,
+          items: [
+            a(t.toolbar.lbl_theorem,     ":::theorem[${1:título}]\n${2:enunciado}\n:::"),
+            a(t.toolbar.lbl_lemma,       ":::lemma[${1:título}]\n${2:enunciado}\n:::"),
+            a(t.toolbar.lbl_corollary,   ":::corollary\n${1:enunciado}\n:::"),
+            a(t.toolbar.lbl_proposition, ":::proposition\n${1:enunciado}\n:::"),
+            a(t.toolbar.lbl_definition,  ":::definition\n${1:definición}\n:::"),
+            a(t.toolbar.lbl_example,     ":::example\n${1:ejemplo}\n:::"),
+            a(t.toolbar.lbl_proof,       ":::proof\n${1:demostración}\n:::"),
+          ],
+        },
+        { kind: "sep" },
+        p(t.sidebar.equations, "equations"),
+        p(t.sidebar.environments, "environments"),
+        p(t.sidebar.graph, "graph"),
       ],
     },
-    // ── Math containers
+    // 4. Vistas
     {
-      kind: "buttons",
+      id: "views",
+      icon: "▦",
+      label: t.toolbar.secViews,
       items: [
-        { label: "$",   title: t.toolbar.mathInline, snippet: "\\$${1}\\$" },
-        { label: "$$",  title: t.toolbar.mathBlock,  snippet: "\\$\\$\n${1}\n\\$\\$" },
+        p(t.sidebar.stats, "stats"),
+        p(t.sidebar.quality, "quality"),
       ],
     },
   ]
 }
 
-// ── "More" dropdown sections (collapsed math/symbol categories) ──────────────
-
-function getMoreSections(t: T): MoreSection[] {
+// Direct (no-dropdown) buttons on the right.
+function getDirectButtons(t: T): { mode: PanelMode; icon: string; label: string }[] {
   return [
-    {
-      label: t.toolbar.mathOps,
-      items: [
-        { label: t.toolbar.lbl_superscript, title: t.toolbar.superscript, snippet: "sup(${1:x}, ${2:n})" },
-        { label: t.toolbar.lbl_subscript,   title: t.toolbar.subscript,   snippet: "sub(${1:x}, ${2:n})" },
-        { label: t.toolbar.lbl_fraction,    title: t.toolbar.fraction,    snippet: "frac(${1:a}, ${2:b})" },
-        { label: t.toolbar.lbl_sqrt,        title: t.toolbar.sqrt,        snippet: "sqrt(${1:x})" },
-        { label: t.toolbar.lbl_nthRoot,     title: t.toolbar.nthRoot,     snippet: "root(${1:n}, ${2:x})" },
-        { label: t.toolbar.lbl_sum,         title: t.toolbar.sum,         snippet: "sum(${1:i=0}, ${2:n})" },
-        { label: t.toolbar.lbl_integral,    title: t.toolbar.integral,    snippet: "int(${1:a}, ${2:b})" },
-        { label: t.toolbar.lbl_limit,       title: t.toolbar.limit,       snippet: "lim(${1:x}, ${2:0})" },
-        { label: t.toolbar.lbl_partialDer,  title: t.toolbar.partialDer,  snippet: "pder(${1:f}, ${2:x})" },
-        { label: t.toolbar.lbl_derivative,  title: t.toolbar.derivative,  snippet: "der(${1:f}, ${2:x})" },
-        { label: t.toolbar.lbl_gradient,    title: t.toolbar.gradient,    snippet: "\\$\\\\nabla ${1:f}\\$" },
-        { label: t.toolbar.lbl_inverse,     title: t.toolbar.inverse,     snippet: "inv(${1:A})" },
-        { label: t.toolbar.lbl_transpose,   title: t.toolbar.transpose,   snippet: "trans(${1:A})" },
-        { label: t.toolbar.lbl_matAuto,     title: t.toolbar.matAuto,     snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
-        { label: t.toolbar.lbl_matFixed,    title: t.toolbar.matFixed,    snippet: "matf(${1:2}, ${2:2})" },
-        { label: t.toolbar.lbl_matLiteral,  title: t.toolbar.matLiteral,  snippet: "[[${1:1},${2:2}],[${3:3},${4:4}]]" },
-      ],
-    },
-    {
-      label: t.toolbar.decorators,
-      items: [
-        { label: "x̂  hat",    title: "hat",   snippet: "hat(${1:x})" },
-        { label: "x̄  bar",    title: "bar",   snippet: "bar(${1:x})" },
-        { label: "x̃  tilde",  title: "tilde", snippet: "tilde(${1:x})" },
-        { label: "ẋ  dot",    title: "dot",   snippet: "dot(${1:x})" },
-        { label: "ẍ  ddot",   title: "ddot",  snippet: "ddot(${1:x})" },
-        { label: "v⃗  vec",    title: "vec",   snippet: "vec(${1:v})" },
-      ],
-    },
-    {
-      label: t.toolbar.mathFonts,
-      items: [
-        { label: "𝐱  bf",  title: "mathbf",  snippet: "bf(${1:x})" },
-        { label: "𝒜  cal", title: "mathcal", snippet: "cal(${1:A})" },
-        { label: "ℝ  bb",  title: "mathbb",  snippet: "bb(${1:R})" },
-      ],
-    },
-    {
-      label: t.toolbar.greekLetters,
-      items: [
-        { label: "α",  title: "alpha",   snippet: "\\$\\\\alpha\\$" },
-        { label: "β",  title: "beta",    snippet: "\\$\\\\beta\\$" },
-        { label: "γ",  title: "gamma",   snippet: "\\$\\\\gamma\\$" },
-        { label: "δ",  title: "delta",   snippet: "\\$\\\\delta\\$" },
-        { label: "ε",  title: "epsilon", snippet: "\\$\\\\epsilon\\$" },
-        { label: "ζ",  title: "zeta",    snippet: "\\$\\\\zeta\\$" },
-        { label: "η",  title: "eta",     snippet: "\\$\\\\eta\\$" },
-        { label: "θ",  title: "theta",   snippet: "\\$\\\\theta\\$" },
-        { label: "λ",  title: "lambda",  snippet: "\\$\\\\lambda\\$" },
-        { label: "μ",  title: "mu",      snippet: "\\$\\\\mu\\$" },
-        { label: "ν",  title: "nu",      snippet: "\\$\\\\nu\\$" },
-        { label: "ξ",  title: "xi",      snippet: "\\$\\\\xi\\$" },
-        { label: "π",  title: "pi",      snippet: "\\$\\\\pi\\$" },
-        { label: "ρ",  title: "rho",     snippet: "\\$\\\\rho\\$" },
-        { label: "σ",  title: "sigma",   snippet: "\\$\\\\sigma\\$" },
-        { label: "τ",  title: "tau",     snippet: "\\$\\\\tau\\$" },
-        { label: "φ",  title: "phi",     snippet: "\\$\\\\phi\\$" },
-        { label: "χ",  title: "chi",     snippet: "\\$\\\\chi\\$" },
-        { label: "ψ",  title: "psi",     snippet: "\\$\\\\psi\\$" },
-        { label: "ω",  title: "omega",   snippet: "\\$\\\\omega\\$" },
-        { label: "Γ",  title: "Gamma",   snippet: "\\$\\\\Gamma\\$" },
-        { label: "Δ",  title: "Delta",   snippet: "\\$\\\\Delta\\$" },
-        { label: "Θ",  title: "Theta",   snippet: "\\$\\\\Theta\\$" },
-        { label: "Λ",  title: "Lambda",  snippet: "\\$\\\\Lambda\\$" },
-        { label: "Π",  title: "Pi",      snippet: "\\$\\\\Pi\\$" },
-        { label: "Σ",  title: "Sigma",   snippet: "\\$\\\\Sigma\\$" },
-        { label: "Φ",  title: "Phi",     snippet: "\\$\\\\Phi\\$" },
-        { label: "Ψ",  title: "Psi",     snippet: "\\$\\\\Psi\\$" },
-        { label: "Ω",  title: "Omega",   snippet: "\\$\\\\Omega\\$" },
-      ],
-    },
-    {
-      label: t.toolbar.operators,
-      items: [
-        { label: "±",  title: "plus-minus",  snippet: "\\$\\\\pm\\$" },
-        { label: "×",  title: "times",       snippet: "\\$\\\\times\\$" },
-        { label: "÷",  title: "div",         snippet: "\\$\\\\div\\$" },
-        { label: "≠",  title: "neq",         snippet: "\\$\\\\neq\\$" },
-        { label: "≤",  title: "leq",         snippet: "\\$\\\\leq\\$" },
-        { label: "≥",  title: "geq",         snippet: "\\$\\\\geq\\$" },
-        { label: "≈",  title: "approx",      snippet: "\\$\\\\approx\\$" },
-        { label: "∝",  title: "propto",      snippet: "\\$\\\\propto\\$" },
-        { label: "∞",  title: "infty",       snippet: "\\$\\\\infty\\$" },
-        { label: "∈",  title: "in",          snippet: "\\$\\\\in\\$" },
-        { label: "∉",  title: "notin",       snippet: "\\$\\\\notin\\$" },
-        { label: "⊂",  title: "subset",      snippet: "\\$\\\\subset\\$" },
-        { label: "⊆",  title: "subseteq",    snippet: "\\$\\\\subseteq\\$" },
-        { label: "∩",  title: "cap",         snippet: "\\$\\\\cap\\$" },
-        { label: "∪",  title: "cup",         snippet: "\\$\\\\cup\\$" },
-        { label: "∅",  title: "emptyset",    snippet: "\\$\\\\emptyset\\$" },
-        { label: "∀",  title: "forall",      snippet: "\\$\\\\forall\\$" },
-        { label: "∃",  title: "exists",      snippet: "\\$\\\\exists\\$" },
-        { label: "¬",  title: "neg",         snippet: "\\$\\\\neg\\$" },
-        { label: "∧",  title: "and",         snippet: "\\$\\\\wedge\\$" },
-        { label: "∨",  title: "or",          snippet: "\\$\\\\vee\\$" },
-      ],
-    },
-    {
-      label: t.toolbar.arrows,
-      items: [
-        { label: "→",  title: "rightarrow",     snippet: "\\$\\\\rightarrow\\$" },
-        { label: "←",  title: "leftarrow",      snippet: "\\$\\\\leftarrow\\$" },
-        { label: "↑",  title: "uparrow",        snippet: "\\$\\\\uparrow\\$" },
-        { label: "↓",  title: "downarrow",      snippet: "\\$\\\\downarrow\\$" },
-        { label: "↔",  title: "leftrightarrow", snippet: "\\$\\\\leftrightarrow\\$" },
-        { label: "⇒",  title: "Rightarrow",     snippet: "\\$\\\\Rightarrow\\$" },
-        { label: "⇐",  title: "Leftarrow",      snippet: "\\$\\\\Leftarrow\\$" },
-        { label: "⇔",  title: "Leftrightarrow", snippet: "\\$\\\\Leftrightarrow\\$" },
-        { label: "↦",  title: "mapsto",         snippet: "\\$\\\\mapsto\\$" },
-      ],
-    },
-    {
-      label: t.toolbar.environments,
-      items: [
-        { label: t.toolbar.lbl_theorem,     title: t.toolbar.theorem,     snippet: ":::theorem[${1:título}]\n${2:enunciado}\n:::" },
-        { label: t.toolbar.lbl_lemma,       title: t.toolbar.lemma,       snippet: ":::lemma[${1:título}]\n${2:enunciado}\n:::" },
-        { label: t.toolbar.lbl_corollary,   title: t.toolbar.corollary,   snippet: ":::corollary\n${1:enunciado}\n:::" },
-        { label: t.toolbar.lbl_proposition, title: t.toolbar.proposition, snippet: ":::proposition\n${1:enunciado}\n:::" },
-        { label: t.toolbar.lbl_definition,  title: t.toolbar.definition,  snippet: ":::definition\n${1:definición}\n:::" },
-        { label: t.toolbar.lbl_example,     title: t.toolbar.example,     snippet: ":::example\n${1:ejemplo}\n:::" },
-        { label: t.toolbar.lbl_exercise,    title: t.toolbar.exercise,    snippet: ":::exercise\n${1:ejercicio}\n:::" },
-        { label: t.toolbar.lbl_proof,       title: t.toolbar.proof,       snippet: ":::proof\n${1:demostración}\n:::" },
-        { label: t.toolbar.lbl_remark,      title: t.toolbar.remark,      snippet: ":::remark\n${1:observación}\n:::" },
-        { label: t.toolbar.lbl_note,        title: t.toolbar.note,        snippet: ":::note\n${1:nota}\n:::" },
-      ],
-    },
-    {
-      label: "sin",
-      items: [
-        { label: "sin",  title: "sin",  snippet: "\\$\\\\sin ${1:x}\\$" },
-        { label: "cos",  title: "cos",  snippet: "\\$\\\\cos ${1:x}\\$" },
-        { label: "tan",  title: "tan",  snippet: "\\$\\\\tan ${1:x}\\$" },
-        { label: "csc",  title: "csc",  snippet: "\\$\\\\csc ${1:x}\\$" },
-        { label: "sec",  title: "sec",  snippet: "\\$\\\\sec ${1:x}\\$" },
-        { label: "cot",  title: "cot",  snippet: "\\$\\\\cot ${1:x}\\$" },
-        { label: "arcsin", title: "arcsin", snippet: "\\$\\\\arcsin ${1:x}\\$" },
-        { label: "arccos", title: "arccos", snippet: "\\$\\\\arccos ${1:x}\\$" },
-        { label: "arctan", title: "arctan", snippet: "\\$\\\\arctan ${1:x}\\$" },
-        { label: "sinh", title: "sinh", snippet: "\\$\\\\sinh ${1:x}\\$" },
-        { label: "cosh", title: "cosh", snippet: "\\$\\\\cosh ${1:x}\\$" },
-        { label: "tanh", title: "tanh", snippet: "\\$\\\\tanh ${1:x}\\$" },
-        { label: "log",  title: "log",  snippet: "\\$\\\\log ${1:x}\\$" },
-        { label: "ln",   title: "ln",   snippet: "\\$\\\\ln ${1:x}\\$" },
-        { label: "exp",  title: "exp",  snippet: "\\$\\\\exp ${1:x}\\$" },
-      ],
-    },
+    { mode: "focusTimer", icon: "◷", label: t.sidebar.focusTimer },
+    { mode: "ai", icon: "✦", label: t.sidebar.ai },
+    { mode: "cloudSync", icon: "☁", label: t.sidebar.cloudSync },
+    { mode: "help", icon: "?", label: t.sidebar.help },
   ]
 }
 
-// ── Symbol picker component ───────────────────────────────────────────────────
+// ── Symbol grid (reused inside the "Símbolos" submenu) ───────────────────────
 
 type SymbolTab = "greek" | "operators" | "arrows"
 
-function SymbolPicker({ onInsert }: { onInsert: (s: string) => void }) {
+function SymbolGrid({ onInsert }: { onInsert: (s: string) => void }) {
   const t = useT()
-  const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<SymbolTab>("greek")
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
-  }, [open])
-
   const symbols =
     tab === "greek"     ? [...GREEK_LOWER, ...GREEK_UPPER] :
     tab === "operators" ? OPERATORS : ARROWS
 
   return (
-    <div className="toolbar-dropdown symbol-picker" ref={ref}>
-      <button
-        className="toolbar-btn toolbar-btn-arrow"
-        title={t.toolbar.symbolPicker}
-        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
-      >
-        Ω <span className="arrow">▾</span>
-      </button>
-      {open && (
-        <div className="symbol-panel">
-          <div className="symbol-tabs">
-            {(["greek", "operators", "arrows"] as SymbolTab[]).map((tb) => (
-              <button
-                key={tb}
-                className={`symbol-tab${tab === tb ? " active" : ""}`}
-                onMouseDown={(e) => { e.preventDefault(); setTab(tb) }}
-              >
-                {tb === "greek" ? "αβ" : tb === "operators" ? "∑∫" : "→⇒"}
-              </button>
-            ))}
-          </div>
-          <div className="symbol-grid">
-            {symbols.map(([glyph, cmd]) => (
-              <button
-                key={cmd}
-                className="symbol-btn"
-                title={cmd}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  onInsert(`$${cmd}$`)
-                  setOpen(false)
-                }}
-              >
-                {glyph}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="symbol-panel-inline">
+      <div className="symbol-tabs">
+        {(["greek", "operators", "arrows"] as SymbolTab[]).map((tb) => (
+          <button
+            key={tb}
+            type="button"
+            className={`symbol-tab${tab === tb ? " active" : ""}`}
+            title={tb === "greek" ? t.toolbar.greekLetters : tb === "operators" ? t.toolbar.operators : t.toolbar.arrows}
+            onMouseDown={(e) => { e.preventDefault(); setTab(tb) }}
+          >
+            {tb === "greek" ? "αβ" : tb === "operators" ? "∑∫" : "→⇒"}
+          </button>
+        ))}
+      </div>
+      <div className="symbol-grid">
+        {symbols.map(([glyph, cmd]) => (
+          <button
+            key={cmd}
+            type="button"
+            className="symbol-btn"
+            title={cmd}
+            onMouseDown={(e) => { e.preventDefault(); onInsert(`$${cmd}$`) }}
+          >
+            {glyph}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
-// ── Dropdown component ────────────────────────────────────────────────────────
+// ── Menu list (renders the items of an open section/submenu) ─────────────────
 
-function Dropdown({
-  label,
-  title,
+function MenuList({
   items,
-  onInsert,
+  onAction,
+  onPanel,
+  activeMode,
+  closeAll,
 }: {
-  label: string
-  title: string
-  items: DropdownItem[]
-  onInsert: (snippet: string) => void
+  items: MenuItem[]
+  onAction: (snippet: string) => void
+  onPanel: (mode: PanelMode) => void
+  activeMode: string
+  closeAll: () => void
 }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
-  }, [open])
+  const [openSub, setOpenSub] = useState<number | null>(null)
+  // Submenu flyout coords (position:fixed, computed from the trigger) so it
+  // opens to the RIGHT and isn't clipped by the menu-list's overflow.
+  const [subPos, setSubPos] = useState<{ left: number; top: number } | null>(null)
+  const openSubmenu = (i: number, btn: HTMLElement) => {
+    const r = btn.getBoundingClientRect()
+    setSubPos({ left: r.right + 2, top: r.top - 5 })
+    setOpenSub(i)
+  }
 
   return (
-    <div className="toolbar-dropdown" ref={ref}>
-      <button
-        className="toolbar-btn toolbar-btn-arrow"
-        title={title}
-        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
-      >
-        {label} <span className="arrow">▾</span>
-      </button>
-      {open && (
-        <div className="dropdown-panel">
-          {items.map((item) => (
+    <div className="menu-list" role="menu">
+      {items.map((item, i) => {
+        if (item.kind === "sep") {
+          return <div key={i} className="menu-list-sep" role="separator" />
+        }
+        if (item.kind === "symbols") {
+          return (
+            <SymbolGrid
+              key={i}
+              onInsert={(s) => { onAction(s); closeAll() }}
+            />
+          )
+        }
+        if (item.kind === "action") {
+          return (
             <button
-              key={item.title}
+              key={i}
+              type="button"
+              role="menuitem"
+              className="menu-list-item"
               title={item.title}
-              className="dropdown-item"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                onInsert(item.snippet)
-                setOpen(false)
-              }}
+              onMouseDown={(e) => { e.preventDefault(); onAction(item.snippet); closeAll() }}
             >
               {item.label}
             </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── "More" dropdown component ────────────────────────────────────────────────
-
-function MoreDropdown({
-  title,
-  sections,
-  onInsert,
-}: {
-  title: string
-  sections: MoreSection[]
-  onInsert: (snippet: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
-  }, [open])
-
-  return (
-    <div className="toolbar-dropdown" ref={ref}>
-      <button
-        className="toolbar-btn toolbar-btn-arrow"
-        title={title}
-        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
-      >
-        ··· <span className="arrow">▾</span>
-      </button>
-      {open && (
-        <div className="dropdown-panel toolbar-more-panel">
-          {sections.map((section) => (
-            <div key={section.label} className="toolbar-more-section">
-              <div className="toolbar-more-section-header">{section.label}</div>
-              <div className="toolbar-more-section-items">
-                {section.items.map((item) => (
-                  <button
-                    key={item.title}
-                    title={item.title}
-                    className="dropdown-item"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      onInsert(item.snippet)
-                      setOpen(false)
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+          )
+        }
+        if (item.kind === "panel") {
+          const active = activeMode === item.mode
+          return (
+            <button
+              key={i}
+              type="button"
+              role="menuitem"
+              className={`menu-list-item menu-list-panel${active ? " active" : ""}`}
+              onMouseDown={(e) => { e.preventDefault(); onPanel(item.mode); closeAll() }}
+            >
+              {item.label}
+            </button>
+          )
+        }
+        // submenu — opens as a flyout to the RIGHT (click to toggle)
+        const isOpen = openSub === i
+        return (
+          <div key={i} className="menu-sub">
+            <button
+              type="button"
+              role="menuitem"
+              aria-haspopup="menu"
+              aria-expanded={isOpen}
+              className={`menu-list-item menu-sub-trigger${isOpen ? " open" : ""}`}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                if (isOpen) setOpenSub(null)
+                else openSubmenu(i, e.currentTarget)
+              }}
+            >
+              <span>{item.label}</span>
+              <span className="menu-sub-arrow">▸</span>
+            </button>
+            {isOpen && (
+              <div
+                className="menu-sub-panel"
+                style={subPos ? { left: subPos.left, top: subPos.top } : undefined}
+              >
+                <MenuList
+                  items={item.items}
+                  onAction={onAction}
+                  onPanel={onPanel}
+                  activeMode={activeMode}
+                  closeAll={closeAll}
+                />
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-// ── Promoted inline shortcuts (frequently-used items per dropdown) ───────────
+// ── Section button + dropdown ────────────────────────────────────────────────
 
-interface PromotedBtn {
-  label: string
-  title: string
-  snippet: string
-  hideAt?: "sm" | "md" // viewport-based hide class
-}
+function SectionMenu({
+  section,
+  activeMode,
+  openId,
+  setOpenId,
+  onAction,
+  onPanel,
+}: {
+  section: MenuSection
+  activeMode: string
+  openId: string | null
+  setOpenId: (id: string | null) => void
+  onAction: (snippet: string) => void
+  onPanel: (mode: PanelMode) => void
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  const open = openId === section.id
 
-function getPromotedHeadings(t: T): PromotedBtn[] {
-  return [
-    { label: "H1", title: t.toolbar.heading1, snippet: "# ${1:Título}" },
-    { label: "H2", title: t.toolbar.heading2, snippet: "## ${1:Título}", hideAt: "md" },
-  ]
-}
+  const sectionActive = collectPanelModes(section.items).includes(activeMode as PanelMode)
 
-function getPromotedInsert(t: T): PromotedBtn[] {
-  return [
-    { label: "•",   title: t.toolbar.list,      snippet: "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}" },
-    { label: "⊞",   title: t.toolbar.table,     snippet: "table(${1:Col1}, ${2:Col2}, ${3:Col3})", hideAt: "md" },
-    { label: "</>", title: t.toolbar.codeBlock, snippet: "```${1:lenguaje}\n${2:código}\n```\n$0", hideAt: "md" },
-  ]
-}
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ left: r.left, top: r.bottom + 4 })
+    }
+    setOpenId(open ? null : section.id)
+  }
 
-// Promoted from "More" — the most-used math operators
-const PROMOTED_MATH: PromotedBtn[] = [
-  { label: "frac", title: "frac", snippet: "frac(${1:a}, ${2:b})" },
-  { label: "√",    title: "sqrt", snippet: "sqrt(${1:x})" },
-  { label: "∑",    title: "sum",  snippet: "sum(${1:i=0}, ${2:n})", hideAt: "md" },
-  { label: "∫",    title: "int",  snippet: "int(${1:a}, ${2:b})", hideAt: "md" },
-]
-
-// Promoted environment shortcut
-function getPromotedEnv(t: T): PromotedBtn[] {
-  return [
-    { label: "thm", title: t.toolbar.theorem, snippet: ":::theorem[${1:título}]\n${2:enunciado}\n:::", hideAt: "md" },
-  ]
-}
-
-// Promoted from symbol picker
-const PROMOTED_SYMBOLS: PromotedBtn[] = [
-  { label: "α", title: "alpha", snippet: "$\\alpha$", hideAt: "sm" },
-  { label: "π", title: "pi",    snippet: "$\\pi$",    hideAt: "sm" },
-  { label: "∑", title: "Sigma", snippet: "$\\Sigma$", hideAt: "sm" },
-]
-
-function PromotedButtons({ items, onInsert }: { items: PromotedBtn[]; onInsert: (s: string) => void }) {
   return (
     <>
-      {items.map((btn) => (
-        <button
-          key={btn.title}
-          title={btn.title}
-          className={`toolbar-btn${btn.hideAt ? ` toolbar-btn-hide-${btn.hideAt}` : ""}`}
-          onMouseDown={(e) => { e.preventDefault(); onInsert(btn.snippet) }}
+      <button
+        ref={btnRef}
+        type="button"
+        className={`menubar-section-btn${open ? " open" : ""}${sectionActive ? " section-active" : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={section.label}
+        onMouseDown={(e) => { e.preventDefault(); toggle() }}
+      >
+        <span className="menubar-section-icon">{section.icon}</span>
+        <span className="menubar-section-label">{section.label}</span>
+        <span className="menubar-section-arrow">▾</span>
+      </button>
+      {open && (
+        <div
+          className="menubar-popup"
+          role="menu"
+          style={pos ? { left: pos.left, top: pos.top } : undefined}
         >
-          {btn.label}
-        </button>
-      ))}
+          <MenuList
+            items={section.items}
+            onAction={onAction}
+            onPanel={onPanel}
+            activeMode={activeMode}
+            closeAll={() => setOpenId(null)}
+          />
+        </div>
+      )}
     </>
   )
 }
 
-// ── Toolbar ───────────────────────────────────────────────────────────────────
+// ── Toolbar (unified menu bar) ───────────────────────────────────────────────
 
-export default function Toolbar({ editorRef, previewVisible, onTogglePreview }: ToolbarProps) {
+export default function Toolbar({ editorRef, sidebarMode, setSidebarMode }: ToolbarProps) {
   const t = useT()
-  const mainGroups = getMainGroups(t)
-  const moreSections = getMoreSections(t)
-  const promotedHeadings = getPromotedHeadings(t)
-  const promotedInsert = getPromotedInsert(t)
-  const promotedEnv = getPromotedEnv(t)
+  const sections = getSections(t)
+  const directButtons = getDirectButtons(t)
+  const [openId, setOpenId] = useState<string | null>(null)
+  const barRef = useRef<HTMLDivElement>(null)
 
-  const insert = (snippet: string) => {
-    const editor = editorRef.current
-    if (!editor) return
-    editor.focus()
-    // Block-level snippets (fenced code, display math, horizontal rules, tables)
-    // must start at column 1 to be valid Markdown. If the cursor is mid-line we
-    // prepend a newline so the construct opens on its own line.
-    const isBlockSnippet = /^(```|~~~|\$\$|---|\|)/.test(snippet)
-    if (isBlockSnippet) {
-      const pos = editor.getPosition()
-      if (pos && pos.column > 1) snippet = "\n" + snippet
+  // Outside-click + Escape close.
+  useEffect(() => {
+    if (openId === null) return
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      // Popups are position:fixed siblings of the bar, so check both the bar and
+      // any open menubar-popup element.
+      if (barRef.current?.contains(target)) return
+      const popups = document.querySelectorAll(".menubar-popup, .menu-sub-panel")
+      for (const el of popups) if (el.contains(target)) return
+      setOpenId(null)
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctrl = editor.getContribution<any>("snippetController2")
-    if (ctrl) {
-      ctrl.insert(snippet)
-    } else {
-      // fallback: plain text at cursor
-      const sel = editor.getSelection()
-      if (sel) editor.executeEdits("toolbar", [{ range: sel, text: snippet }])
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenId(null) }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
     }
-  }
+  }, [openId])
+
+  const insert = useCallback((snippet: string) => {
+    insertSnippet(editorRef.current, snippet)
+  }, [editorRef])
+
+  const onPanel = useCallback((mode: PanelMode) => setSidebarMode(mode), [setSidebarMode])
 
   return (
-    <div className="toolbar">
-      {mainGroups.map((group, gi) => {
-        // Inject promoted buttons BEFORE the matching dropdown
-        const promoted: PromotedBtn[] | null =
-          group.kind === "dropdown" && group.label === "H" ? promotedHeadings :
-          group.kind === "dropdown" && group.label === "⊕" ? promotedInsert :
-          null
+    <div className="menubar" ref={barRef}>
+      {sections.map((section) => (
+        <SectionMenu
+          key={section.id}
+          section={section}
+          activeMode={sidebarMode}
+          openId={openId}
+          setOpenId={setOpenId}
+          onAction={insert}
+          onPanel={onPanel}
+        />
+      ))}
+
+      {directButtons.map((b) => {
+        const active = sidebarMode === b.mode
         return (
-          <div key={gi} className="toolbar-group">
-            {promoted && <PromotedButtons items={promoted} onInsert={insert} />}
-            {group.kind === "buttons"
-              ? group.items.map((btn) => (
-                  <button
-                    key={btn.title}
-                    title={btn.title}
-                    className="toolbar-btn"
-                    onMouseDown={(e) => { e.preventDefault(); insert(btn.snippet) }}
-                  >
-                    {btn.label}
-                  </button>
-                ))
-              : (
-                  <Dropdown
-                    label={group.label}
-                    title={group.title}
-                    items={group.items}
-                    onInsert={insert}
-                  />
-                )}
-          </div>
+          <button
+            key={b.mode}
+            type="button"
+            className={`menubar-direct-btn${active ? " active" : ""}`}
+            title={b.label}
+            onMouseDown={(e) => { e.preventDefault(); setSidebarMode(b.mode) }}
+          >
+            <span className="menubar-section-icon">{b.icon}</span>
+            <span className="menubar-section-label">{b.label}</span>
+          </button>
         )
       })}
-
-      {/* Symbol picker — with promoted Greek/math symbols inline */}
-      <div className="toolbar-group">
-        <PromotedButtons items={PROMOTED_SYMBOLS} onInsert={insert} />
-        <SymbolPicker onInsert={insert} />
-      </div>
-
-      {/* "More" dropdown — promoted math ops + environment shortcut inline */}
-      <div className="toolbar-group">
-        <PromotedButtons items={PROMOTED_MATH} onInsert={insert} />
-        <PromotedButtons items={promotedEnv} onInsert={insert} />
-        <MoreDropdown title={t.toolbar.more} sections={moreSections} onInsert={insert} />
-      </div>
-
-      {/* Preview toggle — right-aligned */}
-      <div className="toolbar-group toolbar-right">
-        <button
-          className={`toolbar-btn toolbar-preview-btn${previewVisible ? " active" : ""}`}
-          title={t.toolbar.togglePreview}
-          onMouseDown={(e) => { e.preventDefault(); onTogglePreview() }}
-        >
-          ⊢
-        </button>
-      </div>
     </div>
   )
 }

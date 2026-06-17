@@ -15,12 +15,23 @@
  */
 
 import type * as monacoApi from "monaco-editor"
+import { checkText, type SpellLang } from "./spellcheck"
 
 export interface LintContext {
   /** Base names of vault files, lowercased, without extension. */
   vaultFileNames: Set<string>
   /** Keys defined in references.bib. */
   bibKeys: Set<string>
+  /**
+   * Dictionary-based spell-checking. When `true`, the content linter emits
+   * Hint markers for unknown words using the `spellLang` dictionary. Defaults
+   * to off — when disabled, NO dictionary is loaded and no spell work runs.
+   */
+  spellcheck?: boolean
+  /** Active spell-check language (frontmatter `lang:` or `settings.language`). */
+  spellLang?: SpellLang
+  /** Localised marker message for an unknown word (from i18n `app.spellError`). */
+  spellMessage?: (word: string) => string
 }
 
 export interface LintSummary {
@@ -213,6 +224,7 @@ function lintWikilinks(
 
   while ((m = re.exec(text)) !== null) {
     const target = m[1].trim().toLowerCase()
+    if (target === "toc") continue // `[[toc]]` is the auto-TOC marker, not a wikilink
     if (!vaultFileNames.has(target)) {
       markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
         `Wikilink [[${m[1].trim()}]] no encontrado en el vault`, Severity.Warning))
@@ -523,6 +535,30 @@ function lintMacros(
   return markers
 }
 
+// ── Rule: dictionary spell-check (opt-in) ─────────────────────────────────────
+
+/**
+ * Emit Hint markers for unknown words. Runs ONLY when `context.spellcheck` is
+ * true — when off, this is never called, so no dictionary is loaded and no
+ * tokenising happens (fully offline, zero overhead when disabled).
+ *
+ * Operates on the ORIGINAL text (not the code-stripped `clean`), because
+ * `checkText` applies its own non-prose masking and needs accurate offsets.
+ */
+function lintSpelling(
+  text: string,
+  lineIdx: number[],
+  context: LintContext,
+  Severity: typeof monacoApi.MarkerSeverity,
+): monacoApi.editor.IMarkerData[] {
+  const lang = context.spellLang ?? "es"
+  const issues = checkText(text, lang)
+  const message = context.spellMessage ?? ((w: string) => `Posible error ortográfico: ${w}`)
+  return issues.map((issue) =>
+    mkMarker(lineIdx, issue.start, issue.end, message(issue.word), Severity.Hint),
+  )
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -536,7 +572,7 @@ export function lintContent(
   const clean = stripCode(text)
   const lineIdx = buildLineIndex(text)
 
-  return [
+  const markers = [
     ...lintDisplayMath(clean, lineIdx, Severity),
     ...lintEnvironments(clean, lineIdx, Severity),
     ...lintEqRefs(clean, lineIdx, Severity),
@@ -544,6 +580,12 @@ export function lintContent(
     ...lintCitations(clean, lineIdx, context.bibKeys, Severity),
     ...lintShorthands(clean, lineIdx, Severity),
   ]
+
+  if (context.spellcheck) {
+    markers.push(...lintSpelling(text, lineIdx, context, Severity))
+  }
+
+  return markers
 }
 
 /**

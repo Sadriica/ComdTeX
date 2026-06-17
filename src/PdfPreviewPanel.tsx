@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useT } from "./i18n"
+import { parseSyncTex, inverseSync, type SyncTexData } from "./synctex"
 
 // Lazy module loader: keep pdfjs out of the initial bundle and behind a
 // runtime guard so that environments that cannot parse the worker URL
@@ -40,8 +41,27 @@ export interface PdfPreviewPanelProps {
    * is 1-indexed. (x, y) are in PDF user-space (origin bottom-left).
    * `nearestText` is the closest text snippet found on that page (best-effort
    * heading-based synctex shim).
+   *
+   * `sync` is populated only when real SyncTeX data is available (see the
+   * `synctex` prop): it carries the resolved input file and 1-based source
+   * line for true inverse sync. When absent, callers fall back to matching
+   * `nearestText` against document headings.
    */
-  onClickSource?: (page: number, x: number, y: number, nearestText: string) => void
+  onClickSource?: (
+    page: number,
+    x: number,
+    y: number,
+    nearestText: string,
+    sync?: { file: string; line: number },
+  ) => void
+  /**
+   * Uncompressed SyncTeX text emitted alongside the PDF, when available. When
+   * provided and parseable, clicks resolve to an exact source line via inverse
+   * sync; otherwise the panel transparently falls back to the heading shim.
+   * The bundled WASM engine does not currently emit SyncTeX, so this is
+   * normally undefined and the shim remains active.
+   */
+  synctex?: string | null
   /** Invert colours for dark themes. */
   invert?: boolean
 }
@@ -60,12 +80,25 @@ const ZOOM_STEP = 0.2
  * PDF preview pane. Renders the document page-by-page on canvases, virtualised
  * via IntersectionObserver so memory stays bounded for large PDFs.
  */
-export default function PdfPreviewPanel({ pdfPath, onClickSource, invert = false }: PdfPreviewPanelProps) {
+export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, invert = false }: PdfPreviewPanelProps) {
   const t = useT()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
   const renderTasksRef = useRef<Map<number, { cancel: () => void }>>(new Map())
   const renderedRef = useRef<Set<number>>(new Set())
+
+  // Parse SyncTeX data once per payload. Parsing is tolerant and never throws,
+  // so a malformed payload simply yields empty boxes and we fall back to the
+  // heading shim. null payload => no synctex (the common case today).
+  const syncData = useMemo<SyncTexData | null>(() => {
+    if (!synctex) return null
+    try {
+      const d = parseSyncTex(synctex)
+      return d.boxes.length > 0 ? d : null
+    } catch {
+      return null
+    }
+  }, [synctex])
 
   const [pages, setPages] = useState<RenderedPage[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -332,11 +365,20 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, invert = false
       } catch {
         // ignore text-extraction errors
       }
-      onClickSource(pageNum, pdfX, pdfY, nearestText)
+      // Real SyncTeX inverse sync, when data is present. pdfjs gives user-space
+      // coords (origin bottom-left); our parser stores top-left coords, so flip
+      // Y against the page height (in points, at scale 1 = pageInfo.height).
+      let sync: { file: string; line: number } | undefined
+      if (syncData) {
+        const topLeftY = pageInfo.height - pdfY
+        const hit = inverseSync(syncData, pageNum, pdfX, topLeftY)
+        if (hit) sync = { file: hit.file, line: hit.line }
+      }
+      onClickSource(pageNum, pdfX, pdfY, nearestText, sync)
     } catch {
       // ignore
     }
-  }, [onClickSource, pages, computeScale])
+  }, [onClickSource, pages, computeScale, syncData])
 
   const totalPages = pages.length
 

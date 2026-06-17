@@ -7,17 +7,30 @@ or `pdflatex`.
 
 ## Required files (place here)
 
-| Filename                  | Purpose                                       |
-| ------------------------- | --------------------------------------------- |
-| `swiftlatexpdftex.js`     | JS glue (registers `PdfTeXEngine` global)     |
-| `swiftlatexpdftex.wasm`   | pdfTeX WASM binary                            |
-| `swiftlatexxetex.js`      | (optional) XeLaTeX glue                       |
-| `swiftlatexxetex.wasm`    | (optional) XeLaTeX WASM binary                |
+| Filename                  | Purpose                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `PdfTeXEngine.js`         | Wrapper class — registers the `PdfTeXEngine` global  |
+| `swiftlatexpdftex.js`     | Inner Emscripten worker (spawned by the wrapper)     |
+| `swiftlatexpdftex.wasm`   | pdfTeX WASM binary (loaded by the inner worker)      |
+| `swiftlatexxetex.js`      | (optional) XeLaTeX inner worker                       |
+| `swiftlatexxetex.wasm`    | (optional) XeLaTeX WASM binary                        |
 
-The worker (`src/wasmTex.worker.ts`) loads `swiftlatexpdftex.js` via
-`importScripts()` and looks for the global `PdfTeXEngine` constructor. If it
-isn't present at runtime, all `compile()` calls resolve with
-`status: "unavailable"` and the caller falls back to the local toolchain.
+SwiftLaTeX ships **two** JS files per engine: the high-level `PdfTeXEngine.js`
+wrapper, and the inner Emscripten worker `swiftlatexpdftex.js` that the wrapper
+spawns. The wrapper exposes `loadEngine()` / `compileLaTeX()` / `writeMemFSFile()`
+etc. and talks to the inner worker over a `{cmd: "..."}` message protocol.
+
+The ComdTeX worker (`src/wasmTex.worker.ts`) is a **classic** worker that loads
+`PdfTeXEngine.js` via `importScripts()` and looks for the global `PdfTeXEngine`
+constructor. (A classic worker is required: `importScripts` is disabled inside
+module workers.) If the constructor isn't present at runtime, all `compile()`
+calls resolve with `status: "unavailable"` and the caller falls back to the
+local toolchain.
+
+> Historical note: earlier builds bundled only `swiftlatexpdftex.js` (the inner
+> worker) and tried to use it directly as the `PdfTeXEngine` — but that file
+> never defines the global, so the engine was always "unavailable". The
+> `PdfTeXEngine.js` wrapper now bundled here closes that gap.
 
 ## Where to obtain the artefacts
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import { computeSectionWordCounts } from "./sectionWordCount"
@@ -23,13 +23,21 @@ interface OutlinePanelProps {
   content: string
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
   activeLine?: number
+  /** Move the section whose heading is at `fromLine` to before the heading at `toLine`. */
+  onReorder?: (fromLine: number, toLine: number) => void
 }
 
-export default function OutlinePanel({ content, editorRef, activeLine }: OutlinePanelProps) {
+export default function OutlinePanel({ content, editorRef, activeLine, onReorder }: OutlinePanelProps) {
   const t = useT()
   const headings = useMemo(() => parseHeadings(content), [content])
   const sectionCounts = useMemo(() => computeSectionWordCounts(content), [content])
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  // Drag-to-reorder state: index of the dragged item and the current drop target.
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dropIdx, setDropIdx] = useState<number | null>(null)
+  // Guards click-after-drag so reordering does not also trigger navigation.
+  const didDragRef = useRef(false)
 
   // Active heading: last heading whose start line <= cursor line
   const activeIdx = activeLine != null
@@ -59,19 +67,64 @@ export default function OutlinePanel({ content, editorRef, activeLine }: Outline
   }
 
   const totalWords = [...sectionCounts.values()].reduce((a, b) => a + b, 0)
+  const canReorder = !!onReorder
 
   return (
     <div className="outline-panel">
       {headings.map((h, i) => {
         const count = sectionCounts.get(h.line)
+        const isDragging = dragIdx === i
+        const isDropTarget = dropIdx === i && dragIdx !== i && dragIdx !== null
         return (
           <button
             key={i}
             ref={(el) => { itemRefs.current[i] = el }}
-            className={`outline-item${i === activeIdx ? " outline-item-active" : ""}`}
+            className={
+              "outline-item" +
+              (i === activeIdx ? " outline-item-active" : "") +
+              (isDragging ? " outline-dragging" : "") +
+              (isDropTarget ? " outline-drop-before" : "")
+            }
             style={{ paddingLeft: 8 + (h.level - 1) * 14 }}
-            onClick={() => jump(h.line)}
-            title={t.outline.lineTitle(h.line)}
+            draggable={canReorder}
+            onClick={() => {
+              if (didDragRef.current) { didDragRef.current = false; return }
+              jump(h.line)
+            }}
+            onDragStart={(e) => {
+              if (!canReorder) return
+              didDragRef.current = true
+              setDragIdx(i)
+              e.dataTransfer.effectAllowed = "move"
+              // Some browsers require data to be set for a drag to begin.
+              try { e.dataTransfer.setData("text/plain", String(h.line)) } catch { /* noop */ }
+            }}
+            onDragOver={(e) => {
+              if (!canReorder || dragIdx === null) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+              if (dropIdx !== i) setDropIdx(i)
+            }}
+            onDragLeave={() => {
+              if (dropIdx === i) setDropIdx(null)
+            }}
+            onDrop={(e) => {
+              if (!canReorder || dragIdx === null) return
+              e.preventDefault()
+              const from = headings[dragIdx]
+              const to = headings[i]
+              if (from && to && from.line !== to.line) onReorder!(from.line, to.line)
+              setDragIdx(null)
+              setDropIdx(null)
+            }}
+            onDragEnd={() => {
+              setDragIdx(null)
+              setDropIdx(null)
+              // Clear the click guard shortly after, in case no click followed.
+              setTimeout(() => { didDragRef.current = false }, 0)
+            }}
+            title={canReorder ? `${t.outline.lineTitle(h.line)} — ${t.outline.dragToReorder}` : t.outline.lineTitle(h.line)}
+            aria-label={canReorder ? `${h.text} — ${t.outline.dragToReorder}` : h.text}
           >
             <span className="outline-level">H{h.level}</span>
             <span className="outline-text">{h.text}</span>

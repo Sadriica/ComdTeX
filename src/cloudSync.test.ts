@@ -29,15 +29,37 @@ describe("isConflictFile — Dropbox", () => {
 })
 
 describe("isConflictFile — OneDrive heuristic", () => {
-  it("matches device-suffix pattern", () => {
-    const m = isConflictFile("note-MyPC.md")
+  it("matches all-caps machine-name suffix (only with onedrive hint)", () => {
+    const m = isConflictFile("note-DESKTOP123.md", "onedrive")
     expect(m.isConflict).toBe(true)
     expect(m.provider).toBe("onedrive")
     expect(m.baseName).toBe("note.md")
   })
 
-  it("ignores too-short suffix", () => {
-    expect(isConflictFile("a-b.md").isConflict).toBe(false)
+  it("matches hyphenated machine name (DESKTOP-7F3KQ9)", () => {
+    const m = isConflictFile("paper-DESKTOP-7F3KQ9.tex", "onedrive")
+    expect(m.isConflict).toBe(true)
+    expect(m.provider).toBe("onedrive")
+    expect(m.baseName).toBe("paper.tex")
+  })
+
+  it("never runs the OneDrive heuristic without a onedrive hint", () => {
+    // No hint → unrelated vaults must not get spurious conflicts that would
+    // then be offered for deletion.
+    expect(isConflictFile("note-DESKTOP123.md").isConflict).toBe(false)
+    expect(isConflictFile("chapter-Introduction.md").isConflict).toBe(false)
+  })
+
+  it("does NOT flag ordinary hyphenated academic filenames", () => {
+    // Normal Capitalized words must not look like a machine name even when the
+    // provider is known to be OneDrive.
+    expect(isConflictFile("chapter-Introduction.md", "onedrive").isConflict).toBe(false)
+    expect(isConflictFile("lemma-Banach.md", "onedrive").isConflict).toBe(false)
+    expect(isConflictFile("proof-Sketch.md", "onedrive").isConflict).toBe(false)
+  })
+
+  it("ignores too-short / lowercase suffix", () => {
+    expect(isConflictFile("a-b.md", "onedrive").isConflict).toBe(false)
   })
 })
 
@@ -86,20 +108,42 @@ describe("findConflicts", () => {
   })
 
   it("requires a sibling for OneDrive matches (suppresses false positives)", () => {
-    // No sibling "draft.md" → must NOT flag "draft-Notes.md".
-    const tree: FileNode[] = [file("draft-Notes.md")]
-    expect(findConflicts(tree)).toHaveLength(0)
+    // No sibling "draft.md" → must NOT flag "draft-DESKTOP123.md".
+    const tree: FileNode[] = [file("draft-DESKTOP123.md")]
+    expect(findConflicts(tree, "onedrive")).toHaveLength(0)
   })
 
-  it("flags OneDrive conflict when sibling exists", () => {
+  it("flags OneDrive conflict when sibling exists (onedrive hint)", () => {
     const tree: FileNode[] = [
       file("draft.md"),
-      file("draft-LaptopPro.md"),
+      file("draft-DESKTOP123.md"),
     ]
-    const conflicts = findConflicts(tree)
+    const conflicts = findConflicts(tree, "onedrive")
     expect(conflicts).toHaveLength(1)
     expect(conflicts[0].provider).toBe("onedrive")
     expect(conflicts[0].basePath).toBe("/v/draft.md")
+  })
+
+  it("does NOT flag hyphenated academic filenames as OneDrive conflicts (even with sibling)", () => {
+    // Regression: chapter-Introduction.md alongside chapter.md must not be
+    // offered for deletion. "Introduction" is a normal word, not a machine name.
+    const tree: FileNode[] = [
+      file("chapter.md"),
+      file("chapter-Introduction.md"),
+      file("lemma.md"),
+      file("lemma-Banach.md"),
+    ]
+    expect(findConflicts(tree, "onedrive")).toHaveLength(0)
+  })
+
+  it("never flags hyphenated filenames when no provider hint is given", () => {
+    // The destructive false positive: without an OneDrive root detected, a
+    // genuine-looking machine-name suffix must still be ignored entirely.
+    const tree: FileNode[] = [
+      file("draft.md"),
+      file("draft-DESKTOP123.md"),
+    ]
+    expect(findConflicts(tree)).toHaveLength(0)
   })
 
   it("walks nested directories", () => {

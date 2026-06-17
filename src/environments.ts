@@ -87,6 +87,13 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
+// Inline error box for a special block whose renderer throws — so a single
+// malformed `:::plot` / `:::graph` / … shows an error in place instead of
+// letting the exception bubble up and blank the ENTIRE preview pane.
+function specialEnvError(kind: string, e: unknown): string {
+  return `<pre class="math-error">Error in :::${kind} — ${escHtml(String(e))}</pre>`
+}
+
 // ── Mermaid SVG cache for `:::flowchart` ─────────────────────────────────────
 // Pre-rendered SVGs keyed by their mermaid source. Populated by App.tsx after
 // mermaid finishes; consumed below so subsequent re-renders embed the SVG
@@ -97,6 +104,48 @@ export function setFlowchartSvg(source: string, svg: string): void {
 }
 export function clearFlowchartSvgCache(): void {
   flowchartSvgCache.clear()
+}
+
+// ── Excalidraw SVG cache for `:::excalidraw` ─────────────────────────────────
+// Pre-rendered SVGs keyed by their base64 scene. The renderer is synchronous
+// but Excalidraw's `exportToSvg` (and the 18MB engine it pulls) is async and
+// lazy-loaded. App.tsx populates this cache off the main thread after a render;
+// until then the block shows a "click to edit" placeholder. Mirrors the
+// flowchart-cache pattern so re-renders embed the SVG inline (no async wait,
+// no repaint loop).
+const excalidrawSvgCache = new Map<string, string>()
+export function setExcalidrawSvg(sceneB64: string, svg: string): void {
+  excalidrawSvgCache.set(sceneB64, svg)
+}
+export function getExcalidrawSvg(sceneB64: string): string | undefined {
+  return excalidrawSvgCache.get(sceneB64)
+}
+export function clearExcalidrawSvgCache(): void {
+  excalidrawSvgCache.clear()
+}
+
+let excalidrawPlaceholderText = "Excalidraw — clic para editar"
+export function setExcalidrawPlaceholderText(text: string): void {
+  excalidrawPlaceholderText = text
+}
+
+function buildExcalidrawHTML(title: string, number: string, sceneB64: string): string {
+  const header = title
+    ? `Excalidraw ${number}: ${escHtml(title)}`
+    : `Excalidraw ${number}`
+  const safeB64 = escHtml(sceneB64)
+  const cachedSvg = sceneB64 ? excalidrawSvgCache.get(sceneB64) : undefined
+  const body = cachedSvg
+    ? `<div class="excalidraw-canvas">${cachedSvg}</div>`
+    : `<div class="excalidraw-placeholder">${escHtml(excalidrawPlaceholderText)}</div>`
+  return [
+    `<div class="excalidraw-block" data-excalidraw-scene="${safeB64}">`,
+    `<div class="excalidraw-header"><span class="excalidraw-title">${header}</span>`,
+    `<button class="excalidraw-edit" data-scene="${safeB64}" data-line="$LINE$" title="${escHtml(excalidrawPlaceholderText)}">✏</button>`,
+    `</div>`,
+    body,
+    `</div>`,
+  ].join("")
 }
 
 function buildPseudocodeHTML(title: string, number: string, content: string): string {
@@ -258,7 +307,9 @@ export function extractEnvironments(
       if (envName === "pseudocode") {
         counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
         const pcNumber = String(counters["pseudocode"])
-        const html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim())
+        let html: string
+        try { html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim()) }
+        catch (e) { html = specialEnvError("pseudocode", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
@@ -266,6 +317,8 @@ export function extractEnvironments(
       if (envName === "flowchart") {
         counters["flowchart"] = (counters["flowchart"] ?? 0) + 1
         const fcNumber = String(counters["flowchart"])
+        let html: string
+        try {
         const mermaidChart = pseudocodeToFlowchart(content.trim())
         const headerHtml = title
           ? `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}: ${escHtml(title)}</span></div>`
@@ -281,40 +334,63 @@ export function extractEnvironments(
         const body = cachedSvg
           ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
           : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
-        const html = [
+        html = [
           `<div class="flowchart-block">`,
           headerHtml,
           body,
           `</div>`,
         ].join("")
+        } catch (e) { html = specialEnvError("flowchart", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "truth") {
         counters["truth"] = (counters["truth"] ?? 0) + 1
-        const html = renderTruthTableHTML(title ?? "", content.trim())
+        let html: string
+        try { html = renderTruthTableHTML(title ?? "", content.trim(), String(counters["truth"])) }
+        catch (e) { html = specialEnvError("truth", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "graph") {
         counters["graph"] = (counters["graph"] ?? 0) + 1
-        const html = renderGraphSVG(title ?? "", content.trim())
+        let html: string
+        try { html = renderGraphSVG(title ?? "", content.trim(), String(counters["graph"])) }
+        catch (e) { html = specialEnvError("graph", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "plot") {
         counters["plot"] = (counters["plot"] ?? 0) + 1
-        const html = renderPlotHTML(title ?? "", content.trim())
+        let html: string
+        try { html = renderPlotHTML(title ?? "", content.trim(), String(counters["plot"])) }
+        catch (e) { html = specialEnvError("plot", e) }
+        slots.push(wrapWithSourceLine(html, srcLine))
+        return `\x02ENV${slots.length - 1}\x03`
+      }
+
+      if (envName === "excalidraw") {
+        counters["excalidraw"] = (counters["excalidraw"] ?? 0) + 1
+        let html: string
+        try {
+          // Body is a single line of base64 JSON (may be empty for a fresh block).
+          const sceneB64 = content.replace(/\s+/g, "")
+          html = buildExcalidrawHTML(title ?? "", String(counters["excalidraw"]), sceneB64)
+          // Embed the source line so App can replace exactly this block's body.
+          html = html.replace("$LINE$", String(srcLine))
+        } catch (e) { html = specialEnvError("excalidraw", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }
 
       if (envName === "commdiag") {
         counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
-        const html = renderCommDiagSVG(title ?? "", content.trim())
+        let html: string
+        try { html = renderCommDiagSVG(title ?? "", content.trim(), String(counters["commdiag"])) }
+        catch (e) { html = specialEnvError("commdiag", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
       }

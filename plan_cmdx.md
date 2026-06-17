@@ -1,5 +1,10 @@
 # Plan v1.2.0 — CMDX Formato Interno Bidireccional
 
+> **Status: superseded.** This is the original v1.2.0 design plan; the CMDX
+> format has long since shipped. For the current behaviour see
+> [`docs/cmdx-contract.md`](docs/cmdx-contract.md), `CLAUDE.md`, and the README.
+> Kept for historical reference only.
+
 ## Estado: EN DESARROLLO
 
 > **Fecha inicio:** 2026-04-24

@@ -7,8 +7,10 @@
 // `status: "unavailable"` and callers fall back to local LaTeX.
 //
 // The runtime artefacts are expected at:
-//   /wasm-tex/swiftlatexpdftex.js
-//   /wasm-tex/swiftlatexpdftex.wasm    (loaded by the JS glue)
+//   /wasm-tex/PdfTeXEngine.js          (wrapper: registers `PdfTeXEngine`)
+//   /wasm-tex/swiftlatexpdftex.js      (inner Emscripten worker, spawned by
+//                                       the wrapper)
+//   /wasm-tex/swiftlatexpdftex.wasm    (loaded by the inner worker)
 //
 // To bundle them, drop them into `public/wasm-tex/` (the Vite static
 // directory). The current source tree intentionally does NOT ship the
@@ -32,6 +34,13 @@ export interface WasmTexResult {
   pdf: Uint8Array | null
   log: string
   status: WasmTexStatus
+  /**
+   * Uncompressed SyncTeX text, when the engine produced one (it currently does
+   * not — the bundled SwiftLaTeX pdftex WASM is built without SyncTeX support;
+   * see synctex.ts / docs). `null` means "no synctex data available" and
+   * callers should fall back to their heading-based source shim.
+   */
+  synctex?: string | null
 }
 
 export interface WasmTexCompileOptions {
@@ -47,8 +56,8 @@ export interface WasmTexCompileOptions {
 
 export interface WasmTexInitOptions {
   /**
-   * Override the URL of the engine glue script. Defaults to
-   * "/wasm-tex/swiftlatexpdftex.js". The worker tries to fetch this URL and
+   * Override the URL of the engine wrapper script. Defaults to
+   * "/wasm-tex/PdfTeXEngine.js". The worker tries to fetch this URL and
    * reports `unavailable` if it 404s. Callers may pass `null` to force the
    * stub path (used for tests).
    */
@@ -63,14 +72,19 @@ interface PendingCompile {
 
 /**
  * Construct the worker. Exposed as a swappable factory so tests can inject a
- * mock without spinning up a real Worker. Vite's `new Worker(new URL(..),
- * { type: "module" })` form is required to get a properly bundled module
- * worker.
+ * mock without spinning up a real Worker.
+ *
+ * NOTE: this is a **classic** worker, not a module worker. The worker loads the
+ * SwiftLaTeX `PdfTeXEngine` wrapper via `importScripts(...)`, and
+ * `WorkerGlobalScope.importScripts()` is disabled inside *module* workers
+ * (it throws `TypeError`). A classic worker is therefore required for the
+ * runtime engine to load at all. Vite still bundles `./wasmTex.worker.ts` into
+ * a self-contained classic worker via the `new URL(..., import.meta.url)` form.
  */
 export type WorkerFactory = () => Worker
 
 const defaultWorkerFactory: WorkerFactory = () =>
-  new Worker(new URL("./wasmTex.worker.ts", import.meta.url), { type: "module" })
+  new Worker(new URL("./wasmTex.worker.ts", import.meta.url), { type: "classic" })
 
 export class WasmTexEngine {
   private worker: Worker | null = null
@@ -111,7 +125,7 @@ export class WasmTexEngine {
       })
       worker.postMessage({
         type: "init",
-        engineUrl: opts.engineUrl === undefined ? "/wasm-tex/swiftlatexpdftex.js" : opts.engineUrl,
+        engineUrl: opts.engineUrl === undefined ? "/wasm-tex/PdfTeXEngine.js" : opts.engineUrl,
       })
     })
 
@@ -209,13 +223,19 @@ export class WasmTexEngine {
         status: WasmTexStatus
         pdf: Uint8Array | ArrayBuffer | null
         log: string
+        synctex?: string | null
       }
       const pdf = payload.pdf == null
         ? null
         : payload.pdf instanceof Uint8Array
           ? payload.pdf
           : new Uint8Array(payload.pdf as ArrayBuffer)
-      pending.resolve({ status: payload.status, pdf, log: payload.log ?? "" })
+      pending.resolve({
+        status: payload.status,
+        pdf,
+        log: payload.log ?? "",
+        synctex: payload.synctex ?? null,
+      })
     }
   }
 }

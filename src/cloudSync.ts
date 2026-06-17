@@ -68,12 +68,18 @@ export function isPathInside(child: string, parent: string): boolean {
 const DROPBOX_RE = /^(.+?) \(([^()]*conflicted copy[^()]*)\)(\.[^.]+)?$/i
 
 /**
- * OneDrive conflict heuristic, e.g. "note-MyPC.md".
- * High false-positive risk → caller must verify a sibling without the suffix
- * exists. Restrict the device-name part to look like a hostname (PascalCase
- * letters/digits/hyphens, not too short).
+ * OneDrive conflict heuristic, e.g. "note-DESKTOP123.md" or
+ * "note-LAPTOP-AB12CD.md". OneDrive appends the *machine name* (NetBIOS /
+ * Windows computer name), which is conventionally all-uppercase letters,
+ * digits and hyphens (e.g. "DESKTOP-7F3KQ9", "WORKPC"). Requiring an all-caps
+ * device token avoids matching ordinary hyphenated academic filenames whose
+ * second part is a normal Capitalized word ("chapter-Introduction.md",
+ * "lemma-Banach.md", "proof-Sketch.md").
+ *
+ * Even so the pattern is broad → the caller must verify a sibling without the
+ * suffix exists before flagging a match.
  */
-const ONEDRIVE_RE = /^(.+)-([A-Za-z][A-Za-z0-9-]{2,40})(\.[^.]+)?$/
+const ONEDRIVE_RE = /^(.+)-([A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*)(\.[^.]+)?$/
 
 export interface ConflictMatch {
   isConflict: boolean
@@ -88,8 +94,9 @@ export interface ConflictMatch {
  * sibling exists, since `paper-Draft.md` would also match.
  *
  * `providerHint` (optional) restricts matching to a single provider's pattern.
- * Useful when the vault is known to live in a specific cloud root: skipping
- * the unrelated regex avoids false-positive scans on every filename.
+ * The broad OneDrive heuristic only runs when `providerHint === "onedrive"`;
+ * without it (no OneDrive root detected) ordinary hyphenated filenames are
+ * never treated as conflicts.
  */
 export function isConflictFile(name: string, providerHint?: CloudProvider): ConflictMatch {
   // Dropbox pattern is cheap to pre-filter via substring.
@@ -103,9 +110,11 @@ export function isConflictFile(name: string, providerHint?: CloudProvider): Conf
       }
     }
   }
-  // OneDrive heuristic is broad — only attempt when explicitly hinted (or
-  // when no hint is given, i.e. the legacy "scan everything" entry point).
-  if (providerHint === "onedrive" || providerHint === undefined) {
+  // OneDrive heuristic is broad and destructive (matched copies are offered
+  // for deletion) → only attempt when the provider is *known* to be OneDrive.
+  // When no hint is given (no OneDrive root detected) we skip it entirely to
+  // avoid flagging ordinary hyphenated filenames in unrelated vaults.
+  if (providerHint === "onedrive") {
     if (name.includes("-")) {
       const om = ONEDRIVE_RE.exec(name)
       if (om) {
@@ -146,7 +155,7 @@ export function findConflicts(tree: FileNode[], providerHint?: CloudProvider): C
         const name = n.name
         if (
           (providerHint !== "onedrive" && name.includes("conflicted copy")) ||
-          (providerHint !== "dropbox" && name.includes("-"))
+          (providerHint === "onedrive" && name.includes("-"))
         ) {
           likely = true
           return

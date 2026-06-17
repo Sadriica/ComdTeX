@@ -4,7 +4,8 @@ Most of ComdTeX works without anything else installed — the bundled WASM LaTeX
 
 | Tool | Required for |
 |------|-------------|
-| `pandoc` | DOCX export, Beamer slides, Markdown → PDF (non-LaTeX path) |
+| `pandoc` | DOCX export, Beamer slides, Typst export, document import, Markdown → PDF (non-LaTeX path) |
+| `typst` | Typst → PDF export (compiles pandoc's Typst output) |
 | `zip` | Vault backup, `.cmdx` archive export |
 | `git` | The Git panel (status, commit, push from inside the app) |
 
@@ -38,6 +39,39 @@ brew install pandoc
 ### Windows
 
 Download the installer from <https://pandoc.org/installing.html> and run it. Make sure the install adds `pandoc` to your `PATH`.
+
+---
+
+## typst
+
+Only needed for **Typst → PDF** export. The plain `.typ` (Typst source) export
+needs only `pandoc`; `typst` is required to compile that source to a PDF.
+
+### Linux
+
+```bash
+# Arch / Manjaro
+sudo pacman -S typst
+
+# Debian/Ubuntu/Fedora: download a release binary
+# from https://github.com/typst/typst/releases and put it on your PATH,
+# or install via Cargo:
+cargo install --locked typst-cli
+```
+
+### macOS
+
+```bash
+brew install typst
+```
+
+### Windows
+
+```powershell
+winget install --id Typst.Typst
+# or
+scoop install typst
+```
 
 ---
 
@@ -105,7 +139,7 @@ Install [Git for Windows](https://git-scm.com/download/win).
 
 ### "Tool is installed but ComdTeX says it's missing"
 
-ComdTeX runs detection through the Tauri shell plugin, which only allows commands that are in the capability scope. As of v1.3.2, the scope includes `pandoc`, `zip`, `git`, `tectonic`, `xelatex`, `pdflatex`. If you upgraded from an older build and the warning persists:
+ComdTeX runs detection through the Tauri shell plugin, which only allows commands that are in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If you upgraded from an older build and the warning persists:
 
 1. Restart ComdTeX after the install — the shell plugin caches `PATH` at startup.
 2. Verify the tool is in your `PATH` from the same shell that launched ComdTeX:

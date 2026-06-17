@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react"
 import type { BibEntry } from "./bibtex"
+import { parseBibtex } from "./bibtex"
+import { fetchBibtexForDoi } from "./doiFetch"
+import { searchZotero, fetchZoteroBibtex, type ZoteroItem } from "./zotero"
+import { showToast } from "./toastService"
 import { useT } from "./i18n"
 
 interface CitationManagerProps {
   open: boolean
   bibMap: Map<string, BibEntry>
   onSave: (bibtexString: string) => void
+  /** Persist the current entry set immediately without closing the modal
+   *  (used by "Add by DOI" so the fetched entry hits references.bib at once). */
+  onPersist: (bibtexString: string) => void | Promise<void>
   onClose: () => void
 }
 
@@ -45,6 +52,7 @@ export default function CitationManager({
   open,
   bibMap,
   onSave,
+  onPersist,
   onClose,
 }: CitationManagerProps) {
   const t = useT()
@@ -52,6 +60,13 @@ export default function CitationManager({
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [doi, setDoi] = useState("")
+  const [fetching, setFetching] = useState(false)
+  // ── Zotero import state ───────────────────────────────────────────────────
+  const [zoteroQuery, setZoteroQuery] = useState("")
+  const [zoteroResults, setZoteroResults] = useState<ZoteroItem[] | null>(null)
+  const [zoteroSearching, setZoteroSearching] = useState(false)
+  const [zoteroFetching, setZoteroFetching] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -60,6 +75,12 @@ export default function CitationManager({
       setForm(DEFAULT_FORM)
       setError(null)
       setDeleteConfirm(null)
+      setDoi("")
+      setFetching(false)
+      setZoteroQuery("")
+      setZoteroResults(null)
+      setZoteroSearching(false)
+      setZoteroFetching(false)
     }
   }, [open, bibMap])
 
@@ -91,6 +112,86 @@ export default function CitationManager({
     setEntries(prev => new Map(prev).set(key, { type: form.type, key, fields }))
     setForm(DEFAULT_FORM)
     setError(null)
+  }
+
+  // ── Add by DOI / arXiv ────────────────────────────────────────────────────
+  // On-demand network fetch ONLY — runs when the user clicks this button. No
+  // automatic/background requests; ComdTeX stays offline until invoked here.
+  const handleFetchDoi = async () => {
+    const query = doi.trim()
+    if (!query || fetching) return
+    setFetching(true)
+    try {
+      const { bibtex } = await fetchBibtexForDoi(query)
+      // Validate it parses with the existing BibTeX parser.
+      const parsed = parseBibtex(bibtex)
+      if (parsed.size === 0) { showToast(t.citationManager.doiError, "error"); return }
+      const [key, entry] = [...parsed.entries()][0]
+      if (entries.has(key)) { showToast(t.citationManager.doiExists(key), "info"); return }
+      const next = new Map(entries).set(key, entry)
+      setEntries(next)
+      setDoi("")
+      // Persist to references.bib immediately and refresh the in-memory bib map.
+      await onPersist(serializeBibtex(next))
+      showToast(t.citationManager.doiSuccess(key), "success")
+    } catch {
+      showToast(t.citationManager.doiError, "error")
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  // ── Import from Zotero (local HTTP API) ───────────────────────────────────
+  // On-demand ONLY — requires Zotero (ideally with the Better BibTeX plugin)
+  // running locally. No network calls happen until the user searches/imports;
+  // ComdTeX stays offline otherwise. Reuses the SAME parse-validate +
+  // dedupe-by-key + onPersist path as "Add by DOI" so behavior is consistent.
+  const handleZoteroSearch = async () => {
+    const q = zoteroQuery.trim()
+    if (!q || zoteroSearching) return
+    setZoteroSearching(true)
+    setZoteroResults(null)
+    try {
+      const results = await searchZotero(q)
+      setZoteroResults(results)
+    } catch {
+      setZoteroResults(null)
+      showToast(t.citationManager.zoteroUnavailable, "error")
+    } finally {
+      setZoteroSearching(false)
+    }
+  }
+
+  /** Fetch BibTeX for the given citekeys and append using the DOI append path. */
+  const importZoteroKeys = async (citekeys: string[]) => {
+    if (citekeys.length === 0 || zoteroFetching) return
+    setZoteroFetching(true)
+    try {
+      const bibtex = await fetchZoteroBibtex(citekeys)
+      const parsed = parseBibtex(bibtex)
+      if (parsed.size === 0) { showToast(t.citationManager.zoteroUnavailable, "error"); return }
+      // Dedupe by key, mirroring the "Add by DOI" path.
+      let next = new Map(entries)
+      let added = 0
+      let lastDup: string | null = null
+      for (const [key, entry] of parsed) {
+        if (next.has(key)) { lastDup = key; continue }
+        next = new Map(next).set(key, entry)
+        added++
+      }
+      if (added === 0) {
+        showToast(t.citationManager.zoteroDuplicate(lastDup ?? citekeys[0]), "info")
+        return
+      }
+      setEntries(next)
+      // Persist to references.bib immediately and refresh the in-memory bib map.
+      await onPersist(serializeBibtex(next))
+      showToast(t.citationManager.zoteroImported(added), "success")
+    } catch {
+      showToast(t.citationManager.zoteroUnavailable, "error")
+    } finally {
+      setZoteroFetching(false)
+    }
   }
 
   const handleDelete = (key: string) => {
@@ -164,6 +265,100 @@ export default function CitationManager({
                 </div>
               )
             })}
+          </div>
+
+          {/* Add by DOI / arXiv (on-demand network fetch) */}
+          <div className="cit-add-form" style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}>
+            <div className="cit-add-form-row">
+              <input
+                placeholder={t.citationManager.doiPlaceholder}
+                value={doi}
+                onChange={e => setDoi(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleFetchDoi() }}
+                disabled={fetching}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="cit-add-btn"
+                onClick={handleFetchDoi}
+                disabled={fetching || !doi.trim()}
+                style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
+              >
+                {fetching ? t.citationManager.doiFetching : t.citationManager.doiAdd}
+              </button>
+            </div>
+          </div>
+
+          {/* Import from Zotero (on-demand local HTTP API; requires Zotero running) */}
+          <div className="cit-add-form" style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 2, fontWeight: 600 }}>
+              {t.citationManager.zoteroHeading}
+            </div>
+            <div className="cit-add-form-row">
+              <input
+                placeholder={t.citationManager.zoteroPlaceholder}
+                value={zoteroQuery}
+                onChange={e => setZoteroQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleZoteroSearch() }}
+                disabled={zoteroSearching || zoteroFetching}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="cit-add-btn"
+                onClick={handleZoteroSearch}
+                disabled={zoteroSearching || zoteroFetching || !zoteroQuery.trim()}
+                style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
+              >
+                {zoteroSearching ? t.citationManager.zoteroSearching : t.citationManager.zoteroSearch}
+              </button>
+            </div>
+
+            {zoteroResults !== null && zoteroResults.length === 0 && !zoteroSearching && (
+              <div style={{ padding: "4px 2px", color: "#777", fontSize: 12 }}>
+                {t.citationManager.zoteroNoResults}
+              </div>
+            )}
+
+            {zoteroResults !== null && zoteroResults.length > 0 && (
+              <>
+                <div className="cit-add-form-row" style={{ justifyContent: "flex-end" }}>
+                  <button
+                    className="cit-add-btn"
+                    onClick={() => importZoteroKeys(zoteroResults.map(r => r.citekey))}
+                    disabled={zoteroFetching}
+                    style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
+                  >
+                    {zoteroFetching ? t.citationManager.zoteroFetching : t.citationManager.zoteroImportAll}
+                  </button>
+                </div>
+                <div className="cit-list" style={{ maxHeight: 160, overflowY: "auto" }}>
+                  {zoteroResults.map(r => (
+                    <div key={r.citekey} className="cit-item">
+                      <div className="cit-item-info">
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span className="cit-item-key">{r.citekey}</span>
+                        </div>
+                        <div className="cit-item-title" title={r.title}>
+                          {r.title || <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>}
+                        </div>
+                        <div className="cit-item-meta">
+                          {[r.author, r.year].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                      <button
+                        className="cit-add-btn"
+                        title={t.citationManager.zoteroHeading}
+                        onClick={() => importZoteroKeys([r.citekey])}
+                        disabled={zoteroFetching}
+                        style={{ flex: "0 0 auto" }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Add entry form */}

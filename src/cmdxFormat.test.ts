@@ -154,6 +154,19 @@ describe("cmdxFormat", () => {
       expect(output).toContain(":::note[Title]\nBody\n:::")
     })
 
+    it("preserves every special block verbatim across a disk round-trip", () => {
+      // Regression: an excalidraw block was flattened to `> [!note]` on save
+      // because `excalidraw` was missing from SPECIAL_ENVS, destroying drawings.
+      const specials = ["pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw"]
+      for (const env of specials) {
+        const block = `:::${env}\nrAW b0dy: ${env} | a==b | f(x) :::keep\n:::`
+        const onDisk = toDiskContent("note.md", block)
+        expect(onDisk).toContain(`:::${env}`)
+        expect(onDisk).not.toContain("> [!note]")
+        expect(toEditorContent("note.md", onDisk)).toContain(block)
+      }
+    })
+
     it("uses path helpers as the only storage gateway", () => {
       expect(toEditorContent("note.md", "> [!note] Hi")).toBe(":::note[Hi]\n:::")
       expect(toDiskContent("note.md", ":::note\nHi\n:::")).toContain("> [!note]")

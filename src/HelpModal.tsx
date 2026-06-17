@@ -39,6 +39,9 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
     { key: "Ctrl+Tab",        desc: t.help.nextTab },
     { key: "Ctrl+Shift+Tab",  desc: t.help.prevTab },
     { key: "Ctrl+W",          desc: t.help.closeTab },
+    { key: "Ctrl+Shift+A",    desc: t.help.openAiAssistant },
+    { key: "Ctrl+Shift+O",    desc: t.help.insertTocShortcut },
+    { key: "Ctrl+Shift+E",    desc: t.help.toggleOutline },
     { key: "?",               desc: t.help.thisHelp },
 
     { group: t.help.editor },

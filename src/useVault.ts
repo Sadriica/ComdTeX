@@ -857,7 +857,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
             if (choice === "Yes") {
               // Reload from disk and replace tab content
               try {
-                const fresh = await readTextFile(path)
+                const fresh = toEditorContent(path, await readTextFile(path))
                 let freshMtime: number | undefined
                 try { freshMtime = (await stat(path)).mtime?.getTime() } catch {}
                 setOpenTabs((tabs) => tabs.map((tab) =>
@@ -1013,6 +1013,38 @@ export function useVault(options: UseVaultOptions | number = {}) {
     }
   }, [vaultPath, refreshTree, closeTab, t])
 
+  /**
+   * Re-key any pending autosave state (debounce timer, pending content, draft)
+   * from oldPath to newPath before a rename/move. Otherwise the queued
+   * saveFile(oldPath, ...) fires after the FS rename and recreates the old file,
+   * and the last in-flight edit never lands on newPath. Mirrors deleteFile's
+   * cleanup but migrates instead of dropping.
+   */
+  const migratePending = useCallback((oldPath: string, newPath: string) => {
+    const timer = saveTimers.current.get(oldPath)
+    if (timer) {
+      // Cancel the timer keyed to the old path; the pending content is re-queued
+      // below so the autosave still happens, just against the new path.
+      clearTimeout(timer)
+      saveTimers.current.delete(oldPath)
+    }
+    const pending = pendingContent.current.get(oldPath)
+    if (pending !== undefined) {
+      pendingContent.current.delete(oldPath)
+      pendingContent.current.set(newPath, pending)
+      // Re-arm the debounced save against the new path.
+      saveTimers.current.set(newPath, setTimeout(() => {
+        saveTimers.current.delete(newPath)
+        void saveFile(newPath, pending)
+      }, autoSaveMs))
+    }
+    const draft = getDrafts().find((d) => d.path === oldPath)
+    if (draft) {
+      clearDraft(oldPath)
+      saveDraft(newPath, draft.content)
+    }
+  }, [autoSaveMs, saveFile])
+
   const renameFile = useCallback(async (oldPath: string, newName: string) => {
     const v = validate(newName.replace(/\.[^.]+$/, ""))
     if (!v.valid) { showToast(v.error!, "error"); return }
@@ -1020,6 +1052,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const newPath = await pathJoin(dir, newName)
     try {
       await rename(oldPath, newPath)
+      // Re-key pending autosave only AFTER the rename succeeds, so a failed
+      // rename can't leave a re-armed timer that recreates the file at newPath.
+      migratePending(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) => tab.path === oldPath ? { ...tab, path: newPath, name: newName } : tab))
       if (activeTabPathRef.current === oldPath) setActiveTabPath(newPath)
@@ -1027,14 +1062,16 @@ export function useVault(options: UseVaultOptions | number = {}) {
     } catch (e) {
       showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, validate, t])
+  }, [vaultPath, refreshTree, validate, migratePending, t])
 
   const moveFile = useCallback(async (oldPath: string, targetFolderPath: string) => {
     const name = pathBasename(oldPath)
-    const newPath = `${targetFolderPath}/${name}`
+    const newPath = await pathJoin(targetFolderPath, name)
     if (oldPath === newPath) return
     try {
       await rename(oldPath, newPath)
+      // Re-key pending autosave only after a successful rename (see renameFile).
+      migratePending(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) =>
         tab.path === oldPath ? { ...tab, path: newPath } : tab
@@ -1045,7 +1082,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       showToast(t.vault.moveError, "error")
       console.error(e)
     }
-  }, [vaultPath, refreshTree, t])
+  }, [vaultPath, refreshTree, migratePending, t])
 
   const createFolder = useCallback(async (name: string) => {
     if (!vaultPath) return
@@ -1068,6 +1105,64 @@ export function useVault(options: UseVaultOptions | number = {}) {
       tabs.map((t) => t.path === path ? { ...t, content: newContent, isDirty: false } : t)
     )
   }, [])
+
+  /**
+   * Write CMDX `editorContent` to `path` safely, masking special blocks via
+   * `toDiskContent` and defeating the per-path autosave race the same way
+   * `replaceInVault` does: cancel any queued autosave timer, drop the stale
+   * pending content, then write. After a successful write it patches the open
+   * tab's content (so an in-memory edit/reopen stays consistent) and refreshes
+   * cachedMtime so the next real save doesn't misfire the external-conflict
+   * guard against our own write.
+   *
+   * Use this for out-of-band programmatic writes (todo toggle, wikilink
+   * refactor, backlink removal) that target arbitrary vault files — open or
+   * not — instead of a raw `writeTextFile`, which would bypass masking and lose
+   * the last in-flight autosave.
+   *
+   * Returns true if the bytes reached disk; throws are surfaced to the caller.
+   */
+  const writeFileSafe = useCallback(async (path: string, editorContent: string): Promise<void> => {
+    // Cancel + drop any queued autosave for this path so a stale debounced
+    // saveFile() can't fire after our write and clobber it with the pre-edit
+    // buffer.
+    const timer = saveTimers.current.get(path)
+    if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
+    pendingContent.current.delete(path)
+    await writeTextFile(path, toDiskContent(path, editorContent))
+    // Keep the open tab (if any) consistent with what's on disk and clear dirty.
+    patchTabContent(path, editorContent)
+    clearDraft(path)
+    // Refresh cachedMtime so the next real save's external-conflict guard
+    // doesn't trip on our own write.
+    let newMtime: number | undefined
+    try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
+    if (newMtime !== undefined) {
+      setOpenTabs((tabs) => tabs.map((tab) =>
+        tab.path === path ? { ...tab, cachedMtime: newMtime } : tab
+      ))
+    }
+  }, [patchTabContent])
+
+  /**
+   * Flush every in-flight debounced autosave to disk immediately. Used by the
+   * window-close handler so the user's last ~800ms of edits aren't lost when the
+   * app quits before the debounce timer fires.
+   *
+   * For each pending path: cancel its queued timer (so it can't double-fire) and
+   * await saveFile() against the latest in-memory content. Paths under an
+   * unresolved external-modification conflict are skipped (saveFile would prompt
+   * a modal — not appropriate mid-quit; their drafts survive for recovery).
+   */
+  const flushPending = useCallback(async (): Promise<void> => {
+    const entries = Array.from(pendingContent.current.entries())
+    for (const [path, content] of entries) {
+      if (conflictPaths.current.has(path)) continue
+      const timer = saveTimers.current.get(path)
+      if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
+      try { await saveFile(path, content) } catch { /* best-effort flush */ }
+    }
+  }, [saveFile])
 
   // Search with result limit and cancellation
   const searchAbortRef = useRef<{ cancelled: boolean }>({ cancelled: false })
@@ -1184,9 +1279,24 @@ export function useVault(options: UseVaultOptions | number = {}) {
             if (!matches) continue
             re.lastIndex = 0
             const updated = editorContent.replace(re, replacement)
+            // If this file has a queued autosave, cancel it and drop the stale
+            // pending content — otherwise the timer could fire after our write
+            // and clobber the replacement with the pre-replace buffer.
+            const timer = saveTimers.current.get(node.path)
+            if (timer) { clearTimeout(timer); saveTimers.current.delete(node.path) }
+            pendingContent.current.delete(node.path)
             await writeTextFile(node.path, toDiskContent(node.path, updated))
             total += matches.length
             patchTabContent(node.path, updated)
+            // Refresh the open tab's cachedMtime so the next real save doesn't
+            // misfire the external-conflict guard against our own write.
+            let newMtime: number | undefined
+            try { newMtime = (await stat(node.path)).mtime?.getTime() } catch {}
+            if (newMtime !== undefined) {
+              setOpenTabs((tabs) => tabs.map((tab) =>
+                tab.path === node.path ? { ...tab, cachedMtime: newMtime } : tab
+              ))
+            }
           } catch { /* skip */ }
         }
       }
@@ -1203,7 +1313,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     selectVault, createVault, loadVault, refreshTree,
     openFileNode, openFilePath, closeTab, switchTab,
     reopenTab, getClosedTabs,
-    updateContent, saveFile, patchTabContent,
+    updateContent, saveFile, patchTabContent, writeFileSafe, flushPending,
     createFile, createFolder, deleteFile, renameFile, moveFile,
     search, replaceInVault,
   }

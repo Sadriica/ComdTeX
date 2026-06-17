@@ -149,18 +149,20 @@ export function toStorage(text: string, format: StorageFormat): string {
  * Convert CMDX to Markdown (.md) - Obsidian compatible.
  */
 export function toStorageMd(text: string): string {
-  return withFrontmatter(text, (body) =>
-    convertCmdxEnvironments(convertFunctions(body, MARKDOWN_FUNCTIONS), "md")
-  )
+  return withFrontmatter(text, (body) => {
+    const { masked, restore } = maskSpecialBlocks(body)
+    return restore(convertCmdxEnvironments(convertFunctions(masked, MARKDOWN_FUNCTIONS), "md"))
+  })
 }
 
 /**
  * Convert CMDX to LaTeX (.tex).
  */
 export function toStorageTex(text: string): string {
-  return withFrontmatter(text, (body) =>
-    convertTexLabelsAndRefs(convertCmdxEnvironments(convertFunctions(body, LATEX_FUNCTIONS), "tex"))
-    )
+  return withFrontmatter(text, (body) => {
+    const { masked, restore } = maskSpecialBlocks(body)
+    return restore(convertTexLabelsAndRefs(convertCmdxEnvironments(convertFunctions(masked, LATEX_FUNCTIONS), "tex")))
+  })
 }
 
 type FunctionHandler = (args: string[]) => string
@@ -273,6 +275,51 @@ interface CmdxEnvStart {
 
 const CMDX_ENV_START_RE = /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*$/
 const CMDX_ENV_END_RE = /^:::\s*$/
+
+/**
+ * ComdTeX-only block types that have NO Obsidian-callout or LaTeX equivalent
+ * (truth tables, graphs, function plots, flowcharts, pseudocode, commutative
+ * diagrams, code). They must survive a save→reopen round-trip VERBATIM —
+ * mapping them to a `note` callout (the old behaviour) silently and
+ * irreversibly destroyed the block on every autosave.
+ */
+const SPECIAL_ENVS = new Set([
+  "pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw",
+])
+
+/**
+ * Replace special `:::type … :::` blocks with placeholders so the storage
+ * conversions (shorthand expansion + env→callout/LaTeX mapping) never touch
+ * them, then restore them verbatim. Keeps these ComdTeX-only blocks lossless
+ * across the CMDX↔disk round-trip. Line-based + depth-tracked to match
+ * `convertCmdxEnvironments`.
+ */
+function maskSpecialBlocks(text: string): { masked: string; restore: (s: string) => string } {
+  const lines = text.split("\n")
+  const slots: string[] = []
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const parsed = parseCmdxEnvStart(lines[i])
+    if (parsed && SPECIAL_ENVS.has(parsed.rawName.toLowerCase())) {
+      let depth = 1
+      let close = -1
+      for (let j = i + 1; j < lines.length; j++) {
+        if (parseCmdxEnvStart(lines[j])) depth++
+        else if (CMDX_ENV_END_RE.test(lines[j])) { depth--; if (depth === 0) { close = j; break } }
+      }
+      if (close >= 0) {
+        slots.push(lines.slice(i, close + 1).join("\n"))
+        out.push(`\x00CMDXSPECIAL${slots.length - 1}\x00`)
+        i = close
+        continue
+      }
+    }
+    out.push(lines[i])
+  }
+  const restore = (s: string): string =>
+    s.replace(/\x00CMDXSPECIAL(\d+)\x00/g, (_, n) => slots[Number(n)] ?? "")
+  return { masked: out.join("\n"), restore }
+}
 
 function parseCmdxEnvStart(line: string): CmdxEnvStart | null {
   const match = CMDX_ENV_START_RE.exec(line)
@@ -507,7 +554,6 @@ function convertMarkdownCallouts(text: string): string {
       continue
     }
 
-    const { env, title } = obsidianCalloutToCmdx(start[1], start[2].trim())
     const bodyLines: string[] = []
     while (i + 1 < lines.length) {
       const continuation = /^>\s?(.*)$/.exec(lines[i + 1])
@@ -515,6 +561,8 @@ function convertMarkdownCallouts(text: string): string {
       bodyLines.push(continuation[1])
       i++
     }
+    // Body is collected first so the recovery heuristic can inspect it.
+    const { env, title } = obsidianCalloutToCmdx(start[1], start[2].trim(), bodyLines.join("\n"))
 
     out.push(`:::${env}${title ? `[${title}]` : ""}`)
     out.push(...bodyLines)
@@ -523,8 +571,61 @@ function convertMarkdownCallouts(text: string): string {
   return out.join("\n")
 }
 
-function obsidianCalloutToCmdx(type: string, rawTitle: string): { env: string; title: string } {
+// Capitalized special-type prefix → env, used to RECOVER files corrupted by
+// older versions that rewrote `:::truth[…]` etc. into `> [!note] Truth: …`.
+// "Truth" → "truth", "Flowchart" → "flowchart", … (matches the exact title the
+// old `cmdxEnvironmentToMarkdown` produced via `Capitalize(name)`).
+const SPECIAL_TITLE_TO_ENV: Record<string, string> = Object.fromEntries(
+  [...SPECIAL_ENVS].map((t) => [t.charAt(0).toUpperCase() + t.slice(1), t])
+)
+
+// "graph", "plot", "code" are common English words a user might genuinely start
+// a note title with → recovering those requires the BODY to look like the
+// block's DSL (heuristic). The other special names ("Truth", "Flowchart", …)
+// are virtually never legit note titles, so they always recover.
+const AMBIGUOUS_SPECIAL = new Set(["graph", "plot", "code"])
+
+function bodyLooksLikeSpecial(env: string, body: string): boolean {
+  const b = body.trim()
+  if (!b) return false
+  switch (env) {
+    // edges: `A -- B`, `A -> B`, `A → B`
+    case "graph": return /(^|\n)\s*\S+\s*(--|->|→)\s*\S+/.test(b)
+    // a function/assignment or a math function or an x-range
+    case "plot": return /=|\b(sin|cos|tan|exp|ln|log|sqrt|abs)\s*\(|\bx(min|max)\b/i.test(b)
+    // code-like tokens / common keywords
+    case "code": return /[{};]|\b(def|function|class|return|import|const|let|var|public|private|print|for|while|if|else)\b/.test(b)
+    default: return true
+  }
+}
+
+/**
+ * Decide whether a `[!note] Prefix[: title]` callout should be recovered to a
+ * special block. Strategy (v3 + v1 fallback): unambiguous types always recover;
+ * the common-word types (graph/plot/code) recover only if the body matches the
+ * block's syntax; if the heuristic itself throws, fall back to recovering so we
+ * never silently drop a real diagram.
+ */
+function shouldRecoverSpecial(env: string, body: string): boolean {
+  if (!AMBIGUOUS_SPECIAL.has(env)) return true
+  try { return bodyLooksLikeSpecial(env, body) } catch { return true }
+}
+
+function obsidianCalloutToCmdx(type: string, rawTitle: string, body = ""): { env: string; title: string } {
   const normalizedType = type.toLowerCase()
+  // Recovery: a `[!note]` whose title starts with a known special-block name was
+  // almost certainly a special block mangled by an older save. Restore it,
+  // gated to `note` callouts + exact prefixes + (for ambiguous types) a body
+  // heuristic, to limit false positives on genuine notes.
+  if (normalizedType === "note") {
+    for (const [prefix, env] of Object.entries(SPECIAL_TITLE_TO_ENV)) {
+      const matchesPrefix = rawTitle === prefix || rawTitle.startsWith(`${prefix}:`)
+      if (!matchesPrefix) continue
+      if (!shouldRecoverSpecial(env, body)) break // looks like a genuine note → don't recover
+      const title = rawTitle === prefix ? "" : rawTitle.slice(prefix.length + 1).trim()
+      return { env, title }
+    }
+  }
   for (const [title, env] of Object.entries(OBSIDIAN_TITLE_TO_CMDX)) {
     if (rawTitle === title) return { env, title: "" }
     if (rawTitle.startsWith(`${title}:`)) return { env, title: rawTitle.slice(title.length + 1).trim() }

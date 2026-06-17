@@ -9,6 +9,7 @@
  *   @fig:label  →  "Figura N" link
  *   @fig:1      →  "Figura 1" (direct numeric)
  */
+import { blankInlineCode, stripCodeFences } from "./equations"
 
 let figCounter = 0
 const figLabels = new Map<string, number>()
@@ -30,10 +31,16 @@ export function prescanFigures(text: string): Map<string, number> {
   const labels = new Map<string, number>()
   let counter = 0
 
+  // Strip fenced + inline code first so an `![...](...)` written inside a code
+  // sample isn't counted — `wrapFigures` only counts rendered <img> tags, which
+  // never come from code blocks, so the two passes must agree or `@fig:` refs
+  // resolve to the wrong number.
+  const stripped = blankInlineCode(stripCodeFences(text))
+
   // Match: ![...](...)  optionally followed by {#fig:label}
   const re = /!\[[^\]]*\]\([^)]*\)(?:\s*\{#(fig:[\w:.-]+)\})?/g
   let m: RegExpExecArray | null
-  while ((m = re.exec(text)) !== null) {
+  while ((m = re.exec(stripped)) !== null) {
     counter++
     if (m[1]) labels.set(m[1], counter)
   }

@@ -40,12 +40,23 @@ Arguments are parsed with balanced parentheses, so nested shorthands are valid.
 
 Markdown storage is Obsidian-compatible:
 
-- CMDX environments become Obsidian callouts.
+- Theorem-like CMDX environments become Obsidian callouts.
 - Environment type is encoded in the callout title, e.g. `Theorem: Title`, so it
   can be recovered on reopen.
 - Markdown tables become `table(...)` on open and storage tables on save.
 - Frontmatter is preserved.
 - Plain blockquotes that are not Obsidian callouts are preserved.
+
+### Special blocks are stored verbatim
+
+ComdTeX-only special blocks — `pseudocode`, `flowchart`, `truth`, `graph`, `plot`,
+`commdiag`, `code`, `excalidraw` — are **not** converted to callouts. `maskSpecialBlocks()`
+(`src/cmdxFormat.ts`) swaps them for placeholders before the storage conversions
+run and restores them afterward, so they survive the `.md`/`.tex` round-trip
+byte-for-byte. Older builds flattened these to `> [!note]` callouts, silently
+corrupting them on autosave; `shouldRecoverSpecial()` auto-recovers such files on
+open (unambiguous types always recover; common-word types like `graph`/`plot`/`code`
+recover only when the body matches the block's syntax).
 
 ## LaTeX Storage
 

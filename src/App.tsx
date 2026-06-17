@@ -8,6 +8,7 @@ import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
+import type { CmdKAnchor } from "./CmdKEdit"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
 import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker } from "./monacoSetup"
 import {
@@ -23,10 +24,16 @@ import {
   type Comment,
 } from "./comments"
 import { lintFileSummary, type LintSummary } from "./contentLinter"
+import {
+  onDictionaryReady,
+  preloadDictionary,
+  resolveSpellLang,
+  type SpellLang,
+} from "./spellcheck"
 import { useVault } from "./useVault"
 import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
-import { LanguageContext, LANGS, useT, type T } from "./i18n"
+import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
 import TitleBar from "./TitleBar"
@@ -37,6 +44,7 @@ import TabBar from "./TabBar"
 import FileTree from "./FileTree"
 import SearchPanel from "./SearchPanel"
 import OutlinePanel from "./OutlinePanel"
+import { reorderSection } from "./outlineReorder"
 import BacklinksPanel from "./BacklinksPanel"
 import GitBar from "./GitBar"
 import Resizer from "./Resizer"
@@ -49,12 +57,14 @@ import SymbolPickerPanel from "./SymbolPickerPanel"
 import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand } from "./CommandPalette"
+import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { exportToTex, exportReveal } from "./exporter"
-import { exportPdf as exportPdfAction, exportAnkiCardsToFile, compileLatexPdf as compileLatexPdfAction } from "./exportActions"
+import { exportPdf as exportPdfAction, exportAnkiCardsToFile, compileLatexPdf as compileLatexPdfAction, importDocument as importDocumentAction, exportTypst as exportTypstAction, exportTypstPdf as exportTypstPdfAction } from "./exportActions"
+import { toPandocMarkdownInput } from "./exportConversion"
 import type { LatexDiagnostic } from "./latexErrors"
 import LatexErrorModal from "./LatexErrorModal"
 import { exportToObsidianMarkdown } from "./obsidianExport"
@@ -74,7 +84,6 @@ import ErrorBoundary from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
 import { buildSearchRegExp, replaceMatchAt, replaceMatches, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
 import { toEditorContent, toDiskContent } from "./cmdxFormat"
-import { buildTocMarkdown } from "./toc"
 import { resolveTransclusions } from "./transclusion"
 import { scanStructuralLabels } from "./structuralLabels"
 import { composeProjectMarkdown } from "./projectExport"
@@ -84,7 +93,7 @@ import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
 import { processTemplateVariables } from "./templates"
-import { setFlowchartSvg } from "./environments"
+import { setFlowchartSvg, setExcalidrawSvg, getExcalidrawSvg, setExcalidrawPlaceholderText } from "./environments"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
@@ -92,7 +101,7 @@ const RECENT_KEY = "comdtex_recent"
 const BOOKMARKS_KEY = "comdtex_bookmarks"
 const CURSOR_KEY = "comdtex_cursor_positions"
 const MAX_RECENT = 10
-type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync"
+type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -287,8 +296,12 @@ const TodoPanel = lazy(() => import("./TodoPanel"))
 const EquationsPanel = lazy(() => import("./EquationsPanel"))
 const EnvironmentsPanel = lazy(() => import("./EnvironmentsPanel"))
 const VaultStatsPanel = lazy(() => import("./VaultStatsPanel"))
+const FocusTimerPanel = lazy(() => import("./FocusTimerPanel"))
 const CitationManager = lazy(() => import("./CitationManager"))
+const ExcalidrawModal = lazy(() => import("./ExcalidrawModal"))
 const CommentsPanel = lazy(() => import("./CommentsPanel"))
+const AiPanel = lazy(() => import("./AiPanel"))
+const CmdKEdit = lazy(() => import("./CmdKEdit"))
 const SettingsModal = lazy(() => import("./SettingsModal"))
 const HelpModal = lazy(() => import("./HelpModal"))
 const TemplateModal = lazy(() => import("./TemplateModal"))
@@ -349,6 +362,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // event through a ref that gets assigned once both sides are ready.
   const afterSaveRef = useRef<((path: string, basename: string) => void) | undefined>(undefined)
   const vault = useVault({
+    autoSaveMs: settings.autoSaveMs,
     onAfterSave: (path, basename) => { afterSaveRef.current?.(path, basename) },
   })
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -356,12 +370,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Linter context refs — updated without re-creating the editor callback
   const lintWikiNamesRef = useRef<Set<string>>(new Set())
   const lintBibKeysRef = useRef<Set<string>>(new Set())
+  // Spell-check linter refs — read live by the linter's getContext callback.
+  const lintSpellEnabledRef = useRef(false)
+  const lintSpellLangRef = useRef<SpellLang>("es")
+  const lintSpellMessageRef = useRef<(w: string) => string>((w) => w)
   // Macros ref for math hover — stays current without rebuilding the hover
   const macrosRef = useRef<Record<string, string>>({})
-  const linterDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const linterDisposableRef = useRef<{ dispose(): void; relint?(): void } | null>(null)
   const mathHoverDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mathPreviewDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mathPreviewEnabledRef = useRef(settings.mathPreview ?? true)
+  // Ctrl/Cmd+K inline AI edit: a ref-backed opener so the Monaco command (bound
+  // once at mount) always calls the latest handler / reads the latest setting.
+  const aiEnabledRef = useRef(settings.aiEnabled)
+  const openCmdkRef = useRef<() => void>(() => {})
   const vimRef = useRef<VimAdapterInstance | null>(null)
   const vimStatusRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<number | null>(null)
@@ -369,6 +391,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [dragOver, setDragOver] = useState(false)
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
   const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
+  const bookmarksRef = useRef(bookmarks)
+  useEffect(() => { bookmarksRef.current = bookmarks }, [bookmarks])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
@@ -424,10 +448,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false)
   const [closedTabsOpen, setClosedTabsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined)
+  // Ctrl/Cmd+K inline AI edit — null when the floating widget is closed.
+  const [cmdkAnchor, setCmdkAnchor] = useState<CmdKAnchor | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
   const [citationManagerOpen, setCitationManagerOpen] = useState(false)
   const [tableEditorOpen, setTableEditorOpen] = useState(false)
+  // Excalidraw editor: `open` toggles the modal; `sceneB64` is the scene being
+  // edited (empty for a new drawing); `targetLine` is the 1-based source line of
+  // the block body to replace on save (null = insert a fresh block at cursor).
+  const [excalidraw, setExcalidraw] = useState<{ open: boolean; sceneB64: string; targetLine: number | null }>({ open: false, sceneB64: "", targetLine: null })
+  const [excalidrawVersion, setExcalidrawVersion] = useState(0)
   const [latexDiagnostics, setLatexDiagnostics] = useState<LatexDiagnostic[] | null>(null)
   const [pdfPath, setPdfPath] = useState<string | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -435,6 +467,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">("idle")
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Shared panel opener: switching the panel is useless if the sidebar is
+  // collapsed (the panel changes but nothing renders), so every panel-open path
+  // must also un-collapse. Use this everywhere instead of bare setSidebarMode.
+  const openPanel = useCallback((m: SidebarMode) => {
+    setSidebarMode(m)
+    setSidebarCollapsed(false)
+  }, [])
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [editorWidth, setEditorWidth] = useState<number | null>(null)
   const typewriterMode = settings.typewriterMode
@@ -538,8 +577,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault.vaultPath])
 
   const cloudConflicts: ConflictEntry[] = useMemo(
-    () => (cloudInfo ? findConflicts(vault.tree, cloudInfo.provider) : []),
-    [cloudInfo, vault.tree],
+    () => (cloudInfo && settings.cloudSyncDetectEnabled ? findConflicts(vault.tree, cloudInfo.provider) : []),
+    [cloudInfo, vault.tree, settings.cloudSyncDetectEnabled],
   )
 
   const cloudConflictPaths = useMemo(() => {
@@ -602,6 +641,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   useEffect(() => { macrosRef.current = macros }, [macros])
   useEffect(() => { mathPreviewEnabledRef.current = settings.mathPreview ?? true }, [settings.mathPreview])
+  useEffect(() => { aiEnabledRef.current = settings.aiEnabled }, [settings.aiEnabled])
 
   // ── Custom preview CSS ────────────────────────────────────────────────────
   useEffect(() => {
@@ -696,6 +736,34 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     lintBibKeysRef.current = bibKeys
   }, [bibKeys])
 
+  // ── Dictionary spell-check wiring ─────────────────────────────────────────
+  // Re-lint when a dictionary finishes loading async (markers were [] until
+  // then). Subscribed once for the editor's lifetime.
+  useEffect(() => {
+    return onDictionaryReady(() => linterDisposableRef.current?.relint?.())
+  }, [])
+
+  // Active spell-check language: frontmatter `lang:` of the open file wins,
+  // else the app UI language. Only es/en are supported.
+  const activeSpellLang = useMemo<SpellLang>(() => {
+    const fm = vault.openFile?.content
+      ? extractFrontmatter(vault.openFile.content)?.data.lang
+      : undefined
+    return resolveSpellLang(typeof fm === "string" ? fm : undefined, settings.language)
+  }, [vault.openFile?.content, settings.language])
+
+  // Keep the linter's spell refs current and force a re-lint when the
+  // spell-check setting toggles, the language changes, or the message
+  // formatter (i18n) changes. When the setting is OFF nothing loads — the
+  // linter simply skips the rule, so squiggles vanish on the next pass.
+  useEffect(() => {
+    lintSpellEnabledRef.current = settings.spellcheck
+    lintSpellLangRef.current = activeSpellLang
+    lintSpellMessageRef.current = t.app.spellError
+    if (settings.spellcheck) preloadDictionary(activeSpellLang)
+    linterDisposableRef.current?.relint?.()
+  }, [settings.spellcheck, activeSpellLang, t.app.spellError])
+
   // ── Sync BibTeX suggestions for citation autocomplete + hover ─────────────
   useEffect(() => {
     const entries = [...bibMap.entries()].map(([key, entry]) => ({
@@ -724,24 +792,60 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // (openTabsRef declared earlier; reused here to read latest tabs from
   // the close-request callback without subscribing to every keystroke)
 
-  // Without onCloseRequested, Tauri closes by default on WM signal
-  // The X button handles the unsaved-changes warning
-  const handleCloseRequest = useCallback(async () => {
-    const win = currentTauriWindow()
-    if (!win) return
+  // Shared close logic for BOTH the custom TitleBar X and the WM-close
+  // (onCloseRequested) path. First flushes every in-flight 800ms autosave
+  // debounce so the user's last edits hit disk, THEN runs the dirty-tab
+  // confirmation (a tab can still be dirty if its save failed). Returns true
+  // when the app should proceed to close, false to abort.
+  const confirmClose = useCallback(async (): Promise<boolean> => {
+    // Flush pending autosaves before deciding — this both persists in-flight
+    // edits and clears the dirty flag on tabs that save successfully.
+    try { await vault.flushPending() } catch { /* best-effort */ }
     const dirtyTabs = openTabsRef.current.filter((t) => t.isDirty)
-    if (dirtyTabs.length === 0) { await win.close(); return }
+    if (dirtyTabs.length === 0) return true
     const names = dirtyTabs.map((t) => t.name).join(", ")
     try {
-      const ok = await tauriConfirm(
+      return await tauriConfirm(
         t.app.unsavedChanges(names),
         { title: "ComdTeX", kind: "warning" }
       )
-      if (ok) await win.close()
     } catch {
-      await win.close()
+      // Dialog unavailable — allow the close (matches prior behavior).
+      return true
     }
-  }, [t])
+  }, [t, vault])
+
+  // X-button handler: confirm, then close the window explicitly.
+  const handleCloseRequest = useCallback(async () => {
+    const win = currentTauriWindow()
+    if (!win) return
+    if (await confirmClose()) await win.close()
+  }, [confirmClose])
+
+  // WM-close path (window manager X / Cmd+Q): Tauri fires onCloseRequested and
+  // closes by default. preventDefault() while we flush + confirm, then close
+  // explicitly only if confirmed. Registered once; reuses confirmClose so both
+  // close paths share one implementation.
+  const confirmCloseRef = useRef(confirmClose)
+  confirmCloseRef.current = confirmClose
+  useEffect(() => {
+    const win = currentTauriWindow()
+    if (!win) return
+    let unlisten: (() => void) | undefined
+    let cancelled = false
+    let closing = false
+    win.onCloseRequested(async (event) => {
+      if (closing) return
+      // Block the default close while we flush + confirm asynchronously.
+      event.preventDefault()
+      const proceed = await confirmCloseRef.current()
+      if (proceed) { closing = true; await win.close() }
+    }).then((fn) => {
+      if (cancelled) { fn(); return }
+      unlisten = fn
+    })
+    return () => { cancelled = true; unlisten?.() }
+  }, [])
 
   // ── Auto-refresh vault on window focus ────────────────────────────────────
   useEffect(() => {
@@ -848,6 +952,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Focus mode + Ctrl+P + Ctrl+Shift+P + ? ───────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ctrl/Cmd+Shift+F — open vault search. The Monaco command only fires when
+      // the editor is focused, but the palette/menu present this as a global
+      // shortcut, so handle it here (regardless of focus) too. Both paths call
+      // openPanel("search").
+      const key = e.key.toLowerCase()
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "f") {
+        e.preventDefault()
+        openPanel("search")
+        return
+      }
       handleGlobalShortcut(
         e,
         {
@@ -859,22 +973,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           exitFocusMode: () => setFocusMode(false),
           openCommandPalette: () => setPaletteOpen(true),
           openQuickSwitcher: () => setQuickSwitcherOpen(true),
-          toggleBookmark: () => {
+          toggleBookmark: (slot: number) => {
             if (!editorRef.current || !vault.activeTabPath) return
             const line = editorRef.current.getPosition()?.lineNumber ?? 1
             setBookmarks((prev) => {
               const next = { ...prev }
-              const existing = Object.entries(next).find(([, l]) => l === line)
-              if (existing) {
-                delete next[parseInt(existing[0])]
+              // Ctrl+Shift+N is a stable toggle on slot N: clear it if it
+              // already points at this line, otherwise (re)assign it here.
+              if (next[slot] === line) {
+                delete next[slot]
               } else {
-                const slot = Object.keys(next).length < 9 ? Object.keys(next).length + 1 : 1
                 next[slot] = line
               }
               saveBookmarks(next)
               return next
             })
             showToast(t.app.bookmarkToggled, "info")
+          },
+          goToBookmark: (slot: number) => {
+            const line = bookmarksRef.current[slot]
+            if (!line || !editorRef.current) return
+            editorRef.current.revealLineInCenter(line)
+            editorRef.current.setPosition({ lineNumber: line, column: 1 })
+            editorRef.current.focus()
           },
           showBookmarks: () => setBookmarksOpen(true),
           togglePreview: () => updateSettings({ previewVisible: !settings.previewVisible }),
@@ -898,7 +1019,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 defaultPath: vault.openFile?.name,
               })
               if (!path) return
-              await writeTextFile(path, editor.getValue())
+              // Faithful save (masked, extension-aware) — not a lossy export.
+              await writeTextFile(path, toDiskContent(path, editor.getValue()))
               await vault.loadVault()
             })()
           },
@@ -913,17 +1035,41 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               setClosedTabsOpen(true)
             }
           },
+          openAiPanel: () => openPanel("ai"),
+          insertToc: () => {
+            const editor = editorRef.current
+            if (!editor) return
+            const pos = editor.getPosition()
+            editor.executeEdits("insert-toc", [{
+              range: {
+                startLineNumber: pos?.lineNumber ?? 1,
+                startColumn: pos?.column ?? 1,
+                endLineNumber: pos?.lineNumber ?? 1,
+                endColumn: pos?.column ?? 1,
+              },
+              text: "[[toc]]\n",
+            }])
+            editor.focus()
+          },
+          toggleOutline: () => {
+            setSidebarMode((m) => {
+              const next = m === "outline" ? "files" : "outline"
+              if (next === "outline") setSidebarCollapsed(false)
+              return next
+            })
+          },
         },
       )
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [focusMode, settings.previewVisible, settings.fontSize, settings.previewFontSize, t, updateSettings, vault, nextTab, prevTab])
+  }, [focusMode, settings.previewVisible, settings.fontSize, settings.previewFontSize, t, updateSettings, vault, nextTab, prevTab, openPanel])
 
   // ── Linter + math hover + pending-timer cleanup on unmount ────────────────
   useEffect(() => () => {
     linterDisposableRef.current?.dispose()
     mathHoverDisposableRef.current?.dispose()
+    mathPreviewDisposableRef.current?.dispose()
     commentDecorationsRef.current?.dispose()
     if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
@@ -1050,7 +1196,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     // mermaidVersion: included so re-renders that follow a mermaid SVG cache
     // population read the freshly-stored SVGs and embed them inline.
-  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, mermaidVersion])
+  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, mermaidVersion, excalidrawVersion])
 
   const deferredPreviewContent = useDeferredValue(previewContent)
 
@@ -1152,6 +1298,60 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // (read below), not as a dep of this effect — it would cause a re-render loop.
   void mermaidVersion
 
+  // ── Excalidraw static SVG rendering ───────────────────────────────────────
+  // `:::excalidraw` blocks render to a placeholder in environments.ts (sync).
+  // Here we lazy-import Excalidraw's `exportToSvg` (its own heavy chunk, only
+  // fetched when a drawing is actually present in the preview), render each
+  // scene to a static SVG, cache it, and bump a version so the next preview
+  // render embeds the SVG inline. Mirrors the mermaid effect above.
+  useEffect(() => {
+    let cancelled = false
+    const placeholders = previewPaneRef.current
+      ? [...previewPaneRef.current.querySelectorAll<HTMLElement>(".excalidraw-block .excalidraw-placeholder")]
+      : []
+    // Only blocks with a non-empty scene that isn't already cached need rendering.
+    const pending = placeholders
+      .map((el) => el.closest<HTMLElement>(".excalidraw-block"))
+      .filter((block): block is HTMLElement => {
+        const b64 = block?.getAttribute("data-excalidraw-scene") ?? ""
+        return !!block && !!b64 && !getExcalidrawSvg(b64)
+      })
+    if (pending.length === 0) return
+
+    ;(async () => {
+      const { exportToSvg } = await import("@excalidraw/excalidraw")
+      if (cancelled) return
+      let storedAny = false
+      for (const block of pending) {
+        const b64 = block.getAttribute("data-excalidraw-scene") ?? ""
+        try {
+          const json = decodeURIComponent(escape(atob(b64)))
+          const parsed = JSON.parse(json)
+          const elements = Array.isArray(parsed.elements) ? parsed.elements : []
+          if (elements.length === 0) continue
+          const svgEl = await exportToSvg({
+            elements,
+            appState: { ...(parsed.appState ?? {}), exportBackground: true },
+            files: parsed.files ?? null,
+          })
+          if (cancelled) return
+          setExcalidrawSvg(b64, sanitizeRenderedHtml(svgEl.outerHTML))
+          storedAny = true
+        } catch (err) {
+          console.warn("Excalidraw render failed", err)
+        }
+      }
+      if (storedAny && !cancelled) setExcalidrawVersion((v) => v + 1)
+    })().catch((err) => console.warn("Excalidraw export failed", err))
+
+    return () => { cancelled = true }
+  }, [previewHtml, excalidrawVersion])
+
+  // Keep the renderer's placeholder text in sync with the active language.
+  useEffect(() => {
+    setExcalidrawPlaceholderText(t.excalidraw.placeholder)
+  }, [t.excalidraw.placeholder])
+
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
     setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
@@ -1213,6 +1413,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
       vaultFileNames: lintWikiNamesRef.current,
       bibKeys: lintBibKeysRef.current,
+      spellcheck: lintSpellEnabledRef.current,
+      spellLang: lintSpellLangRef.current,
+      spellMessage: lintSpellMessageRef.current,
     }))
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -1231,7 +1434,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             defaultPath: vault.openFile?.name,
           })
           if (!path) return
-          await writeTextFile(path, editor.getValue())
+          // Faithful save (masked, extension-aware) — not a lossy export.
+          await writeTextFile(path, toDiskContent(path, editor.getValue()))
           await vault.loadVault()
         })()
       }
@@ -1242,7 +1446,28 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     )
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
-      () => setSidebarMode("search")
+      () => openPanel("search")
+    )
+    // Ctrl/Cmd+B / Ctrl/Cmd+I — bold / italic. The command palette advertises
+    // these shortcuts but Monaco has no default binding for them; wire them to
+    // the same selection-aware insert the palette uses so they wrap the current
+    // selection (matching the palette's snippets exactly).
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
+      () => insertSnippet(editorRef.current, "**${1:texto}**"),
+    )
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI,
+      () => insertSnippet(editorRef.current, "_${1:texto}_"),
+    )
+    // Ctrl/Cmd+K inline AI edit (flagship). Monaco normally reserves Ctrl+K as a
+    // CHORD prefix (e.g. Ctrl+K Ctrl+C); registering a plain Ctrl+K command here
+    // overrides the chord with a single-stroke binding, which is what we want.
+    // Routed through a ref so this once-bound command always calls the latest
+    // handler (and re-reads settings.aiEnabled) without re-binding on every render.
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK,
+      () => openCmdkRef.current(),
     )
     editor.onDidChangeCursorPosition((e) => {
       setCursorPos({ line: e.position.lineNumber, col: e.position.column })
@@ -1279,7 +1504,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     // Math hover preview
     mathHoverDisposableRef.current?.dispose()
-    mathHoverDisposableRef.current = setupMathHover(editor, () => macrosRef.current)
+    mathHoverDisposableRef.current = setupMathHover(editor, () => macrosRef.current, () => mathPreviewEnabledRef.current)
 
     mathPreviewDisposableRef.current?.dispose()
     mathPreviewDisposableRef.current = setupDisplayMathPreview(
@@ -1292,7 +1517,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     commentDecorationsRef.current?.dispose()
     commentDecorationsRef.current = setupCommentDecorations(editor, monaco, () => {
       // Click on a glyph: surface the comments panel.
-      setSidebarMode("comments")
+      openPanel("comments")
     })
 
     // ── Editor → Preview double-click sync ───────────────────────────────────
@@ -1335,7 +1560,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     // Apply typewriter mode from settings
     applyTypewriterMode(editor, settings.typewriterMode)
-  }, [vault, settings.vimMode, settings.typewriterMode, t])
+  }, [vault, settings.vimMode, settings.typewriterMode, t, openPanel])
 
   const handleChange = useCallback((value: string | undefined) => {
     const content = value ?? ""
@@ -1348,6 +1573,30 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     previewDebounceRef.current = setTimeout(() => setPreviewContent(content), 150)
   }, [vault])
 
+  // ── Ctrl/Cmd+K inline AI edit: open the floating prompt at the selection. ──
+  const openCmdk = useCallback(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    // Gated when AI is off: a short hint, nothing else.
+    if (!aiEnabledRef.current) { showToast(t.ai.cmdk.disabledHint, "info"); return }
+    const model = editor.getModel()
+    if (!model) return
+    const sel = editor.getSelection()
+    const hasSelection = !!(sel && !sel.isEmpty())
+    let range: monaco.IRange
+    let selectionText = ""
+    if (hasSelection && sel) {
+      range = sel
+      selectionText = model.getValueInRange(sel)
+    } else {
+      // Insert mode: a zero-width range at the cursor.
+      const pos = editor.getPosition() ?? { lineNumber: 1, column: 1 }
+      range = { startLineNumber: pos.lineNumber, startColumn: pos.column, endLineNumber: pos.lineNumber, endColumn: pos.column }
+    }
+    setCmdkAnchor({ range, hasSelection, selectionText })
+  }, [t])
+  useEffect(() => { openCmdkRef.current = openCmdk }, [openCmdk])
+
   // ── FrontmatterPanel: write changed content back to the editor ────────────
   const handleFrontmatterChange = useCallback((newContent: string) => {
     const editor = editorRef.current
@@ -1356,6 +1605,27 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     vault.updateContent(newContent)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
     previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), 150)
+  }, [vault])
+
+  // ── OutlinePanel: drag-to-reorder document sections ──────────────────────
+  // Move the dragged heading's whole section to before the target heading,
+  // applied as a single full-document replace via executeEdits so it is a
+  // single undoable change. Renumbering (equations/figures) happens at render.
+  const handleOutlineReorder = useCallback((fromLine: number, toLine: number) => {
+    const editor = editorRef.current
+    if (!editor) return
+    const model = editor.getModel()
+    if (!model) return
+    const current = model.getValue()
+    const next = reorderSection(current, fromLine, toLine)
+    if (next === current) return
+    const fullRange = model.getFullModelRange()
+    editor.pushUndoStop()
+    editor.executeEdits("outline-reorder", [{ range: fullRange, text: next }])
+    editor.pushUndoStop()
+    vault.updateContent(next)
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), 150)
   }, [vault])
 
   // ── Recent files ─────────────────────────────────────────────────────────
@@ -1426,13 +1696,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     try {
       await addCommentToVault(vault.vaultPath, comment)
       showToast(t.comments.addedToast, "success")
-      setSidebarMode("comments")
+      openPanel("comments")
     } catch (e) {
       // Roll back on failure to keep state in sync with disk.
       setComments((prev) => prev.filter((c) => c.id !== comment.id))
       showToast(e instanceof Error ? e.message : String(e), "error")
     }
-  }, [vault.vaultPath, vault.openFile, t])
+  }, [vault.vaultPath, vault.openFile, t, openPanel])
 
   const handleDeleteComment = useCallback(async (id: string) => {
     if (!vault.vaultPath) return
@@ -1533,7 +1803,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return () => window.removeEventListener("keydown", handler)
   }, [goBack, goForward, handleAddCommentAtCursor])
 
-  const searchVault = useCallback(() => setSidebarMode("search"), [])
+  const searchVault = useCallback(() => openPanel("search"), [openPanel])
 
   // ── PDF preview: click-to-source (heading-based shim) ─────────────────────
   // Real synctex needs xelatex's .synctex.gz output and a parser; the
@@ -1604,8 +1874,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     // Try structural label
     const labelMatch = /@([a-zA-Z0-9_-]+):/.exec(line)
-    if (labelMatch) { setSidebarMode("labels"); return }
-  }, [handleOpenFileNode, vaultFileNodes])
+    if (labelMatch) { openPanel("labels"); return }
+  }, [handleOpenFileNode, vaultFileNodes, openPanel])
 
   useTouchpadGestures({
     openCommandPalette: () => setPaletteOpen(true),
@@ -1687,6 +1957,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           if (editorRef.current) editorRef.current.setValue(newContent)
         }
       }
+      return
+    }
+
+    // ── Excalidraw: open the drawing editor for this block ─────────────────
+    const exEdit = el.closest(".excalidraw-edit") as HTMLElement | null
+    if (exEdit) {
+      e.preventDefault()
+      e.stopPropagation()
+      const sceneB64 = exEdit.dataset.scene ?? ""
+      const line = parseInt(exEdit.dataset.line ?? "", 10)
+      setExcalidraw({ open: true, sceneB64, targetLine: Number.isFinite(line) && line > 0 ? line : null })
       return
     }
 
@@ -1892,7 +2173,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       defaultPath: vault.openFile?.name,
     })
     if (!path) return
-    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
+    // Save As must persist the document faithfully (round-trippable), so write
+    // the masked CMDX via toDiskContent — extension-aware (.md / .tex) — never a
+    // lossy Obsidian transform. (Obsidian/GFM export is handled by Export Markdown.)
+    await writeTextFile(path, toDiskContent(path, editor.getValue()))
     await vault.loadVault()
   }, [vault, t])
 
@@ -1904,7 +2188,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
     })
     if (!path) return
-    await writeTextFile(path, editor.getValue())
+    // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
+    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
   }, [vault, t])
 
   const handleExportTex = useCallback(async () => {
@@ -1982,10 +2267,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         generatingPdf: t.app.generatingPdf,
         pdfDone: t.app.pdfDone,
         pandocError: t.app.pandocError,
-        exportDocxSuccess: t.app.exportDocxSuccess,
-        exportDocxError: t.app.exportDocxError,
-        exportBeamerSuccess: t.app.exportBeamerSuccess,
-        exportBeamerError: t.app.exportBeamerError,
         backupSuccess: t.app.backupSuccess,
         backupError: t.app.backupError,
         copiedLatex: t.app.copiedLatex,
@@ -2083,7 +2364,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       vaultFiles,
       deps,
       dialogs: { saveAs: "Save as", exportMd: t.app.dialogExportMd, exportTex: t.app.dialogExportTex, exportPdf: t.app.dialogExportPdf, exportReveal: "Export Reveal.js" },
-      messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, exportDocxSuccess: t.app.exportDocxSuccess, exportDocxError: t.app.exportDocxError, exportBeamerSuccess: t.app.exportBeamerSuccess, exportBeamerError: t.app.exportBeamerError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing },
+      messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing },
       readEditorContent: () => editorRef.current?.getValue() ?? null,
       reloadVault: async () => { await vault.loadVault?.() },
       resolveTransclusion: transclusionResolver,
@@ -2101,6 +2382,54 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     )
   }, [vault.openFile, t])
 
+  const handleImportDocument = useCallback(async () => {
+    await importDocumentAction({
+      vaultPath: vault.vaultPath,
+      deps,
+      dialogTitle: t.app.importDocTitle,
+      messages: {
+        pandocMissing: t.app.pandocMissingImport,
+        importing: t.app.importing,
+        importSuccess: t.app.importSuccess,
+        importError: t.app.importError,
+      },
+      toast: showToast,
+      reloadVault: vault.loadVault,
+      openFilePath: vault.openFilePath,
+    })
+  }, [vault.vaultPath, vault.loadVault, vault.openFilePath, t, deps])
+
+  const typstMessages = useMemo(() => ({
+    pandocMissing: t.app.pandocMissingTypst,
+    generating: t.app.typstGenerating,
+    typstSuccess: t.app.typstSuccess,
+    typstError: t.app.typstError,
+    typstPdfSuccess: t.app.typstPdfSuccess,
+    typstPdfError: t.app.typstPdfError,
+  }), [t])
+
+  const handleExportTypst = useCallback(async () => {
+    await exportTypstAction({
+      activeFile: vault.openFile,
+      deps,
+      dialogTitle: t.app.typstExportTitle,
+      messages: typstMessages,
+      readEditorContent: () => editorRef.current?.getValue() ?? null,
+      toast: showToast,
+    })
+  }, [vault.openFile, deps, t, typstMessages])
+
+  const handleExportTypstPdf = useCallback(async () => {
+    await exportTypstPdfAction({
+      activeFile: vault.openFile,
+      deps,
+      dialogTitle: t.app.typstExportTitle,
+      messages: typstMessages,
+      readEditorContent: () => editorRef.current?.getValue() ?? null,
+      toast: showToast,
+    })
+  }, [vault.openFile, deps, t, typstMessages])
+
   const handleExportDocx = useCallback(async () => {
     const file = vault.openFile
     if (!file) return
@@ -2112,7 +2441,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!outPath) return
     const tmpPath = outPath.replace(/\.docx$/i, "_tmp.md")
     try {
-      await writeTextFile(tmpPath, file.content)
+      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
@@ -2136,7 +2465,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!outPath) return
     const tmpPath = outPath.replace(/\.pdf$/i, "_tmp.md")
     try {
-      await writeTextFile(tmpPath, file.content)
+      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
@@ -2243,6 +2572,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     showToast(t.app.bibSaved, "success")
   }, [vault, t])
 
+  // Persist references.bib without closing the manager and refresh the
+  // in-memory bib map (used by "Add by DOI" for immediate availability).
+  const handlePersistBib = useCallback(async (bibtexString: string) => {
+    if (!vault.vaultPath) return
+    const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
+    await writeTextFile(bibPath, bibtexString)
+    setBibMap(parseBibtex(bibtexString))
+  }, [vault.vaultPath])
+
   const handleFind = useCallback(() => editorRef.current?.trigger("menu", "actions.find", null), [])
 
   // ── Reveal.js export ──────────────────────────────────────────────────────
@@ -2320,6 +2658,49 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setTableEditorOpen(false)
   }, [])
 
+  // ── Excalidraw drawing: open empty (insert) / save back into source ───────
+  const handleInsertExcalidraw = useCallback(() => {
+    setExcalidraw({ open: true, sceneB64: "", targetLine: null })
+  }, [])
+
+  const handleSaveExcalidraw = useCallback((sceneB64: string) => {
+    const editor = editorRef.current
+    setExcalidraw((prev) => {
+      if (!editor) return { open: false, sceneB64: "", targetLine: null }
+      const model = editor.getModel()
+      if (!model) return { open: false, sceneB64: "", targetLine: null }
+
+      if (prev.targetLine != null) {
+        // Replace the body line of the existing `:::excalidraw` block. The block
+        // is `:::excalidraw[title]\n<base64>\n:::`, so the source line at
+        // `targetLine` is the OPENING fence; its body is the next line.
+        const bodyLine = prev.targetLine + 1
+        const lineCount = model.getLineCount()
+        if (bodyLine <= lineCount) {
+          const range = {
+            startLineNumber: bodyLine,
+            startColumn: 1,
+            endLineNumber: bodyLine,
+            endColumn: model.getLineMaxColumn(bodyLine),
+          }
+          editor.executeEdits("excalidraw-save", [{ range, text: sceneB64 }])
+        }
+      } else {
+        // Insert a fresh block at the cursor.
+        const pos = editor.getPosition()
+        const line = pos?.lineNumber ?? 1
+        const col = pos?.column ?? 1
+        const text = `\n:::excalidraw\n${sceneB64}\n:::\n`
+        editor.executeEdits("excalidraw-insert", [{
+          range: { startLineNumber: line, startColumn: col, endLineNumber: line, endColumn: col },
+          text,
+        }])
+      }
+      editor.focus()
+      return { open: false, sceneB64: "", targetLine: null }
+    })
+  }, [])
+
   // ── HTML export ───────────────────────────────────────────────────────────
   const handleExportHtml = useCallback(async () => {
     const editor = editorRef.current
@@ -2371,12 +2752,30 @@ ${html}
   }, [vault, macros, wikiNames, bibMap, transclusionResolver, t])
 
   // ── Insert TOC ────────────────────────────────────────────────────────────
+  // Inserts the live `[[toc]]` marker, which the renderer expands into an
+  // always-current table of contents (auto-generated on every render) rather
+  // than a one-off static snapshot that goes stale as headings change.
+  // Selection-aware snippet insert used by palette "Insertar" commands. Shares
+  // the exact wrap-when-selection logic the Toolbar uses.
+  const palInsert = useCallback((snippet: string) => {
+    insertSnippet(editorRef.current, snippet)
+  }, [])
+
+  const handleExportObsidian = useCallback(async () => {
+    const editor = editorRef.current; if (!editor) return
+    const path = await save({
+      title: t.palette.exportObsidian,
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+    })
+    if (!path) return
+    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
+    showToast(t.app.revealExportSuccess, "success")
+  }, [vault, t])
+
   const handleInsertToc = useCallback(() => {
     const editor = editorRef.current
     if (!editor) return
-    const content = editor.getValue()
-    const toc = buildTocMarkdown(content, 3)
-    if (!toc) return
     const pos = editor.getPosition()
     editor.executeEdits("insert-toc", [{
       range: {
@@ -2385,7 +2784,7 @@ ${html}
         endLineNumber: pos?.lineNumber ?? 1,
         endColumn: pos?.column ?? 1,
       },
-      text: toc + "\n",
+      text: "[[toc]]\n",
     }])
     editor.focus()
   }, [])
@@ -2414,10 +2813,13 @@ ${html}
   }, [findVaultNodeByPath, handleOpenFileNode])
 
   const handleTodoToggle = useCallback((path: string, newContent: string) => {
-    vault.patchTabContent(path, newContent)
-    // Write to disk asynchronously
-    writeTextFile(path, newContent).catch(() => {})
-  }, [vault])
+    // writeFileSafe masks special blocks (toDiskContent), cancels the pending
+    // per-path autosave so it can't clobber this write, patches the open tab,
+    // and refreshes mtime. Surface failures instead of swallowing them.
+    vault.writeFileSafe(path, newContent).catch((e) => {
+      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
+    })
+  }, [vault, t])
 
   const handleRenameFile = useCallback(async (oldPath: string, newName: string) => {
     const oldBasename = displayBasename(oldPath).replace(/\.[^.]+$/, "")
@@ -2448,10 +2850,12 @@ ${html}
           if (ok) {
             for (const file of filesWithLinks) {
               re.lastIndex = 0
-              const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
               const matches = file.content.match(re)
-              await writeTextFile(file.path, updated)
-              vault.patchTabContent(file.path, updated)
+              re.lastIndex = 0
+              const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
+              // writeFileSafe masks special blocks, cancels the pending autosave
+              // (lost-update guard), patches the open tab + refreshes mtime.
+              await vault.writeFileSafe(file.path, updated)
               refactorCount += matches ? matches.length : 0
             }
             if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
@@ -2689,60 +3093,160 @@ ${html}
 
   // ── Command palette entries ───────────────────────────────────────────────
   const paletteCommands: PaletteCommand[] = [
-    { id: "save",       label: t.palette.save,            description: "Ctrl+S",       action: handleSave },
-    { id: "saveAs",     label: t.palette.saveAs,                                        action: handleSaveAs },
-    { id: "exportTex",  label: t.palette.exportTex,                                    action: handleExportTex },
-    { id: "exportProjectTex", label: t.palette.exportProjectTex,                        action: handleExportProjectTex },
-    { id: "compileLatexPdf", label: t.palette.compileLatexPdf,                         action: () => handleCompileLatexPdf({ forceWasm: false }) },
-    { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,                          action: () => handleCompileLatexPdf({ forceWasm: true }) },
-    { id: "exportPdf",  label: t.palette.exportPdf,                                    action: handleExportPdf },
-    { id: "find",       label: t.palette.findInFile,      description: "Ctrl+F",       action: handleFind },
-    { id: "findVault",  label: t.palette.searchVault,     description: "Ctrl+Shift+F", action: () => setSidebarMode("search") },
-    { id: "focus",      label: t.palette.focusMode,       description: "F11",          action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },
-    { id: "template",   label: t.palette.newFromTemplate,                               action: () => setTemplateOpen(true) },
-    { id: "macros",     label: t.palette.editMacros,                                   action: handleOpenMacros },
-    { id: "bib",        label: t.palette.editBib,                                      action: handleOpenBib },
-    { id: "settings",   label: t.palette.settings,                                     action: () => setSettingsOpen(true) },
-    { id: "help",       label: t.palette.shortcuts,       description: "?",            action: () => setHelpOpen(true) },
-    { id: "vault",      label: t.palette.openVault,                                    action: vault.selectVault },
-    { id: "outline",    label: t.palette.viewOutline,                                  action: () => setSidebarMode("outline") },
-    { id: "backlinks",  label: t.palette.viewBacklinks,                                action: () => setSidebarMode("backlinks") },
-    { id: "tags",       label: t.palette.viewTags,                                     action: () => setSidebarMode("tags") },
-    { id: "labels",     label: t.palette.viewLabels,                                   action: () => setSidebarMode("labels") },
-    { id: "quality",    label: t.palette.viewQuality,                                  action: () => setSidebarMode("quality") },
-    { id: "properties", label: t.palette.viewProperties,                               action: () => setSidebarMode("properties") },
-    { id: "graph",      label: t.palette.viewGraph,                                    action: () => setSidebarMode("graph") },
-    { id: "toc",        label: t.palette.insertToc,                                     action: handleInsertToc },
-    { id: "exportHtml", label: t.palette.exportHtml,                                    action: handleExportHtml },
-    { id: "todo",       label: t.palette.viewTodo,                                      action: () => setSidebarMode("todo") },
-    { id: "equations",  label: t.palette.viewEquations,                                 action: () => setSidebarMode("equations") },
-    { id: "stats",      label: t.palette.viewStats,                                     action: () => setSidebarMode("stats") },
-    { id: "typewriter", label: t.palette.typewriterMode,  description: typewriterMode ? "✓" : "", action: () => updateSettings({ typewriterMode: !typewriterMode }) },
-    { id: "syncScroll", label: t.palette.syncScroll,      description: syncScroll ? "✓" : "",     action: () => updateSettings({ syncScroll: !syncScroll }) },
-    { id: "wordWrap",    label: t.palette.wordWrap,        description: wordWrap ? "✓" : "",       action: () => updateSettings({ wordWrap: !wordWrap }) },
-    { id: "minimap",     label: t.palette.minimap,         description: minimapEnabled ? "✓" : "", action: () => updateSettings({ minimapEnabled: !minimapEnabled }) },
-    { id: "spellcheck",  label: t.palette.spellcheck,      description: spellcheck ? "✓" : "",     action: () => updateSettings({ spellcheck: !spellcheck }) },
-    { id: "exportAnki",  label: t.palette.exportAnkiCards,                                         action: handleExportAnki },
-    { id: "exportDocx",  label: t.palette.exportDocx,                                              action: handleExportDocx },
-    { id: "exportBeamer",label: t.palette.exportBeamer,                                            action: handleExportBeamer },
-    { id: "goBack",          label: t.palette.goBack,          description: "Alt+←",  action: goBack },
-    { id: "goForward",       label: t.palette.goForward,       description: "Alt+→",  action: goForward },
-    { id: "environments",    label: t.palette.viewEnvironments,                        action: () => setSidebarMode("environments") },
-    { id: "citationManager", label: t.palette.citationManager,                         action: () => setCitationManagerOpen(true) },
-    { id: "vaultBackup",     label: t.palette.vaultBackup,                             action: handleVaultBackup },
-    { id: "copyHtml",        label: t.palette.copyHtml,                                action: handleCopyHtml },
-    { id: "copyLatex",       label: t.palette.copyLatex,                               action: handleCopyLatex },
-    { id: "searchReplace",   label: t.palette.searchReplace,                           action: () => setSidebarMode("searchReplace") },
-    { id: "tableEditor",     label: t.palette.tableEditor,                             action: () => setTableEditorOpen(true) },
-    { id: "exportReveal",    label: t.palette.exportReveal,                            action: handleExportReveal },
-    { id: "checkUpdates",    label: t.palette.checkUpdates,                             action: () => checkForUpdate().then(info => { setUpdateInfo(info); if (!info.available) showToast(t.app.upToDate) }) },
-    { id: "symbols",         label: t.palette.symbolPicker,                             action: () => setSidebarMode("symbols") },
-    { id: "dailyNote",       label: t.palette.openDailyNote,   description: "Ctrl+Shift+D", action: handleOpenDailyNote },
-    { id: "onboarding",      label: t.palette.showOnboarding,                            action: () => setOnboardingOpen(true) },
-    { id: "viewPdf",         label: t.palette.viewPdf,                                  action: () => setSidebarMode("pdfPreview") },
-    { id: "addComment",      label: t.palette.addComment,      description: "Ctrl+Shift+M", action: () => { void handleAddCommentAtCursor() } },
-    { id: "viewComments",    label: t.palette.viewComments,                              action: () => setSidebarMode("comments") },
-    { id: "toggleCommentResolved", label: t.palette.toggleCommentResolved,               action: handleToggleCommentAtCursor },
+    // ── Edición ──────────────────────────────────────────────────────────────
+    { id: "save",       label: t.palette.save,       shortcut: "Ctrl+S", category: "Edición", action: handleSave },
+    { id: "saveAs",     label: t.palette.saveAs,     shortcut: "Ctrl+Shift+S", category: "Edición", action: handleSaveAs },
+    { id: "find",       label: t.palette.findInFile, shortcut: "Ctrl+F", category: "Edición", action: handleFind },
+    { id: "searchReplace", label: t.palette.searchReplace, category: "Edición", action: () => openPanel("searchReplace") },
+    { id: "fmt:bold",      label: t.toolbar.bold,          shortcut: "Ctrl+B", category: "Edición", action: () => palInsert("**${1:texto}**") },
+    { id: "fmt:italic",    label: t.toolbar.italic,        shortcut: "Ctrl+I", category: "Edición", action: () => palInsert("_${1:texto}_") },
+    { id: "fmt:underline", label: t.toolbar.underline,     category: "Edición", action: () => palInsert("<u>${1:texto}</u>") },
+    { id: "fmt:strike",    label: t.toolbar.strikethrough, category: "Edición", action: () => palInsert("~~${1:texto}~~") },
+    { id: "fmt:code",      label: t.toolbar.inlineCode,    category: "Edición", action: () => palInsert("`${1:código}`") },
+    { id: "fmt:link",      label: t.toolbar.link,          category: "Edición", action: () => palInsert("[${1:texto}](${2:url})") },
+    { id: "fmt:highlight", label: t.toolbar.highlight, category: "Edición", children: [
+      { id: "hl:yellow", label: t.toolbar.hlDefault, category: "Edición", icon: "🟨", action: () => palInsert("==${1:texto}==") },
+      { id: "hl:green",  label: t.toolbar.hlGreen,   category: "Edición", icon: "🟩", action: () => palInsert('<mark class="hl-green">${1:texto}</mark>') },
+      { id: "hl:blue",   label: t.toolbar.hlBlue,    category: "Edición", icon: "🟦", action: () => palInsert('<mark class="hl-blue">${1:texto}</mark>') },
+      { id: "hl:purple", label: t.toolbar.hlPurple,  category: "Edición", icon: "🟪", action: () => palInsert('<mark class="hl-purple">${1:texto}</mark>') },
+      { id: "hl:orange", label: t.toolbar.hlOrange,  category: "Edición", icon: "🟧", action: () => palInsert('<mark class="hl-orange">${1:texto}</mark>') },
+      { id: "hl:red",    label: t.toolbar.hlRed,     category: "Edición", icon: "🟥", action: () => palInsert('<mark class="hl-red">${1:texto}</mark>') },
+      { id: "hl:pink",   label: t.toolbar.hlPink,    category: "Edición", icon: "🌸", action: () => palInsert('<mark class="hl-pink">${1:texto}</mark>') },
+    ] },
+    { id: "fmt:headings", label: t.toolbar.headings, category: "Edición", children: [
+      { id: "h1", label: t.toolbar.lbl_heading1, category: "Edición", action: () => palInsert("# ${1:Título}") },
+      { id: "h2", label: t.toolbar.lbl_heading2, category: "Edición", action: () => palInsert("## ${1:Título}") },
+      { id: "h3", label: t.toolbar.lbl_heading3, category: "Edición", action: () => palInsert("### ${1:Título}") },
+    ] },
+    { id: "fmt:lists", label: t.toolbar.list, category: "Edición", children: [
+      { id: "list:ul",   label: t.toolbar.lbl_list,        category: "Edición", action: () => palInsert("- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}") },
+      { id: "list:ol",   label: t.toolbar.lbl_orderedList, category: "Edición", action: () => palInsert("1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}") },
+      { id: "list:task", label: t.toolbar.lbl_taskList,    category: "Edición", action: () => palInsert("- [ ] ${1:tarea}\n- [ ] ${2:tarea}") },
+    ] },
+
+    // ── Insertar ─────────────────────────────────────────────────────────────
+    { id: "ins:table",  label: t.palette.tableEditor,  category: "Insertar", action: () => setTableEditorOpen(true) },
+    { id: "toc",        label: t.palette.insertToc,    shortcut: "Ctrl+Shift+O", category: "Insertar", action: handleInsertToc },
+    { id: "ins:code",   label: t.palette.insertCodeBlock,  category: "Insertar", action: () => palInsert("```${1:lang}\n${2:código}\n```") },
+    { id: "ins:quote",  label: t.toolbar.quote,        category: "Insertar", action: () => palInsert("> ${1:cita}") },
+    { id: "ins:sep",    label: t.toolbar.separator,    category: "Insertar", action: () => palInsert("\n---\n") },
+    { id: "ins:mathInline", label: t.toolbar.mathInline, category: "Insertar", action: () => palInsert("$${1}$") },
+    { id: "ins:mathBlock",  label: t.toolbar.mathBlock,  category: "Insertar", action: () => palInsert("$$\n${1}\n$$") },
+    { id: "insertExcalidraw", label: t.palette.insertExcalidraw, category: "Insertar", action: handleInsertExcalidraw },
+
+    // ── Matemáticas ──────────────────────────────────────────────────────────
+    { id: "math:symbols", label: t.toolbar.symbols, category: "Matemáticas", children: [
+      { id: "sym:alpha",  label: "α  \\alpha",   category: "Matemáticas", action: () => palInsert("$\\alpha$") },
+      { id: "sym:beta",   label: "β  \\beta",    category: "Matemáticas", action: () => palInsert("$\\beta$") },
+      { id: "sym:gamma",  label: "γ  \\gamma",   category: "Matemáticas", action: () => palInsert("$\\gamma$") },
+      { id: "sym:delta",  label: "δ  \\delta",   category: "Matemáticas", action: () => palInsert("$\\delta$") },
+      { id: "sym:lambda", label: "λ  \\lambda",  category: "Matemáticas", action: () => palInsert("$\\lambda$") },
+      { id: "sym:pi",     label: "π  \\pi",      category: "Matemáticas", action: () => palInsert("$\\pi$") },
+      { id: "sym:sigma",  label: "σ  \\sigma",   category: "Matemáticas", action: () => palInsert("$\\sigma$") },
+      { id: "sym:omega",  label: "ω  \\omega",   category: "Matemáticas", action: () => palInsert("$\\omega$") },
+      { id: "sym:infty",  label: "∞  \\infty",   category: "Matemáticas", action: () => palInsert("$\\infty$") },
+      { id: "sym:partial",label: "∂  \\partial", category: "Matemáticas", action: () => palInsert("$\\partial$") },
+      { id: "sym:nabla",  label: "∇  \\nabla",   category: "Matemáticas", action: () => palInsert("$\\nabla$") },
+      { id: "sym:times",  label: "×  \\times",   category: "Matemáticas", action: () => palInsert("$\\times$") },
+      { id: "sym:leq",    label: "≤  \\leq",     category: "Matemáticas", action: () => palInsert("$\\leq$") },
+      { id: "sym:geq",    label: "≥  \\geq",     category: "Matemáticas", action: () => palInsert("$\\geq$") },
+      { id: "sym:neq",    label: "≠  \\neq",     category: "Matemáticas", action: () => palInsert("$\\neq$") },
+      { id: "sym:approx", label: "≈  \\approx",  category: "Matemáticas", action: () => palInsert("$\\approx$") },
+      { id: "sym:in",     label: "∈  \\in",      category: "Matemáticas", action: () => palInsert("$\\in$") },
+      { id: "sym:subset", label: "⊂  \\subset",  category: "Matemáticas", action: () => palInsert("$\\subset$") },
+      { id: "sym:forall", label: "∀  \\forall",  category: "Matemáticas", action: () => palInsert("$\\forall$") },
+      { id: "sym:exists", label: "∃  \\exists",  category: "Matemáticas", action: () => palInsert("$\\exists$") },
+      { id: "sym:rarr",   label: "→  \\rightarrow", category: "Matemáticas", action: () => palInsert("$\\rightarrow$") },
+      { id: "sym:Rarr",   label: "⇒  \\Rightarrow", category: "Matemáticas", action: () => palInsert("$\\Rightarrow$") },
+    ] },
+    { id: "math:ops", label: t.toolbar.mathOps, category: "Matemáticas", children: [
+      { id: "op:frac", label: t.toolbar.lbl_fraction, category: "Matemáticas", action: () => palInsert("frac(${1:a}, ${2:b})") },
+      { id: "op:sqrt", label: t.toolbar.lbl_sqrt,     category: "Matemáticas", action: () => palInsert("sqrt(${1:x})") },
+      { id: "op:root", label: t.toolbar.lbl_nthRoot,  category: "Matemáticas", action: () => palInsert("root(${1:n}, ${2:x})") },
+      { id: "op:sum",  label: t.toolbar.lbl_sum,      category: "Matemáticas", action: () => palInsert("sum(${1:i=0}, ${2:n})") },
+      { id: "op:int",  label: t.toolbar.lbl_integral, category: "Matemáticas", action: () => palInsert("int(${1:a}, ${2:b})") },
+      { id: "op:lim",  label: t.toolbar.lbl_limit,    category: "Matemáticas", action: () => palInsert("lim(${1:x}, ${2:0})") },
+      { id: "op:der",  label: t.toolbar.lbl_derivative, category: "Matemáticas", action: () => palInsert("der(${1:f}, ${2:x})") },
+      { id: "op:pder", label: t.toolbar.lbl_partialDer, category: "Matemáticas", action: () => palInsert("pder(${1:f}, ${2:x})") },
+    ] },
+    { id: "math:envs", label: t.toolbar.environments, category: "Matemáticas", children: [
+      { id: "env:thm",   label: t.toolbar.lbl_theorem,     category: "Matemáticas", action: () => palInsert(":::theorem[${1:título}]\n${2:enunciado}\n:::") },
+      { id: "env:lem",   label: t.toolbar.lbl_lemma,       category: "Matemáticas", action: () => palInsert(":::lemma[${1:título}]\n${2:enunciado}\n:::") },
+      { id: "env:cor",   label: t.toolbar.lbl_corollary,   category: "Matemáticas", action: () => palInsert(":::corollary\n${1:enunciado}\n:::") },
+      { id: "env:prop",  label: t.toolbar.lbl_proposition, category: "Matemáticas", action: () => palInsert(":::proposition\n${1:enunciado}\n:::") },
+      { id: "env:defn",  label: t.toolbar.lbl_definition,  category: "Matemáticas", action: () => palInsert(":::definition\n${1:definición}\n:::") },
+      { id: "env:ex",    label: t.toolbar.lbl_example,     category: "Matemáticas", action: () => palInsert(":::example\n${1:ejemplo}\n:::") },
+      { id: "env:proof", label: t.toolbar.lbl_proof,       category: "Matemáticas", action: () => palInsert(":::proof\n${1:demostración}\n:::") },
+    ] },
+    { id: "symbols", label: t.palette.symbolPicker, category: "Matemáticas", action: () => openPanel("symbols") },
+
+    // ── Vista (paneles) ──────────────────────────────────────────────────────
+    { id: "panel:files",   label: t.palette.openPanel(t.sidebar.files),   category: "Vista", action: () => openPanel("files") },
+    { id: "outline",       label: t.palette.openPanel(t.sidebar.outline), category: "Vista", action: () => openPanel("outline") },
+    { id: "equations",     label: t.palette.openPanel(t.sidebar.equations), category: "Vista", action: () => openPanel("equations") },
+    { id: "environments",  label: t.palette.openPanel(t.sidebar.environments), category: "Vista", action: () => openPanel("environments") },
+    { id: "citationManager", label: t.palette.openPanel(t.palette.citationManager), category: "Vista", action: () => setCitationManagerOpen(true) },
+    { id: "graph",         label: t.palette.openPanel(t.sidebar.graph),   category: "Vista", action: () => openPanel("graph") },
+    { id: "tags",          label: t.palette.openPanel(t.sidebar.tags),    category: "Vista", action: () => openPanel("tags") },
+    { id: "labels",        label: t.palette.openPanel(t.sidebar.labels),  category: "Vista", action: () => openPanel("labels") },
+    { id: "properties",    label: t.palette.openPanel(t.sidebar.properties), category: "Vista", action: () => openPanel("properties") },
+    { id: "viewComments",  label: t.palette.openPanel(t.sidebar.comments), category: "Vista", action: () => openPanel("comments") },
+    { id: "todo",          label: t.palette.openPanel(t.sidebar.todo),    category: "Vista", action: () => openPanel("todo") },
+    { id: "stats",         label: t.palette.openPanel(t.sidebar.stats),   category: "Vista", action: () => openPanel("stats") },
+    { id: "quality",       label: t.palette.openPanel(t.sidebar.quality), category: "Vista", action: () => openPanel("quality") },
+    { id: "backlinks",     label: t.palette.openPanel(t.sidebar.backlinks), category: "Vista", action: () => openPanel("backlinks") },
+    { id: "findVault",     label: t.palette.openPanel(t.sidebar.search),  shortcut: "Ctrl+Shift+F", category: "Vista", action: () => openPanel("search") },
+    { id: "searchReplacePanel", label: t.palette.openPanel(t.sidebar.searchReplace), category: "Vista", action: () => openPanel("searchReplace") },
+    { id: "viewPdf",       label: t.palette.openPanel(t.sidebar.pdfPreview), category: "Vista", action: () => openPanel("pdfPreview") },
+    { id: "focusTimer",    label: t.palette.openPanel(t.sidebar.focusTimer), category: "Vista", action: () => openPanel("focusTimer") },
+    { id: "panel:cloud",   label: t.palette.openPanel(t.sidebar.cloudSync), category: "Vista", action: () => openPanel("cloudSync") },
+    { id: "panel:help",    label: t.palette.openPanel(t.sidebar.help),    category: "Vista", action: () => openPanel("help") },
+    { id: "focus",         label: t.palette.focusMode,       shortcut: "F11",  category: "Vista", action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },
+    { id: "typewriter", label: t.palette.typewriterMode,  shortcut: typewriterMode ? "✓" : "", category: "Vista", action: () => updateSettings({ typewriterMode: !typewriterMode }) },
+    { id: "syncScroll", label: t.palette.syncScroll,      shortcut: syncScroll ? "✓" : "",     category: "Vista", action: () => updateSettings({ syncScroll: !syncScroll }) },
+    { id: "wordWrap",    label: t.palette.wordWrap,        shortcut: wordWrap ? "✓" : "",       category: "Vista", action: () => updateSettings({ wordWrap: !wordWrap }) },
+    { id: "minimap",     label: t.palette.minimap,         shortcut: minimapEnabled ? "✓" : "", category: "Vista", action: () => updateSettings({ minimapEnabled: !minimapEnabled }) },
+    { id: "spellcheck",  label: t.palette.spellcheck,      shortcut: spellcheck ? "✓" : "",     category: "Vista", action: () => updateSettings({ spellcheck: !spellcheck }) },
+
+    // ── Exportar ─────────────────────────────────────────────────────────────
+    { id: "exportTex",  label: t.palette.exportTex,        category: "Exportar", action: handleExportTex },
+    { id: "exportProjectTex", label: t.palette.exportProjectTex, category: "Exportar", action: handleExportProjectTex },
+    { id: "compileLatexPdf", label: t.palette.compileLatexPdf, category: "Exportar", action: () => handleCompileLatexPdf({ forceWasm: false }) },
+    { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,  category: "Exportar", action: () => handleCompileLatexPdf({ forceWasm: true }) },
+    { id: "exportPdf",  label: t.palette.exportPdf,         category: "Exportar", action: handleExportPdf },
+    { id: "exportHtml", label: t.palette.exportHtml,        category: "Exportar", action: handleExportHtml },
+    { id: "exportDocx", label: t.palette.exportDocx,        category: "Exportar", action: handleExportDocx },
+    { id: "exportTypst", label: t.palette.exportTypst,      category: "Exportar", action: handleExportTypst },
+    ...(deps?.typst ? [{ id: "exportTypstPdf", label: t.palette.exportTypstPdf, category: "Exportar" as const, action: handleExportTypstPdf }] : []),
+    { id: "exportBeamer", label: t.palette.exportBeamer,    category: "Exportar", action: handleExportBeamer },
+    { id: "exportReveal", label: t.palette.exportReveal,    category: "Exportar", action: handleExportReveal },
+    { id: "exportObsidian", label: t.palette.exportObsidian, category: "Exportar", action: handleExportObsidian },
+    { id: "exportAnki", label: t.palette.exportAnkiCards,   category: "Exportar", action: handleExportAnki },
+    { id: "importDoc",  label: t.palette.importDoc,         category: "Exportar", action: handleImportDocument },
+    { id: "copyHtml",   label: t.palette.copyHtml,          category: "Exportar", action: handleCopyHtml },
+    { id: "copyLatex",  label: t.palette.copyLatex,         category: "Exportar", action: handleCopyLatex },
+    { id: "vaultBackup", label: t.palette.vaultBackup,      category: "Exportar", action: handleVaultBackup },
+
+    // ── IA ──────────────────────────────────────────────────────────────────
+    { id: "ai:open",   label: t.palette.openAi, shortcut: "Ctrl+Shift+A", category: "IA", action: () => openPanel("ai") },
+    { id: "ai:cmdk",   label: t.palette.aiInlineEdit, shortcut: "Ctrl+K", category: "IA", action: () => openCmdkRef.current?.() },
+
+    // ── Vault ────────────────────────────────────────────────────────────────
+    { id: "vault",     label: t.palette.openVault,       category: "Vault", action: vault.selectVault },
+    { id: "template",  label: t.palette.newFromTemplate, category: "Vault", action: () => setTemplateOpen(true) },
+    { id: "dailyNote", label: t.palette.openDailyNote,   shortcut: "Ctrl+Shift+D", category: "Vault", action: handleOpenDailyNote },
+    { id: "macros",    label: t.palette.editMacros,      category: "Vault", action: handleOpenMacros },
+    { id: "bib",       label: t.palette.editBib,         category: "Vault", action: handleOpenBib },
+    { id: "settings",  label: t.palette.settings,        category: "Vault", action: () => setSettingsOpen(true) },
+    { id: "checkUpdates", label: t.palette.checkUpdates, category: "Vault", action: () => checkForUpdate().then(info => { setUpdateInfo(info); if (!info.available) showToast(t.app.upToDate) }) },
+    { id: "addComment", label: t.palette.addComment,     shortcut: "Ctrl+Shift+M", category: "Vault", action: () => { void handleAddCommentAtCursor() } },
+    { id: "toggleCommentResolved", label: t.palette.toggleCommentResolved, category: "Vault", action: handleToggleCommentAtCursor },
+    { id: "onboarding", label: t.palette.showOnboarding, category: "Vault", action: () => setOnboardingOpen(true) },
+    { id: "help",      label: t.palette.shortcuts,       shortcut: "?", category: "Vault", action: () => setHelpOpen(true) },
+
+    // ── Navegación ───────────────────────────────────────────────────────────
+    { id: "goBack",    label: t.palette.goBack,    shortcut: "Alt+←", category: "Navegación", action: goBack },
+    { id: "goForward", label: t.palette.goForward, shortcut: "Alt+→", category: "Navegación", action: goForward },
   ]
 
   // ── Menu ──────────────────────────────────────────────────────────────────
@@ -2781,6 +3285,11 @@ ${html}
         { label: t.menus.exportDocx,       disabled: !hasFile, action: handleExportDocx },
         { label: t.menus.exportBeamer,     disabled: !hasFile, action: handleExportBeamer },
         { label: t.menus.exportReveal,     disabled: !hasFile, action: handleExportReveal },
+        { label: t.menus.exportTypst,      disabled: !hasFile, action: handleExportTypst },
+        // The Typst→PDF entry is offered only when the optional `typst` binary is present.
+        ...(deps?.typst ? [{ label: t.menus.exportTypstPdf, disabled: !hasFile, action: handleExportTypstPdf } as MenuEntry] : []),
+        { separator: true },
+        { label: t.menus.importDoc,        disabled: !hasVault, action: handleImportDocument },
         ...recentEntries,
       ],
     },
@@ -2788,7 +3297,7 @@ ${html}
       label: t.menus.edit,
       entries: [
         { label: t.menus.findInFile,      shortcut: "Ctrl+F",       disabled: !hasFile, action: handleFind },
-        { label: t.menus.searchVault,     shortcut: "Ctrl+Shift+F",                     action: () => setSidebarMode("search") },
+        { label: t.menus.searchVault,     shortcut: "Ctrl+Shift+F",                     action: () => openPanel("search") },
         { separator: true },
         { label: t.menus.commandPalette,  shortcut: "Ctrl+P",                           action: () => setPaletteOpen(true) },
       ],
@@ -2798,10 +3307,10 @@ ${html}
       entries: [
         { label: t.menus.focusMode,       shortcut: "F11", action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },
         { separator: true },
-        { label: t.menus.files,    action: () => setSidebarMode("files") },
-        { label: t.menus.search,   action: () => setSidebarMode("search") },
-        { label: t.menus.outline,  action: () => setSidebarMode("outline") },
-        { label: t.sidebar.backlinks, action: () => setSidebarMode("backlinks") },
+        { label: t.menus.files,    action: () => openPanel("files") },
+        { label: t.menus.search,   action: () => openPanel("search") },
+        { label: t.menus.outline,  action: () => openPanel("outline") },
+        { label: t.sidebar.backlinks, action: () => openPanel("backlinks") },
       ],
     },
     {
@@ -2845,9 +3354,12 @@ ${html}
         />
         <Suspense fallback={null}>
           <SettingsModal
+            key={settingsSection ?? "default"}
             open={settingsOpen}
             settings={settings}
-            onClose={() => setSettingsOpen(false)}
+            initialSection={settingsSection}
+            cloudProvider={cloudInfo?.provider ?? null}
+            onClose={() => { setSettingsOpen(false); setSettingsSection(undefined) }}
             onChange={updateSettings}
           />
           <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
@@ -2870,14 +3382,16 @@ ${html}
           onDismiss={dismissDep}
         />
       )}
-      {cloudSuggestion && !cloudBannerDismissed && vault.vaultPath && (
+      {settings.cloudSyncBannerEnabled && cloudSuggestion && !cloudBannerDismissed && vault.vaultPath && (
         <CloudSyncBanner provider={cloudSuggestion} onDismiss={dismissCloudBanner} />
       )}
-      <Toolbar
-        editorRef={editorRef}
-        previewVisible={settings.previewVisible}
-        onTogglePreview={() => updateSettings({ previewVisible: !settings.previewVisible })}
-      />
+      <div className="topbar">
+        <Toolbar
+          editorRef={editorRef}
+          sidebarMode={sidebarMode}
+          setSidebarMode={openPanel}
+        />
+      </div>
 
       <div className="main" ref={mainRef}>
         {/* ── Sidebar ── */}
@@ -2893,11 +3407,6 @@ ${html}
           </div>
           {!sidebarCollapsed && (
             <>
-          <SidebarTabs
-            sidebarMode={sidebarMode}
-            setSidebarMode={setSidebarMode}
-            t={t}
-          />
           <div className="sidebar-content">
             {sidebarMode === "files" && (
               <FileTree
@@ -2913,7 +3422,7 @@ ${html}
                 onRenameFile={handleRenameFile}
                 onMoveFile={vault.moveFile}
                 conflictPaths={cloudConflictPaths}
-                onConflictClick={() => setSidebarMode("cloudSync")}
+                onConflictClick={() => openPanel("cloudSync")}
               />
             )}
             {sidebarMode === "search" && (
@@ -2949,7 +3458,7 @@ ${html}
               </Suspense>
             )}
             {sidebarMode === "outline" && (
-              <OutlinePanel content={previewContent} editorRef={editorRef} activeLine={cursorPos.line} />
+              <OutlinePanel content={previewContent} editorRef={editorRef} activeLine={cursorPos.line} onReorder={handleOutlineReorder} />
             )}
             {sidebarMode === "backlinks" && (
               <BacklinksPanel
@@ -3067,7 +3576,7 @@ ${html}
                   }}
                   onRemoveLink={async (path, line, link) => {
                     const openTab = vault.openTabs.find((tab) => tab.path === path)
-                    const content = openTab ? openTab.content : await readTextFile(path)
+                    const content = openTab ? openTab.content : toEditorContent(path, await readTextFile(path))
                     const lines = content.split("\n")
                     const idx = line - 1
                     if (idx < 0 || idx >= lines.length) return
@@ -3075,9 +3584,35 @@ ${html}
                     if (!lines[idx].includes(pattern)) return
                     lines[idx] = lines[idx].split(pattern).join("")
                     const updated = lines.join("\n")
-                    await writeTextFile(path, updated)
-                    if (openTab) vault.patchTabContent(path, updated)
+                    // writeFileSafe masks special blocks (toDiskContent), cancels
+                    // the pending autosave so it can't clobber this write, patches
+                    // the open tab, and refreshes mtime.
+                    try {
+                      await vault.writeFileSafe(path, updated)
+                    } catch (e) {
+                      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
+                    }
                   }}
+                />
+              </Suspense>
+            )}
+            {sidebarMode === "focusTimer" && (
+              <Suspense fallback={null}>
+                <FocusTimerPanel
+                  content={vault.openFile?.content ?? ""}
+                  config={{
+                    workMin: settings.pomodoroWorkMin,
+                    breakMin: settings.pomodoroBreakMin,
+                    longBreakMin: settings.pomodoroLongBreakMin,
+                    cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
+                  }}
+                  wordGoal={settings.wordGoal}
+                  onConfigChange={(patch) => updateSettings({
+                    ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
+                    ...(patch.breakMin !== undefined && { pomodoroBreakMin: patch.breakMin }),
+                    ...(patch.longBreakMin !== undefined && { pomodoroLongBreakMin: patch.longBreakMin }),
+                    ...(patch.cyclesBeforeLongBreak !== undefined && { pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak }),
+                  })}
                 />
               </Suspense>
             )}
@@ -3124,6 +3659,20 @@ ${html}
                   onToggleResolved={(id) => { void handleToggleCommentResolved(id) }}
                   onDelete={(id) => { void handleDeleteComment(id) }}
                   onEditBody={(id, body) => { void handleEditCommentBody(id, body) }}
+                />
+              </Suspense>
+            )}
+            {sidebarMode === "ai" && (
+              <Suspense fallback={null}>
+                <AiPanel
+                  settings={settings}
+                  editor={editorRef.current}
+                  fileContent={vault.openFile?.content ?? null}
+                  fileName={vault.openFile?.name ?? null}
+                  renderHtml={(md) => sanitizeRenderedHtml(
+                    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+                  )}
+                  onOpenSettings={() => { setSettingsSection("ai"); setSettingsOpen(true) }}
                 />
               </Suspense>
             )}
@@ -3206,6 +3755,17 @@ ${html}
               />
             </Suspense>
           )}
+          {/* Ctrl/Cmd+K inline AI edit — floating prompt anchored at the selection. */}
+          {cmdkAnchor && editorRef.current && (
+            <Suspense fallback={null}>
+              <CmdKEdit
+                settings={settings}
+                editor={editorRef.current}
+                anchor={cmdkAnchor}
+                onClose={() => setCmdkAnchor(null)}
+              />
+            </Suspense>
+          )}
           {/* Vim mode status bar */}
           <div
             ref={vimStatusRef}
@@ -3265,9 +3825,9 @@ ${html}
         wordGoal={settings.wordGoal > 0 ? settings.wordGoal : undefined}
         texEngine={settings.useWasmTex ? "wasm" : "local"}
         texEngineState={texEngineState}
-        cloudSync={cloudInfo}
+        cloudSync={settings.cloudSyncDetectEnabled ? cloudInfo : null}
         cloudConflictCount={cloudConflicts.length}
-        onCloudSyncClick={() => setSidebarMode("cloudSync")}
+        onCloudSyncClick={() => openPanel("cloudSync")}
         onGoToLine={(line) => {
           const editor = editorRef.current
           editor?.setPosition({ lineNumber: line, column: 1 })
@@ -3321,9 +3881,12 @@ ${html}
 
       <Suspense fallback={null}>
         <SettingsModal
+          key={settingsSection ?? "default"}
           open={settingsOpen}
           settings={settings}
-          onClose={() => setSettingsOpen(false)}
+          initialSection={settingsSection}
+          cloudProvider={cloudInfo?.provider ?? null}
+          onClose={() => { setSettingsOpen(false); setSettingsSection(undefined) }}
           onChange={updateSettings}
         />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
@@ -3342,6 +3905,7 @@ ${html}
           open={citationManagerOpen}
           bibMap={bibMap}
           onSave={handleSaveBib}
+          onPersist={handlePersistBib}
           onClose={() => setCitationManagerOpen(false)}
         />
       </Suspense>
@@ -3350,6 +3914,18 @@ ${html}
         onClose={() => setTableEditorOpen(false)}
         onInsert={handleInsertTable}
       />
+
+      {excalidraw.open && (
+        <Suspense fallback={null}>
+          <ExcalidrawModal
+            open={excalidraw.open}
+            sceneB64={excalidraw.sceneB64}
+            theme={settings.theme === "vs" ? "light" : "dark"}
+            onSave={handleSaveExcalidraw}
+            onClose={() => setExcalidraw({ open: false, sceneB64: "", targetLine: null })}
+          />
+        </Suspense>
+      )}
 
       {latexDiagnostics && (
         <LatexErrorModal
@@ -3368,127 +3944,6 @@ ${html}
           />
         </Suspense>
       )}
-    </div>
-  )
-}
-
-// ── Sidebar tab strip with overflow popup ────────────────────────────────────
-
-const SIDEBAR_ESSENTIALS: SidebarMode[] = ["files", "search", "outline", "equations", "symbols", "pdfPreview"]
-const SIDEBAR_OVERFLOW: SidebarMode[] = ["searchReplace", "backlinks", "tags", "labels", "quality", "properties", "graph", "todo", "environments", "stats", "comments", "cloudSync", "help"]
-
-const SIDEBAR_ICONS: Record<SidebarMode, string> = {
-  files: "☰", search: "⌕", outline: "≡", backlinks: "←",
-  tags: "#", labels: "⌁", properties: "≋", graph: "⬡", help: "?",
-  todo: "☑", equations: "∑", environments: "∀", stats: "◈",
-  searchReplace: "⇄",
-  quality: "✓",
-  symbols: "∑",
-  pdfPreview: "📑",
-  comments: "💬",
-  cloudSync: "☁",
-}
-
-function sidebarLabel(mode: SidebarMode, t: T): string {
-  const map: Record<SidebarMode, string> = {
-    files: t.sidebar.files, search: t.sidebar.search, outline: t.sidebar.outline,
-    backlinks: t.sidebar.backlinks, help: t.sidebar.help,
-    tags: t.sidebar.tags, labels: t.sidebar.labels, properties: t.sidebar.properties, graph: t.sidebar.graph,
-    todo: t.sidebar.todo, equations: t.sidebar.equations, stats: t.sidebar.stats,
-    environments: t.sidebar.environments,
-    searchReplace: t.sidebar.searchReplace,
-    quality: t.sidebar.quality,
-    symbols: t.sidebar.symbols,
-    pdfPreview: t.sidebar.pdfPreview,
-    comments: t.sidebar.comments,
-    cloudSync: t.sidebar.cloudSync,
-  }
-  return map[mode]
-}
-
-function SidebarTabs({
-  sidebarMode,
-  setSidebarMode,
-  t,
-}: {
-  sidebarMode: SidebarMode
-  setSidebarMode: (m: SidebarMode) => void
-  t: T
-}) {
-  const [overflowOpen, setOverflowOpen] = useState(false)
-  const overflowRef = useRef<HTMLDivElement>(null)
-  const overflowActive = SIDEBAR_OVERFLOW.includes(sidebarMode)
-
-  useEffect(() => {
-    if (!overflowOpen) return
-    const onDown = (e: MouseEvent) => {
-      if (!overflowRef.current?.contains(e.target as Node)) setOverflowOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOverflowOpen(false)
-    }
-    document.addEventListener("mousedown", onDown)
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", onDown)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [overflowOpen])
-
-  return (
-    <div className="sidebar-tabs" role="tablist" aria-label="Panel lateral">
-      {SIDEBAR_ESSENTIALS.map((mode) => {
-        const label = sidebarLabel(mode, t)
-        return (
-          <button
-            key={mode}
-            role="tab"
-            aria-selected={sidebarMode === mode}
-            aria-label={label}
-            className={`sidebar-tab ${sidebarMode === mode ? "active" : ""}`}
-            onClick={() => setSidebarMode(mode)}
-            title={label}
-          >
-            {SIDEBAR_ICONS[mode]}
-          </button>
-        )
-      })}
-      <div className="sidebar-tabs-overflow" ref={overflowRef}>
-        <button
-          type="button"
-          aria-label={t.sidebar.more}
-          aria-haspopup="menu"
-          aria-expanded={overflowOpen}
-          className={`sidebar-tab sidebar-tabs-overflow-btn ${overflowActive ? "active" : ""}`}
-          onClick={() => setOverflowOpen((o) => !o)}
-          title={t.sidebar.more}
-        >
-          ⋯
-        </button>
-        {overflowOpen && (
-          <div className="sidebar-tabs-overflow-popup" role="menu">
-            {SIDEBAR_OVERFLOW.map((mode) => {
-              const label = sidebarLabel(mode, t)
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  role="menuitem"
-                  className={`sidebar-overflow-item ${sidebarMode === mode ? "active" : ""}`}
-                  onClick={() => {
-                    setSidebarMode(mode)
-                    setOverflowOpen(false)
-                  }}
-                  title={label}
-                >
-                  <span className="sidebar-overflow-item-icon">{SIDEBAR_ICONS[mode]}</span>
-                  <span className="sidebar-overflow-item-label">{label}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
     </div>
   )
 }
