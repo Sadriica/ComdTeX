@@ -3,19 +3,15 @@ import { displayBasename } from "./pathUtils"
 import { buildSearchRegExp, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
 import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
-
-interface SearchReplaceResult {
-  filePath: string
-  line: number
-  content: string
-  matchStart: number
-  matchEnd: number
-}
+import { type SearchReplaceState, type SearchReplaceResult } from "./useSearchReplaceState"
 
 interface SearchReplacePanelProps {
   vaultPath: string
   onOpenFile: (path: string, line?: number) => void
   onReplaceInFile: (path: string, search: string, replace: string, opts: SearchReplaceOptions, target?: SearchReplaceTarget) => Promise<number>
+  /** Persistent input/results state, lifted to AppContent so it survives the
+   *  panel unmounting when the user switches sidebar panels. */
+  state: SearchReplaceState
 }
 
 const IGNORED_SEARCH_DIRS = new Set(["node_modules"])
@@ -31,14 +27,11 @@ function highlightMatch(content: string, matchStart: number, matchEnd: number): 
   }
 }
 
-export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, onReplaceInFile }: SearchReplacePanelProps) {
+export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, onReplaceInFile, state }: SearchReplacePanelProps) {
   const t = useT()
-  const [query, setQuery] = useState("")
-  const [replacement, setReplacement] = useState("")
-  const [caseSensitive, setCaseSensitive] = useState(false)
-  const [wholeWord, setWholeWord] = useState(false)
-  const [regexMode, setRegexMode] = useState(false)
-  const [results, setResults] = useState<SearchReplaceResult[]>([])
+  // Inputs / options / results live in AppContent (survive panel unmount); only
+  // the transient action flags below stay local to this panel.
+  const { query, setQuery, replacement, setReplacement, caseSensitive, setCaseSensitive, wholeWord, setWholeWord, regexMode, setRegexMode, results, setResults } = state
   const [searching, setSearching] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -109,7 +102,7 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
         setSearching(false)
       }
     }
-  }, [query, caseSensitive, wholeWord, regexMode, _vaultPath, t])
+  }, [query, caseSensitive, wholeWord, regexMode, _vaultPath, t, setResults])
 
   const handleSearch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)

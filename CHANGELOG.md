@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.9.0] - 2026-06-17
+## [1.9.5] - 2026-06-17
 
 ### Added
 - **AI assistant (bring-your-own, off by default):** multi-provider support — Anthropic, OpenAI, Google Gemini, any OpenAI-compatible endpoint (incl. local **Ollama** / LM Studio / OpenRouter / DeepSeek), and a local agent **CLI** bridge (e.g. `claude` / `opencode`). Chat panel (`Ctrl+Shift+A`, or the **IA** menu button) plus **inline edit** (`Ctrl+K`). All edits are applied through Monaco `executeEdits()`, so every change is undo-safe. Base URLs are SSRF-guarded (`https://` or loopback only). ComdTeX ships no keys and makes no requests until enabled

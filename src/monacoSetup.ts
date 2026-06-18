@@ -663,6 +663,23 @@ export function setupContentLinter(
 
 // ── Math hover preview (KaTeX overlay widget) ─────────────────────────────────
 
+// Cache hover-widget KaTeX by source, so re-rendering while the caret sits in a
+// math block (every cursor move / keystroke fires the handler) is free.
+const hoverKatexCache = new Map<string, string | null>()
+let hoverKatexCacheMacros: Record<string, string> | null = null
+function renderHoverKatex(expr: string, displayMode: boolean, macros: Record<string, string>): string | null {
+  if (macros !== hoverKatexCacheMacros) { hoverKatexCache.clear(); hoverKatexCacheMacros = macros }
+  const key = (displayMode ? "D\x00" : "I\x00") + expr.trim()
+  const cached = hoverKatexCache.get(key)
+  if (cached !== undefined) return cached
+  let html: string | null
+  try { html = katex.renderToString(expr.trim(), { displayMode, throwOnError: false, macros }) }
+  catch { html = null }
+  if (hoverKatexCache.size >= 2000) hoverKatexCache.clear()
+  hoverKatexCache.set(key, html)
+  return html
+}
+
 /**
  * Attach a math preview overlay to the editor.
  * When the cursor is inside `$...$` or `$$...$$`, renders the expression
@@ -682,15 +699,17 @@ export function setupMathHover(
     }
   }
 
-  const disposable = editor.onDidChangeCursorPosition((e) => {
+  const updateHover = () => {
     // Gated by the same "Math preview" setting as the display-math view zones,
     // so turning the setting off hides the floating overlay too.
     if (!isEnabled()) { removeWidget(); return }
     const model = editor.getModel()
-    if (!model) { removeWidget(); return }
+    const cursor = editor.getPosition()
+    if (!model || !cursor) { removeWidget(); return }
 
-    const lineText = model.getLineContent(e.position.lineNumber)
-    const col = e.position.column - 1 // 0-indexed
+    try {
+    const lineText = model.getLineContent(cursor.lineNumber)
+    const col = cursor.column - 1 // 0-indexed
 
     let mathExpr: string | null = null
     let displayMode = false
@@ -719,7 +738,7 @@ export function setupMathHover(
     // Try multi-line $$ block
     if (!mathExpr) {
       const lineCount = model.getLineCount()
-      const cursorLine = e.position.lineNumber
+      const cursorLine = cursor.lineNumber
 
       // Scan upward for opening $$
       let openLine = -1
@@ -751,18 +770,12 @@ export function setupMathHover(
 
     if (!mathExpr) { removeWidget(); return }
 
-    let rendered: string
-    try {
-      rendered = katex.renderToString(mathExpr.trim(), {
-        displayMode,
-        throwOnError: false,
-        macros: getMacros(),
-      })
-    } catch { removeWidget(); return }
+    const rendered = renderHoverKatex(mathExpr, displayMode, getMacros())
+    if (rendered === null) { removeWidget(); return }
 
     // Get pixel position of the match start within the editor
     const screenPos = editor.getScrolledVisiblePosition({
-      lineNumber: e.position.lineNumber,
+      lineNumber: cursor.lineNumber,
       column: matchStart + 1,
     })
     if (!screenPos) { removeWidget(); return }
@@ -784,10 +797,24 @@ export function setupMathHover(
 
     editor.addOverlayWidget(widget)
     currentWidget = widget
+    } catch {
+      // Swallow transient Monaco overlay/layout errors (e.g. "this.domNode.domNode")
+      // during (re)mount or rapid cursor changes.
+      try { removeWidget() } catch { /* ignore */ }
+    }
+  }
+
+  // Debounce: the cursor moves on every keystroke; rendering KaTeX + scanning
+  // for the enclosing block on each was a per-keystroke cost. Coalesce.
+  let hoverTimer: ReturnType<typeof setTimeout> | null = null
+  const disposable = editor.onDidChangeCursorPosition(() => {
+    if (hoverTimer) clearTimeout(hoverTimer)
+    hoverTimer = setTimeout(updateHover, 120)
   })
 
   return {
     dispose() {
+      if (hoverTimer) clearTimeout(hoverTimer)
       disposable.dispose()
       removeWidget()
     },

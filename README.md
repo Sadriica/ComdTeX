@@ -207,15 +207,15 @@ When you save, the file is written back in its original format. `.md` files stay
 
 ### 8. Validate, Export, and Compile
 
-The **Quality** panel is the main pre-export checklist:
+The **Diagnostics** panel is the main pre-export checklist:
 
 | Tab | Purpose |
 |---|---|
-| Diagnóstico | Broken refs, duplicate labels, missing citations, malformed math, export risks |
+| Diagnostics | Broken refs, duplicate labels, missing citations, malformed math, export risks |
 | Export | Compatibility score for Overleaf/LaTeX and Obsidian Markdown |
-| Proyecto | Detects a main document and included `![[transclusions]]` |
-| Estructura | Academic structure checks (frontmatter title, theorem/proof proximity) |
-| Backlinks math | Which sections and blocks reference each structural label |
+| Project | Detects a main document and included `![[transclusions]]` |
+| Structure | Academic structure checks (frontmatter title, theorem/proof proximity) |
+| Math backlinks | Which sections and blocks reference each structural label |
 
 A typical multi-file project:
 
@@ -229,7 +229,7 @@ comdtex.main: true
 ![[chapters/02-background]]
 ```
 
-Use **Exportar proyecto .tex** to generate one Overleaf-ready `.tex` from the main document. Use **Compilar PDF con LaTeX local** to compile with `tectonic`, `xelatex`, or `pdflatex` if installed locally.
+Use **Export project as .tex** to generate one Overleaf-ready `.tex` from the main document. Use **Compile PDF with local LaTeX** to compile with `tectonic`, `xelatex`, or `pdflatex` if installed locally.
 
 ### 9. Add a BibTeX Citation
 
@@ -283,7 +283,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Per-line comments — annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
 - Clickable checkboxes in preview
-- Visual table editor (Ctrl+P → "Table Editor")
+- Visual table editor (Ctrl+P → "Table editor")
 - Typewriter mode and focus mode (F11)
 - Autosave (debounced) with crash recovery via drafts
 - Session restore (tabs, active file, pinned tabs)
@@ -296,7 +296,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-render correctness — macros are loaded before the initial render (no flash of unrendered math)
 
 ### Navigation & Panels
-- Command palette (Ctrl+P): a categorized, selection-aware universal launcher — eight categories (Edición / Insertar / Matemáticas / Vista / Exportar / IA / Vault / Navegación), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
+- Command palette (Ctrl+P): a categorized, selection-aware universal launcher — eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
 - Quick switcher (Ctrl+;): fast file switching
 - Daily notes (Ctrl+Shift+D): create or jump to today's dated note
 - Outline panel (document headings) — drag headings to reorder sections in the source
@@ -304,7 +304,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Wikilinks with `[[note-name]]` autocomplete
 - Tag panel (browse files by frontmatter tag)
 - Labels panel (structural labels, broken references, duplicate labels, unused labels)
-- Quality panel (diagnostics, export compatibility, project plan, academic structure, math backlinks)
+- Diagnostics panel (diagnostics, export compatibility, project plan, academic structure, math backlinks)
 - Graph panel — improved visual wikilink map with clustering and filtering
 - Environments panel (all theorem/lemma/etc. blocks across vault)
 - Equations panel (all numbered equations in current file)
@@ -317,7 +317,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Breadcrumb bar
 - Focus timer panel — Pomodoro (work/break/long-break cycles) plus live writing-session stats (word delta, words-per-minute, daily-goal progress)
 - AI assistant panel — optional, bring-your-own provider (see [AI assistant](#ai-assistant) below)
-- Unified top menu bar — a classic dropdown bar (Archivo/Edición/Vista/Vault) plus a sectioned **Archivos / Textos / Matemáticas / Vistas** menu with direct **Enfoque / IA / Sync / Ayuda** buttons. Opening a panel un-collapses the sidebar; the old sidebar tab strip is gone
+- Unified top menu bar — a classic dropdown bar (File/Edit/View/Vault) plus a sectioned **Files / Texts / Math / Views** menu with direct **Focus / AI / Sync / Help** buttons. Opening a panel un-collapses the sidebar; the old sidebar tab strip is gone
 
 ### Vault & Files
 - Vault = a regular folder on disk; open any folder
@@ -350,9 +350,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 ### AI assistant
 - Optional and **off by default** — bring your own provider and API key; ComdTeX ships none and makes no requests until you enable it
 - Providers: Anthropic, OpenAI, Google Gemini, any OpenAI-compatible endpoint (including local **Ollama** / LM Studio / OpenRouter / DeepSeek), or a local agent **CLI** (e.g. `claude` / `opencode`)
-- Two entry points: the **panel** (`Ctrl+Shift+A`, or the **IA** menu-bar button) and **inline edit** (`Ctrl+K`) — describe a change and it is applied to the selection or at the cursor
+- Two entry points: the **panel** (`Ctrl+Shift+A`, or the **AI** menu-bar button) and **inline edit** (`Ctrl+K`) — describe a change and it is applied to the selection or at the cursor
 - Edits are applied through the editor, so every AI change is fully **undo-able** (Ctrl+Z) and never silently rewrites your files
-- Base URLs are validated to `https://` or loopback (`http://localhost`) as an SSRF guard; ComdTeX ships no keys and makes no requests until you enable it
+- Base URLs are validated to `https://` or loopback (`http://localhost`) as an SSRF guard
 - Configured in Settings → **AI assistant**
 
 ### Citations
@@ -379,6 +379,10 @@ All cited entries are collected into a bibliography at the bottom of the preview
 | `Ctrl+0` | Reset zoom |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+W` | Close tab |
+| `Ctrl+Shift+T` | Reopen last closed tab |
+| `Ctrl+Shift+B` | Show bookmarks |
+| `Ctrl+Shift+1`…`9` | Set/clear bookmark in slot N |
+| `Ctrl+Alt+1`…`9` | Jump to bookmark slot N |
 | `Ctrl+Shift+A` | Open AI assistant panel |
 | `Ctrl+K` | AI inline edit (applies to selection or at cursor) |
 | `Ctrl+Shift+O` | Insert table of contents (`[[toc]]`) |
@@ -469,7 +473,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 
 ### Requirements
 
-- **Node.js** 18 or later
+- **Node.js** 20 or later (CI builds on Node 22; Vite 8 requires Node 20+)
 - **Rust** (stable) and `cargo` — install via [rustup](https://rustup.rs/)
 - System libraries for your distro:
 
@@ -480,13 +484,50 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | Fedora | `sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel librsvg2-devel openssl-devel` |
 | Gentoo/other | Install equivalents of `webkit2gtk:4.1`, `libayatana-appindicator`, `librsvg`, `openssl` |
 
-### Commands
+### Build from source — step by step
+
+Full path from a clean machine to a packaged desktop app.
+
+**1. Install the prerequisites** above (Node.js 20+, Rust + `cargo`, and your distro's system libraries from the table).
+
+**2. Clone the repository**
 
 ```bash
-npm install           # install dependencies
+git clone https://github.com/Sadriica/ComdTeX.git
+cd ComdTeX
+```
+
+**3. Install dependencies**
+
+```bash
+npm ci          # lockfile-exact (recommended); or `npm install`
+```
+
+**4. (Optional) Run in development** — hot-reloads the frontend:
+
+```bash
+npm run tauri dev
+```
+
+**5. Build the desktop app + installers** (release mode):
+
+```bash
+npm run tauri build
+```
+
+> On **modern/Arch Linux**, the binary + `.deb` + `.rpm` build fine, but the AppImage step can fail in `linuxdeploy` (`strip: unknown type [0x13]`). If so, disable stripping:
+> ```bash
+> NO_STRIP=true npm run tauri build
+> ```
+
+`npm run tauri build` runs `npm run build` (eslint + tsc + vite) internally, then compiles the Rust binary and packages the bundles. Running `npm run build` on its own only produces the frontend `dist/` — not a desktop app.
+
+### Other commands
+
+```bash
 npm run tauri dev     # development mode with hot-reload
-npm run build         # frontend only
-npm run tauri build   # desktop app + bundles (release mode)
+npm test              # run the test suite (vitest)
+npm run build         # frontend only (eslint + tsc + vite)
 ```
 
 ### Build output
@@ -495,8 +536,9 @@ After `npm run tauri build`, bundles are written to `src-tauri/target/release/bu
 
 | Bundle | Path |
 |---|---|
-| AppImage | `appimage/ComdTeX_*.AppImage` |
-| .deb | `deb/comdtex_*.deb` |
+| AppImage | `appimage/comdtex_*_amd64.AppImage` |
+| .deb | `deb/comdtex_*_amd64.deb` |
+| .rpm | `rpm/comdtex-*-1.x86_64.rpm` |
 | .exe (Windows) | `nsis/ComdTeX_*_x64-setup.exe` |
 
 To build a specific format:
@@ -524,17 +566,17 @@ This is only relevant when building locally on Arch — release artifacts downlo
 Releases are triggered by pushing a version tag:
 
 ```bash
-git tag v1.0.x
-git push origin v1.0.x
+git tag v1.9.5
+git push origin v1.9.5
 ```
 
 This triggers the GitHub Actions release workflow:
 
 | Job | Runner | Output |
 |---|---|---|
-| `build-linux` | `ubuntu-22.04` | `.AppImage` (patched for Mesa 24+) and `.deb` |
-| `build-windows` | `windows-latest` | `.exe` (NSIS installer) |
-| `publish` | `ubuntu-22.04` | Removes draft status after all jobs succeed |
+| `build` (matrix) | `ubuntu-22.04` | `.AppImage` (patched for Mesa 24+) and `.deb` |
+| `build` (matrix) | `windows-latest` | `.exe` (NSIS installer) |
+| `publish` | `ubuntu-22.04` | Removes draft status after the build matrix succeeds |
 
 > The repository must have `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` set in **Settings → Secrets and variables → Actions**.
 
@@ -550,11 +592,19 @@ Released AppImages are already patched in CI (libwayland-egl removed, `WEBKIT_DI
 
 The bundled `linuxdeploy` ships an old `strip`. Set `NO_STRIP=true` before running `npm run tauri build` (see [Development](#development)).
 
+### `vite build` fails to resolve `@excalidraw/excalidraw/index.css`
+
+**Symptom:** `Rolldown failed to resolve import "@excalidraw/excalidraw/index.css"` during `npm run tauri build`.
+
+**Cause:** an outdated `@excalidraw/excalidraw` is installed (the separate `index.css` export only exists in **0.18+**; 0.17.x embedded styles in the JS). This happens on a stale clone or when `node_modules` drifted from `package-lock.json`.
+
+**Fix:** sync dependencies to the lockfile — `npm ci` (clean, lockfile-exact) or `npm install`. Do **not** delete the CSS import; the pinned version (`^0.18.1`) ships it.
+
 ### pandoc / zip / git not detected
 
 **Symptom:** Amber banner on startup, or "Scoped command X not found" in the dev console.
 
-ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Instalar** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
+ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Install** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
 
 PDF compilation no longer needs any of these — the WASM engine is bundled. Pandoc is required for DOCX / Beamer / Typst / document import / Markdown→PDF (non-LaTeX path); typst is additionally needed for Typst→PDF; zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
 
@@ -611,7 +661,7 @@ Requires updating **all five** of the following — omitting any causes inconsis
 |---|---|
 | `App.tsx` | `App` wrapper (`LanguageContext` provider) + `AppContent` (all state, layout, keybindings, menus) |
 | `useVault.ts` | Central hook: vault folder, tabs, file tree, CRUD, autosave, search |
-| `useSettings.ts` | Settings persisted in `localStorage`: font sizes, theme, vim mode, language |
+| `useSettings.ts` | Settings persisted in `localStorage`: font sizes, theme, vim mode, language, word wrap, WASM TeX, touchpad gestures, Pomodoro durations, AI provider config, cloud-sync toggles |
 | `useUpdater.ts` | Auto-updater: `checkForUpdate()`, `downloadAndInstallUpdate()` |
 | `renderer.ts` | Markdown + math → HTML pipeline |
 | `preprocessor.ts` | Expands shorthands before KaTeX |
@@ -645,7 +695,7 @@ Requires updating **all five** of the following — omitting any causes inconsis
 | `pathUtils.ts` | Cross-platform path helpers |
 | `sanitizeRenderedHtml.ts` | DOMParser-based HTML sanitizer |
 | `contentLinter.ts` | Real-time Monaco markers: broken links, citations, equations, shorthand errors |
-| `checkDeps.ts` | Checks `pandoc` and `zip` on startup |
+| `checkDeps.ts` | Checks optional shell tools (`pandoc`, `zip`, `git`, `typst`) on startup |
 | `i18n.ts` | EN/ES translation system: `T` interface, `LANGS`, `LanguageContext`, `useT()` |
 | `toastService.ts` | Singleton toast module |
 | `types.ts` | Shared TypeScript types (`FileNode`, `OpenFile`, `SearchResult`) |

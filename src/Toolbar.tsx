@@ -249,10 +249,19 @@ function getSections(t: T): MenuSection[] {
 }
 
 // Direct (no-dropdown) buttons on the right.
-function getDirectButtons(t: T): { mode: PanelMode; icon: string; label: string }[] {
+function getDirectButtons(t: T): { mode: PanelMode; icon: ReactNode; label: string }[] {
   return [
     { mode: "focusTimer", icon: "◷", label: t.sidebar.focusTimer },
-    { mode: "ai", icon: "✦", label: t.sidebar.ai },
+    {
+      mode: "ai",
+      // Monochrome sparkle SVG — the ✦/✨ glyphs render coloured in WebKitGTK.
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
+          <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
+        </svg>
+      ),
+      label: t.sidebar.ai,
+    },
     { mode: "cloudSync", icon: "☁", label: t.sidebar.cloudSync },
     { mode: "help", icon: "?", label: t.sidebar.help },
   ]

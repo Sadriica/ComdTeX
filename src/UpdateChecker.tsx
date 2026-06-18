@@ -1,4 +1,5 @@
 import type { UpdateInfo } from "./useUpdater"
+import { useT } from "./i18n"
 
 interface UpdateCheckerProps {
   updateInfo: UpdateInfo | null
@@ -8,6 +9,7 @@ interface UpdateCheckerProps {
 }
 
 export default function UpdateChecker({ updateInfo, onInstall, onDismiss, installing }: UpdateCheckerProps) {
+  const t = useT()
   if (!updateInfo?.available) return null
 
   const notes = updateInfo.body
@@ -16,7 +18,7 @@ export default function UpdateChecker({ updateInfo, onInstall, onDismiss, instal
 
   return (
     <div className="update-banner">
-      <h4>Nueva versión disponible: v{updateInfo.version}</h4>
+      <h4>{t.updateBanner.available(updateInfo.version)}</h4>
       {notes && <p>{notes}</p>}
       <div className="update-banner-actions">
         <button
@@ -24,14 +26,14 @@ export default function UpdateChecker({ updateInfo, onInstall, onDismiss, instal
           onClick={onInstall}
           disabled={installing}
         >
-          {installing ? "Instalando…" : "Instalar y reiniciar"}
+          {installing ? t.updateBanner.installing : t.updateBanner.installRestart}
         </button>
         <button
           className="update-btn-later"
           onClick={onDismiss}
           disabled={installing}
         >
-          Más tarde
+          {t.updateBanner.later}
         </button>
       </div>
     </div>

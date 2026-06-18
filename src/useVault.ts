@@ -430,14 +430,40 @@ function isPathInsideVault(path: string, vaultPath: string): boolean {
   return normalizedPath === normalizedVault || normalizedPath.startsWith(`${normalizedVault}/`)
 }
 
-function saveDraft(path: string, content: string) {
+// Crash-recovery drafts are written THROTTLED, not on every keystroke. The
+// previous per-keystroke `getDrafts()` parse + `JSON.stringify(all drafts)` +
+// synchronous `localStorage.setItem` blocked the main thread on each character,
+// and the cost scaled with the document size and the number of stored drafts —
+// making typing/pasting crawl in large files. Edits are queued in memory and
+// flushed to localStorage at most once per `DRAFT_FLUSH_MS`; the in-memory tab
+// content (and the 800ms autosave) remain the primary source of truth, so a
+// crash loses at most a fraction of a second of edits.
+const DRAFT_FLUSH_MS = 300
+const draftQueue = new Map<string, string>()
+let draftFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+function flushDrafts() {
+  draftFlushTimer = null
+  if (draftQueue.size === 0) return
   const now = Date.now()
-  const drafts = getDrafts().filter((d) => d.path !== path && now - d.savedAt < DRAFT_MAX_AGE)
-  drafts.unshift({ path, content, savedAt: now })
+  let drafts = getDrafts().filter((d) => now - d.savedAt < DRAFT_MAX_AGE)
+  for (const [path, content] of draftQueue) {
+    drafts = drafts.filter((d) => d.path !== path)
+    drafts.unshift({ path, content, savedAt: now })
+  }
+  draftQueue.clear()
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts.slice(0, 20)))
 }
 
+function saveDraft(path: string, content: string) {
+  draftQueue.set(path, content)
+  if (!draftFlushTimer) draftFlushTimer = setTimeout(flushDrafts, DRAFT_FLUSH_MS)
+}
+
 function clearDraft(path: string) {
+  // Cancel any queued (not-yet-written) draft so a pending flush can't re-create
+  // a stale draft for a file that was just saved/closed.
+  draftQueue.delete(path)
   const drafts = getDrafts().filter((d) => d.path !== path)
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
 }
@@ -501,6 +527,13 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const conflictPaths = useRef<Set<string>>(new Set())
   const activeTabPathRef = useRef<string | null>(null)
   activeTabPathRef.current = activeTabPath
+  // Latest openTabs, mirrored into a ref so callbacks that only NEED to read the
+  // current tabs (saveFile, closeTab) don't have to list `openTabs` in their deps.
+  // Without this, every keystroke (which mutates an open tab) recreates saveFile →
+  // closeTab → deleteFile, changing the identity of vault methods passed to memo'd
+  // children (FileTree) and forcing a full re-render of the file tree per keystroke.
+  const openTabsRef = useRef(openTabs)
+  openTabsRef.current = openTabs
 
   const openFile = openTabs.find((tab) => tab.path === activeTabPath) ?? null
 
@@ -814,7 +847,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     saveOpts: { force?: boolean } = {},
   ): Promise<boolean> => {
     try {
-      const openTab = openTabs.find((tab) => tab.path === path)
+      const openTab = openTabsRef.current.find((tab) => tab.path === path)
       // Read-only modes (currently just PDF) must never write to disk —
       // doing so would overwrite the binary file with text content.
       if (openTab?.mode === "pdf") return false
@@ -907,7 +940,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
       showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
       return false
     }
-  }, [openTabs, t])
+    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+  }, [t])
 
   const updateContent = useCallback((content: string) => {
     const path = activeTabPathRef.current
@@ -935,7 +969,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return
-    const closedTab = openTabs.find((t) => t.path === path)
+    const closedTab = openTabsRef.current.find((t) => t.path === path)
     // Flush any pending autosave SYNCHRONOUSLY before tearing down the tab.
     // Without this, three failure modes are possible:
     //   (a) timer fires after closeTab and re-creates a draft for a closed tab,
@@ -977,7 +1011,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // the flush above failed, we want the draft to survive for crash recovery.
     // saveFile clears the draft on success.
     if (!closedTab?.isDirty) clearDraft(path)
-  }, [pinnedPaths, openTabs, saveFile, t])
+    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+  }, [pinnedPaths, saveFile, t])
 
   const createFile = useCallback(async (name: string, content = "") => {
     if (!vaultPath) return
@@ -1032,10 +1067,13 @@ export function useVault(options: UseVaultOptions | number = {}) {
     if (pending !== undefined) {
       pendingContent.current.delete(oldPath)
       pendingContent.current.set(newPath, pending)
-      // Re-arm the debounced save against the new path.
+      // Re-arm the debounced save against the new path. Force it: the rename/move
+      // we just performed bumps newPath's mtime above the tab's cachedMtime, which
+      // would otherwise trip saveFile's external-modification conflict guard for
+      // what is actually OUR own pending edit (no external change to protect).
       saveTimers.current.set(newPath, setTimeout(() => {
         saveTimers.current.delete(newPath)
-        void saveFile(newPath, pending)
+        void saveFile(newPath, pending, { force: true })
       }, autoSaveMs))
     }
     const draft = getDrafts().find((d) => d.path === oldPath)

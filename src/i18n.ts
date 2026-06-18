@@ -238,6 +238,16 @@ export interface T {
     openAi: string
     aiInlineEdit: string
     exportObsidian: string
+    categories: {
+      Edición: string
+      Insertar: string
+      Matemáticas: string
+      Vista: string
+      Exportar: string
+      IA: string
+      Vault: string
+      Navegación: string
+    }
   }
 
   excalidraw: {
@@ -284,6 +294,9 @@ export interface T {
     send: string
     sendHint: string
     clearThread: string
+    newConversation: string
+    conversations: string
+    deleteConversation: string
     settingsShortcut: string
     stop: string
     thinking: string
@@ -346,6 +359,8 @@ export interface T {
     cliCommand: string
     cliCommandPlaceholder: string
     cliNote: string
+    warmup: string
+    warmupDesc: string
   }
 
   todo: {
@@ -398,6 +413,8 @@ export interface T {
     noVault: string
     notRepo: string
     gitNotFound: string
+    gitNotFoundTitle: string
+    gitNotFoundHint: string
     refresh: string
     noChanges: string
     staged: string
@@ -893,6 +910,23 @@ export interface T {
     replaceAriaLabel: string
   }
 
+  deps: {
+    intro: string
+    pandocFeatureWasm: string
+    pandocFeatureNoWasm: string
+    zipFeature: string
+    install: string
+    ignore: string
+    ignoreTitle: (label: string) => string
+  }
+
+  updateBanner: {
+    available: (version: string | undefined) => string
+    installing: string
+    installRestart: string
+    later: string
+  }
+
   comments: {
     title: string
     addAriaLabel: string
@@ -958,6 +992,7 @@ export interface T {
     panelHelp: string
     conflictWith: (provider: string) => string
     conflictMissingOriginal: string
+    conflictBadge: string
     actionOpenBoth: string
     actionKeepMine: string
     actionKeepCopy: string
@@ -1266,6 +1301,16 @@ const es: T = {
     openAi: "Abrir asistente IA",
     aiInlineEdit: "Edición inline con IA",
     exportObsidian: "Exportar a Obsidian (Markdown)",
+    categories: {
+      "Edición": "Edición",
+      "Insertar": "Insertar",
+      "Matemáticas": "Matemáticas",
+      "Vista": "Vista",
+      "Exportar": "Exportar",
+      "IA": "IA",
+      "Vault": "Vault",
+      "Navegación": "Navegación",
+    },
   },
 
   excalidraw: {
@@ -1314,8 +1359,11 @@ const es: T = {
     openSettings: "Abrir Configuración",
     inputPlaceholder: "Escribe un mensaje… (Ctrl+Enter para enviar, «/» para acciones)",
     send: "Enviar",
-    sendHint: "Ctrl+Enter para enviar",
+    sendHint: "Enter para enviar · Shift+Enter para salto de línea",
     clearThread: "Limpiar conversación",
+    newConversation: "Nueva conversación",
+    conversations: "Conversaciones",
+    deleteConversation: "Eliminar conversación",
     settingsShortcut: "Configuración de IA",
     stop: "Detener",
     thinking: "Pensando…",
@@ -1383,6 +1431,8 @@ const es: T = {
     cliCommand: "Comando de CLI",
     cliCommandPlaceholder: "p. ej. opencode run  •  claude -p",
     cliNote: "El nombre del comando debe estar permitido en capabilities/default.json.",
+    warmup: "Precalentar el chat al abrirlo",
+    warmupDesc: "Envía una petición mínima al abrir el asistente para preparar la conexión (o arrancar el proceso CLI), de modo que el primer mensaje responda más rápido. Solo con la IA activada.",
   },
 
   todo: {
@@ -1446,6 +1496,8 @@ const es: T = {
     noVault: "Abre un vault para usar Git.",
     notRepo: "Esta carpeta no es un repositorio Git.",
     gitNotFound: "Git no encontrado. Instálalo para usar esta función.",
+    gitNotFoundTitle: "Git no encontrado",
+    gitNotFoundHint: "Instala Git y reinicia la aplicación.",
     refresh: "Actualizar",
     noChanges: "Sin cambios en el repositorio.",
     staged: "Cambios preparados",
@@ -2011,13 +2063,13 @@ const es: T = {
 
   documentLab: {
     diagnostics: "Diagnóstico",
-    compatibility: "Export",
+    compatibility: "Exportar",
     project: "Proyecto",
     structure: "Estructura",
     mathlinks: "Backlinks matemáticos",
     quality: "Calidad",
     errors: "Errores",
-    warnings: "Warnings",
+    warnings: "Advertencias",
     info: "Info",
     noIssues: "Sin problemas detectados.",
     noIssuesCompat: "Sin degradaciones detectadas.",
@@ -2051,6 +2103,23 @@ const es: T = {
   searchReplace: {
     searchAriaLabel: "Término de búsqueda",
     replaceAriaLabel: "Texto de reemplazo",
+  },
+
+  deps: {
+    intro: "⚠ Algunas funciones requieren herramientas externas:",
+    pandocFeatureWasm: "necesario para exportar DOCX, Beamer y Markdown→PDF (no para PDF normal)",
+    pandocFeatureNoWasm: "necesario para exportar PDF, DOCX, Beamer",
+    zipFeature: "necesario para backup del vault y export a .cmdx",
+    install: "Instalar",
+    ignore: "Ignorar",
+    ignoreTitle: (label) => `Ignorar ${label}`,
+  },
+
+  updateBanner: {
+    available: (version) => `Nueva versión disponible: v${version}`,
+    installing: "Instalando…",
+    installRestart: "Instalar y reiniciar",
+    later: "Más tarde",
   },
 
   comments: {
@@ -2095,6 +2164,7 @@ const es: T = {
     panelHelp: "Tu cliente de nube creó copias en conflicto. Revisa cuál versión conservar.",
     conflictWith: (provider) => `Conflicto de ${provider}`,
     conflictMissingOriginal: "Original no encontrado",
+    conflictBadge: "Conflicto de sincronización en la nube",
     actionOpenBoth: "Abrir ambos",
     actionKeepMine: "Mantener mío",
     actionKeepCopy: "Usar la copia",
@@ -2403,6 +2473,16 @@ const en: T = {
     openAi: "Open AI assistant",
     aiInlineEdit: "Inline AI edit",
     exportObsidian: "Export to Obsidian (Markdown)",
+    categories: {
+      "Edición": "Edit",
+      "Insertar": "Insert",
+      "Matemáticas": "Math",
+      "Vista": "View",
+      "Exportar": "Export",
+      "IA": "AI",
+      "Vault": "Vault",
+      "Navegación": "Navigation",
+    },
   },
 
   excalidraw: {
@@ -2451,8 +2531,11 @@ const en: T = {
     openSettings: "Open Settings",
     inputPlaceholder: "Type a message… (Ctrl+Enter to send, “/” for actions)",
     send: "Send",
-    sendHint: "Ctrl+Enter to send",
+    sendHint: "Enter to send · Shift+Enter for newline",
     clearThread: "Clear thread",
+    newConversation: "New conversation",
+    conversations: "Conversations",
+    deleteConversation: "Delete conversation",
     settingsShortcut: "AI settings",
     stop: "Stop",
     thinking: "Thinking…",
@@ -2520,6 +2603,8 @@ const en: T = {
     cliCommand: "CLI command",
     cliCommandPlaceholder: "e.g. opencode run  •  claude -p",
     cliNote: "The command name must be allow-listed in capabilities/default.json.",
+    warmup: "Warm up the chat on open",
+    warmupDesc: "Sends a tiny request when the assistant opens to prime the connection (or spin up the CLI process), so your first message responds faster. Only when AI is enabled.",
   },
 
   todo: {
@@ -2582,6 +2667,8 @@ const en: T = {
     noVault: "Open a vault to use Git.",
     notRepo: "This folder is not a Git repository.",
     gitNotFound: "Git not found. Install it to use this feature.",
+    gitNotFoundTitle: "Git not found",
+    gitNotFoundHint: "Install Git and restart the application.",
     refresh: "Refresh",
     noChanges: "No changes in the repository.",
     staged: "Staged changes",
@@ -3189,6 +3276,23 @@ const en: T = {
     replaceAriaLabel: "Replacement text",
   },
 
+  deps: {
+    intro: "⚠ Some features require external tools:",
+    pandocFeatureWasm: "needed to export DOCX, Beamer and Markdown→PDF (not for normal PDF)",
+    pandocFeatureNoWasm: "needed to export PDF, DOCX, Beamer",
+    zipFeature: "needed for vault backup and export to .cmdx",
+    install: "Install",
+    ignore: "Ignore",
+    ignoreTitle: (label) => `Ignore ${label}`,
+  },
+
+  updateBanner: {
+    available: (version) => `New version available: v${version}`,
+    installing: "Installing…",
+    installRestart: "Install and restart",
+    later: "Later",
+  },
+
   comments: {
     title: "Comments",
     addAriaLabel: "Add comment at cursor",
@@ -3231,6 +3335,7 @@ const en: T = {
     panelHelp: "Your cloud client created conflict copies. Review which version to keep.",
     conflictWith: (provider) => `${provider} conflict`,
     conflictMissingOriginal: "Original missing",
+    conflictBadge: "Cloud-sync conflict",
     actionOpenBoth: "Open both",
     actionKeepMine: "Keep mine",
     actionKeepCopy: "Use the copy",

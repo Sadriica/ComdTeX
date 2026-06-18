@@ -433,6 +433,20 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <p className="setting-hint">{t.aiSettings.apiKeyNote}</p>
                   </>
                 )}
+
+                {settings.aiEnabled && (
+                  <>
+                    <label className="setting-row">
+                      <span>{t.aiSettings.warmup}</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.aiWarmupEnabled}
+                        onChange={() => onChange({ aiWarmupEnabled: !settings.aiWarmupEnabled })}
+                      />
+                    </label>
+                    <p className="setting-hint">{t.aiSettings.warmupDesc}</p>
+                  </>
+                )}
               </>
             )}
           </div>

@@ -618,11 +618,21 @@ function obsidianCalloutToCmdx(type: string, rawTitle: string, body = ""): { env
   // gated to `note` callouts + exact prefixes + (for ambiguous types) a body
   // heuristic, to limit false positives on genuine notes.
   if (normalizedType === "note") {
+    // Some older buggy saves DOUBLE-prefixed the block: `:::flowchart[X]` became
+    // `:::note[Flowchart: X]` (special→note) and then `> [!note] Note: Flowchart: X`
+    // (note→callout prepended the "Note" display name). Strip that redundant
+    // leading "Note: " so the special-type prefix below is still recognized.
+    const recoverTitle = rawTitle.replace(/^Note:\s*/i, "")
+    // The redundant leading "Note: " is itself a corruption signature: a genuine
+    // note is never titled `Note: <SpecialType>`. When present, trust it even for
+    // the ambiguous types (graph/plot/code) whose body heuristic would otherwise
+    // gate recovery — so e.g. a `:::code` with plain-text body still heals.
+    const hadNotePrefix = recoverTitle !== rawTitle
     for (const [prefix, env] of Object.entries(SPECIAL_TITLE_TO_ENV)) {
-      const matchesPrefix = rawTitle === prefix || rawTitle.startsWith(`${prefix}:`)
+      const matchesPrefix = recoverTitle === prefix || recoverTitle.startsWith(`${prefix}:`)
       if (!matchesPrefix) continue
-      if (!shouldRecoverSpecial(env, body)) break // looks like a genuine note → don't recover
-      const title = rawTitle === prefix ? "" : rawTitle.slice(prefix.length + 1).trim()
+      if (!hadNotePrefix && !shouldRecoverSpecial(env, body)) break // genuine note → keep
+      const title = recoverTitle === prefix ? "" : recoverTitle.slice(prefix.length + 1).trim()
       return { env, title }
     }
   }

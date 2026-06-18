@@ -124,6 +124,28 @@ export function clearExcalidrawSvgCache(): void {
   excalidrawSvgCache.clear()
 }
 
+// ── Memo cache for the pure, synchronous special-block renderers ─────────────
+// `truth` / `graph` (Graphviz layout) / `plot` (function sampling) / `commdiag`
+// are non-trivial pure functions of (title, content, number) with no async or
+// browser dependency. They were recomputed on EVERY (debounced) preview render;
+// a small doc like comdtex.md holds several of them, so editing prose around
+// them re-ran every layout each time. Memoize by source so an unchanged block
+// is rendered once and reused. The output uses `currentColor`, so it's
+// theme-independent and safe to cache across theme/macros changes.
+const specialRenderCache = new Map<string, string>()
+function memoSpecial(kind: string, title: string, content: string, number: string, render: () => string): string {
+  const key = `${kind}\x00${number}\x00${title}\x00${content}`
+  const hit = specialRenderCache.get(key)
+  if (hit !== undefined) return hit
+  const html = render()
+  if (specialRenderCache.size >= 1000) specialRenderCache.clear()
+  specialRenderCache.set(key, html)
+  return html
+}
+export function clearSpecialRenderCache(): void {
+  specialRenderCache.clear()
+}
+
 let excalidrawPlaceholderText = "Excalidraw — clic para editar"
 export function setExcalidrawPlaceholderText(text: string): void {
   excalidrawPlaceholderText = text
@@ -263,11 +285,23 @@ export function extractEnvironments(
   // and fall back to the local-text line when raw isn't provided.
   const haveRaw = typeof rawSource === "string" && rawSource.length > 0
   let rawCursor = 0
+  // Newlines in rawSource[0, rawCursor). Maintained incrementally so resolving
+  // each env's source line is O(1) amortized; the previous `slice(0, idx)
+  // .split("\n")` re-walked from the document start for every env → O(n²) on a
+  // large, env-heavy file. `rawCursor` only advances, so total work is O(n).
+  let rawCursorNewlines = 0
+  const countNewlines = (s: string, from: number, to: number): number => {
+    let n = 0
+    for (let i = from; i < to; i++) if (s.charCodeAt(i) === 10) n++
+    return n
+  }
   const lineOfInRaw = (opening: string): number => {
     const idx = rawSource!.indexOf(opening, rawCursor)
     if (idx === -1) return 1
+    const newlinesBeforeIdx = rawCursorNewlines + countNewlines(rawSource!, rawCursor, idx)
+    rawCursorNewlines = newlinesBeforeIdx + countNewlines(rawSource!, idx, idx + opening.length)
     rawCursor = idx + opening.length
-    return rawSource!.slice(0, idx).split("\n").length
+    return newlinesBeforeIdx + 1
   }
   const lineOfInText = (idx: number): number =>
     text.slice(0, idx).split("\n").length
@@ -308,6 +342,10 @@ export function extractEnvironments(
         counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
         const pcNumber = String(counters["pseudocode"])
         let html: string
+        // NOT memoized: buildPseudocodeHTML embeds a Mermaid flowchart and reads
+        // the (async-populated) `flowchartSvgCache`, so its output must be
+        // re-evaluated each render — otherwise the cached "no SVG yet" HTML keeps
+        // re-triggering the mermaid effect in an infinite re-render loop.
         try { html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim()) }
         catch (e) { html = specialEnvError("pseudocode", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
@@ -347,8 +385,9 @@ export function extractEnvironments(
 
       if (envName === "truth") {
         counters["truth"] = (counters["truth"] ?? 0) + 1
+        const num = String(counters["truth"]); const body = content.trim(); const t = title ?? ""
         let html: string
-        try { html = renderTruthTableHTML(title ?? "", content.trim(), String(counters["truth"])) }
+        try { html = memoSpecial("truth", t, body, num, () => renderTruthTableHTML(t, body, num)) }
         catch (e) { html = specialEnvError("truth", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
@@ -356,8 +395,9 @@ export function extractEnvironments(
 
       if (envName === "graph") {
         counters["graph"] = (counters["graph"] ?? 0) + 1
+        const num = String(counters["graph"]); const body = content.trim(); const t = title ?? ""
         let html: string
-        try { html = renderGraphSVG(title ?? "", content.trim(), String(counters["graph"])) }
+        try { html = memoSpecial("graph", t, body, num, () => renderGraphSVG(t, body, num)) }
         catch (e) { html = specialEnvError("graph", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
@@ -365,8 +405,9 @@ export function extractEnvironments(
 
       if (envName === "plot") {
         counters["plot"] = (counters["plot"] ?? 0) + 1
+        const num = String(counters["plot"]); const body = content.trim(); const t = title ?? ""
         let html: string
-        try { html = renderPlotHTML(title ?? "", content.trim(), String(counters["plot"])) }
+        try { html = memoSpecial("plot", t, body, num, () => renderPlotHTML(t, body, num)) }
         catch (e) { html = specialEnvError("plot", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
@@ -388,8 +429,9 @@ export function extractEnvironments(
 
       if (envName === "commdiag") {
         counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
+        const num = String(counters["commdiag"]); const body = content.trim(); const t = title ?? ""
         let html: string
-        try { html = renderCommDiagSVG(title ?? "", content.trim(), String(counters["commdiag"])) }
+        try { html = memoSpecial("commdiag", t, body, num, () => renderCommDiagSVG(t, body, num)) }
         catch (e) { html = specialEnvError("commdiag", e) }
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`

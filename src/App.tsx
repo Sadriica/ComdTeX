@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
@@ -33,6 +33,9 @@ import {
 import { useVault } from "./useVault"
 import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
+import { AiSessionProvider } from "./useAiSession"
+import { useFocusTimer } from "./useFocusTimer"
+import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
 import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
@@ -78,6 +81,7 @@ import TableEditor from "./TableEditor"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
+import { morphPreviewContent } from "./previewMorph"
 import { handleGlobalShortcut } from "./appShortcuts"
 import { useTouchpadGestures } from "./useTouchpadGestures"
 import ErrorBoundary from "./ErrorBoundary"
@@ -348,7 +352,12 @@ export default function App() {
   return (
     <LanguageContext.Provider value={LANGS[settings.language]}>
       <ErrorBoundary>
-        <AppContent settings={settings} updateSettings={updateSettings} />
+        {/* AiSessionProvider owns the AI chat state and renders AppContent as a
+            stable child, so a streamed token only re-renders the AiPanel (context
+            consumer), not this whole AppContent tree. */}
+        <AiSessionProvider>
+          <AppContent settings={settings} updateSettings={updateSettings} />
+        </AiSessionProvider>
       </ErrorBoundary>
     </LanguageContext.Provider>
   )
@@ -366,6 +375,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     onAfterSave: (path, basename) => { afterSaveRef.current?.(path, basename) },
   })
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  // Last content the editor model is known to hold (the user's last keystroke
+  // value, or the last value we pushed). Lets the external-sync effect skip the
+  // common case — the user's own typing — with an O(1) reference compare instead
+  // of the controlled-`value` round-trip (`getValue()` of the whole document on
+  // every keystroke), which scaled badly with file size.
+  const lastEditorContentRef = useRef<string>("")
   const mainRef = useRef<HTMLDivElement>(null)
   // Linter context refs — updated without re-creating the editor callback
   const lintWikiNamesRef = useRef<Set<string>>(new Set())
@@ -388,6 +403,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const vimStatusRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<number | null>(null)
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Last measured preview DOM-commit cost (ms); drives the ADAPTIVE preview
+  // debounce: cheap docs re-render the preview ~150ms after a keystroke; an
+  // SVG-heavy doc (whose commit costs 50-100ms+) backs off toward ~550ms so the
+  // main thread isn't saturated while typing.
+  const previewCostRef = useRef(0)
   const [dragOver, setDragOver] = useState(false)
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
   const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
@@ -449,6 +469,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [closedTabsOpen, setClosedTabsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined)
+  // Pomodoro / writing-session state, lifted out of FocusTimerPanel so the timer
+  // keeps running (and notifies on phase change) when the panel is closed — e.g.
+  // while iterating between the Pomodoro panel and the AI assistant.
+  const pomodoroConfig = useMemo(() => ({
+    workMin: settings.pomodoroWorkMin,
+    breakMin: settings.pomodoroBreakMin,
+    longBreakMin: settings.pomodoroLongBreakMin,
+    cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
+  }), [settings.pomodoroWorkMin, settings.pomodoroBreakMin, settings.pomodoroLongBreakMin, settings.pomodoroCyclesBeforeLongBreak])
+  const focusTimer = useFocusTimer(pomodoroConfig, vault.openFile?.content ?? "")
+  // Search & Replace inputs/results, lifted so they survive the panel unmounting.
+  const searchReplaceState = useSearchReplaceState()
   // Ctrl/Cmd+K inline AI edit — null when the floating widget is closed.
   const [cmdkAnchor, setCmdkAnchor] = useState<CmdKAnchor | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -474,6 +506,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setSidebarMode(m)
     setSidebarCollapsed(false)
   }, [])
+  // Stable callbacks for FileTree so its React.memo holds — otherwise the inline
+  // arrows would change identity every render and the (potentially huge) file
+  // tree would re-render on every keystroke (the "big vault = slow typing" cause).
+  // Depend on the stable method, not the `vault` object (a fresh literal each render).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleSelectVault = useCallback(() => { void vault.selectVault() }, [vault.selectVault])
+  const handleConflictClick = useCallback(() => openPanel("cloudSync"), [openPanel])
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [editorWidth, setEditorWidth] = useState<number | null>(null)
   const typewriterMode = settings.typewriterMode
@@ -483,6 +522,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [recentlyClosed, setRecentlyClosed] = useState<string[]>([])
   const minimapEnabled = settings.minimapEnabled
   const spellcheck = settings.spellcheck
+  // Memoized Editor options. A fresh `options={{...}}` literal every render made
+  // @monaco-editor/react call `editor.updateOptions()` on EVERY keystroke (the
+  // prop identity changed each render). readOnly keys off the boolean, since
+  // `vault.openFile` mints a new object identity on each keystroke.
+  const editorReadOnly = !vault.openFile
+  const editorOptions = useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(() => ({
+    fontSize: settings.fontSize,
+    lineHeight: Math.round(settings.fontSize * 1.6),
+    wordWrap: wordWrap ? "on" : "off",
+    minimap: { enabled: minimapEnabled },
+    scrollBeyondLastLine: false,
+    renderWhitespace: "none",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    padding: { top: 16, bottom: 16 },
+    readOnly: editorReadOnly,
+    quickSuggestions: { other: true, comments: false, strings: true },
+    suggestOnTriggerCharacters: true,
+    snippetSuggestions: "top",
+    // Smooth caret animation keeps the GPU compositor busy (~6% CPU on
+    // Linux/WebKitGTK); not worth it. "solid" avoids the idle blink repaint.
+    cursorSmoothCaretAnimation: "off",
+    cursorBlinking: "solid",
+  }), [settings.fontSize, wordWrap, minimapEnabled, editorReadOnly])
   const [navHistory, setNavHistory] = useState<string[]>([])
   const [navFuture, setNavFuture] = useState<string[]>([])
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
@@ -494,6 +556,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const activeFilePathRef = useRef<string | null>(null)
   activeFilePathRef.current = vault.openFile?.path ?? null
   const previewPaneRef = useRef<HTMLDivElement>(null)
+  // The .preview-content divs are committed imperatively (block-level morph) so a
+  // one-block edit doesn't blow away every diagram SVG; see morphPreviewContent.
+  const previewContentRef = useRef<HTMLDivElement>(null)
+  const splitContentRef = useRef<HTMLDivElement>(null)
   // Set when the cursor change originates from a preview click. The preview
   // scroll-sync effect reads + clears this so a click in the preview moves the
   // editor without yanking the preview back up to the section's heading.
@@ -542,17 +608,26 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return found?.content || null
   }, [])
 
+  // Stable Markdown→HTML renderer for the AI panel, so memoized assistant
+  // messages aren't re-rendered through the KaTeX pipeline on every streamed
+  // token (the prop identity stays put until its inputs actually change).
+  const aiRenderHtml = useCallback((md: string) => sanitizeRenderedHtml(
+    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+  ), [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver])
+
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
+  // Keyed on the DEBOUNCED `previewContent` (not the live editor content) so it
+  // doesn't re-split the whole document on every keystroke — only the breadcrumb
+  // reads this, a ~150ms staleness is invisible.
   const currentHeading = useMemo(() => {
-    const content = vault.openFile?.content ?? ""
-    const lines = content.split("\n")
+    const lines = previewContent.split("\n")
     let heading: string | null = null
     for (let i = 0; i < cursorPos.line - 1 && i < lines.length; i++) {
       const m = /^#{1,6}\s+(.+)$/.exec(lines[i])
       if (m) heading = m[1].trim()
     }
     return heading
-  }, [vault.openFile?.content, cursorPos.line])
+  }, [previewContent, cursorPos.line])
 
   useEffect(() => { checkDependencies().then(setDeps) }, [])
 
@@ -696,7 +771,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const wasSuppressed = suppressPreviewScrollOnce.current
     suppressPreviewScrollOnce.current = false
     if (!settings.previewVisible) return
-    const content = vault.openFile?.content
+    // Use the DEBOUNCED preview content: this matches the headings actually
+    // rendered in the preview pane (`headingEls` below) AND avoids splitting the
+    // whole document on every keystroke.
+    const content = previewContent
     if (!content) return
 
     // Collect heading line numbers from document
@@ -730,7 +808,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         target?.scrollIntoView({ behavior: "smooth", block: "start" })
       }
     }
-  }, [cursorPos.line, syncScroll, settings.previewVisible, vault.openFile?.content])
+  }, [cursorPos.line, syncScroll, settings.previewVisible, previewContent])
 
   useEffect(() => {
     lintBibKeysRef.current = bibKeys
@@ -745,12 +823,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // Active spell-check language: frontmatter `lang:` of the open file wins,
   // else the app UI language. Only es/en are supported.
+  // Keyed on the DEBOUNCED preview content so frontmatter isn't re-parsed on
+  // every keystroke (the `lang:` field only ever lives in the frontmatter block).
   const activeSpellLang = useMemo<SpellLang>(() => {
-    const fm = vault.openFile?.content
-      ? extractFrontmatter(vault.openFile.content)?.data.lang
-      : undefined
+    const fm = previewContent ? extractFrontmatter(previewContent)?.data.lang : undefined
     return resolveSpellLang(typeof fm === "string" ? fm : undefined, settings.language)
-  }, [vault.openFile?.content, settings.language])
+  }, [previewContent, settings.language])
 
   // Keep the linter's spell refs current and force a re-lint when the
   // spell-check setting toggles, the language changes, or the message
@@ -1200,10 +1278,33 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   const deferredPreviewContent = useDeferredValue(previewContent)
 
+  // Skip the full renderMarkdown() entirely when the preview pane is hidden.
+  // Previously this ran on every (debounced) keystroke regardless of visibility,
+  // so drafting with the preview collapsed still paid the whole render cost.
   const previewHtml = useMemo(
-    () => renderPreviewHtml(deferredPreviewContent),
-    [renderPreviewHtml, deferredPreviewContent]
+    () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent) : ""),
+    [settings.previewVisible, renderPreviewHtml, deferredPreviewContent]
   )
+
+  // Commit previewHtml via BLOCK-LEVEL morph instead of dangerouslySetInnerHTML.
+  // Only the top-level blocks that actually changed are replaced; unchanged blocks
+  // (and their already-rendered diagram SVGs) keep their live DOM nodes, so a
+  // one-character edit no longer re-parses + re-lays-out the whole document.
+  useLayoutEffect(() => {
+    const el = previewContentRef.current
+    if (el) morphPreviewContent(el, previewHtml)
+  }, [previewHtml])
+
+  // Measure the cost of committing previewHtml into the DOM (morph + layout of any
+  // changed inline SVGs). It feeds the ADAPTIVE preview debounce (below) so heavy
+  // docs re-render less often, keeping typing smooth, while light docs stay snappy.
+  useLayoutEffect(() => {
+    const __t = performance.now()
+    const id = requestAnimationFrame(() => {
+      previewCostRef.current = performance.now() - __t
+    })
+    return () => cancelAnimationFrame(id)
+  }, [previewHtml])
 
   const splitTab = useMemo(
     () => vault.openTabs.find((t) => t.path === splitFile) ?? null,
@@ -1216,6 +1317,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     () => splitTab ? renderPreviewHtml(deferredSplitContent) : "",
     [renderPreviewHtml, splitTab, deferredSplitContent]
   )
+
+  // Same block-level morph for the split reference pane.
+  useLayoutEffect(() => {
+    const el = splitContentRef.current
+    if (el) morphPreviewContent(el, splitPreviewHtml)
+  }, [splitPreviewHtml])
 
   const previewNeedsMermaid = useMemo(
     () => previewHtml.includes("language-mermaid"),
@@ -1250,8 +1357,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         const pre = el.parentElement
         if (!pre) return
 
-        const diagram = el.textContent ?? ""
         const sourceAttr = pre.getAttribute("data-mermaid-source-b64") ?? ""
+        // Use the EXACT mermaid source from the b64 attribute, NOT el.textContent.
+        // After the escHtml → markdown-it → sanitize → DOM round-trip, textContent
+        // can differ from the original source, so the cache key written below would
+        // never match the one environments.ts reads with (`mermaidChart`) → the
+        // mermaid effect re-renders forever, pegging CPU until the WebView OOMs.
+        // The b64 attr is `btoa(mermaidChart)` verbatim, so this round-trips exactly.
+        const diagram = sourceAttr
+          ? decodeURIComponent(escape(atob(sourceAttr)))
+          : (el.textContent ?? "")
         const div = document.createElement("div")
         div.className = "mermaid-diagram"
         if (sourceAttr) div.setAttribute("data-mermaid-source-b64", sourceAttr)
@@ -1265,9 +1380,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           if (cancelled) return
           const safe = sanitizeRenderedHtml(svg)
           div.innerHTML = safe
-          // Populate the cache so future re-renders embed the SVG inline.
-          setFlowchartSvg(diagram, safe)
-          storedAny = true
+          // Populate the cache so future re-renders embed the SVG inline — but
+          // ONLY for ComdTeX-generated blocks that carry the b64 source attr
+          // (whose key matches what environments.ts reads). For a raw ```mermaid
+          // fence there's no such attr, so caching under el.textContent would
+          // never be hit and would just re-render every pass — skip it.
+          if (sourceAttr) {
+            setFlowchartSvg(diagram, safe)
+            storedAny = true
+          }
         } catch (err) {
           console.warn("Mermaid render failed", err)
           const fallback = document.createElement("pre")
@@ -1564,14 +1685,43 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   const handleChange = useCallback((value: string | undefined) => {
     const content = value ?? ""
+    // Record what the user just typed so the external-content-sync effect can
+    // tell "the editor already has this" (O(1) reference check) from a genuine
+    // external change (conflict reload / replace / programmatic edit).
+    lastEditorContentRef.current = content
     // Ignore onChange fires on mount / programmatic value change
     if (content !== (vault.openFile?.content ?? "")) {
       vault.updateContent(content)
     }
     // Debounce preview 150ms to avoid re-rendering on every keystroke
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(content), 150)
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(content), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
   }, [vault])
+
+  // Push EXTERNAL content changes into the Monaco model. The editor is now
+  // uncontrolled (`defaultValue` + `key` per tab), so the user's own keystrokes
+  // never round-trip through React's `value` (which made the library serialize
+  // the whole document via `getValue()` on every keystroke). This effect only
+  // does work when `openFile.content` differs from what the editor already has —
+  // i.e. a conflict reload, vault-wide replace, todo/wikilink/backlink edit, or
+  // a tab switch — all rare relative to typing.
+  useEffect(() => {
+    const ed = editorRef.current
+    const file = vault.openFile
+    if (!ed || !file || file.mode === "pdf") return
+    if (file.content === lastEditorContentRef.current) return // O(1): the user's own typing
+    lastEditorContentRef.current = file.content
+    try {
+      if (ed.getValue() === file.content) return // already in sync (e.g. just switched tabs)
+      const pos = ed.getPosition()
+      ed.setValue(file.content)
+      if (pos) ed.setPosition(pos)
+    } catch { /* editor disposed mid-swap — the key remount re-seeds it */ }
+    // Intentionally key on the content/mode PRIMITIVES, not the `vault.openFile`
+    // object (whose identity changes every keystroke — depending on it would run
+    // this effect per keystroke, defeating the purpose).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vault.openFile?.content, vault.openFile?.mode])
 
   // ── Ctrl/Cmd+K inline AI edit: open the floating prompt at the selection. ──
   const openCmdk = useCallback(() => {
@@ -1604,7 +1754,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.setValue(newContent)
     vault.updateContent(newContent)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), 150)
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
   }, [vault])
 
   // ── OutlinePanel: drag-to-reorder document sections ──────────────────────
@@ -1625,7 +1775,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.pushUndoStop()
     vault.updateContent(next)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), 150)
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
   }, [vault])
 
   // ── Recent files ─────────────────────────────────────────────────────────
@@ -1644,7 +1794,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     vault.openFileNode(node)
     if (node.type === "file") trackRecent(node.path)
-  }, [vault, trackRecent])
+    // Depend on the stable methods (not the `vault` object, which is a fresh
+    // literal every render) so this prop stays stable across keystrokes and
+    // FileTree's React.memo actually holds. activeTabPath only changes on tab
+    // switch (not while typing).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vault.openFileNode, vault.activeTabPath, trackRecent])
 
   const goBack = useCallback(() => {
     if (navHistory.length === 0) return
@@ -2833,7 +2988,7 @@ ${html}
       const filesWithLinks: { path: string; content: string }[] = []
 
       for (const file of markdownFiles) {
-        const openTab = vault.openTabs.find((tab) => tab.path === file.path)
+        const openTab = openTabsRef.current.find((tab) => tab.path === file.path)
         const rawDisk = await readTextFile(file.path).catch(() => "")
         const source = openTab?.content ?? toEditorContent(file.path, rawDisk)
         re.lastIndex = 0
@@ -2865,7 +3020,9 @@ ${html}
     }
 
     await vault.renameFile(oldPath, newName)
-  }, [vault, t, vaultFileNodes])
+    // Stable deps (open tabs read via ref) so FileTree's React.memo holds while typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe])
 
   const handleOpenBib = useCallback(async () => {
     if (!vault.vaultPath) return
@@ -3414,7 +3571,7 @@ ${html}
                 tree={vault.tree}
                 activePath={vault.openFile?.path ?? null}
                 isLoading={vault.isLoading}
-                onSelectVault={() => { void vault.selectVault() }}
+                onSelectVault={handleSelectVault}
                 onOpenFile={handleOpenFileNode}
                 onCreateFile={vault.createFile}
                 onCreateFolder={vault.createFolder}
@@ -3422,7 +3579,7 @@ ${html}
                 onRenameFile={handleRenameFile}
                 onMoveFile={vault.moveFile}
                 conflictPaths={cloudConflictPaths}
-                onConflictClick={() => openPanel("cloudSync")}
+                onConflictClick={handleConflictClick}
               />
             )}
             {sidebarMode === "search" && (
@@ -3454,6 +3611,7 @@ ${html}
                     setSidebarMode("files")
                   }}
                   onReplaceInFile={handleReplaceInFile}
+                  state={searchReplaceState}
                 />
               </Suspense>
             )}
@@ -3600,12 +3758,8 @@ ${html}
               <Suspense fallback={null}>
                 <FocusTimerPanel
                   content={vault.openFile?.content ?? ""}
-                  config={{
-                    workMin: settings.pomodoroWorkMin,
-                    breakMin: settings.pomodoroBreakMin,
-                    longBreakMin: settings.pomodoroLongBreakMin,
-                    cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
-                  }}
+                  config={pomodoroConfig}
+                  focusTimer={focusTimer}
                   wordGoal={settings.wordGoal}
                   onConfigChange={(patch) => updateSettings({
                     ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
@@ -3669,9 +3823,7 @@ ${html}
                   editor={editorRef.current}
                   fileContent={vault.openFile?.content ?? null}
                   fileName={vault.openFile?.name ?? null}
-                  renderHtml={(md) => sanitizeRenderedHtml(
-                    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
-                  )}
+                  renderHtml={aiRenderHtml}
                   onOpenSettings={() => { setSettingsSection("ai"); setSettingsOpen(true) }}
                 />
               </Suspense>
@@ -3726,32 +3878,12 @@ ${html}
               <MonacoEditor
                 key={vault.activeTabPath ?? "welcome"}
                 defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
-                value={currentContent}
+                defaultValue={currentContent}
                 onChange={handleChange}
                 beforeMount={handleBeforeMount}
                 onMount={handleEditorMount}
                 theme={settings.theme}
-                options={{
-                  fontSize: settings.fontSize,
-                  lineHeight: Math.round(settings.fontSize * 1.6),
-                  wordWrap: wordWrap ? "on" : "off",
-                  minimap: { enabled: minimapEnabled },
-                  scrollBeyondLastLine: false,
-                  renderWhitespace: "none",
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  padding: { top: 16, bottom: 16 },
-                  readOnly: !vault.openFile,
-                  quickSuggestions: { other: true, comments: false, strings: true },
-                  suggestOnTriggerCharacters: true,
-                  snippetSuggestions: "top",
-                  // Smooth caret animation keeps the GPU compositor busy (~6% CPU
-                // on Linux/WebKitGTK). The visual gain isn't worth it.
-                cursorSmoothCaretAnimation: "off",
-                // Default "blink" repaints the cursor every 500 ms which keeps
-                // the compositor thread alive. "solid" eliminates that idle
-                // repaint without harming usability.
-                cursorBlinking: "solid",
-                }}
+                options={editorOptions}
               />
             </Suspense>
           )}
@@ -3788,7 +3920,7 @@ ${html}
               style={{ fontSize: settings.previewFontSize }}
               onClick={handlePreviewClick}
               onDoubleClick={handlePreviewDblClick}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+              ref={previewContentRef}
             />
           </div>
         )}
@@ -3806,7 +3938,7 @@ ${html}
                 <div
                   className="preview-content"
                   style={{ fontSize: settings.previewFontSize }}
-                  dangerouslySetInnerHTML={{ __html: splitPreviewHtml }}
+                  ref={splitContentRef}
                 />
               </div>
             </>
@@ -3818,7 +3950,7 @@ ${html}
         mode={vault.openFile?.mode ?? null}
         line={cursorPos.line}
         col={cursorPos.col}
-        content={currentContent}
+        content={previewContent}
         isDirty={vault.openFile?.isDirty ?? false}
         macroCount={Object.keys(macros).length}
         selectedWords={selectedWords}

@@ -76,18 +76,49 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
+// KaTeX render cache. `katex.renderToString` is one of the most expensive
+// per-call operations in the whole pipeline, and the live preview re-runs the
+// ENTIRE document render on every edit — without this, every equation was
+// re-rendered from scratch on each keystroke, the dominant cost in a math-heavy
+// document. Cached by (displayMode, source); editing one equation now only
+// re-renders that one. (Mirrors the Mermaid/Excalidraw SVG caches.)
+const katexCache = new Map<string, string>()
+let katexCacheMacrosRef: KatexMacros | null = null
+const KATEX_CACHE_MAX = 5000
+
+// Macros change rarely (only when `macros.md` is saved → a new object from
+// `setMacros`). Reference equality is a cheap, correct invalidation signal:
+// clear the cache when a different macros object is rendered with.
+function syncKatexCacheMacros(macros: KatexMacros): void {
+  if (macros !== katexCacheMacrosRef) {
+    katexCache.clear()
+    katexCacheMacrosRef = macros
+  }
+}
+
 function renderKatex(expr: string, display: boolean, macros: KatexMacros): string {
+  syncKatexCacheMacros(macros)
+  const trimmed = expr.trim()
+  const key = (display ? "D\x00" : "I\x00") + trimmed
+  const cached = katexCache.get(key)
+  if (cached !== undefined) return cached
+
+  let result: string
   try {
-    const rendered = katex.renderToString(expr.trim(), {
+    const rendered = katex.renderToString(trimmed, {
       displayMode: display,
       throwOnError: false,
       macros,
     })
-    return `<span class="katex-wrapper" data-expr="${encodeURIComponent(expr.trim())}">${rendered}</span>`
+    result = `<span class="katex-wrapper" data-expr="${encodeURIComponent(trimmed)}">${rendered}</span>`
   } catch {
-    const safe = expr.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    return `<span class="math-error">${safe}</span>`
+    const safe = trimmed.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    result = `<span class="math-error">${safe}</span>`
   }
+
+  if (katexCache.size >= KATEX_CACHE_MAX) katexCache.clear()
+  katexCache.set(key, result)
+  return result
 }
 
 /**

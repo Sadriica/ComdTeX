@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useT } from "./i18n"
 import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 
@@ -31,14 +32,15 @@ function charCount(text: string): number {
   return text.length
 }
 
-function readingMinutes(text: string): number {
-  const wc = wordCount(text)
-  return Math.max(1, Math.ceil(wc / 200))
-}
-
 export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount }: StatusBarProps) {
   const t = useT()
-  const wc = wordCount(content)
+  // Memoized so the cursor moving (line/col change every keystroke) doesn't
+  // re-run these O(n) document scans — they only recompute when `content` (the
+  // debounced preview content) actually changes.
+  const { wc, cc, readMin } = useMemo(() => {
+    const w = wordCount(content)
+    return { wc: w, cc: charCount(content), readMin: Math.max(1, Math.ceil(w / 200)) }
+  }, [content])
   const showTexEngine = texEngine !== undefined || (texEngineState && texEngineState !== "idle")
   const texEngineLabel =
     texEngineState && texEngineState !== "idle"
@@ -100,9 +102,9 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
           <span className="status-item">{t.statusBar.words(wc)}</span>
         )}
         <span className="status-item status-readtime" title={t.statusBar.readingTimeTitle}>
-          ~{readingMinutes(content)} min
+          ~{readMin} min
         </span>
-        <span className="status-item">{t.statusBar.chars(charCount(content))}</span>
+        <span className="status-item">{t.statusBar.chars(cc)}</span>
         <button
           className="status-item status-position"
           onClick={() => onGoToLine?.(line)}

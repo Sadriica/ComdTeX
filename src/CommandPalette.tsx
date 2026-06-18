@@ -39,6 +39,14 @@ const FolderIcon = (
   </svg>
 )
 
+// Monochrome AI sparkle (inline SVG with currentColor — the ✦/✨-style glyphs
+// render coloured in WebKitGTK, the same bug as the folder/gear icons).
+const SparkleIcon = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
+    <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
+  </svg>
+)
+
 // Default per-category glyph (reused for commands that omit their own icon).
 const CATEGORY_ICON: Record<PaletteCategory, ReactNode> = {
   "Edición": "✎",
@@ -46,7 +54,7 @@ const CATEGORY_ICON: Record<PaletteCategory, ReactNode> = {
   "Matemáticas": "∑",
   "Vista": "▦",
   "Exportar": "⇪",
-  "IA": "✦",
+  "IA": SparkleIcon,
   "Vault": FolderIcon,
   "Navegación": "⇄",
 }
@@ -152,7 +160,7 @@ export default function CommandPalette({ open, onClose, files, commands, onOpenF
           action: () => { onOpenFile(f); onClose() },
         })),
       ...commands
-        .filter((c) => !query || fuzzy(query, c.label) || (c.category && fuzzy(query, c.category)))
+        .filter((c) => !query || fuzzy(query, c.label) || (c.category && fuzzy(query, t.palette.categories[c.category])))
         .map<PaletteItem>((c) => ({
           kind: "command",
           label: c.label,
@@ -219,7 +227,7 @@ export default function CommandPalette({ open, onClose, files, commands, onOpenF
             const showCat = showCatAt[i]
             return (
               <div key={i} className="palette-row">
-                {showCat && <div className="palette-cat">{item.category}</div>}
+                {showCat && item.category && <div className="palette-cat">{t.palette.categories[item.category]}</div>}
                 <button
                   className={`palette-item ${i === clampedSelected ? "palette-item-selected" : ""}`}
                   onMouseEnter={() => setSelected(i)}

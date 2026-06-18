@@ -1,5 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
 import type { DepStatus } from "./checkDeps"
+import { useT } from "./i18n"
 
 const DOCS_BASE = "https://github.com/sadriica/comdtex/blob/main/docs/installing-deps.md"
 
@@ -27,15 +28,14 @@ function getOsHint(tool: DepName): string {
 }
 
 export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: DepsWarningProps) {
+  const t = useT()
   const missing: Array<{ name: DepName; label: string; feature: string; url: string }> = []
 
   if (!deps.pandoc && !dismissed.includes("pandoc")) {
     missing.push({
       name: "pandoc",
       label: "pandoc",
-      feature: useWasmTex
-        ? "necesario para exportar DOCX, Beamer y Markdown→PDF (no para PDF normal)"
-        : "necesario para exportar PDF, DOCX, Beamer",
+      feature: useWasmTex ? t.deps.pandocFeatureWasm : t.deps.pandocFeatureNoWasm,
       url: `${DOCS_BASE}#pandoc`,
     })
   }
@@ -44,7 +44,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
     missing.push({
       name: "zip",
       label: "zip",
-      feature: "necesario para backup del vault y export a .cmdx",
+      feature: t.deps.zipFeature,
       url: `${DOCS_BASE}#zip`,
     })
   }
@@ -70,7 +70,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
   return (
     <div className="deps-warning" role="alert">
       <span className="deps-warning-text">
-        ⚠ Algunas funciones requieren herramientas externas:{" "}
+        {t.deps.intro}{" "}
         {missing.map((item) => (
           <span key={item.name} className="deps-warning-item">
             <strong>{item.label}</strong> — {item.feature}
@@ -83,14 +83,14 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
               className="deps-warning-btn"
               onClick={() => handleInstall(item)}
             >
-              Instalar
+              {t.deps.install}
             </button>
             <button
               className="deps-warning-dismiss"
               onClick={() => onDismiss(item.name)}
-              title={`Ignorar ${item.label}`}
+              title={t.deps.ignoreTitle(item.label)}
             >
-              Ignorar
+              {t.deps.ignore}
             </button>
           </span>
         ))}

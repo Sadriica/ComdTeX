@@ -41,16 +41,27 @@ function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] 
   return blocks
 }
 
+// Cache rendered display-math HTML by source. Without it, `update()` re-ran
+// KaTeX for every visible block on every keystroke / cursor move — the dominant
+// per-keystroke cost in a math-heavy document. Invalidated by macros reference
+// (macros only change when macros.md is saved).
+const mathHtmlCache = new Map<string, string | null>()
+let mathHtmlCacheMacros: KatexMacros | null = null
+
 function renderMathHtml(expr: string, macros: KatexMacros): string | null {
+  if (macros !== mathHtmlCacheMacros) { mathHtmlCache.clear(); mathHtmlCacheMacros = macros }
+  const key = expr.trim()
+  const cached = mathHtmlCache.get(key)
+  if (cached !== undefined) return cached
+  let html: string | null
   try {
-    return katex.renderToString(expr.trim(), {
-      displayMode: true,
-      throwOnError: false,
-      macros,
-    })
+    html = katex.renderToString(key, { displayMode: true, throwOnError: false, macros })
   } catch {
-    return null
+    html = null
   }
+  if (mathHtmlCache.size >= 2000) mathHtmlCache.clear()
+  mathHtmlCache.set(key, html)
+  return html
 }
 
 interface ActiveZone {
@@ -86,7 +97,15 @@ export function setupDisplayMathPreview(
     const model = editor.getModel()
     if (!model) { removeAllZones(); return }
     if (!getEnabled()) { removeAllZones(); return }
+    try { updateZones(model) } catch {
+      // Monaco can throw transient view-zone/layout errors during editor
+      // (re)mount or rapid model changes (e.g. "this.domNode.domNode"); reset and
+      // carry on instead of surfacing an unhandled error.
+      try { removeAllZones() } catch { /* ignore */ }
+    }
+  }
 
+  function updateZones(model: monacoApi.editor.ITextModel) {
     const cursorLine = editor.getPosition()?.lineNumber ?? 0
     const blocks = findDisplayMathBlocks(model)
     const macros = getMacros()
@@ -164,14 +183,28 @@ export function setupDisplayMathPreview(
     }
   }
 
-  update()
+  // Debounce: typing fires content + cursor changes rapidly (2× per keystroke).
+  // Running the full-document scan + KaTeX synchronously on each was the main
+  // editor lag in math-heavy files. Coalesce into one update shortly after the
+  // user pauses; the KaTeX cache above keeps that update cheap.
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  const scheduleUpdate = () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => { debounceTimer = null; update() }, 140)
+  }
 
-  const d1 = editor.onDidChangeCursorPosition(() => update())
-  const d2 = editor.onDidChangeModelContent(() => update())
-  const d3 = editor.onDidChangeModel(() => { removeAllZones(); update() })
+  // Defer the first pass: running it synchronously inside onMount (before the
+  // editor's view is fully laid out) is what triggered the Monaco view-zone
+  // "this.domNode.domNode" error when opening a math-heavy file.
+  scheduleUpdate()
+
+  const d1 = editor.onDidChangeCursorPosition(scheduleUpdate)
+  const d2 = editor.onDidChangeModelContent(scheduleUpdate)
+  const d3 = editor.onDidChangeModel(() => { removeAllZones(); scheduleUpdate() })
 
   return {
     dispose() {
+      if (debounceTimer) clearTimeout(debounceTimer)
       d1.dispose()
       d2.dispose()
       d3.dispose()

@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState } from "react"
+import { memo, useRef, useMemo, useState } from "react"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import type { FileNode } from "./types"
 import ContextMenu from "./ContextMenu"
@@ -162,8 +162,8 @@ function FileNodeRow({
       {hasConflict && (
         <span
           className="tree-conflict-badge"
-          title="Cloud-sync conflict"
-          aria-label="Cloud-sync conflict"
+          title={t.cloudSync.conflictBadge}
+          aria-label={t.cloudSync.conflictBadge}
           onClick={(e) => { e.stopPropagation(); onConflictClick?.(node.path) }}
         >⚠</span>
       )}
@@ -199,7 +199,7 @@ function filterTree(nodes: FileNode[], query: string): FileNode[] {
   }, [])
 }
 
-export default function FileTree({
+function FileTree({
   vaultPath,
   tree,
   activePath,
@@ -442,3 +442,9 @@ export default function FileTree({
     </div>
   )
 }
+
+// Memoized: AppContent re-renders on every keystroke, but the file tree only
+// depends on the vault (stable across keystrokes). Without this, a large vault's
+// tree re-rendered on each character typed — the dominant "big vault = slow
+// typing" cost. All callback/array props from App are stable (useCallback/useMemo).
+export default memo(FileTree)

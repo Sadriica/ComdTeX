@@ -680,8 +680,8 @@ export default function GitBar({ vaultPath }: GitBarProps) {
           {gitMissing ? (
             <div className="git-empty-state">
               <div className="git-empty-icon">⎇</div>
-              <div className="git-empty-title">Git no encontrado</div>
-              <div className="git-empty-desc">Instala Git y reinicia la aplicación.</div>
+              <div className="git-empty-title">{g.gitNotFoundTitle}</div>
+              <div className="git-empty-desc">{g.gitNotFoundHint}</div>
             </div>
           ) : notRepo ? (
             <div className="git-empty-state">

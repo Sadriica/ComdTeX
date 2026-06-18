@@ -1,31 +1,12 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { useT } from "./i18n"
-import { showToast } from "./toastService"
 import {
   type Phase,
   type PomodoroConfig,
-  type PomodoroState,
-  type WritingSession,
-  createState,
-  tick,
-  start,
-  pause,
-  reset,
   formatClock,
-  startSession,
   sessionStats,
 } from "./pomodoro"
-
-// Same word-count rule the StatusBar uses for the live document count, so the
-// session word-delta is measured on the same scale (plain prose, code/math
-// stripped out).
-function wordCount(text: string): number {
-  const stripped = text
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/\$\$[\s\S]*?\$\$/g, "")
-    .replace(/\$[^$\n]+?\$/g, "")
-  return stripped.trim() ? stripped.trim().split(/\s+/).length : 0
-}
+import { type FocusTimer, wordCount } from "./useFocusTimer"
 
 const Row = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
   <div className={`stats-row${accent ? " stats-accent" : ""}`}>
@@ -61,75 +42,20 @@ interface FocusTimerPanelProps {
   wordGoal: number
   /** Persist an edited duration back to Settings. */
   onConfigChange: (patch: Partial<PomodoroConfig>) => void
+  /** Timer/session state, owned by AppContent so it survives this panel
+   *  unmounting and keeps ticking in the background (see useFocusTimer). */
+  focusTimer: FocusTimer
 }
 
-export default function FocusTimerPanel({ content, config, wordGoal, onConfigChange }: FocusTimerPanelProps) {
+export default function FocusTimerPanel({ content, config, wordGoal, onConfigChange, focusTimer }: FocusTimerPanelProps) {
   const t = useT()
-
-  const [timer, setTimer] = useState<PomodoroState>(() => createState(config))
+  const { timer, session, now, startTimer, pauseTimer, resetTimer } = focusTimer
   const [showSettings, setShowSettings] = useState(false)
-  const [session, setSession] = useState<WritingSession | null>(null)
-  // Re-render once per second while a session is open so elapsed/wpm stay live.
-  const [now, setNow] = useState(() => Date.now())
-
-  // Latest content/config for the interval closure without re-arming the timer.
-  const contentRef = useRef(content)
-  contentRef.current = content
-  const configRef = useRef(config)
-  configRef.current = config
-  // Timestamp of the previous tick, so the timer advances by REAL elapsed time
-  // rather than a fixed 1s. Browsers throttle background timers, so a fixed
-  // decrement under-counts and drifts away from the Date.now()-based session
-  // stats; measuring the wall-clock delta keeps both in agreement.
-  const lastTickRef = useRef(Date.now())
 
   const phaseLabel = (phase: Phase): string =>
     phase === "work" ? t.focusTimer.phaseWork
       : phase === "break" ? t.focusTimer.phaseBreak
-      : t.focusTimer.phaseLongBreak
-
-  // Single interval: ticks the running timer and refreshes the session clock.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const ts = Date.now()
-      setNow(ts)
-      // Advance by the measured wall-clock seconds since the last tick (≥1),
-      // so a backgrounded/throttled tab catches up instead of losing time.
-      const elapsedSec = Math.max(1, Math.round((ts - lastTickRef.current) / 1000))
-      lastTickRef.current = ts
-      setTimer((prev) => {
-        const { state, phaseCompleted } = tick(prev, elapsedSec, configRef.current)
-        if (phaseCompleted) {
-          // The phase that just finished is the one we were *in* before the tick.
-          showToast(t.focusTimer.phaseDone(phaseLabel(prev.phase)), "info")
-        }
-        return state
-      })
-    }, 1000)
-    return () => clearInterval(id)
-    // phaseLabel/t are stable enough for this lifecycle; arm once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // When the user edits the durations (and the timer is idle), reflect the new
-  // values on the clock immediately. A running timer is left alone until reset.
-  useEffect(() => {
-    setTimer((prev) => (prev.running ? prev : reset(config)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.workMin, config.breakMin, config.longBreakMin, config.cyclesBeforeLongBreak])
-
-  const handleStart = () => {
-    setTimer((prev) => start(prev))
-    // Begin (or keep) a writing session anchored to the current word count.
-    setSession((prev) => prev ?? startSession(Date.now(), wordCount(contentRef.current)))
-  }
-
-  const handlePause = () => setTimer((prev) => pause(prev))
-
-  const handleReset = () => {
-    setTimer(reset(config))
-    setSession(null)
-  }
+        : t.focusTimer.phaseLongBreak
 
   const stats = session ? sessionStats(session, now, wordCount(content)) : null
   const goalWords = stats ? stats.wordsWritten : 0
@@ -142,11 +68,11 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
         <div className="focus-timer-clock">{formatClock(timer.remainingSec)}</div>
         <div className="focus-timer-controls">
           {timer.running ? (
-            <button className="focus-timer-btn" onClick={handlePause}>{t.focusTimer.pause}</button>
+            <button className="focus-timer-btn" onClick={pauseTimer}>{t.focusTimer.pause}</button>
           ) : (
-            <button className="focus-timer-btn focus-timer-btn-primary" onClick={handleStart}>{t.focusTimer.start}</button>
+            <button className="focus-timer-btn focus-timer-btn-primary" onClick={startTimer}>{t.focusTimer.start}</button>
           )}
-          <button className="focus-timer-btn" onClick={handleReset}>{t.focusTimer.reset}</button>
+          <button className="focus-timer-btn" onClick={resetTimer}>{t.focusTimer.reset}</button>
         </div>
         <Row label={t.focusTimer.cycles} value={timer.completedWork} />
         <button

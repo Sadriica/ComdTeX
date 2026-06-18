@@ -9,17 +9,13 @@
 // TODO (phase 2): Cmd+K inline-diff editing and external-file-watch sync are
 // intentionally out of scope for the MVP.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
-import { sendMessage, getPreset, AiError, type ChatMessage } from "./ai/aiProvider"
+import { sendMessage, getPreset, AiError, warmUp, isAiReady, type ChatMessage } from "./ai/aiProvider"
 import { showToast } from "./toastService"
-
-interface DisplayMessage {
-  role: "user" | "assistant"
-  content: string
-}
+import { useAiSessionContext } from "./useAiSession"
 
 interface AiPanelProps {
   settings: Settings
@@ -52,16 +48,38 @@ function aiErrorMessage(e: unknown, t: ReturnType<typeof useT>): string {
   return t.ai.errGeneric(e instanceof Error ? e.message : String(e))
 }
 
+// Warm-up fires at most once per provider configuration per app session — the
+// connection / CLI process only needs priming once; re-warming on every panel
+// open would waste tokens or spawn redundant processes. Reset when the config
+// signature changes (different provider / model / base URL / CLI command).
+let warmedSignature: string | null = null
+
+// Rendered assistant message (full Markdown+math). Memoized + the markdown render
+// is `useMemo`'d on `content`, so a completed message is NOT re-rendered through
+// the (expensive) KaTeX pipeline every time a later message streams a token.
+// Relies on `renderHtml` being a stable reference (a useCallback in AppContent).
+const AssistantContent = memo(function AssistantContent(
+  { content, renderHtml }: { content: string; renderHtml: (md: string) => string },
+) {
+  const html = useMemo(() => renderHtml(content), [content, renderHtml])
+  return <div className="ai-bubble-body markdown-body" dangerouslySetInnerHTML={{ __html: html }} />
+})
+
 export default function AiPanel({
   settings, editor, fileContent, fileName, renderHtml, onOpenSettings,
 }: AiPanelProps) {
   const t = useT()
-  const [messages, setMessages] = useState<DisplayMessage[]>([])
-  const [input, setInput] = useState("")
+  // Chat state comes from context (owned by AiSessionProvider above AppContent),
+  // so it persists across this panel unmounting AND a streamed token re-renders
+  // only this panel — not the whole AppContent tree.
+  const session = useAiSessionContext()
+  const {
+    messages, setMessages, setMessagesFor, input, setInput, includeFile, setIncludeFile, includeSelection, setIncludeSelection,
+    conversations, activeId, newConversation, switchConversation, deleteConversation,
+  } = session
   const [streaming, setStreaming] = useState(false)
-  const [includeFile, setIncludeFile] = useState(true)
-  const [includeSelection, setIncludeSelection] = useState(false)
   const [showActions, setShowActions] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -85,6 +103,30 @@ export default function AiPanel({
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
   }, [messages, streaming])
+
+  // Auto-grow the input textarea with its content (capped), so multi-line
+  // prompts are visible without an inner scrollbar.
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+  }, [input])
+
+  // Warm-up preflight: when the chat opens (and AI is enabled, configured and
+  // warm-up is on), prime the connection / CLI process so the first real message
+  // responds faster. Guarded to fire at most once per provider configuration.
+  useEffect(() => {
+    if (!settings.aiWarmupEnabled || !isAiReady(settings)) return
+    const sig = `${settings.aiProviderId}|${settings.aiModel}|${settings.aiBaseUrl}|${settings.aiCliCommand}`
+    if (warmedSignature === sig) return
+    warmedSignature = sig
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 20000)
+    void warmUp(settings, ctrl.signal).finally(() => clearTimeout(timer))
+    return () => { clearTimeout(timer); ctrl.abort() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.aiWarmupEnabled, settings.aiEnabled, settings.aiProviderId, settings.aiModel, settings.aiBaseUrl, settings.aiCliCommand])
 
   // Abort any in-flight request when the panel unmounts so a streaming fetch
   // doesn't keep running (and calling setState) after the component is gone.
@@ -128,7 +170,10 @@ export default function AiPanel({
       { role: "user", content: composed },
     ]
 
-    setMessages((prev) => [...prev, { role: "user", content: userText }, { role: "assistant", content: "" }])
+    // Pin this run to the conversation it started in, so switching/deleting
+    // conversations mid-stream can't redirect tokens into the wrong thread.
+    const convId = activeId
+    setMessagesFor(convId, (prev) => [...prev, { role: "user", content: userText }, { role: "assistant", content: "" }])
     setInput("")
     setStreaming(true)
     const ctrl = new AbortController()
@@ -138,7 +183,7 @@ export default function AiPanel({
       await sendMessage(settings, history, {
         signal: ctrl.signal,
         onToken: (chunk) => {
-          setMessages((prev) => {
+          setMessagesFor(convId, (prev) => {
             const next = [...prev]
             const last = next[next.length - 1]
             if (last && last.role === "assistant") next[next.length - 1] = { ...last, content: last.content + chunk }
@@ -150,7 +195,7 @@ export default function AiPanel({
       const msg = aiErrorMessage(e, t)
       if (msg) {
         showToast(msg, "error")
-        setMessages((prev) => {
+        setMessagesFor(convId, (prev) => {
           const next = [...prev]
           const last = next[next.length - 1]
           if (last && last.role === "assistant" && !last.content) next.pop()
@@ -161,14 +206,14 @@ export default function AiPanel({
       setStreaming(false)
       abortRef.current = null
     }
-  }, [settings, streaming, preset, buildContext, messages, t])
+  }, [settings, streaming, preset, buildContext, messages, t, activeId, setMessagesFor, setInput])
 
   const stop = useCallback(() => { abortRef.current?.abort() }, [])
 
   const clearThread = useCallback(() => {
     abortRef.current?.abort()
     setMessages([])
-  }, [])
+  }, [setMessages])
 
   // ── Editor edit helpers — both go through Monaco's undo stack. ──────────────
   const insertAtCursor = useCallback((text: string) => {
@@ -207,10 +252,12 @@ export default function AiPanel({
     void run(instruction, useSelection
       ? { file: includeFile, selection: true }
       : { file: true, selection: includeSelection })
-  }, [editor, run, includeFile, includeSelection])
+  }, [editor, run, includeFile, includeSelection, setIncludeFile, setIncludeSelection])
 
   const onInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    // Enter sends; Shift+Enter inserts a newline. Ignore Enter while an IME
+    // composition is active so it only commits the candidate.
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       void run(input)
     } else if (e.key === "/" && input === "") {
@@ -265,33 +312,80 @@ export default function AiPanel({
           {preset.label}{settings.aiModel ? ` · ${settings.aiModel}` : ""}
         </span>
         <div className="panel-header-actions">
+          <button className="panel-header-btn" title={t.ai.newConversation} onClick={() => { newConversation(); setShowHistory(false) }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px" }}>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+          <button className={`panel-header-btn${showHistory ? " active" : ""}`} title={t.ai.conversations} aria-expanded={showHistory} onClick={() => setShowHistory((v) => !v)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px" }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
           <button className="panel-header-btn" title={t.ai.clearThread} onClick={clearThread}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px" }}>
               <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6" />
             </svg>
           </button>
-          <button className="panel-header-btn" title={t.ai.settingsShortcut} onClick={onOpenSettings}>⚙</button>
+          <button className="panel-header-btn" title={t.ai.settingsShortcut} onClick={onOpenSettings}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px" }}>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
       </div>
 
+      {showHistory && (
+        <div className="ai-history" role="listbox" aria-label={t.ai.conversations}>
+          {conversations.map((c) => (
+            <div key={c.id} className={`ai-history-item${c.id === activeId ? " active" : ""}`} role="option" aria-selected={c.id === activeId}>
+              <button
+                type="button"
+                className="ai-history-title"
+                onClick={() => { switchConversation(c.id); setShowHistory(false) }}
+              >{c.title || t.ai.newConversation}</button>
+              <button
+                type="button"
+                className="ai-history-del"
+                title={t.ai.deleteConversation}
+                aria-label={t.ai.deleteConversation}
+                onClick={() => deleteConversation(c.id)}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="ai-messages" ref={listRef}>
         {messages.length === 0 && <div className="panel-empty">{t.ai.emptyThread}</div>}
-        {messages.map((m, i) => (
-          <div key={i} className={`ai-bubble ai-bubble-${m.role}`}>
-            <div className="ai-bubble-role">{m.role === "user" ? t.ai.you : t.ai.assistant}</div>
-            {m.role === "assistant"
-              ? <div className="ai-bubble-body markdown-body" dangerouslySetInnerHTML={{ __html: renderHtml(m.content || (streaming ? "…" : "")) }} />
-              : <div className="ai-bubble-body ai-bubble-user-text">{m.content}</div>}
-            {m.role === "assistant" && m.content && (
-              <div className="ai-bubble-actions">
-                <button className="ai-btn" onClick={() => insertAtCursor(m.content)}>{t.ai.insertAtCursor}</button>
-                <button className="ai-btn" onClick={() => replaceSelection(m.content)}>{t.ai.replaceSelection}</button>
-                <button className="ai-btn" onClick={() => void copy(m.content)}>{t.ai.copy}</button>
-              </div>
-            )}
-          </div>
-        ))}
-        {streaming && <div className="ai-streaming">{t.ai.thinking}</div>}
+        {messages.map((m, i) => {
+          // The message currently being streamed: render it as cheap plain text
+          // with a blinking caret instead of running the Markdown+KaTeX pipeline
+          // on every token; full Markdown render happens once it completes.
+          const isStreamingMsg = streaming && m.role === "assistant" && i === messages.length - 1
+          return (
+            <div key={i} className={`ai-bubble ai-bubble-${m.role}`}>
+              <div className="ai-bubble-role">{m.role === "user" ? t.ai.you : t.ai.assistant}</div>
+              {m.role === "user" ? (
+                <div className="ai-bubble-body ai-bubble-user-text">{m.content}</div>
+              ) : isStreamingMsg ? (
+                m.content
+                  ? <div className="ai-bubble-body ai-streaming-text">{m.content}<span className="ai-cursor" /></div>
+                  : <div className="ai-bubble-body ai-typing-wrap"><span className="ai-typing"><span /><span /><span /></span></div>
+              ) : (
+                <AssistantContent content={m.content} renderHtml={renderHtml} />
+              )}
+              {m.role === "assistant" && m.content && !isStreamingMsg && (
+                <div className="ai-bubble-actions">
+                  <button className="ai-btn" onClick={() => insertAtCursor(m.content)}>{t.ai.insertAtCursor}</button>
+                  <button className="ai-btn" onClick={() => replaceSelection(m.content)}>{t.ai.replaceSelection}</button>
+                  <button className="ai-btn" onClick={() => void copy(m.content)}>{t.ai.copy}</button>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       <div className="ai-context-chips">

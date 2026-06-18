@@ -33,6 +33,8 @@ export interface SendOptions {
   onToken?: (chunk: string) => void
   /** Abort signal so the UI can cancel an in-flight request. */
   signal?: AbortSignal
+  /** Cap on output tokens. Used by the warm-up preflight to keep it near-free. */
+  maxTokens?: number
 }
 
 export type ProviderId = "anthropic" | "openai" | "gemini" | "openai-compatible" | "cli"
@@ -216,6 +218,7 @@ class HttpProvider {
       body: JSON.stringify({
         model: this.cfg.model,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
         stream: true,
       }),
     })
@@ -257,7 +260,7 @@ class HttpProvider {
       signal: opts.signal,
       body: JSON.stringify({
         model: this.cfg.model,
-        max_tokens: 4096,
+        max_tokens: opts.maxTokens ?? 4096,
         ...(system ? { system } : {}),
         messages: convo.map((m) => ({ role: m.role, content: m.content })),
         stream: true,
@@ -301,6 +304,7 @@ class HttpProvider {
       body: JSON.stringify({
         contents,
         ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+        ...(opts.maxTokens ? { generationConfig: { maxOutputTokens: opts.maxTokens } } : {}),
       }),
     })
     if (!res.ok) throw new AiError(await errText(res))
@@ -414,6 +418,41 @@ export async function sendMessage(
     apiKey: settings.aiApiKey,
     model: settings.aiModel,
   }).send(withSystem, opts)
+}
+
+/** True when the AI is enabled AND has the config its provider needs to send. */
+export function isAiReady(settings: Settings): boolean {
+  if (!settings.aiEnabled) return false
+  const id = settings.aiProviderId as ProviderId
+  if (id === "cli") return !!settings.aiCliCommand.trim()
+  if (id === "openai-compatible" && !settings.aiBaseUrl.trim()) return false
+  return !!settings.aiModel.trim()
+}
+
+/**
+ * Best-effort warm-up "preflight" run when the chat opens, so the first real
+ * message feels faster: for HTTP providers it establishes the DNS/TLS/keep-alive
+ * connection; for the CLI it spins up the agent process and primes its
+ * auth/config caches. Deliberately sends a trivial 1-word prompt WITHOUT the
+ * (large) ComdTeX system context, and caps output to ~1 token, so it stays
+ * near-free. Errors are swallowed — a failed warm-up must never surface.
+ */
+export async function warmUp(settings: Settings, signal?: AbortSignal): Promise<void> {
+  if (!isAiReady(settings)) return
+  const id = settings.aiProviderId as ProviderId
+  // Skip the CLI provider: `Command.execute()` doesn't honor an AbortSignal, so a
+  // warm-up spawn couldn't be cancelled (orphaned process on a slow/hanging local
+  // agent), and the speed benefit of pre-spawning a one-shot CLI is marginal.
+  if (id === "cli") return
+  const ping: ChatMessage[] = [{ role: "user", content: "Hi" }]
+  try {
+    await new HttpProvider({
+      providerId: id,
+      baseUrl: settings.aiBaseUrl,
+      apiKey: settings.aiApiKey,
+      model: settings.aiModel,
+    }).send(ping, { signal, maxTokens: 1 })
+  } catch { /* warm-up is best-effort — ignore all failures */ }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

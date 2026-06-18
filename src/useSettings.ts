@@ -50,6 +50,10 @@ export interface Settings {
   aiApiKey: string
   /** Command line for the local agent CLI bridge (e.g. "opencode run" or "claude -p"). */
   aiCliCommand: string
+  /** Send a tiny preflight request when the chat opens to warm up the connection
+   *  / CLI process, so the first real message feels faster. Only fires when AI is
+   *  enabled and configured. */
+  aiWarmupEnabled: boolean
 
   // ── Cloud sync (BYO cloud, Option A) ───────────────────────────────────────
   /** Show the cloud-sync banner/hints (e.g. "move vault into synced folder"). */
@@ -90,6 +94,7 @@ const DEFAULTS: Settings = {
   aiModel: "",
   aiApiKey: "",
   aiCliCommand: "",
+  aiWarmupEnabled: true,
   cloudSyncBannerEnabled: true,
   cloudSyncDetectEnabled: true,
 }
