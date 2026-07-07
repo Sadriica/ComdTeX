@@ -74,7 +74,7 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Cargo clippy (lint, warnings as errors)
         working-directory: src-tauri
@@ -87,6 +87,17 @@ jobs:
       - name: Run tests
         run: npm test -- --run
 
+      - name: Run tests with coverage (regression floor)
+        if: matrix.os == 'ubuntu-22.04'
+        # TODO: `@vitest/coverage-v8` is not currently declared as a
+        # devDependency (package-lock.json only lists it as vitest's own
+        # *optional* peer dependency, so `npm ci` won't install it) — this
+        # step will fail with "MISSING DEPENDENCY" until it's added for real.
+        # continue-on-error keeps that failure informational rather than
+        # blocking the job; flip it off once the dependency lands.
+        continue-on-error: true
+        run: npm run test:coverage
+
       - name: Cargo check (Rust only, fast)
         working-directory: src-tauri
         env:
@@ -96,10 +107,6 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Informational until we mock Tauri APIs (or migrate to tauri-driver).
-    # The app calls getCurrentWindow() etc. on mount; without a Tauri runtime
-    # the React tree never renders, so the .welcome-logo locator times out.
-    continue-on-error: true
 
     steps:
       - name: Checkout

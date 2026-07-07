@@ -1,4 +1,5 @@
 import type { Lang } from "./i18n"
+import { STORAGE_KEYS } from "./storageKeys"
 
 export interface Settings {
   fontSize: number
@@ -44,8 +45,9 @@ export interface Settings {
   /** Model id (e.g. "claude-3-5-sonnet-latest", "gpt-4o-mini", "gemini-1.5-flash"). */
   aiModel: string
   /**
-   * API key. Stored in localStorage for the MVP.
-   * TODO (phase 2): move to OS keychain (Tauri plugin) instead of localStorage.
+   * API key. Kept in memory here for backwards-compatible consumer access,
+   * but persisted in the OS keychain (via `secretStore.ts`) rather than in
+   * the `comdtex_settings` localStorage blob — see `useSettings()` below.
    */
   aiApiKey: string
   /** Command line for the local agent CLI bridge (e.g. "opencode run" or "claude -p"). */
@@ -99,7 +101,8 @@ const DEFAULTS: Settings = {
   cloudSyncDetectEnabled: true,
 }
 
-const KEY = "comdtex_settings"
+const KEY = STORAGE_KEYS.SETTINGS
+const AI_API_KEY_SECRET = "aiApiKey"
 
 function load(): Settings {
   try {
@@ -111,15 +114,81 @@ function load(): Settings {
   }
 }
 
-import { useState, useCallback } from "react"
+/**
+ * `aiApiKey` must never be written to the `comdtex_settings` localStorage
+ * blob — it is persisted separately via the OS keychain (`secretStore.ts`).
+ * This strips it before every `localStorage.setItem(KEY, ...)` call.
+ */
+function withoutApiKey(settings: Settings): Omit<Settings, "aiApiKey"> {
+  const { aiApiKey: _aiApiKey, ...rest } = settings
+  return rest
+}
+
+import { useState, useCallback, useEffect, useRef } from "react"
+import { getSecret, setSecret } from "./secretStore"
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(load)
+  const hydrated = useRef(false)
+
+  // One-time migration + async rehydration on mount: move any legacy
+  // plaintext `aiApiKey` (from older builds that persisted it in
+  // localStorage) into the keychain, strip it from the settings JSON, and
+  // load whatever key is currently in the keychain (or the localStorage
+  // fallback inside secretStore.ts) into in-memory state.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const raw = localStorage.getItem(KEY)
+      let legacyKey = ""
+      try {
+        legacyKey = raw ? (JSON.parse(raw).aiApiKey ?? "") : ""
+      } catch {
+        legacyKey = ""
+      }
+
+      if (legacyKey) {
+        await setSecret(AI_API_KEY_SECRET, legacyKey)
+      }
+
+      // Always strip aiApiKey from the persisted blob, whether or not it
+      // was present (defends against future accidental writes too).
+      try {
+        const current = localStorage.getItem(KEY)
+        if (current) {
+          const parsed = JSON.parse(current)
+          if ("aiApiKey" in parsed) {
+            delete parsed.aiApiKey
+            localStorage.setItem(KEY, JSON.stringify(parsed))
+          }
+        }
+      } catch {
+        // ignore — non-fatal
+      }
+
+      const keychainKey = legacyKey || (await getSecret(AI_API_KEY_SECRET)) || ""
+
+      hydrated.current = true
+      if (!cancelled && keychainKey) {
+        setSettings((prev) => ({ ...prev, aiApiKey: keychainKey }))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const update = useCallback((partial: Partial<Settings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...partial }
-      localStorage.setItem(KEY, JSON.stringify(next))
+      localStorage.setItem(KEY, JSON.stringify(withoutApiKey(next)))
+
+      if (Object.prototype.hasOwnProperty.call(partial, "aiApiKey") && hydrated.current) {
+        // Fire-and-forget: mirror the new key to the OS keychain. Errors
+        // are handled inside secretStore.ts (falls back to localStorage).
+        void setSecret(AI_API_KEY_SECRET, next.aiApiKey)
+      }
+
       return next
     })
   }, [])

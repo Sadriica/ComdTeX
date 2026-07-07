@@ -158,24 +158,28 @@ function generate(ast: ASTNode[]): string {
     edges.push(label ? `${from} -->|"${label}"| ${to}` : `${from} --> ${to}`)
   }
 
-  // Returns new open tails after processing all nodes
-  function gen(nodes: ASTNode[], tails: string[]): string[] {
+  // Returns new open tails after processing all nodes. `firstLabel`, when given,
+  // labels the edges from the incoming `tails` into the FIRST node only — used to
+  // put "Yes"/"No" on the branches leaving an IF condition diamond.
+  function gen(nodes: ASTNode[], tails: string[], firstLabel?: string): string[] {
+    let first = true
     for (const node of nodes) {
-      tails = genOne(node, tails)
+      tails = genOne(node, tails, first ? firstLabel : undefined)
+      first = false
     }
     return tails
   }
 
-  function genOne(node: ASTNode, tails: string[]): string[] {
+  function genOne(node: ASTNode, tails: string[], firstLabel?: string): string[] {
     if (node.t === "simple") {
       const id = mkNode(node.kind, node.text)
-      tails.forEach(t => addEdge(t, id))
+      tails.forEach(t => addEdge(t, id, firstLabel))
       return node.kind === "terminal" ? [] : [id]
     }
 
     if (node.t === "for") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d))
+      tails.forEach(t => addEdge(t, d, firstLabel))
       const bodyTails = gen(node.body, [d])
       bodyTails.forEach(t => addEdge(t, d, "↺"))
       return [d]  // "No / Done" exit
@@ -183,45 +187,53 @@ function generate(ast: ASTNode[]): string {
 
     if (node.t === "while") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d))
+      tails.forEach(t => addEdge(t, d, firstLabel))
       const bodyTails = gen(node.body, [d])
       bodyTails.forEach(t => addEdge(t, d, "↺"))
       return [d]
     }
 
     if (node.t === "repeat") {
-      // body runs first, condition checked at end
-      const bodyTails = gen(node.body, tails)
+      // body runs first, condition checked at end. The first node the body
+      // allocates (uid `n${counter}` before gen runs) is the loop-entry we jump
+      // back to when the UNTIL condition is not yet met.
+      const bodyHead = `n${counter}`
+      const hadBody = counter
+      const bodyTails = gen(node.body, tails, firstLabel)
       const d = mkDiamond(`UNTIL ${node.cond}`)
       bodyTails.forEach(t => addEdge(t, d))
-      // Loop back: re-entry into body start — approximate via back to d
-      addEdge(d, d, "↺ No")
+      // Loop back to the body's start on "No" (condition not met yet). Guard the
+      // degenerate empty-body case, where no head node exists to return to.
+      if (counter > hadBody) addEdge(d, bodyHead, "↺ No")
       return [d]  // "Yes / Exit" tail
     }
 
     if (node.t === "if") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d))
+      tails.forEach(t => addEdge(t, d, firstLabel))
 
       const merges: string[] = []
-      const thenTails = gen(node.then, [d])
+      // THEN path is the diamond's "Yes" branch.
+      const thenTails = gen(node.then, [d], "Yes")
       merges.push(...thenTails)
 
-      // Chain ELSE IF diamonds off previous diamond's No path
+      // Chain ELSE IF diamonds off previous diamond's "No" path; each else-if
+      // body is that diamond's own "Yes" branch.
       let prev = d
       for (const eif of node.elseIfs) {
         const ed = mkDiamond(eif.cond)
         addEdge(prev, ed, "No")
-        const eifTails = gen(eif.body, [ed])
+        const eifTails = gen(eif.body, [ed], "Yes")
         merges.push(...eifTails)
         prev = ed
       }
 
       if (node.else_) {
-        const elseTails = gen(node.else_, [prev])
+        // ELSE is the final diamond's "No" branch.
+        const elseTails = gen(node.else_, [prev], "No")
         merges.push(...elseTails)
       } else {
-        merges.push(prev)  // No-branch falls through
+        merges.push(prev)  // No-branch falls through (labelled by the next node)
       }
 
       return merges

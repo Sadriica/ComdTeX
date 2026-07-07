@@ -5,20 +5,49 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "allow-allow-vault-dir",
+    "allow-set-secret",
+    "allow-get-secret",
+    "allow-delete-secret",
     "opener:default",
     "fs:default",
-    "fs:allow-read-file",
-    "fs:allow-read-dir",
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$HOME/.dropbox/info.json" },
+        { "path": "$HOME/AppData/Local/Dropbox/info.json" },
+        { "path": "$HOME/AppData/Roaming/Dropbox/info.json" },
+        { "path": "$HOME/Dropbox" },
+        { "path": "$HOME/Library/CloudStorage" },
+        { "path": "$HOME/Library/CloudStorage/*" },
+        { "path": "$HOME/Google Drive" },
+        { "path": "$HOME/My Drive" },
+        { "path": "$HOME/GoogleDrive" },
+        { "path": "$HOME/OneDrive" },
+        { "path": "$HOME/OneDrive - Personal" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        { "path": "$HOME/.dropbox/info.json" },
+        { "path": "$HOME/AppData/Local/Dropbox/info.json" },
+        { "path": "$HOME/AppData/Roaming/Dropbox/info.json" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$HOME/Library/CloudStorage" }
+      ]
+    },
     "fs:allow-write-file",
     "fs:allow-write-text-file",
-    "fs:allow-read-text-file",
     "fs:allow-mkdir",
-    "fs:allow-exists",
     "fs:allow-stat",
     "fs:allow-remove",
     "fs:allow-rename",
     "fs:allow-copy-file",
-    "fs:scope-home-recursive",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",

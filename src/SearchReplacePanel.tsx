@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react"
 import { displayBasename } from "./pathUtils"
 import { buildSearchRegExp, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
-import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
 import { type SearchReplaceState, type SearchReplaceResult } from "./useSearchReplaceState"
+import { VaultSearchIndex } from "./searchIndex"
 
 interface SearchReplacePanelProps {
   vaultPath: string
@@ -15,6 +15,24 @@ interface SearchReplacePanelProps {
 }
 
 const IGNORED_SEARCH_DIRS = new Set(["node_modules"])
+
+// Shared indexed path: one in-memory content/mtime cache per vault, reused
+// across panel mounts (the panel unmounts when the user switches sidebar
+// panels) and across successive searches within a session. This panel does
+// its own regex matching (wholeWord, matchStart/matchEnd for inline replace)
+// so it can't reuse VaultSearchIndex.search() directly, but it reuses the
+// SAME cache primitive (`syncFile`) that `useVault.search()` uses, so a file
+// unchanged since the last search — in this panel OR the Search panel — is
+// served from memory instead of re-read from disk.
+const panelIndexes = new Map<string, VaultSearchIndex>()
+function getPanelIndex(vaultPath: string): VaultSearchIndex {
+  let idx = panelIndexes.get(vaultPath)
+  if (!idx) {
+    idx = new VaultSearchIndex()
+    panelIndexes.set(vaultPath, idx)
+  }
+  return idx
+}
 
 function highlightMatch(content: string, matchStart: number, matchEnd: number): { before: string; match: string; after: string } {
   const RADIUS = 40
@@ -49,7 +67,8 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
     setResults([])
 
     try {
-      const { readDir, readTextFile } = await import("@tauri-apps/plugin-fs")
+      const { readDir, readTextFile, stat } = await import("@tauri-apps/plugin-fs")
+      const index = getPanelIndex(_vaultPath)
       const found: SearchReplaceResult[] = []
 
       async function scanDir(dirPath: string) {
@@ -66,7 +85,12 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
             await scanDir(fullPath)
           } else if (entry.name.endsWith(".md") || entry.name.endsWith(".tex")) {
             try {
-              const text = toEditorContent(fullPath, await readTextFile(fullPath))
+              // mtime-gated: unchanged since the last sync (by this panel or
+              // useVault.search) → served from memory, no readTextFile call.
+              const mtimeMs = (await stat(fullPath)).mtime?.getTime()
+              if (mtimeMs === undefined) continue
+              const entryData = await index.syncFile(fullPath, mtimeMs, () => readTextFile(fullPath))
+              const text = entryData.content
               const lines = text.split("\n")
               lines.forEach((lineContent, lineIdx) => {
                 const re = new RegExp(validPattern.source, validPattern.flags)

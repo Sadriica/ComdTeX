@@ -5,6 +5,7 @@ import { useFocusTrap } from "./useFocusTrap"
 import { PROVIDER_PRESETS, getPreset } from "./ai/aiProvider"
 import { providerLabel, type CloudProvider } from "./cloudSync"
 import { showToast } from "./toastService"
+import { STORAGE_KEYS } from "./storageKeys"
 
 interface SettingsModalProps {
   open: boolean
@@ -42,7 +43,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   const aiPreset = getPreset(settings.aiProviderId)
 
   const handleResetCloudHints = () => {
-    try { localStorage.removeItem("comdtex_cloud_banner_dismissed") } catch { /* ignore */ }
+    try { localStorage.removeItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) } catch { /* ignore */ }
     showToast(t.cloudSync.settings.resetDismissedDone, "success")
   }
 

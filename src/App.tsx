@@ -3,7 +3,7 @@ import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
-import { writeTextFile, readTextFile, exists, mkdir, copyFile, remove } from "@tauri-apps/plugin-fs"
+import { writeTextFile, readTextFile, exists, mkdir, copyFile } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
@@ -31,6 +31,7 @@ import {
   type SpellLang,
 } from "./spellcheck"
 import { useVault } from "./useVault"
+import { useExportActions } from "./useExportActions"
 import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
 import { AiSessionProvider } from "./useAiSession"
@@ -38,7 +39,8 @@ import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
-import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
+import { pathJoin, displayBasename } from "./pathUtils"
+import { writeTextFileAtomic } from "./atomicWrite"
 import TitleBar from "./TitleBar"
 import MenuBar from "./MenuBar"
 import type { MenuDef, MenuEntry } from "./MenuBar"
@@ -60,17 +62,16 @@ import SymbolPickerPanel from "./SymbolPickerPanel"
 import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand } from "./CommandPalette"
+import { buildPaletteCommands } from "./commands"
+import { buildMenus } from "./menus"
 import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
-import { exportToTex, exportReveal } from "./exporter"
-import { exportPdf as exportPdfAction, exportAnkiCardsToFile, compileLatexPdf as compileLatexPdfAction, importDocument as importDocumentAction, exportTypst as exportTypstAction, exportTypstPdf as exportTypstPdfAction } from "./exportActions"
-import { toPandocMarkdownInput } from "./exportConversion"
+import { exportToTex } from "./exporter"
 import type { LatexDiagnostic } from "./latexErrors"
 import LatexErrorModal from "./LatexErrorModal"
-import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import { checkDependencies, type DepStatus } from "./checkDeps"
 import DepsWarning, { type DepName } from "./DepsWarning"
@@ -90,7 +91,6 @@ import { buildSearchRegExp, replaceMatchAt, replaceMatches, type SearchReplaceOp
 import { toEditorContent, toDiskContent } from "./cmdxFormat"
 import { resolveTransclusions } from "./transclusion"
 import { scanStructuralLabels } from "./structuralLabels"
-import { composeProjectMarkdown } from "./projectExport"
 import { showToast } from "./toastService"
 import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
@@ -98,14 +98,15 @@ import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
 import { processTemplateVariables } from "./templates"
 import { setFlowchartSvg, setExcalidrawSvg, getExcalidrawSvg, setExcalidrawPlaceholderText } from "./environments"
+import { STORAGE_KEYS } from "./storageKeys"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
-const RECENT_KEY = "comdtex_recent"
-const BOOKMARKS_KEY = "comdtex_bookmarks"
-const CURSOR_KEY = "comdtex_cursor_positions"
+const RECENT_KEY = STORAGE_KEYS.RECENT_FILES
+const BOOKMARKS_KEY = STORAGE_KEYS.BOOKMARKS
+const CURSOR_KEY = STORAGE_KEYS.CURSOR_POSITIONS
 const MAX_RECENT = 10
-type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
+export type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -427,7 +428,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [deps, setDeps] = useState<DepStatus | null>(null)
   const [depsDismissed, setDepsDismissed] = useState<DepName[]>(() => {
     try {
-      const raw = localStorage.getItem("comdtex_deps_dismissed")
+      const raw = localStorage.getItem(STORAGE_KEYS.DEPS_DISMISSED)
       if (!raw) return []
       const parsed = JSON.parse(raw)
       if (!Array.isArray(parsed)) return []
@@ -442,18 +443,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo | null>(null)
   const [cloudSuggestion, setCloudSuggestion] = useState<CloudSyncInfo | null>(null)
   const [cloudBannerDismissed, setCloudBannerDismissed] = useState<boolean>(() => {
-    try { return localStorage.getItem("comdtex_cloud_banner_dismissed") === "1" } catch { return false }
+    try { return localStorage.getItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) === "1" } catch { return false }
   })
   const dismissCloudBanner = useCallback(() => {
     setCloudBannerDismissed(true)
-    try { localStorage.setItem("comdtex_cloud_banner_dismissed", "1") } catch {}
+    try { localStorage.setItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED, "1") } catch {}
   }, [])
 
   const dismissDep = useCallback((name: DepName) => {
     setDepsDismissed((prev) => {
       if (prev.includes(name)) return prev
       const next = [...prev, name]
-      try { localStorage.setItem("comdtex_deps_dismissed", JSON.stringify(next)) } catch {}
+      try { localStorage.setItem(STORAGE_KEYS.DEPS_DISMISSED, JSON.stringify(next)) } catch {}
       return next
     })
   }, [])
@@ -607,6 +608,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`))
     return found?.content || null
   }, [])
+
+  // Export/import/compile handlers — extracted to useExportActions.ts.
+  const exportActions = useExportActions({
+    editorRef,
+    vault,
+    t,
+    deps,
+    vaultFiles,
+    transclusionResolver,
+    useWasmTex: settings.useWasmTex,
+    macros,
+    wikiNames,
+    bibMap,
+    pdfPath,
+    setLatexDiagnostics,
+    setPdfPath,
+    setTexEngineState,
+  })
+  const { rebuildPdfInPlace } = exportActions
 
   // Stable Markdown→HTML renderer for the AI panel, so memoized assistant
   // messages aren't re-rendered through the KaTeX pipeline on every streamed
@@ -857,13 +877,44 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [bibMap])
 
   // ── Background lint of all open tabs ─────────────────────────────────────
+  // Debounced ~1000ms: `vault.openTabs` gets a new array identity on every
+  // keystroke (useVault's updateContent maps the tabs array), so this used to
+  // re-lint every open tab's full content on the main thread per keystroke.
+  // A per-path cache also skips re-linting tabs whose content hasn't changed
+  // since the last pass; the cache is invalidated wholesale when the lint
+  // context (wikiNames/bibKeys) changes, since a stale-content skip would
+  // otherwise reuse a summary computed against the old context.
+  const lintCacheRef = useRef<Map<string, { content: string; summary: LintSummary }>>(new Map())
+  const lintContextRef = useRef<{ wikiNames: typeof wikiNames; bibKeys: typeof bibKeys } | null>(null)
   useEffect(() => {
-    const context = { vaultFileNames: wikiNames, bibKeys }
-    const counts: Record<string, LintSummary> = {}
-    for (const tab of vault.openTabs) {
-      counts[tab.path] = lintFileSummary(tab.content, tab.name, context)
-    }
-    setTabLintCounts(counts)
+    const timer = setTimeout(() => {
+      const prevContext = lintContextRef.current
+      if (!prevContext || prevContext.wikiNames !== wikiNames || prevContext.bibKeys !== bibKeys) {
+        lintCacheRef.current.clear()
+        lintContextRef.current = { wikiNames, bibKeys }
+      }
+      const context = { vaultFileNames: wikiNames, bibKeys }
+      const cache = lintCacheRef.current
+      const counts: Record<string, LintSummary> = {}
+      const seenPaths = new Set<string>()
+      for (const tab of vault.openTabs) {
+        seenPaths.add(tab.path)
+        const cached = cache.get(tab.path)
+        if (cached && cached.content === tab.content) {
+          counts[tab.path] = cached.summary
+          continue
+        }
+        const summary = lintFileSummary(tab.content, tab.name, context)
+        cache.set(tab.path, { content: tab.content, summary })
+        counts[tab.path] = summary
+      }
+      // Drop cache entries for tabs that have since been closed.
+      for (const path of cache.keys()) {
+        if (!seenPaths.has(path)) cache.delete(path)
+      }
+      setTabLintCounts(counts)
+    }, 1000)
+    return () => clearTimeout(timer)
   }, [vault.openTabs, wikiNames, bibKeys])
 
   // ── Close warning ─────────────────────────────────────────────────────────
@@ -964,7 +1015,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           y: pos.y,
           maximized: isMaximized,
         }
-        localStorage.setItem("comdtex_window_state", JSON.stringify(state))
+        localStorage.setItem(STORAGE_KEYS.WINDOW_STATE, JSON.stringify(state))
       } catch {
         /* ignore */
       }
@@ -977,7 +1028,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     const restore = async () => {
       try {
-        const raw = localStorage.getItem("comdtex_window_state")
+        const raw = localStorage.getItem(STORAGE_KEYS.WINDOW_STATE)
         if (!raw) return
         const state = JSON.parse(raw) as {
           width?: number; height?: number; x?: number; y?: number; maximized?: boolean
@@ -1098,7 +1149,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               })
               if (!path) return
               // Faithful save (masked, extension-aware) — not a lossy export.
-              await writeTextFile(path, toDiskContent(path, editor.getValue()))
+              await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
               await vault.loadVault()
             })()
           },
@@ -1556,7 +1607,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           })
           if (!path) return
           // Faithful save (masked, extension-aware) — not a lossy export.
-          await writeTextFile(path, toDiskContent(path, editor.getValue()))
+          await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
           await vault.loadVault()
         })()
       }
@@ -2331,175 +2382,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // Save As must persist the document faithfully (round-trippable), so write
     // the masked CMDX via toDiskContent — extension-aware (.md / .tex) — never a
     // lossy Obsidian transform. (Obsidian/GFM export is handled by Export Markdown.)
-    await writeTextFile(path, toDiskContent(path, editor.getValue()))
+    await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
     await vault.loadVault()
   }, [vault, t])
-
-  const handleExportMd = useCallback(async () => {
-    const editor = editorRef.current; if (!editor) return
-    const path = await save({
-      title: t.app.dialogExportMd,
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
-    })
-    if (!path) return
-    // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
-    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
-  }, [vault, t])
-
-  const handleExportTex = useCallback(async () => {
-    const editor = editorRef.current; if (!editor) return
-    let macrosText = ""
-    if (vault.vaultPath) {
-      try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
-        if (await exists(mp)) macrosText = await readTextFile(mp)
-      } catch { /* ok */ }
-    }
-    const titleGuess = vault.openFile?.name.replace(/\.[^.]+$/, "") ?? ""
-    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
-    const parsed = extractFrontmatter(content)
-    const fm = parsed?.data
-    const author = fm?.author as string | undefined
-    const tex = exportToTex(
-      content,
-      macrosText,
-      (fm?.title as string) || titleGuess,
-      author,
-      { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
-    )
-    const path = await save({
-      title: t.app.dialogExportTex,
-      filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
-    })
-    if (!path) return
-    await writeTextFile(path, tex)
-  }, [vault, t, transclusionResolver])
-
-  const handleExportProjectTex = useCallback(async () => {
-    let macrosText = ""
-    if (vault.vaultPath) {
-      try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
-        if (await exists(mp)) macrosText = await readTextFile(mp)
-      } catch { /* ok */ }
-    }
-    const content = composeProjectMarkdown(vaultFiles, vault.activeTabPath)
-    if (!content) {
-      showToast(t.app.noMainDocument, "error")
-      return
-    }
-    const parsed = extractFrontmatter(content)
-    const fm = parsed?.data
-    const title = (fm?.title as string) || vault.openFile?.name.replace(/\.[^.]+$/, "") || "project"
-    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
-    const path = await save({
-      title: t.palette.exportProjectTex,
-      filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: `${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
-    })
-    if (!path) return
-    await writeTextFile(path, tex)
-  }, [vault.vaultPath, vault.activeTabPath, vault.openFile, vaultFiles, t])
-
-  const handleCompileLatexPdf = useCallback(async (opts?: { forceWasm?: boolean }) => {
-    await compileLatexPdfAction({
-      activeFile: vault.openFile,
-      vaultPath: vault.vaultPath,
-      activePath: vault.activeTabPath,
-      vaultFiles,
-      deps,
-      dialogs: {
-        saveAs: "Save as",
-        exportMd: t.app.dialogExportMd,
-        exportTex: t.app.dialogExportTex,
-        exportPdf: t.app.dialogExportPdf,
-        exportReveal: "Export Reveal.js",
-      },
-      messages: {
-        pandocMissing: t.app.pandocMissing,
-        generatingPdf: t.app.generatingPdf,
-        pdfDone: t.app.pdfDone,
-        pandocError: t.app.pandocError,
-        backupSuccess: t.app.backupSuccess,
-        backupError: t.app.backupError,
-        copiedLatex: t.app.copiedLatex,
-        copyError: t.app.copyError,
-        revealExportSuccess: t.app.revealExportSuccess,
-        revealExportError: t.app.revealExportError,
-        noMainDocument: t.app.noMainDocument,
-        pdfCompiledLocal: t.app.pdfCompiledLocal,
-        compilationFailed: t.app.compilationFailed,
-        zipMissing: t.app.zipMissing,
-        wasmTexInitializing: t.settings.wasmTexInitializing,
-        wasmTexCompiling: t.settings.wasmTexCompiling,
-        wasmTexFallback: t.settings.wasmTexFallback,
-        wasmTexUnavailable: t.settings.wasmTexUnavailable,
-      },
-      readEditorContent: () => editorRef.current?.getValue() ?? null,
-      reloadVault: async () => { await vault.loadVault?.() },
-      resolveTransclusion: transclusionResolver,
-      toast: showToast,
-      writeClipboard: (text) => navigator.clipboard.writeText(text),
-      onLatexError: (diags) => setLatexDiagnostics(diags),
-      useWasmTex: opts?.forceWasm ?? settings.useWasmTex,
-      onPdfSaved: setPdfPath,
-      onWasmStatus: (state) => setTexEngineState(state),
-    })
-  }, [vault, t, deps, vaultFiles, transclusionResolver, settings.useWasmTex])
-
-  // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
-  // We recompile to the existing pdfPath, no dialog. Skips silently on error.
-  const rebuildPdfInPlace = useCallback(async () => {
-    const editor = editorRef.current
-    const currentFile = vault.openFile
-    if (!editor || !currentFile || !pdfPath) return
-    let macrosText = ""
-    if (vault.vaultPath) {
-      try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
-        if (await exists(mp)) macrosText = await readTextFile(mp)
-      } catch { /* ok */ }
-    }
-    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
-    const parsed = extractFrontmatter(content)
-    const fm = parsed?.data
-    const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
-    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
-    const dir = pathDirname(currentFile.path) || "."
-    const base = currentFile.name.replace(/\.[^.]+$/, "")
-    const tmpTex = `${dir}/${base}.comdtex-rebuild.tex`
-    const tmpPdf = `${dir}/${base}.comdtex-rebuild.pdf`
-    try {
-      await writeTextFile(tmpTex, tex)
-      const attempts: Array<[string, string[]]> = [
-        ["tectonic", [tmpTex, "--outdir", dir]],
-        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
-        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
-      ]
-      for (const [cmdName, args] of attempts) {
-        try {
-          const result = await Command.create(cmdName, args, { cwd: dir }).execute()
-          if (result.code === 0 && await exists(tmpPdf)) {
-            await copyFile(tmpPdf, pdfPath)
-            // Force PdfPreviewPanel to reload by re-setting the same path with a
-            // cache-busting suffix is awkward (Tauri convertFileSrc); instead we
-            // toggle the path through null then back so the effect re-runs.
-            const restore = pdfPath
-            setPdfPath(null)
-            setTimeout(() => setPdfPath(restore), 0)
-            return
-          }
-        } catch { /* try next engine */ }
-      }
-    } finally {
-      await remove(tmpTex).catch(() => {})
-      await remove(tmpPdf).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.aux`).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.log`).catch(() => {})
-    }
-  }, [vault.openFile, vault.vaultPath, pdfPath, transclusionResolver])
 
   // Debounced: when autoRebuildPdf is on, the PDF panel is active, and there
   // is an existing pdfPath, recompile ~3s after content changes.
@@ -2510,129 +2395,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const timer = setTimeout(() => { rebuildPdfInPlace() }, 3000)
     return () => clearTimeout(timer)
   }, [settings.autoRebuildPdf, sidebarMode, pdfPath, vault.openFile?.content, rebuildPdfInPlace])
-
-  const handleExportPdf = useCallback(async () => {
-    await exportPdfAction({
-      activeFile: vault.openFile,
-      vaultPath: vault.vaultPath,
-      activePath: vault.activeTabPath,
-      vaultFiles,
-      deps,
-      dialogs: { saveAs: "Save as", exportMd: t.app.dialogExportMd, exportTex: t.app.dialogExportTex, exportPdf: t.app.dialogExportPdf, exportReveal: "Export Reveal.js" },
-      messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing },
-      readEditorContent: () => editorRef.current?.getValue() ?? null,
-      reloadVault: async () => { await vault.loadVault?.() },
-      resolveTransclusion: transclusionResolver,
-      toast: showToast,
-      writeClipboard: (text) => navigator.clipboard.writeText(text),
-      onLatexError: (diags) => setLatexDiagnostics(diags),
-      onPdfSaved: (path) => setPdfPath(path),
-    })
-  }, [vault, t, deps, vaultFiles, transclusionResolver])
-
-  const handleExportAnki = useCallback(async () => {
-    await exportAnkiCardsToFile(
-      { activeFile: vault.openFile, readEditorContent: () => editorRef.current?.getValue() ?? null, toast: showToast },
-      { ankiNoCards: t.ankiExport.ankiNoCards, ankiExported: t.ankiExport.ankiExported },
-    )
-  }, [vault.openFile, t])
-
-  const handleImportDocument = useCallback(async () => {
-    await importDocumentAction({
-      vaultPath: vault.vaultPath,
-      deps,
-      dialogTitle: t.app.importDocTitle,
-      messages: {
-        pandocMissing: t.app.pandocMissingImport,
-        importing: t.app.importing,
-        importSuccess: t.app.importSuccess,
-        importError: t.app.importError,
-      },
-      toast: showToast,
-      reloadVault: vault.loadVault,
-      openFilePath: vault.openFilePath,
-    })
-  }, [vault.vaultPath, vault.loadVault, vault.openFilePath, t, deps])
-
-  const typstMessages = useMemo(() => ({
-    pandocMissing: t.app.pandocMissingTypst,
-    generating: t.app.typstGenerating,
-    typstSuccess: t.app.typstSuccess,
-    typstError: t.app.typstError,
-    typstPdfSuccess: t.app.typstPdfSuccess,
-    typstPdfError: t.app.typstPdfError,
-  }), [t])
-
-  const handleExportTypst = useCallback(async () => {
-    await exportTypstAction({
-      activeFile: vault.openFile,
-      deps,
-      dialogTitle: t.app.typstExportTitle,
-      messages: typstMessages,
-      readEditorContent: () => editorRef.current?.getValue() ?? null,
-      toast: showToast,
-    })
-  }, [vault.openFile, deps, t, typstMessages])
-
-  const handleExportTypstPdf = useCallback(async () => {
-    await exportTypstPdfAction({
-      activeFile: vault.openFile,
-      deps,
-      dialogTitle: t.app.typstExportTitle,
-      messages: typstMessages,
-      readEditorContent: () => editorRef.current?.getValue() ?? null,
-      toast: showToast,
-    })
-  }, [vault.openFile, deps, t, typstMessages])
-
-  const handleExportDocx = useCallback(async () => {
-    const file = vault.openFile
-    if (!file) return
-    if (deps && !deps.pandoc) {
-      showToast(t.app.pandocMissingDocx, "error", 6000)
-      return
-    }
-    const outPath = await save({ filters: [{ name: "Word Document", extensions: ["docx"] }] })
-    if (!outPath) return
-    const tmpPath = outPath.replace(/\.docx$/i, "_tmp.md")
-    try {
-      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
-      const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"])
-      const result = await cmd.execute()
-      if (result.code !== 0) throw new Error(result.stderr)
-      await remove(tmpPath)
-      showToast(t.app.exportDocxSuccess, "success")
-    } catch (e) {
-      try { await remove(tmpPath) } catch {}
-      showToast(t.app.exportDocxError, "error")
-      console.error(e)
-    }
-  }, [vault.openFile, t, deps])
-
-  const handleExportBeamer = useCallback(async () => {
-    const file = vault.openFile
-    if (!file) return
-    if (deps && !deps.pandoc) {
-      showToast(t.app.pandocMissingBeamer, "error", 6000)
-      return
-    }
-    const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
-    if (!outPath) return
-    const tmpPath = outPath.replace(/\.pdf$/i, "_tmp.md")
-    try {
-      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
-      const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"])
-      const result = await cmd.execute()
-      if (result.code !== 0) throw new Error(result.stderr)
-      await remove(tmpPath)
-      showToast(t.app.exportBeamerSuccess, "success")
-      await openPath(outPath)
-    } catch (e) {
-      try { await remove(tmpPath) } catch {}
-      showToast(t.app.exportBeamerError, "error")
-      console.error(e)
-    }
-  }, [vault.openFile, t, deps])
 
   const handleVaultBackup = useCallback(async () => {
     if (!vault.vaultPath) return
@@ -2738,28 +2500,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   const handleFind = useCallback(() => editorRef.current?.trigger("menu", "actions.find", null), [])
 
-  // ── Reveal.js export ──────────────────────────────────────────────────────
-  const handleExportReveal = useCallback(async () => {
-    const editor = editorRef.current
-    if (!editor || !vault.openFile) return
-    const content = editor.getValue()
-    const title = vault.openFile.name.replace(/\.[^.]+$/, "")
-    const html = exportReveal(content, title)
-    try {
-      const path = await save({
-        title: t.palette.exportReveal,
-        filters: [{ name: "HTML", extensions: ["html"] }],
-        defaultPath: vault.openFile.name.replace(/\.[^.]+$/, ".html"),
-      })
-      if (!path) return
-      await writeTextFile(path, html)
-      showToast(t.app.revealExportSuccess, "success")
-      await openPath(path)
-    } catch {
-      showToast(t.app.revealExportError, "error")
-    }
-  }, [vault.openFile, t])
-
   // ── Search & Replace: replace in a single file ───────────────────────────
   const handleReplaceInFile = useCallback(async (
     filePath: string,
@@ -2777,7 +2517,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         ? replaceMatchAt(text, re, replace, target)
         : replaceMatches(text, re, replace)
       if (count === 0) return 0
-      await writeTextFile(filePath, toDiskContent(filePath, newContent))
+      await writeTextFileAtomic(filePath, toDiskContent(filePath, newContent))
       vault.patchTabContent(filePath, newContent)
       return count
     } catch (e) {
@@ -2856,56 +2596,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })
   }, [])
 
-  // ── HTML export ───────────────────────────────────────────────────────────
-  const handleExportHtml = useCallback(async () => {
-    const editor = editorRef.current
-    if (!editor || !vault.openFile) return
-    const content = editor.getValue()
-    let html: string
-    try {
-      html = sanitizeRenderedHtml(
-        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
-      )
-    } catch { return }
-
-    const previewCss = `
-      body{max-width:860px;margin:2rem auto;padding:0 1.5rem;font-family:Georgia,serif;line-height:1.7;color:#1a1a1a}
-      h1,h2,h3,h4,h5,h6{font-family:system-ui,sans-serif;margin:1.5em 0 .5em;line-height:1.2}
-      pre,code{font-family:monospace;background:#f4f4f4;border-radius:4px}
-      pre{padding:1em;overflow:auto}code{padding:2px 5px}
-      blockquote{border-left:4px solid #ccc;margin:0;padding-left:1em;color:#555}
-      table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:.5em}
-      .eq-block{position:relative;text-align:center;margin:1em 0}
-      .eq-number{position:absolute;right:0;top:50%;transform:translateY(-50%);color:#888}
-      .fig-block{text-align:center;margin:1.5em 0}figcaption{font-size:.9em;color:#555}
-      .callout{border-left:4px solid #888;padding:.75em 1em;margin:1em 0;background:#f9f9f9}
-    `
-
-    const standalone = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${vault.openFile.name.replace(/\.[^.]+$/, "")}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<style>${previewCss}</style>
-</head>
-<body>
-${html}
-</body>
-</html>`
-
-    const path = await save({
-      title: t.palette.exportHtml,
-      filters: [{ name: "HTML", extensions: ["html"] }],
-      defaultPath: vault.openFile.name.replace(/\.[^.]+$/, ".html"),
-    })
-    if (!path) return
-    await writeTextFile(path, standalone)
-    showToast(t.app.htmlExported, "success")
-    await openPath(path)
-  }, [vault, macros, wikiNames, bibMap, transclusionResolver, t])
-
   // ── Insert TOC ────────────────────────────────────────────────────────────
   // Inserts the live `[[toc]]` marker, which the renderer expands into an
   // always-current table of contents (auto-generated on every render) rather
@@ -2915,18 +2605,6 @@ ${html}
   const palInsert = useCallback((snippet: string) => {
     insertSnippet(editorRef.current, snippet)
   }, [])
-
-  const handleExportObsidian = useCallback(async () => {
-    const editor = editorRef.current; if (!editor) return
-    const path = await save({
-      title: t.palette.exportObsidian,
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
-    })
-    if (!path) return
-    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
-    showToast(t.app.revealExportSuccess, "success")
-  }, [vault, t])
 
   const handleInsertToc = useCallback(() => {
     const editor = editorRef.current
@@ -3171,7 +2849,7 @@ ${html}
   useEffect(() => {
     if (!vault.vaultPath) return
     try {
-      const seen = localStorage.getItem("comdtex_onboarding_seen") === "true"
+      const seen = localStorage.getItem(STORAGE_KEYS.ONBOARDING_SEEN) === "true"
       if (!seen) {
         // small delay so the layout settles before the modal appears
         const timer = setTimeout(() => setOnboardingOpen(true), 600)
@@ -3182,7 +2860,7 @@ ${html}
 
   const handleOnboardingClose = useCallback(() => {
     setOnboardingOpen(false)
-    try { localStorage.setItem("comdtex_onboarding_seen", "true") } catch { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEYS.ONBOARDING_SEEN, "true") } catch { /* ignore */ }
   }, [])
 
   // ── Daily notes ─────────────────────────────────────────────────────────
@@ -3249,162 +2927,15 @@ ${html}
   }
 
   // ── Command palette entries ───────────────────────────────────────────────
-  const paletteCommands: PaletteCommand[] = [
-    // ── Edición ──────────────────────────────────────────────────────────────
-    { id: "save",       label: t.palette.save,       shortcut: "Ctrl+S", category: "Edición", action: handleSave },
-    { id: "saveAs",     label: t.palette.saveAs,     shortcut: "Ctrl+Shift+S", category: "Edición", action: handleSaveAs },
-    { id: "find",       label: t.palette.findInFile, shortcut: "Ctrl+F", category: "Edición", action: handleFind },
-    { id: "searchReplace", label: t.palette.searchReplace, category: "Edición", action: () => openPanel("searchReplace") },
-    { id: "fmt:bold",      label: t.toolbar.bold,          shortcut: "Ctrl+B", category: "Edición", action: () => palInsert("**${1:texto}**") },
-    { id: "fmt:italic",    label: t.toolbar.italic,        shortcut: "Ctrl+I", category: "Edición", action: () => palInsert("_${1:texto}_") },
-    { id: "fmt:underline", label: t.toolbar.underline,     category: "Edición", action: () => palInsert("<u>${1:texto}</u>") },
-    { id: "fmt:strike",    label: t.toolbar.strikethrough, category: "Edición", action: () => palInsert("~~${1:texto}~~") },
-    { id: "fmt:code",      label: t.toolbar.inlineCode,    category: "Edición", action: () => palInsert("`${1:código}`") },
-    { id: "fmt:link",      label: t.toolbar.link,          category: "Edición", action: () => palInsert("[${1:texto}](${2:url})") },
-    { id: "fmt:highlight", label: t.toolbar.highlight, category: "Edición", children: [
-      { id: "hl:yellow", label: t.toolbar.hlDefault, category: "Edición", icon: "🟨", action: () => palInsert("==${1:texto}==") },
-      { id: "hl:green",  label: t.toolbar.hlGreen,   category: "Edición", icon: "🟩", action: () => palInsert('<mark class="hl-green">${1:texto}</mark>') },
-      { id: "hl:blue",   label: t.toolbar.hlBlue,    category: "Edición", icon: "🟦", action: () => palInsert('<mark class="hl-blue">${1:texto}</mark>') },
-      { id: "hl:purple", label: t.toolbar.hlPurple,  category: "Edición", icon: "🟪", action: () => palInsert('<mark class="hl-purple">${1:texto}</mark>') },
-      { id: "hl:orange", label: t.toolbar.hlOrange,  category: "Edición", icon: "🟧", action: () => palInsert('<mark class="hl-orange">${1:texto}</mark>') },
-      { id: "hl:red",    label: t.toolbar.hlRed,     category: "Edición", icon: "🟥", action: () => palInsert('<mark class="hl-red">${1:texto}</mark>') },
-      { id: "hl:pink",   label: t.toolbar.hlPink,    category: "Edición", icon: "🌸", action: () => palInsert('<mark class="hl-pink">${1:texto}</mark>') },
-    ] },
-    { id: "fmt:headings", label: t.toolbar.headings, category: "Edición", children: [
-      { id: "h1", label: t.toolbar.lbl_heading1, category: "Edición", action: () => palInsert("# ${1:Título}") },
-      { id: "h2", label: t.toolbar.lbl_heading2, category: "Edición", action: () => palInsert("## ${1:Título}") },
-      { id: "h3", label: t.toolbar.lbl_heading3, category: "Edición", action: () => palInsert("### ${1:Título}") },
-    ] },
-    { id: "fmt:lists", label: t.toolbar.list, category: "Edición", children: [
-      { id: "list:ul",   label: t.toolbar.lbl_list,        category: "Edición", action: () => palInsert("- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}") },
-      { id: "list:ol",   label: t.toolbar.lbl_orderedList, category: "Edición", action: () => palInsert("1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}") },
-      { id: "list:task", label: t.toolbar.lbl_taskList,    category: "Edición", action: () => palInsert("- [ ] ${1:tarea}\n- [ ] ${2:tarea}") },
-    ] },
-
-    // ── Insertar ─────────────────────────────────────────────────────────────
-    { id: "ins:table",  label: t.palette.tableEditor,  category: "Insertar", action: () => setTableEditorOpen(true) },
-    { id: "toc",        label: t.palette.insertToc,    shortcut: "Ctrl+Shift+O", category: "Insertar", action: handleInsertToc },
-    { id: "ins:code",   label: t.palette.insertCodeBlock,  category: "Insertar", action: () => palInsert("```${1:lang}\n${2:código}\n```") },
-    { id: "ins:quote",  label: t.toolbar.quote,        category: "Insertar", action: () => palInsert("> ${1:cita}") },
-    { id: "ins:sep",    label: t.toolbar.separator,    category: "Insertar", action: () => palInsert("\n---\n") },
-    { id: "ins:mathInline", label: t.toolbar.mathInline, category: "Insertar", action: () => palInsert("$${1}$") },
-    { id: "ins:mathBlock",  label: t.toolbar.mathBlock,  category: "Insertar", action: () => palInsert("$$\n${1}\n$$") },
-    { id: "insertExcalidraw", label: t.palette.insertExcalidraw, category: "Insertar", action: handleInsertExcalidraw },
-
-    // ── Matemáticas ──────────────────────────────────────────────────────────
-    { id: "math:symbols", label: t.toolbar.symbols, category: "Matemáticas", children: [
-      { id: "sym:alpha",  label: "α  \\alpha",   category: "Matemáticas", action: () => palInsert("$\\alpha$") },
-      { id: "sym:beta",   label: "β  \\beta",    category: "Matemáticas", action: () => palInsert("$\\beta$") },
-      { id: "sym:gamma",  label: "γ  \\gamma",   category: "Matemáticas", action: () => palInsert("$\\gamma$") },
-      { id: "sym:delta",  label: "δ  \\delta",   category: "Matemáticas", action: () => palInsert("$\\delta$") },
-      { id: "sym:lambda", label: "λ  \\lambda",  category: "Matemáticas", action: () => palInsert("$\\lambda$") },
-      { id: "sym:pi",     label: "π  \\pi",      category: "Matemáticas", action: () => palInsert("$\\pi$") },
-      { id: "sym:sigma",  label: "σ  \\sigma",   category: "Matemáticas", action: () => palInsert("$\\sigma$") },
-      { id: "sym:omega",  label: "ω  \\omega",   category: "Matemáticas", action: () => palInsert("$\\omega$") },
-      { id: "sym:infty",  label: "∞  \\infty",   category: "Matemáticas", action: () => palInsert("$\\infty$") },
-      { id: "sym:partial",label: "∂  \\partial", category: "Matemáticas", action: () => palInsert("$\\partial$") },
-      { id: "sym:nabla",  label: "∇  \\nabla",   category: "Matemáticas", action: () => palInsert("$\\nabla$") },
-      { id: "sym:times",  label: "×  \\times",   category: "Matemáticas", action: () => palInsert("$\\times$") },
-      { id: "sym:leq",    label: "≤  \\leq",     category: "Matemáticas", action: () => palInsert("$\\leq$") },
-      { id: "sym:geq",    label: "≥  \\geq",     category: "Matemáticas", action: () => palInsert("$\\geq$") },
-      { id: "sym:neq",    label: "≠  \\neq",     category: "Matemáticas", action: () => palInsert("$\\neq$") },
-      { id: "sym:approx", label: "≈  \\approx",  category: "Matemáticas", action: () => palInsert("$\\approx$") },
-      { id: "sym:in",     label: "∈  \\in",      category: "Matemáticas", action: () => palInsert("$\\in$") },
-      { id: "sym:subset", label: "⊂  \\subset",  category: "Matemáticas", action: () => palInsert("$\\subset$") },
-      { id: "sym:forall", label: "∀  \\forall",  category: "Matemáticas", action: () => palInsert("$\\forall$") },
-      { id: "sym:exists", label: "∃  \\exists",  category: "Matemáticas", action: () => palInsert("$\\exists$") },
-      { id: "sym:rarr",   label: "→  \\rightarrow", category: "Matemáticas", action: () => palInsert("$\\rightarrow$") },
-      { id: "sym:Rarr",   label: "⇒  \\Rightarrow", category: "Matemáticas", action: () => palInsert("$\\Rightarrow$") },
-    ] },
-    { id: "math:ops", label: t.toolbar.mathOps, category: "Matemáticas", children: [
-      { id: "op:frac", label: t.toolbar.lbl_fraction, category: "Matemáticas", action: () => palInsert("frac(${1:a}, ${2:b})") },
-      { id: "op:sqrt", label: t.toolbar.lbl_sqrt,     category: "Matemáticas", action: () => palInsert("sqrt(${1:x})") },
-      { id: "op:root", label: t.toolbar.lbl_nthRoot,  category: "Matemáticas", action: () => palInsert("root(${1:n}, ${2:x})") },
-      { id: "op:sum",  label: t.toolbar.lbl_sum,      category: "Matemáticas", action: () => palInsert("sum(${1:i=0}, ${2:n})") },
-      { id: "op:int",  label: t.toolbar.lbl_integral, category: "Matemáticas", action: () => palInsert("int(${1:a}, ${2:b})") },
-      { id: "op:lim",  label: t.toolbar.lbl_limit,    category: "Matemáticas", action: () => palInsert("lim(${1:x}, ${2:0})") },
-      { id: "op:der",  label: t.toolbar.lbl_derivative, category: "Matemáticas", action: () => palInsert("der(${1:f}, ${2:x})") },
-      { id: "op:pder", label: t.toolbar.lbl_partialDer, category: "Matemáticas", action: () => palInsert("pder(${1:f}, ${2:x})") },
-    ] },
-    { id: "math:envs", label: t.toolbar.environments, category: "Matemáticas", children: [
-      { id: "env:thm",   label: t.toolbar.lbl_theorem,     category: "Matemáticas", action: () => palInsert(":::theorem[${1:título}]\n${2:enunciado}\n:::") },
-      { id: "env:lem",   label: t.toolbar.lbl_lemma,       category: "Matemáticas", action: () => palInsert(":::lemma[${1:título}]\n${2:enunciado}\n:::") },
-      { id: "env:cor",   label: t.toolbar.lbl_corollary,   category: "Matemáticas", action: () => palInsert(":::corollary\n${1:enunciado}\n:::") },
-      { id: "env:prop",  label: t.toolbar.lbl_proposition, category: "Matemáticas", action: () => palInsert(":::proposition\n${1:enunciado}\n:::") },
-      { id: "env:defn",  label: t.toolbar.lbl_definition,  category: "Matemáticas", action: () => palInsert(":::definition\n${1:definición}\n:::") },
-      { id: "env:ex",    label: t.toolbar.lbl_example,     category: "Matemáticas", action: () => palInsert(":::example\n${1:ejemplo}\n:::") },
-      { id: "env:proof", label: t.toolbar.lbl_proof,       category: "Matemáticas", action: () => palInsert(":::proof\n${1:demostración}\n:::") },
-    ] },
-    { id: "symbols", label: t.palette.symbolPicker, category: "Matemáticas", action: () => openPanel("symbols") },
-
-    // ── Vista (paneles) ──────────────────────────────────────────────────────
-    { id: "panel:files",   label: t.palette.openPanel(t.sidebar.files),   category: "Vista", action: () => openPanel("files") },
-    { id: "outline",       label: t.palette.openPanel(t.sidebar.outline), category: "Vista", action: () => openPanel("outline") },
-    { id: "equations",     label: t.palette.openPanel(t.sidebar.equations), category: "Vista", action: () => openPanel("equations") },
-    { id: "environments",  label: t.palette.openPanel(t.sidebar.environments), category: "Vista", action: () => openPanel("environments") },
-    { id: "citationManager", label: t.palette.openPanel(t.palette.citationManager), category: "Vista", action: () => setCitationManagerOpen(true) },
-    { id: "graph",         label: t.palette.openPanel(t.sidebar.graph),   category: "Vista", action: () => openPanel("graph") },
-    { id: "tags",          label: t.palette.openPanel(t.sidebar.tags),    category: "Vista", action: () => openPanel("tags") },
-    { id: "labels",        label: t.palette.openPanel(t.sidebar.labels),  category: "Vista", action: () => openPanel("labels") },
-    { id: "properties",    label: t.palette.openPanel(t.sidebar.properties), category: "Vista", action: () => openPanel("properties") },
-    { id: "viewComments",  label: t.palette.openPanel(t.sidebar.comments), category: "Vista", action: () => openPanel("comments") },
-    { id: "todo",          label: t.palette.openPanel(t.sidebar.todo),    category: "Vista", action: () => openPanel("todo") },
-    { id: "stats",         label: t.palette.openPanel(t.sidebar.stats),   category: "Vista", action: () => openPanel("stats") },
-    { id: "quality",       label: t.palette.openPanel(t.sidebar.quality), category: "Vista", action: () => openPanel("quality") },
-    { id: "backlinks",     label: t.palette.openPanel(t.sidebar.backlinks), category: "Vista", action: () => openPanel("backlinks") },
-    { id: "findVault",     label: t.palette.openPanel(t.sidebar.search),  shortcut: "Ctrl+Shift+F", category: "Vista", action: () => openPanel("search") },
-    { id: "searchReplacePanel", label: t.palette.openPanel(t.sidebar.searchReplace), category: "Vista", action: () => openPanel("searchReplace") },
-    { id: "viewPdf",       label: t.palette.openPanel(t.sidebar.pdfPreview), category: "Vista", action: () => openPanel("pdfPreview") },
-    { id: "focusTimer",    label: t.palette.openPanel(t.sidebar.focusTimer), category: "Vista", action: () => openPanel("focusTimer") },
-    { id: "panel:cloud",   label: t.palette.openPanel(t.sidebar.cloudSync), category: "Vista", action: () => openPanel("cloudSync") },
-    { id: "panel:help",    label: t.palette.openPanel(t.sidebar.help),    category: "Vista", action: () => openPanel("help") },
-    { id: "focus",         label: t.palette.focusMode,       shortcut: "F11",  category: "Vista", action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },
-    { id: "typewriter", label: t.palette.typewriterMode,  shortcut: typewriterMode ? "✓" : "", category: "Vista", action: () => updateSettings({ typewriterMode: !typewriterMode }) },
-    { id: "syncScroll", label: t.palette.syncScroll,      shortcut: syncScroll ? "✓" : "",     category: "Vista", action: () => updateSettings({ syncScroll: !syncScroll }) },
-    { id: "wordWrap",    label: t.palette.wordWrap,        shortcut: wordWrap ? "✓" : "",       category: "Vista", action: () => updateSettings({ wordWrap: !wordWrap }) },
-    { id: "minimap",     label: t.palette.minimap,         shortcut: minimapEnabled ? "✓" : "", category: "Vista", action: () => updateSettings({ minimapEnabled: !minimapEnabled }) },
-    { id: "spellcheck",  label: t.palette.spellcheck,      shortcut: spellcheck ? "✓" : "",     category: "Vista", action: () => updateSettings({ spellcheck: !spellcheck }) },
-
-    // ── Exportar ─────────────────────────────────────────────────────────────
-    { id: "exportTex",  label: t.palette.exportTex,        category: "Exportar", action: handleExportTex },
-    { id: "exportProjectTex", label: t.palette.exportProjectTex, category: "Exportar", action: handleExportProjectTex },
-    { id: "compileLatexPdf", label: t.palette.compileLatexPdf, category: "Exportar", action: () => handleCompileLatexPdf({ forceWasm: false }) },
-    { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,  category: "Exportar", action: () => handleCompileLatexPdf({ forceWasm: true }) },
-    { id: "exportPdf",  label: t.palette.exportPdf,         category: "Exportar", action: handleExportPdf },
-    { id: "exportHtml", label: t.palette.exportHtml,        category: "Exportar", action: handleExportHtml },
-    { id: "exportDocx", label: t.palette.exportDocx,        category: "Exportar", action: handleExportDocx },
-    { id: "exportTypst", label: t.palette.exportTypst,      category: "Exportar", action: handleExportTypst },
-    ...(deps?.typst ? [{ id: "exportTypstPdf", label: t.palette.exportTypstPdf, category: "Exportar" as const, action: handleExportTypstPdf }] : []),
-    { id: "exportBeamer", label: t.palette.exportBeamer,    category: "Exportar", action: handleExportBeamer },
-    { id: "exportReveal", label: t.palette.exportReveal,    category: "Exportar", action: handleExportReveal },
-    { id: "exportObsidian", label: t.palette.exportObsidian, category: "Exportar", action: handleExportObsidian },
-    { id: "exportAnki", label: t.palette.exportAnkiCards,   category: "Exportar", action: handleExportAnki },
-    { id: "importDoc",  label: t.palette.importDoc,         category: "Exportar", action: handleImportDocument },
-    { id: "copyHtml",   label: t.palette.copyHtml,          category: "Exportar", action: handleCopyHtml },
-    { id: "copyLatex",  label: t.palette.copyLatex,         category: "Exportar", action: handleCopyLatex },
-    { id: "vaultBackup", label: t.palette.vaultBackup,      category: "Exportar", action: handleVaultBackup },
-
-    // ── IA ──────────────────────────────────────────────────────────────────
-    { id: "ai:open",   label: t.palette.openAi, shortcut: "Ctrl+Shift+A", category: "IA", action: () => openPanel("ai") },
-    { id: "ai:cmdk",   label: t.palette.aiInlineEdit, shortcut: "Ctrl+K", category: "IA", action: () => openCmdkRef.current?.() },
-
-    // ── Vault ────────────────────────────────────────────────────────────────
-    { id: "vault",     label: t.palette.openVault,       category: "Vault", action: vault.selectVault },
-    { id: "template",  label: t.palette.newFromTemplate, category: "Vault", action: () => setTemplateOpen(true) },
-    { id: "dailyNote", label: t.palette.openDailyNote,   shortcut: "Ctrl+Shift+D", category: "Vault", action: handleOpenDailyNote },
-    { id: "macros",    label: t.palette.editMacros,      category: "Vault", action: handleOpenMacros },
-    { id: "bib",       label: t.palette.editBib,         category: "Vault", action: handleOpenBib },
-    { id: "settings",  label: t.palette.settings,        category: "Vault", action: () => setSettingsOpen(true) },
-    { id: "checkUpdates", label: t.palette.checkUpdates, category: "Vault", action: () => checkForUpdate().then(info => { setUpdateInfo(info); if (!info.available) showToast(t.app.upToDate) }) },
-    { id: "addComment", label: t.palette.addComment,     shortcut: "Ctrl+Shift+M", category: "Vault", action: () => { void handleAddCommentAtCursor() } },
-    { id: "toggleCommentResolved", label: t.palette.toggleCommentResolved, category: "Vault", action: handleToggleCommentAtCursor },
-    { id: "onboarding", label: t.palette.showOnboarding, category: "Vault", action: () => setOnboardingOpen(true) },
-    { id: "help",      label: t.palette.shortcuts,       shortcut: "?", category: "Vault", action: () => setHelpOpen(true) },
-
-    // ── Navegación ───────────────────────────────────────────────────────────
-    { id: "goBack",    label: t.palette.goBack,    shortcut: "Alt+←", category: "Navegación", action: goBack },
-    { id: "goForward", label: t.palette.goForward, shortcut: "Alt+→", category: "Navegación", action: goForward },
-  ]
+  const paletteCommands: PaletteCommand[] = buildPaletteCommands({
+    t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
+    setTableEditorOpen, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
+    setFocusMode, typewriterMode, syncScroll, wordWrap, minimapEnabled, spellcheck,
+    updateSettings, handleCopyHtml, handleCopyLatex, handleVaultBackup, openCmdkRef,
+    selectVault: vault.selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros,
+    handleOpenBib, setSettingsOpen, checkForUpdate, setUpdateInfo, handleAddCommentAtCursor,
+    handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
+  })
 
   // ── Menu ──────────────────────────────────────────────────────────────────
   const hasFile = !!vault.openFile
@@ -3423,64 +2954,11 @@ ${html}
       ]
     : []
 
-  const menus: MenuDef[] = [
-    {
-      label: t.menus.file,
-      entries: [
-        { label: t.menus.openVault,        action: vault.selectVault },
-        { separator: true },
-        { label: t.menus.newFromTemplate,  disabled: !hasVault, action: () => setTemplateOpen(true) },
-        { separator: true },
-        { label: t.menus.save,             shortcut: "Ctrl+S",       disabled: !hasFile, action: handleSave },
-        { label: t.menus.saveAs,           shortcut: "Ctrl+Shift+S", disabled: !hasFile, action: handleSaveAs },
-        { separator: true },
-        { label: t.menus.exportMd,         disabled: !hasFile, action: handleExportMd },
-        { label: t.menus.exportTex,        disabled: !hasFile, action: handleExportTex },
-        { label: t.palette.exportProjectTex, disabled: !hasVault, action: handleExportProjectTex },
-        { label: t.palette.compileLatexPdf, disabled: !hasFile, action: () => handleCompileLatexPdf() },
-        { label: t.menus.exportPdf,        disabled: !hasFile, action: handleExportPdf },
-        { label: t.menus.exportDocx,       disabled: !hasFile, action: handleExportDocx },
-        { label: t.menus.exportBeamer,     disabled: !hasFile, action: handleExportBeamer },
-        { label: t.menus.exportReveal,     disabled: !hasFile, action: handleExportReveal },
-        { label: t.menus.exportTypst,      disabled: !hasFile, action: handleExportTypst },
-        // The Typst→PDF entry is offered only when the optional `typst` binary is present.
-        ...(deps?.typst ? [{ label: t.menus.exportTypstPdf, disabled: !hasFile, action: handleExportTypstPdf } as MenuEntry] : []),
-        { separator: true },
-        { label: t.menus.importDoc,        disabled: !hasVault, action: handleImportDocument },
-        ...recentEntries,
-      ],
-    },
-    {
-      label: t.menus.edit,
-      entries: [
-        { label: t.menus.findInFile,      shortcut: "Ctrl+F",       disabled: !hasFile, action: handleFind },
-        { label: t.menus.searchVault,     shortcut: "Ctrl+Shift+F",                     action: () => openPanel("search") },
-        { separator: true },
-        { label: t.menus.commandPalette,  shortcut: "Ctrl+P",                           action: () => setPaletteOpen(true) },
-      ],
-    },
-    {
-      label: t.menus.view,
-      entries: [
-        { label: t.menus.focusMode,       shortcut: "F11", action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },
-        { separator: true },
-        { label: t.menus.files,    action: () => openPanel("files") },
-        { label: t.menus.search,   action: () => openPanel("search") },
-        { label: t.menus.outline,  action: () => openPanel("outline") },
-        { label: t.sidebar.backlinks, action: () => openPanel("backlinks") },
-      ],
-    },
-    {
-      label: t.menus.vault,
-      entries: [
-        { label: t.menus.editMacros,  disabled: !hasVault, action: handleOpenMacros },
-        { label: t.menus.editBib,     disabled: !hasVault, action: handleOpenBib },
-        { separator: true },
-        { label: t.menus.settings,                          action: () => setSettingsOpen(true) },
-        { label: t.menus.shortcuts,   shortcut: "?",        action: () => setHelpOpen(true) },
-      ],
-    },
-  ]
+  const menus: MenuDef[] = buildMenus({
+    t, hasFile, hasVault, deps, exportActions, selectVault: vault.selectVault, setTemplateOpen,
+    handleSave, handleSaveAs, handleFind, openPanel, setPaletteOpen, setFocusMode,
+    handleOpenMacros, handleOpenBib, setSettingsOpen, setHelpOpen, recentEntries,
+  })
 
   const currentContent = vault.openFile?.content ?? WELCOME
   const editorFlex = editorWidth || undefined

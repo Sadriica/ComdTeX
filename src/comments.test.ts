@@ -17,6 +17,16 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: vi.fn(async (path: string, content: string) => {
     fs.files.set(path, content)
   }),
+  // Used by writeTextFileAtomic (src/atomicWrite.ts): write-to-temp-then-rename.
+  rename: vi.fn(async (oldPath: string, newPath: string) => {
+    const content = fs.files.get(oldPath)
+    if (content === undefined) throw new Error(`missing file: ${oldPath}`)
+    fs.files.set(newPath, content)
+    fs.files.delete(oldPath)
+  }),
+  remove: vi.fn(async (path: string) => {
+    fs.files.delete(path)
+  }),
 }))
 
 vi.mock("@tauri-apps/api/path", () => ({

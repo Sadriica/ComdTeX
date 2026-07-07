@@ -1,4 +1,5 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState } from "react"
+import { STORAGE_KEYS } from "./storageKeys"
 
 /** A single chat turn shown in the AI panel. */
 export interface DisplayMessage {
@@ -50,9 +51,9 @@ export interface AiSession {
   clear: () => void
 }
 
-const CONVS_KEY = "comdtex_ai_conversations"
-const ACTIVE_KEY = "comdtex_ai_active"
-const INPUT_KEY = "comdtex_ai_input"
+const CONVS_KEY = STORAGE_KEYS.AI_CONVERSATIONS
+const ACTIVE_KEY = STORAGE_KEYS.AI_ACTIVE_CONVERSATION
+const INPUT_KEY = STORAGE_KEYS.AI_INPUT_DRAFT
 const MAX_TITLE = 48
 // Cap the stored history so localStorage can't grow unbounded over time.
 const MAX_CONVERSATIONS = 50

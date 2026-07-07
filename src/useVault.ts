@@ -2,18 +2,21 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
+import { writeTextFileAtomic } from "./atomicWrite"
+import { allowVaultDir } from "./vaultScope"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
-import { extractDetailedTags, extractFrontmatter } from "./frontmatter"
 import { analyzeConversion, storageFormatForPath, toEditorContent, toDiskContent } from "./cmdxFormat"
+import { VaultSearchIndex, parseSearchQuery, buildSearchRegex, type SearchCandidate } from "./searchIndex"
+import { STORAGE_KEYS } from "./storageKeys"
 
-const VAULT_KEY   = "comdtex_vault"
-const TABS_KEY    = "comdtex_tabs"
-const ACTIVE_KEY  = "comdtex_active"
-const DRAFTS_KEY  = "comdtex_drafts"
-const RECENT_KEY  = "comdtex_recent_vaults"
-const CLOSED_KEY  = "comdtex_closed_tabs"
+const VAULT_KEY   = STORAGE_KEYS.VAULT_PATH
+const TABS_KEY    = STORAGE_KEYS.TABS
+const ACTIVE_KEY  = STORAGE_KEYS.TABS_ACTIVE
+const DRAFTS_KEY  = STORAGE_KEYS.DRAFTS
+const RECENT_KEY  = STORAGE_KEYS.RECENT_VAULTS
+const CLOSED_KEY  = STORAGE_KEYS.CLOSED_TABS
 const MAX_RECENT_VAULTS = 5
 const MAX_CLOSED_TABS = 20
 
@@ -534,6 +537,11 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // children (FileTree) and forcing a full re-render of the file tree per keystroke.
   const openTabsRef = useRef(openTabs)
   openTabsRef.current = openTabs
+  // In-memory search index for the current vault — content/mtime cache so
+  // repeat searches don't re-read+re-parse every unchanged file. One index
+  // per vault: cleared whenever the user switches vaults (selectVault /
+  // createVault) so a stale path from a previous vault can never leak in.
+  const searchIndexRef = useRef<VaultSearchIndex>(new VaultSearchIndex())
 
   const openFile = openTabs.find((tab) => tab.path === activeTabPath) ?? null
 
@@ -666,12 +674,20 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // Cancel pending autosaves from the previous vault
     saveTimers.current.forEach(clearTimeout)
     saveTimers.current.clear()
+    // Drop the previous vault's cached file contents — paths are only unique
+    // within a vault, so a stale entry could otherwise "match" under the new
+    // vault before its real content is ever synced.
+    searchIndexRef.current.clear()
     setOpenTabs([])
     setActiveTabPath(null)
     setVaultPath(selected)
+    // Grant the webview fs + asset access to this vault before any disk I/O.
+    // Without this the plugin-fs scope denies every read/write inside it.
+    try { await allowVaultDir(selected) }
+    catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
     await refreshTree(selected)
     await openOrCreateReadme(selected)
-  }, [refreshTree, openOrCreateReadme])
+  }, [refreshTree, openOrCreateReadme, t])
 
   const createVault = useCallback(async () => {
     // Ask for the new folder path via a save-style dialog
@@ -695,6 +711,10 @@ export function useVault(options: UseVaultOptions | number = {}) {
       )
       return
     }
+    // Grant scope BEFORE mkdir — the folder does not exist yet, so the
+    // Rust command permits a not-yet-existing path (see allow_vault_dir).
+    try { await allowVaultDir(chosen) }
+    catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error"); return }
     await mkdir(chosen, { recursive: true })
     localStorage.setItem(VAULT_KEY, chosen)
     localStorage.removeItem(TABS_KEY)
@@ -703,24 +723,29 @@ export function useVault(options: UseVaultOptions | number = {}) {
     setRecentVaults(loadRecentVaults())
     saveTimers.current.forEach(clearTimeout)
     saveTimers.current.clear()
+    searchIndexRef.current.clear()
     setOpenTabs([])
     setActiveTabPath(null)
     setVaultPath(chosen)
     await refreshTree(chosen)
     await openOrCreateReadme(chosen)
-  }, [refreshTree, openOrCreateReadme])
+  }, [refreshTree, openOrCreateReadme, t])
 
   const loadVault = useCallback(async () => {
     if (!vaultPath) return
     setIsLoading(true)
     try {
+      // Re-grant scope on every load (fresh app launch restoring a saved
+      // vault, or re-entering loadVault) before touching the filesystem.
+      try { await allowVaultDir(vaultPath) }
+      catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
       await refreshTree(vaultPath)
       const restored = await restoreTabs(vaultPath)
       if (!restored) await openOrCreateReadme(vaultPath)
     } finally {
       setIsLoading(false)
     }
-  }, [vaultPath, refreshTree, restoreTabs, openOrCreateReadme])
+  }, [vaultPath, refreshTree, restoreTabs, openOrCreateReadme, t])
 
   const openFileNode = useCallback(async (node: FileNode) => {
     if (openTabs.find((t) => t.path === node.path)) {
@@ -901,6 +926,10 @@ export function useVault(options: UseVaultOptions | number = {}) {
                 pendingContent.current.delete(path)
                 clearDraft(path)
                 conflictPaths.current.delete(path)
+                // Reflect the reloaded disk content in the index immediately —
+                // avoids a stale cache entry surviving until the next search.
+                if (freshMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, freshMtime, fresh)
+                else searchIndexRef.current.invalidate(path)
               } catch (e) {
                 showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
               }
@@ -921,7 +950,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       showConversionWarnings(path, content, "saving")
       // Convert from CMDX to storage format before saving. Non-CMDX files like .bib stay raw.
       const storageContent = toDiskContent(path, content)
-      await writeTextFile(path, storageContent)
+      await writeTextFileAtomic(path, storageContent)
       // Update mtime after successful save
       let newMtime: number | undefined
       try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
@@ -934,6 +963,10 @@ export function useVault(options: UseVaultOptions | number = {}) {
       pendingContent.current.delete(path)
       conflictPaths.current.delete(path)
       clearDraft(path)
+      // Keep the index in sync with what we just wrote so the next search
+      // doesn't need to re-read this file at all.
+      if (newMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, newMtime, content)
+      else searchIndexRef.current.invalidate(path)
       onAfterSaveRef.current?.(path, displayBasename(path))
       return true
     } catch (e) {
@@ -1023,6 +1056,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
     try {
       await writeTextFile(filePath, toDiskContent(filePath, content))
       await refreshTree(vaultPath)
+      // Brand-new path: make sure no stale cache entry lingers (shouldn't
+      // normally exist, but a rename/delete race could leave one behind).
+      searchIndexRef.current.invalidate(filePath)
       const newTab: OpenFile = { path: filePath, name: fileName, content: toEditorContent(filePath, content), isDirty: false, mode: editorModeForPath(filePath) }
       setOpenTabs((tabs) => [...tabs, newTab])
       setActiveTabPath(filePath)
@@ -1040,6 +1076,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       pendingContent.current.delete(path)
       conflictPaths.current.delete(path)
       await remove(path)
+      searchIndexRef.current.invalidate(path)
       if (vaultPath) await refreshTree(vaultPath)
       await closeTab(path)
       clearDraft(path)
@@ -1093,6 +1130,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // Re-key pending autosave only AFTER the rename succeeds, so a failed
       // rename can't leave a re-armed timer that recreates the file at newPath.
       migratePending(oldPath, newPath)
+      searchIndexRef.current.rename(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) => tab.path === oldPath ? { ...tab, path: newPath, name: newName } : tab))
       if (activeTabPathRef.current === oldPath) setActiveTabPath(newPath)
@@ -1110,6 +1148,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       await rename(oldPath, newPath)
       // Re-key pending autosave only after a successful rename (see renameFile).
       migratePending(oldPath, newPath)
+      searchIndexRef.current.rename(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) =>
         tab.path === oldPath ? { ...tab, path: newPath } : tab
@@ -1167,7 +1206,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const timer = saveTimers.current.get(path)
     if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
     pendingContent.current.delete(path)
-    await writeTextFile(path, toDiskContent(path, editorContent))
+    await writeTextFileAtomic(path, toDiskContent(path, editorContent))
     // Keep the open tab (if any) consistent with what's on disk and clear dirty.
     patchTabContent(path, editorContent)
     clearDraft(path)
@@ -1176,9 +1215,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
     let newMtime: number | undefined
     try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
     if (newMtime !== undefined) {
+      searchIndexRef.current.setFromEditorContent(path, newMtime, editorContent)
       setOpenTabs((tabs) => tabs.map((tab) =>
         tab.path === path ? { ...tab, cachedMtime: newMtime } : tab
       ))
+    } else {
+      searchIndexRef.current.invalidate(path)
     }
   }, [patchTabContent])
 
@@ -1211,75 +1253,44 @@ export function useVault(options: UseVaultOptions | number = {}) {
   ): Promise<SearchResult[]> => {
     if (!vaultPath || !query.trim()) return []
 
-    const terms = query.trim().split(/\s+/)
-    const filters = {
-      tags: terms.filter((term) => term.startsWith("tag:")).map((term) => term.slice(4).toLowerCase()),
-      paths: terms.filter((term) => term.startsWith("path:")).map((term) => term.slice(5).toLowerCase()),
-      exts: terms.filter((term) => term.startsWith("ext:")).map((term) => term.slice(4).replace(/^\./, "").toLowerCase()),
-      frontmatter: terms
-        .filter((term) => term.startsWith("fm:"))
-        .map((term) => term.slice(3))
-        .map((term) => {
-          const [key, ...valueParts] = term.split("=")
-          return { key: key.toLowerCase(), value: valueParts.join("=").toLowerCase() }
-        })
-        .filter((item) => item.key),
-    }
-    const textQuery = terms
-      .filter((term) => !/^(tag|path|ext|fm):/.test(term))
-      .join(" ")
+    const { filters, textQuery } = parseSearchQuery(query)
 
     // Validate regex before starting search
-    let searchRe: RegExp
-    try {
-      searchRe = opts.regex
-        ? new RegExp(textQuery || ".*", opts.caseSensitive ? "g" : "gi")
-        : new RegExp((textQuery || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
-    } catch { return [] }
+    const searchRe = buildSearchRegex(textQuery, opts)
+    if (!searchRe) return []
 
     // Cancel previous search
     searchAbortRef.current.cancelled = true
     const token = { cancelled: false }
     searchAbortRef.current = token
 
-    const MAX_RESULTS = 500
-    const results: SearchResult[] = []
-
-    const searchIn = async (nodes: FileNode[]) => {
+    // Flatten the tree (cheap — no disk I/O) into candidates in the same
+    // order the old recursive walk visited them, so result ordering and the
+    // 500-result cap behave identically. mtime/content are fetched lazily by
+    // the index only for candidates it actually reaches (see searchIndex.ts).
+    const candidates: SearchCandidate[] = []
+    const collect = (nodes: FileNode[]) => {
       for (const node of nodes) {
-        if (token.cancelled || results.length >= MAX_RESULTS) return
-        if (node.type === "dir" && node.children) {
-          await searchIn(node.children)
-        } else if (node.type === "file" && isTextVaultFile(node)) {
-          try {
-            if (filters.exts.length > 0 && !filters.exts.includes((node.ext ?? "").toLowerCase())) continue
-            if (filters.paths.length > 0 && !filters.paths.some((path) => node.path.toLowerCase().includes(path))) continue
-            const content = await readTextFile(node.path)
-            const editorContent = toEditorContent(node.path, content)
-            const parsed = extractFrontmatter(editorContent)
-            const tags = extractDetailedTags(editorContent).map((tag) => tag.tag)
-            if (filters.tags.length > 0 && !filters.tags.every((tag) => tags.includes(tag))) continue
-            if (filters.frontmatter.length > 0) {
-              const data = parsed?.data ?? {}
-              const ok = filters.frontmatter.every(({ key, value }) => {
-                const actual = data[key]
-                if (actual == null) return false
-                if (!value) return true
-                return String(actual).toLowerCase().includes(value)
-              })
-              if (!ok) continue
-            }
-            editorContent.split("\n").forEach((line, i) => {
-              searchRe.lastIndex = 0
-              if (results.length < MAX_RESULTS && (!textQuery || searchRe.test(line)))
-                results.push({ filePath: node.path, fileName: node.name, line: i + 1, content: line.trim().slice(0, 200) })
-            })
-          } catch { /* skip */ }
+        if (node.type === "dir" && node.children) collect(node.children)
+        else if (node.type === "file" && isTextVaultFile(node)) {
+          candidates.push({
+            path: node.path,
+            name: node.name,
+            ext: node.ext ?? "",
+            getMtime: async () => {
+              try { return (await stat(node.path)).mtime?.getTime() } catch { return undefined }
+            },
+            readContent: () => readTextFile(node.path),
+          })
         }
       }
     }
+    collect(tree)
 
-    await searchIn(tree)
+    const results = await searchIndexRef.current.search(candidates, filters, textQuery, searchRe, {
+      cap: 500,
+      isCancelled: () => token.cancelled,
+    })
     return token.cancelled ? [] : results
   }, [vaultPath, tree])
 
@@ -1310,8 +1321,16 @@ export function useVault(options: UseVaultOptions | number = {}) {
           await replaceIn(node.children)
         } else if (node.type === "file" && isTextVaultFile(node)) {
           try {
-            const content = await readTextFile(node.path)
-            const editorContent = toEditorContent(node.path, content)
+            // Read via the index cache — mtime-gated, so a file this pass
+            // (or the search that likely preceded it) already synced is
+            // served from memory instead of re-read from disk. If the file
+            // changed on disk since it was last cached, the mtime mismatch
+            // still forces a fresh read here, so this is never stale.
+            let mtimeMs: number | undefined
+            try { mtimeMs = (await stat(node.path)).mtime?.getTime() } catch { /* fall through, syncFile will retry */ }
+            if (mtimeMs === undefined) continue
+            const entry = await searchIndexRef.current.syncFile(node.path, mtimeMs, () => readTextFile(node.path))
+            const editorContent = entry.content
             re.lastIndex = 0
             const matches = editorContent.match(re)
             if (!matches) continue
@@ -1323,7 +1342,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
             const timer = saveTimers.current.get(node.path)
             if (timer) { clearTimeout(timer); saveTimers.current.delete(node.path) }
             pendingContent.current.delete(node.path)
-            await writeTextFile(node.path, toDiskContent(node.path, updated))
+            await writeTextFileAtomic(node.path, toDiskContent(node.path, updated))
             total += matches.length
             patchTabContent(node.path, updated)
             // Refresh the open tab's cachedMtime so the next real save doesn't
@@ -1331,9 +1350,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
             let newMtime: number | undefined
             try { newMtime = (await stat(node.path)).mtime?.getTime() } catch {}
             if (newMtime !== undefined) {
+              searchIndexRef.current.setFromEditorContent(node.path, newMtime, updated)
               setOpenTabs((tabs) => tabs.map((tab) =>
                 tab.path === node.path ? { ...tab, cachedMtime: newMtime } : tab
               ))
+            } else {
+              searchIndexRef.current.invalidate(node.path)
             }
           } catch { /* skip */ }
         }

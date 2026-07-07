@@ -39,7 +39,7 @@ describe("sanitizeRenderedHtml — data: image policy", () => {
     expect(html).not.toContain("<script>")
   })
 
-  it("still allows http(s), relative, asset:, blob:, file: URLs", () => {
+  it("still allows http(s), relative, blob: URLs", () => {
     expect(sanitizeRenderedHtml('<a href="https://example.com">x</a>')).toContain(
       'href="https://example.com"',
     )
@@ -57,5 +57,92 @@ describe("sanitizeRenderedHtml — data: image policy", () => {
     const html = sanitizeRenderedHtml('<div onclick="alert(1)">x</div>')
     expect(html).not.toContain("onclick")
     expect(html).not.toContain("alert")
+  })
+
+  // Behavior change vs. the old hand-rolled sanitizer: `file:` links are now
+  // stripped (they let a rendered doc navigate to/reference arbitrary local
+  // files, distinct from just displaying a local image), and `asset:` is
+  // removed from <a href> specifically while remaining allowed for <img src>.
+  it("strips file: links but keeps asset: images", () => {
+    const linkHtml = sanitizeRenderedHtml('<a href="file:///etc/passwd">x</a>')
+    expect(linkHtml).not.toContain("file:")
+
+    const assetLinkHtml = sanitizeRenderedHtml('<a href="asset://localhost/secret.md">x</a>')
+    expect(assetLinkHtml).not.toContain("asset:")
+
+    const imgHtml = sanitizeRenderedHtml('<img src="asset://localhost/vault/pic.png">')
+    expect(imgHtml).toContain('src="asset://localhost/vault/pic.png"')
+  })
+})
+
+describe("sanitizeRenderedHtml — dangerous markup", () => {
+  it("strips <script> nested inside inline <svg>", () => {
+    const html = sanitizeRenderedHtml(
+      '<svg><script>alert(1)</script><circle cx="5" cy="5" r="4"></circle></svg>',
+    )
+    expect(html).not.toContain("<script")
+    expect(html).not.toContain("alert")
+    expect(html).toContain("<circle")
+  })
+
+  it("neutralizes mXSS-style namespace confusion (math > mtext > style)", () => {
+    const html = sanitizeRenderedHtml(
+      '<math><mtext><style><img src=x onerror=alert(1)></style></mtext></math>',
+    )
+    expect(html).not.toContain("onerror")
+    expect(html).not.toContain("alert(1)")
+  })
+
+  it("strips onerror handlers on <img>", () => {
+    const html = sanitizeRenderedHtml('<img src="https://example.com/a.png" onerror="alert(1)">')
+    expect(html).not.toContain("onerror")
+    expect(html).not.toContain("alert")
+    expect(html).toContain('src="https://example.com/a.png"')
+  })
+})
+
+describe("sanitizeRenderedHtml — iframes", () => {
+  it("keeps a youtube-nocookie embed iframe", () => {
+    const html = sanitizeRenderedHtml(
+      '<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"></iframe>',
+    )
+    expect(html).toContain("<iframe")
+    expect(html).toContain("youtube-nocookie.com/embed/dQw4w9WgXcQ")
+  })
+
+  it("drops a non-youtube iframe", () => {
+    const html = sanitizeRenderedHtml('<iframe src="https://evil.example.com/"></iframe>')
+    expect(html).not.toContain("<iframe")
+  })
+})
+
+describe("sanitizeRenderedHtml — app-specific markup", () => {
+  it("keeps task-list checkboxes with their state and line attribute", () => {
+    const html = sanitizeRenderedHtml(
+      '<input type="checkbox" class="preview-checkbox" data-line="3" checked>',
+    )
+    expect(html).toContain('type="checkbox"')
+    expect(html).toContain('data-line="3"')
+    expect(html).toContain("checked")
+  })
+
+  it("keeps data-source-line used for click-to-reveal in the editor", () => {
+    const html = sanitizeRenderedHtml('<div data-source-line="12">Some text</div>')
+    expect(html).toContain('data-source-line="12"')
+  })
+
+  it("keeps a representative KaTeX render intact", () => {
+    const katex =
+      '<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML">' +
+      '<semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics>' +
+      '</math></span><span class="katex-html" aria-hidden="true">' +
+      '<span class="base"><span class="strut" style="height:0.4306em;"></span>' +
+      '<span class="mord mathnormal">x</span></span></span></span>'
+    const html = sanitizeRenderedHtml(katex)
+    expect(html).toContain("<semantics>")
+    expect(html).toContain('<annotation encoding="application/x-tex">x</annotation>')
+    expect(html).toContain('aria-hidden="true"')
+    expect(html).toContain('class="katex-mathml"')
+    expect(html).toContain('style="height:0.4306em;"')
   })
 })

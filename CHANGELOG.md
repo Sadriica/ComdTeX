@@ -3,6 +3,27 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Security
+- **Vault-scoped filesystem access.** The Tauri fs-plugin scope no longer grants `$HOME`-recursive read/write/delete. Access is now granted per-vault at runtime through a new Rust command `allow_vault_dir` (see `src/vaultScope.ts`), called on every vault open. The asset-protocol scope was narrowed from `["**"]` to empty + runtime vault grant. Pre-vault cloud-sync detection keeps read-only scope for the specific provider paths it probes.
+- **AI API key moved out of `localStorage` into the OS keychain** (Secret Service / macOS Keychain / Windows Credential Manager) via the `keyring` crate and `src/secretStore.ts`. Legacy plaintext keys are migrated off the settings JSON on first run; a namespaced `localStorage` fallback is used only when no keychain backend is available.
+- **Preview HTML sanitizer rebuilt on DOMPurify** (allowlist) replacing the hand-rolled blocklist — closes mXSS/namespace-confusion vectors. `file:` links are no longer accepted; `asset:` is allowed only on image sources; YouTube embeds are now explicitly sandboxed.
+
+### Fixed
+- **Flowchart `REPEAT`/`UNTIL` loop-back.** The `:::flowchart` / `:::pseudocode` generator drew the `UNTIL` condition diamond looping back to *itself*; it now loops back to the first node of the loop body, as a real do-while flowchart should.
+- **Flowchart `IF` branch labels.** Condition diamonds now label their branches `Yes`/`No` (previously only `ELSE IF` chains were labelled, leaving a plain `IF`/`ELSE` fork ambiguous).
+- **Data safety — atomic disk writes.** Document saves (`saveFile`, `writeFileSafe`, `replaceInVault`, Save-As paths, inline comments) now write to a temp file and `rename()` onto the target, so a crash/power-cut mid-write can't truncate the real file.
+- **Typing-lag fix.** The background per-tab linter no longer re-runs synchronously on every keystroke; it is debounced (~1s) and skips tabs whose content is unchanged.
+- **Preview task-list checkboxes** (`- [ ]`) now survive sanitization (the old sanitizer stripped all `<input>` elements).
+- **localStorage key collisions** (`RECENT_KEY`, `ACTIVE_KEY` meaning different things in different modules; `comdtex_cloud_banner_dismissed` written from two files) resolved via a single typed `src/storageKeys.ts` source of truth.
+
+### Changed
+- **Vault search is now indexed in memory** (`src/searchIndex.ts`), invalidated by file mtime, instead of re-reading every file from disk on each query. Wired through `useVault.search`, `replaceInVault`, and the Search & Replace panel.
+- **`i18n.ts` split** into `src/i18n/{types,es,en}.ts` (thin re-export shim preserves the public API) with a new EN/ES key-parity test.
+- **`App.tsx` slimmed by ~555 lines**: export/import/compile handlers extracted to `src/useExportActions.ts`; command-palette and menu-bar data extracted to `src/commands.ts` / `src/menus.ts`.
+- **Test/CI**: Vitest coverage (`@vitest/coverage-v8`) with a regression-floor threshold; `typecheck` / `test:coverage` / `format:check` scripts; the Playwright e2e job is now a required gate (was informational) with an added command-palette spec. Test count 504 → 732: new suites for `aiProvider`, `frontmatter`, `searchIndex`, `storageKeys`, `atomicWrite`, i18n-parity, plus the previously untested pure modules `latexErrors`, `macros`, `sectionWordCount`, `truthTable`, `pseudocodeFlowchart`, `graphViz`, `functionPlot`, `commDiag`. Line coverage ~26% → ~36% (i18n data excluded).
+
 ## [1.9.5] - 2026-06-17
 
 ### Added

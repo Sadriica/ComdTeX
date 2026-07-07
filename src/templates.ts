@@ -1,3 +1,5 @@
+import { STORAGE_KEYS } from "./storageKeys"
+
 export interface Template {
   id: string
   name: string
@@ -306,7 +308,7 @@ Aplica @thm:key a un caso concreto.
   },
 ]
 
-const CUSTOM_TEMPLATES_KEY = "comdtex.customTemplates"
+const CUSTOM_TEMPLATES_KEY = STORAGE_KEYS.CUSTOM_TEMPLATES
 
 export function loadCustomTemplates(): Template[] {
   try {

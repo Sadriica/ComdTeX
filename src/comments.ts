@@ -10,8 +10,9 @@
  * mutators that delegate to those helpers, so callers can either
  * batch updates or fire-and-forget single operations.
  */
-import { exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs"
+import { exists, readTextFile } from "@tauri-apps/plugin-fs"
 import { join as pathJoin } from "@tauri-apps/api/path"
+import { writeTextFileAtomic } from "./atomicWrite"
 
 export const COMMENTS_FILENAME = ".comdtex-comments.json"
 export const COMMENTS_VERSION = 1
@@ -144,13 +145,13 @@ export async function loadComments(vaultPath: string): Promise<Comment[]> {
 }
 
 /**
- * Atomic write: writes the entire array on every save. Tauri's
- * `writeTextFile` is itself a single syscall, so this is durable enough
- * for our single-user, low-write use case.
+ * Atomic write: writes the entire array on every save, via
+ * `writeTextFileAtomic` (write to a temp file + rename onto the target) so a
+ * crash or power loss mid-write can never leave the comments file truncated.
  */
 export async function saveComments(vaultPath: string, comments: Comment[]): Promise<void> {
   const path = await pathJoin(vaultPath, COMMENTS_FILENAME)
-  await writeTextFile(path, serialiseComments(comments))
+  await writeTextFileAtomic(path, serialiseComments(comments))
 }
 
 export async function addComment(vaultPath: string, comment: Comment): Promise<void> {
