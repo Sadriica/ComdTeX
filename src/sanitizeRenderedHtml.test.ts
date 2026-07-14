@@ -146,3 +146,61 @@ describe("sanitizeRenderedHtml — app-specific markup", () => {
     expect(html).toContain('style="height:0.4306em;"')
   })
 })
+
+describe("sanitizeRenderedHtml â Mermaid SVG labels", () => {
+  // Regression guard for the empty-Mermaid-node bug: DOMPurify ships
+  // `foreignobject` in DEFAULT_FORBID_CONTENTS, so it keeps the element but
+  // drops its children. Mermaid's default `htmlLabels: true` puts every node
+  // label in a <foreignObject>, which meant every shape rendered blank.
+  //
+  // The fix is `htmlLabels: false` (see src/mermaidConfig.ts) â these tests pin
+  // the two facts that fix depends on.
+  it("keeps native SVG <text>/<tspan> node labels (what Mermaid now emits)", () => {
+    const svg =
+      '<svg><g class="node"><rect width="118" height="38"></rect>' +
+      '<text x="10" y="20" class="nodeLabel"><tspan x="10" dy="0">Idea (oportunidad o problema)</tspan></text>' +
+      "</g></svg>"
+    const html = sanitizeRenderedHtml(svg)
+    expect(html).toContain("<text")
+    expect(html).toContain("<tspan")
+    expect(html).toContain("Idea (oportunidad o problema)")
+    expect(html).toContain('class="nodeLabel"')
+  })
+
+  it("keeps accented and symbolic label text used by pseudocode flowcharts", () => {
+    const svg =
+      '<svg><text class="nodeLabel"><tspan>Más estudio, plata y personas</tspan></text>' +
+      '<text class="edgeLabel"><tspan>↺ No</tspan></text>' +
+      '<text class="nodeLabel"><tspan>WHILE lo ≤ hi</tspan></text>' +
+      '<text class="nodeLabel"><tspan>mid ← (lo + hi) / 2</tspan></text></svg>'
+    const html = sanitizeRenderedHtml(svg)
+    expect(html).toContain("Más estudio, plata y personas")
+    expect(html).toContain("↺ No")
+    expect(html).toContain("WHILE lo ≤ hi")
+    expect(html).toContain("mid ← (lo + hi) / 2")
+  })
+
+  it("documents that <foreignObject> children do NOT survive (why htmlLabels must stay false)", () => {
+    const svg =
+      '<svg><foreignObject width="118" height="38">' +
+      '<div xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">Idea (oportunidad o problema)</span></div>' +
+      "</foreignObject></svg>"
+    const html = sanitizeRenderedHtml(svg)
+    // DOMPurify keeps the element but strips its contents. If this ever starts
+    // passing the label through, `htmlLabels: false` is no longer load-bearing
+    // â but do NOT weaken the sanitizer to try to make it pass.
+    expect(html).not.toContain("Idea (oportunidad o problema)")
+    expect(html).not.toContain("nodeLabel")
+  })
+
+  it("still strips scripts and event handlers from an SVG", () => {
+    const svg =
+      '<svg><text class="nodeLabel"><tspan>ok</tspan></text>' +
+      '<script>alert(1)</script><rect onload="alert(2)" width="10"></rect></svg>'
+    const html = sanitizeRenderedHtml(svg)
+    expect(html).toContain("ok")
+    expect(html).not.toContain("<script")
+    expect(html).not.toContain("onload")
+    expect(html).not.toContain("alert")
+  })
+})

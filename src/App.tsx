@@ -8,6 +8,7 @@ import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
+import { MERMAID_CONFIG } from "./mermaidConfig"
 import type { CmdKAnchor } from "./CmdKEdit"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
 import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker } from "./monacoSetup"
@@ -323,21 +324,7 @@ function getMermaid(): Promise<MermaidModule> {
   if (_mermaidPromise) return _mermaidPromise
   _mermaidPromise = import("mermaid").then((mod) => {
     const m = (mod as { default: { initialize: (cfg: unknown) => void } & MermaidModule }).default
-    m.initialize({
-      startOnLoad: false,
-      theme: "dark",
-      // `loose` is required for the `↺` and similar special chars in our
-      // pseudocode-derived flowcharts. We escape body text already and the
-      // sanitizer strips dangerous tags from the SVG before injection.
-      securityLevel: "loose",
-      themeVariables: {
-        background: "transparent",
-        mainBkg: "transparent",
-        primaryColor: "transparent",
-        secondaryColor: "transparent",
-        tertiaryColor: "transparent",
-      },
-    })
+    m.initialize(MERMAID_CONFIG)
     return m
   })
   return _mermaidPromise

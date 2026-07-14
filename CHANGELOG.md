@@ -3,6 +3,14 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Mermaid diagrams render their labels again.** Since 1.9.6, every `:::flowchart` / `:::pseudocode` diagram (and any raw ```mermaid fence) drew its shapes and arrows correctly but with completely empty nodes — no label text at all. The 1.9.6 audit wave rebuilt `sanitizeRenderedHtml` on DOMPurify, which ships `foreignobject` in its `DEFAULT_FORBID_CONTENTS` set: it keeps the `<foreignObject>` element but deliberately drops its children. Mermaid's default `htmlLabels: true` renders every node label as HTML inside a `<foreignObject>`, so the sanitizer gutted all of them. Mermaid is now configured with `htmlLabels: false` (`src/mermaidConfig.ts`), emitting labels as native SVG `<text>`/`<tspan>`, which passes the sanitizer untouched. The sanitizer was **not** weakened — removing `foreignobject` from `FORBID_CONTENTS` does not restore the children anyway, and doing so would be the wrong trade.
+
+### Security
+- **Mermaid now runs at its default `securityLevel: "strict"`** instead of `"loose"`. The `"loose"` opt-in was justified by a comment claiming it was needed for the `↺` (and similar) characters in pseudocode-derived flowcharts; that turned out to be untrue — strict and loose render byte-identical SVG for those diagrams, since the characters are plain Unicode in SVG text and never involve HTML. Strict additionally makes Mermaid sanitize label text itself, so a hostile label in a raw ```mermaid fence is defanged before it reaches our own sanitizer. Nothing is lost: Mermaid's `click` handlers (the other thing strict disables) never worked here regardless, because the render path re-injects the sanitized SVG via `innerHTML`, dropping any listeners Mermaid attached.
+
 ## [1.9.7] - 2026-07-14
 
 ### Fixed
