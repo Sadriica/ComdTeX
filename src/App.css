@@ -5806,6 +5806,76 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .comment-glyph.resolved::before { opacity: 0.35; filter: grayscale(1); }
 .comment-glyph.drifted::before { content: "⚠"; color: #f0c040; }
 
+/* ── Keep marks (editor-only decoration) ──
+   A keep mark is invisible in the preview and in every export — the editor is
+   the ONLY surface that shows it. Deliberately subtle: a faint dotted underline
+   plus a small gutter glyph, so marked prose still reads as prose. */
+.keep-mark-inline {
+  border-bottom: 1px dotted var(--accent);
+  opacity: 0.92;
+}
+.keep-mark-glyph::before {
+  content: "❰";
+  font-size: 10px;
+  color: var(--accent);
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  line-height: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.keep-mark-glyph:hover::before { opacity: 1; }
+
+/* ── Keep Panel ── */
+.keep-panel { display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
+.keep-controls { padding: 8px 10px 4px; }
+.keep-actions {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.keep-export-btn {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.keep-export-btn:hover { border-color: var(--accent); color: var(--accent); }
+.keep-list { flex: 1; overflow-y: auto; }
+.keep-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 10px 4px;
+  color: var(--accent);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.keep-section-count { color: var(--muted); }
+.keep-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.keep-item:hover { background: var(--surface2); }
+.keep-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keep-item-file { color: var(--muted); font-size: 10px; }
+
 /* ── Comments Panel ── */
 .comments-panel { display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
 .comments-header {

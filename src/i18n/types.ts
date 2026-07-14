@@ -280,7 +280,22 @@ export interface T {
     cloudSync: string
     focusTimer: string
     ai: string
+    keep: string
     more: string
+  }
+
+  keepPanel: {
+    title: string
+    filterPlaceholder: string
+    allCategories: string
+    uncategorized: string
+    count: (n: number) => string
+    exportGlossary: string
+    exportDialogTitle: string
+    exported: string
+    glossaryTitle: string
+    emptyIcon: string
+    emptyMessage: string
   }
 
   ai: {

@@ -9,9 +9,16 @@
  *   Inside a `:::definition` body, any `{{X}}` braces are converted into
  *   Anki cloze syntax `{{c1::X}}` (each cloze gets its own incrementing index).
  *   The card is exported with type "Cloze" so Anki recognises it.
+ *
+ * Keep marks:
+ *   `^^…^^` keep marks are editor-only and are stripped to their plain text
+ *   before extraction, so a mark never leaks into a card. The two syntaxes are
+ *   deliberately disjoint — `{{ }}` is cloze, `^^…^^` is a keep mark — so a
+ *   marked fragment inside a definition does NOT silently become a cloze.
  */
 
 import { ALL_ENVS } from "./environments"
+import { stripKeepMarks } from "./keepMarks"
 
 /** Environments that produce Anki cards. */
 export const ANKI_EXPORT_ENVS: ReadonlySet<string> = new Set([
@@ -63,7 +70,11 @@ export function applyClozeDeletions(body: string): { body: string; hasCloze: boo
 /**
  * Extract Anki cards from a Markdown document.
  */
-export function extractAnkiCards(markdown: string): AnkiCard[] {
+export function extractAnkiCards(rawMarkdown: string): AnkiCard[] {
+  // Keep marks are editor-only: collapse them to plain text first so no `^^`
+  // reaches a card. Cloze `{{…}}` is a different delimiter and survives this
+  // untouched, so the two features compose cleanly.
+  const markdown = stripKeepMarks(rawMarkdown)
   const cards: AnkiCard[] = []
   let m: RegExpExecArray | null
   // `replace`-style global regex requires resetting lastIndex when we use .exec

@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **"Keep" marks — invisible highlighting, plus a Keep panel.** Wrap a fragment in `^^texto^^` to mark it as worth keeping, or add a freeform category with `^^def: texto^^` / `^^duda: revisar esto^^`. The mark is visible **only** in the editor (faint dotted underline + a gutter glyph); the preview and every export — LaTeX, PDF, DOCX, Typst, Beamer, Reveal, HTML, Obsidian, Markdown, Anki — render the plain text with the delimiters and the `cat:` prefix removed, so a marked document is byte-for-byte identical to the same prose written unmarked. The new **Guardar / Keep** sidebar panel (menu bar → Vistas, or the command palette) collects every mark across the vault grouped by category, showing each one's text and `file:line`, and jumps to it on click. It reads the documents directly, so it is always in sync; a glossary is written only on demand via its export button — never automatically. Marks are never parsed inside math, inline/fenced/indented code, or ComdTeX special blocks; the math exclusion matters because `^` is LaTeX superscript, so `$x^{2^^3}$` and `$a^{n+1}$` are left alone. Trailing block ids (`^myid`) do not collide either — `^^a^^ ^blockid` parses as both. The text may contain a single caret (`^^dato: 2^10 = 1024^^`), and ordinary carets in prose never become marks. `^^` was chosen because the obvious delimiters were taken: `{{ }}` is Anki cloze deletions plus template and PDF header/footer variables, and `%%…%%` is Obsidian's comment syntax, which *hides* text where a keep mark shows it. A `:::definition` can now hold both a cloze and a keep mark. See [docs/keep-marks.md](docs/keep-marks.md).
+
 ## [1.9.7] - 2026-07-14
 
 ### Fixed

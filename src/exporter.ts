@@ -16,6 +16,7 @@ import { preprocess } from "./preprocessor"
 import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
+import { stripKeepMarks } from "./keepMarks"
 
 interface LatexMacro {
   command: string
@@ -383,7 +384,10 @@ function pickRevealTheme(raw: unknown): RevealTheme {
     : "black"
 }
 
-export function exportReveal(markdown: string, title: string): string {
+export function exportReveal(rawMarkdown: string, title: string): string {
+  // Keep marks are editor-only — collapse them to plain text so no `^^`
+  // ever reaches a slide. See keepMarks.ts.
+  const markdown = stripKeepMarks(rawMarkdown)
   // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
   const parsed = extractFrontmatter(markdown)
   const body = parsed?.content ?? markdown
@@ -432,7 +436,11 @@ ${slideHtml}
 </html>`
 }
 
-export function exportToTex(raw: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
+export function exportToTex(rawInput: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
+  // Keep marks are editor-only — collapse them to plain text before the LaTeX
+  // conversion. `stripKeepMarks` is math-aware, so a doubled caret inside a
+  // superscript (`$x^{2^^3}$`) is left alone.
+  const raw = stripKeepMarks(rawInput)
   const parsed = extractFrontmatter(raw)
   const body = mdToTex(parsed?.content ?? raw)
 

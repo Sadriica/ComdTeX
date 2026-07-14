@@ -329,7 +329,22 @@ export const es: T = {
     cloudSync: "Sincronización",
     focusTimer: "Enfoque",
     ai: "Asistente IA",
+    keep: "Guardar",
     more: "Más",
+  },
+
+  keepPanel: {
+    title: "Guardar",
+    filterPlaceholder: "Filtrar marcas…",
+    allCategories: "Todas las categorías",
+    uncategorized: "Sin categoría",
+    count: (n) => `${n} marca${n === 1 ? "" : "s"}`,
+    exportGlossary: "Exportar glosario",
+    exportDialogTitle: "Exportar glosario",
+    exported: "Glosario exportado",
+    glossaryTitle: "Glosario",
+    emptyIcon: "❰❱",
+    emptyMessage: "Aún no hay marcas. Envuelve un fragmento en `^^dobles acentos circunflejos^^` para guardarlo, o añade una categoría con `^^def: texto^^`. Las marcas son invisibles en la vista previa y en las exportaciones.",
   },
 
   ai: {

@@ -43,7 +43,7 @@ const ARROWS = [
 // Panel modes the menu can switch to (mirror of App.tsx SidebarMode subset used here).
 export type PanelMode =
   | "files" | "search" | "searchReplace" | "backlinks" | "pdfPreview"
-  | "outline" | "tags" | "labels" | "properties" | "comments" | "todo"
+  | "outline" | "tags" | "labels" | "keep" | "properties" | "comments" | "todo"
   | "equations" | "environments" | "graph"
   | "stats" | "quality"
   | "focusTimer" | "ai" | "cloudSync" | "help"
@@ -241,6 +241,7 @@ function getSections(t: T): MenuSection[] {
       icon: "▦",
       label: t.toolbar.secViews,
       items: [
+        p(t.sidebar.keep, "keep"),
         p(t.sidebar.stats, "stats"),
         p(t.sidebar.quality, "quality"),
       ],
