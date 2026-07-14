@@ -3,6 +3,16 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.9.7] - 2026-07-14
+
+### Fixed
+- **Saving no longer fails on Linux.** Since 1.9.6 every write — autosave, save, save-as, vault-wide replace and the comment store — failed with `forbidden path: /<vault>/.<name>.tmp-<hex>`, leaving edits unsaved on disk. Atomic writes go to a temp file first, and that temp file was dot-prefixed; Tauri's fs scope matches with glob's `require_literal_leading_dot`, which is `true` by default on Unix, so the `<vault>/**` grant could not match a name starting with a dot. Temp files are no longer hidden (the file tree filters them by name instead), and `.comdtex-comments.json` — whose own name starts with a dot — is granted explicitly.
+- **Preview sync now works inside code blocks.** Code blocks were never annotated with `data-source-line`, so double-clicking in the editor highlighted the nearest annotated block *above* the cursor (often many lines off), and clicking a code block in the preview did not move the editor at all. This mainly hit documents written as indented blocks, where the whole document is one code block. Fenced blocks are now indexed too, which also stops code text from stealing a prose line's number.
+
+### Dependencies
+- `undici` 7.25.0 → 7.28.0 and `lodash-es` pinned to ^4.18.1 via overrides, clearing both high-severity npm advisories without downgrading `@excalidraw/excalidraw` (npm's suggested `--force` fix would have broken the build).
+- `quick-xml` 0.38.4 → 0.41.0 via `plist` 1.10.0, clearing RUSTSEC-2026-0194 and RUSTSEC-2026-0195. Neither reaches the Linux or Windows binaries — `quick-xml` is macOS-only in this tree — so no shipped artifact was affected.
+
 ## [1.9.6] - 2026-07-14
 
 ### Security
