@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.9.6] - 2026-07-14
 
 ### Security
 - **Vault-scoped filesystem access.** The Tauri fs-plugin scope no longer grants `$HOME`-recursive read/write/delete. Access is now granted per-vault at runtime through a new Rust command `allow_vault_dir` (see `src/vaultScope.ts`), called on every vault open. The asset-protocol scope was narrowed from `["**"]` to empty + runtime vault grant. Pre-vault cloud-sync detection keeps read-only scope for the specific provider paths it probes.

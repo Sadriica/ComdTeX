@@ -89,13 +89,6 @@ jobs:
 
       - name: Run tests with coverage (regression floor)
         if: matrix.os == 'ubuntu-22.04'
-        # TODO: `@vitest/coverage-v8` is not currently declared as a
-        # devDependency (package-lock.json only lists it as vitest's own
-        # *optional* peer dependency, so `npm ci` won't install it) — this
-        # step will fail with "MISSING DEPENDENCY" until it's added for real.
-        # continue-on-error keeps that failure informational rather than
-        # blocking the job; flip it off once the dependency lands.
-        continue-on-error: true
         run: npm run test:coverage
 
       - name: Cargo check (Rust only, fast)
