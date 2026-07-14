@@ -2098,6 +2098,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const el = e.target as HTMLElement
     const editor = editorRef.current
 
+    // ── In-page cross-reference: scroll the preview to the target ──────────
+    // Must come first: a cross-reference link (@tbl:/@fig:/@sec:/@thm:, TOC
+    // entries) sits inside a paragraph carrying `data-source-line`, so without
+    // this branch the fallback at the bottom hijacks the click and jumps the
+    // editor to the line the *reference* is written on instead of the target.
+    const anchor = el.closest('a[href^="#"]') as HTMLAnchorElement | null
+    if (anchor) {
+      e.preventDefault()
+      const id = decodeURIComponent(anchor.getAttribute("href")?.slice(1) ?? "")
+      // Attribute selector, not `#id`: ids like `env-thm:main` contain a colon,
+      // which is a pseudo-class separator in a CSS id selector.
+      const target = id ? previewPaneRef.current?.querySelector(`[id="${id.replace(/["\\]/g, "\\$&")}"]`) : null
+      target?.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+
     // Copy LaTeX from KaTeX
     const katexWrapper = el.closest(".katex-wrapper") as HTMLElement | null
     if (katexWrapper) {

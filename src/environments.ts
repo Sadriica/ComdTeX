@@ -517,7 +517,10 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
 }
 
 export function resolveEnvironmentRefs(text: string, labels: Map<string, EnvironmentReference>): string {
-  return text.replace(/@([a-zA-Z]+):([\w.-]+)/g, (full, prefix, id) => {
+  // Dots may appear *inside* a label (`thm:1.2`) but a trailing one is sentence
+  // punctuation — `[\w.-]+` would swallow the period in "ver @thm:main." and
+  // leave the reference unresolved. Same shape as the `@tbl:` / `@fig:` patterns.
+  return text.replace(/@([a-zA-Z]+):([\w-]+(?:\.\w+)*)/g, (full, prefix, id) => {
     if (!ENV_REF_PREFIXES[prefix]) return full
     const label = `${prefix}:${id}`
     const ref = labels.get(label)

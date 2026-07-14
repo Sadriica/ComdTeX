@@ -59,33 +59,46 @@ export function resolveFigRefs(
   return text.replace(/@fig:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     // Direct numeric reference
     if (/^\d+$/.test(ref)) {
-      return `<a class="fig-ref" href="#fig-${ref}">Figura ${ref}</a>`
+      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">Figura ${ref}</a>`
     }
     const n = labels.get(`fig:${ref}`)
     if (n !== undefined) {
-      return `<a class="fig-ref" href="#fig-${ref}">Figura ${n}</a>`
+      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">Figura ${n}</a>`
     }
     return `<span class="fig-ref-broken">Figura (?)</span>`
   })
+}
+
+/** Canonical anchor id for a figure label/number (`fig:map` | `map` -> `fig-map`). */
+function figureAnchorId(labelOrNumber: string): string {
+  return `fig-${labelOrNumber.replace(/^fig:/, "")}`
 }
 
 /**
  * Transform `![caption](src){#fig:label}` and `![caption](src)` into
  * a figure block with number and caption. Called during HTML post-processing.
  */
+const FIG_LABEL_TITLE_RE = /\s*title="fig-label:(fig:[\w:.-]+)"/
+
 export function wrapFigures(html: string, labels: Map<string, number>): string {
   // Reset a local counter for this pass
   let n = 0
 
   return html.replace(
     /<img([^>]*?)alt="([^"]*)"([^>]*?)>/g,
-    (_match, before, alt, after) => {
+    (_match, before: string, alt: string, after: string) => {
       n++
-      // Extract label from data attribute if present (set earlier)
-      const labelMatch = /data-fig-label="([^"]+)"/.exec(before + after)
+      // `preprocessFigureLabels` smuggles the label through markdown-it in the
+      // title slot as `title="fig-label:fig:name"`. Recover it, then strip the
+      // attribute so the label never shows up as a browser tooltip.
+      const labelMatch = FIG_LABEL_TITLE_RE.exec(before + after)
       const label = labelMatch ? labelMatch[1] : null
-      const figNum = label ? (labels.get(`fig:${label}`) ?? n) : n
-      const id = label ? `fig-${label}` : `fig-${figNum}`
+      if (label) {
+        before = before.replace(FIG_LABEL_TITLE_RE, "")
+        after = after.replace(FIG_LABEL_TITLE_RE, "")
+      }
+      const figNum = label ? (labels.get(label) ?? n) : n
+      const id = figureAnchorId(label ?? String(figNum))
       const escapedAlt = alt.replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
       return `<figure class="fig-block" id="${id}">

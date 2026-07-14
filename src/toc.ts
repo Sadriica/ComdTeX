@@ -2,7 +2,22 @@ export interface TocEntry {
   level: number
   text: string
   slug: string
+  /** The explicit `{#label}` written on the heading, if any (without braces). */
+  label: string | null
   line: number
+}
+
+/**
+ * Canonical DOM id for a heading — the single source of truth shared by the
+ * renderer (which stamps the id), `@sec:` references and the auto-TOC, so an
+ * anchor can never disagree with the id it points at.
+ *
+ * An explicit `{#sec:label}` / `{#label}` becomes `sec-label`; an unlabeled
+ * heading falls back to a slug of its visible text.
+ */
+export function headingAnchorId(explicitLabel: string | null | undefined, text: string): string {
+  if (explicitLabel) return `sec-${explicitLabel.replace(/^sec:/, "")}`
+  return slugifyHeading(text) || "section"
 }
 
 export function slugifyHeading(text: string): string {
@@ -32,6 +47,7 @@ export function extractTocEntries(content: string, maxLevel = 3): TocEntry[] {
       level,
       text,
       slug: explicit?.[1] ?? slugifyHeading(text),
+      label: explicit?.[1] ?? null,
       line: index + 1,
     })
   })
