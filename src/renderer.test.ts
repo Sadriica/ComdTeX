@@ -144,6 +144,69 @@ describe("renderMarkdown", () => {
       expect(annotated).toMatch(/<p[^>]*data-source-line="1"[^>]*>Hello world/)
       expect(annotated).toMatch(/<p[^>]*data-source-line="3"[^>]*>Another line/)
     })
+
+    // Regression: `pre` was missing from ANNOTATABLE_SELECTOR, so an indented
+    // code block carried no data-source-line. Double-clicking inside it jumped
+    // the preview to the nearest annotated block ABOVE (often dozens of lines
+    // off), and clicking it in the preview did not move the editor at all.
+    it("annotates an indented code block with the line its content starts on", () => {
+      const raw = [
+        "Guia PMI #8:",                 // 1
+        "",                              // 2
+        "    -> Estandar",               // 3  <- indented code block starts here
+        "        -> Aspectos",           // 4
+        "        -> Sistema de valor",   // 5
+        "",                              // 6
+        "Acta de constitucion.",         // 7
+      ].join("\n")
+      const html = renderMarkdown(raw)
+      // The <pre> is keyed by its FIRST content line, not its joined textContent.
+      expect(html).toMatch(/<pre[^>]*data-source-line="3"/)
+      // Blocks around it keep their own accurate lines.
+      expect(html).toMatch(/<p[^>]*data-source-line="1"[^>]*>Guia PMI #8:/)
+      expect(html).toMatch(/<p[^>]*data-source-line="7"[^>]*>Acta de constitucion/)
+    })
+
+    it("keeps `->` matchable: arrows are escaped, not rewritten to →", () => {
+      const raw = ["Intro:", "", "    -> Estandar", "    -> Aspectos"].join("\n")
+      const html = renderMarkdown(raw)
+      expect(html).toContain("-&gt; Estandar")
+      expect(html).not.toContain("→")
+      expect(html).toMatch(/<pre[^>]*data-source-line="3"/)
+    })
+
+    it("annotates a fenced code block with its first content line", () => {
+      const raw = [
+        "Example:",   // 1
+        "",            // 2
+        "```js",       // 3
+        "const a = 1", // 4  <- first content line
+        "const b = 2", // 5
+        "```",         // 6
+        "",            // 7
+        "After.",      // 8
+      ].join("\n")
+      const html = renderMarkdown(raw)
+      expect(html).toMatch(/<pre[^>]*data-source-line="4"/)
+      expect(html).toMatch(/<p[^>]*data-source-line="8"[^>]*>After/)
+      // Fenced content is still rendered verbatim (no regression).
+      expect(html).toContain("const a = 1")
+      expect(html).toContain("const b = 2")
+    })
+
+    it("does not let fenced code content shadow identical prose lines", () => {
+      const raw = [
+        "```",          // 1
+        "duplicate me", // 2
+        "```",          // 3
+        "",             // 4
+        "duplicate me", // 5
+      ].join("\n")
+      const html = renderMarkdown(raw)
+      // The <pre> takes line 2 (its own content); the paragraph keeps line 5.
+      expect(html).toMatch(/<pre[^>]*data-source-line="2"/)
+      expect(html).toMatch(/<p[^>]*data-source-line="5"[^>]*>duplicate me/)
+    })
   })
 
   describe("block ids", () => {
@@ -162,7 +225,7 @@ describe("renderMarkdown", () => {
 
     it(":::code without language has no class on <code>", () => {
       const html = renderMarkdown(":::code\nplain text\n:::")
-      expect(html).toMatch(/<pre><code>plain text<\/code><\/pre>/)
+      expect(html).toMatch(/<pre[^>]*><code>plain text<\/code><\/pre>/)
       expect(html).not.toContain("language-")
     })
 
@@ -174,7 +237,10 @@ describe("renderMarkdown", () => {
 
     it(":::code wraps in env-wrap with data-source-line", () => {
       const html = renderMarkdown("line1\n\n:::code\nbody\n:::")
-      expect(html).toMatch(/<div class="env-wrap" data-source-line="\d+"><pre><code>body<\/code><\/pre><\/div>/)
+      // The wrapper is annotated with the `:::code` line (3); the inner <pre>
+      // is separately annotated with the line its body starts on (4).
+      expect(html).toMatch(/<div class="env-wrap" data-source-line="3"><pre[^>]*><code>body<\/code><\/pre><\/div>/)
+      expect(html).toMatch(/<pre[^>]*data-source-line="4"/)
     })
 
     it("triple-backtick fences still render normally (regression)", () => {

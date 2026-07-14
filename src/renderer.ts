@@ -259,6 +259,15 @@ function normalizeSourceKey(s: string): string {
 
 /** Pick the rendered-text key for a DOM element (first 40 chars, normalized). */
 function elementTextKey(el: Element): string {
+  // Code blocks are many source lines joined, so their full textContent can
+  // never match a single source line in the map. Key them by their FIRST
+  // non-empty content line instead — that is the line the block starts on.
+  // The line is run through `normalizeSourceKey` so it is shaped exactly like
+  // the map keys (which are built from trimmed source lines).
+  if (el.tagName.toLowerCase() === "pre") {
+    const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
+    return first ? normalizeSourceKey(first) : ""
+  }
   let text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
   // Strip auto-numbering prefixes from headings: numberHeadings turns
   // `# Intro` → `<h1>1 Intro</h1>` and `## Sub` → `<h2>1.1 Sub</h2>`. The
@@ -284,8 +293,26 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const trimmed = line.trim()
-    // Toggle fenced code blocks
-    if (/^```/.test(trimmed)) { inFence = !inFence; continue }
+    // Toggle fenced code blocks. Content inside a fence is deliberately NOT
+    // indexed (code text must not shadow prose keys), but we do record the
+    // fence's first non-empty content line so the rendered `<pre>` can be
+    // annotated — `elementTextKey` keys a `<pre>` by exactly that line.
+    if (/^```/.test(trimmed)) {
+      if (!inFence) {
+        for (let j = i + 1; j < lines.length && !/^```/.test(lines[j].trim()); j++) {
+          if (!lines[j].trim()) continue
+          const fenceKey = normalizeSourceKey(lines[j].trim())
+          if (fenceKey) {
+            const prev = map.get(fenceKey)
+            if (prev) prev.push(j + 1)
+            else map.set(fenceKey, [j + 1])
+          }
+          break
+        }
+      }
+      inFence = !inFence
+      continue
+    }
     if (inFence) continue
     // Toggle YAML frontmatter (only at very top)
     if (i === 0 && trimmed === "---") { inFrontmatter = true; continue }
@@ -311,7 +338,7 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
 }
 
 const ANNOTATABLE_SELECTOR =
-  "h1, h2, h3, h4, h5, h6, p, li, blockquote, figure.tbl-block, div.callout, div.env-wrap"
+  "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figure.tbl-block, div.callout, div.env-wrap"
 
 /**
  * Walk the rendered HTML and add `data-source-line="N"` to block elements
