@@ -4,7 +4,7 @@ import markPlugin from "markdown-it-mark"
 import katex from "katex"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { preprocess } from "./preprocessor"
-import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs } from "./environments"
+import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs, type EnvironmentDocResolver } from "./environments"
 import { processWikilinks } from "./wikilinks"
 import type { KatexMacros } from "./macros"
 import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, wrapInlineNumbered, NUMBERED_MATH_RE } from "./equations"
@@ -498,6 +498,7 @@ export function renderMarkdown(
   wikiNames?: Set<string>,
   bibMap?: Map<string, BibEntry>,
   transclusionResolver?: TransclusionResolver,
+  envRefResolver?: EnvironmentDocResolver,
 ): string {
   resetEnvCounters()
   resetEqCounters()
@@ -535,7 +536,7 @@ export function renderMarkdown(
   withRefs = resolveEqRefs(withRefs, eqLabels)
   withRefs = resolveFigRefs(withRefs, figLabels)
   withRefs = resolveTableRefs(withRefs, tableLabels)
-  withRefs = resolveEnvironmentRefs(withRefs, envLabels)
+  withRefs = resolveEnvironmentRefs(withRefs, envLabels, envRefResolver)
   withRefs = restoreCode(withRefs)
 
   withRefs = withRefs.split('\n').map((line, i) => {
