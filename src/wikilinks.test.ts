@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getFileNameSet, flatFiles, findByName, processWikilinks } from "./wikilinks"
+import { getFileNameSet, flatFiles, findByName, processWikilinks, matchesVaultRelPath, findByVaultRelPath } from "./wikilinks"
 import type { FileNode } from "./types"
 
 const tree: FileNode[] = [
@@ -125,5 +125,52 @@ describe("processWikilinks", () => {
   it("ignores headings: [[target#heading]] uses target for existence check", () => {
     const html = processWikilinks("[[notes#intro]]", names)
     expect(html).not.toContain("wikilink-broken")
+  })
+})
+
+describe("matchesVaultRelPath", () => {
+  it("matches a vault-relative path against an absolute file path", () => {
+    expect(matchesVaultRelPath("/home/w/vault/gp/calendario.md", "gp/calendario")).toBe(true)
+    expect(matchesVaultRelPath("/home/w/vault/gp/calendario.md", "calendario")).toBe(true)
+  })
+
+  it("disambiguates same-named files in different folders", () => {
+    // The whole reason cross-refs are path-based: `findByName` would silently
+    // return whichever `calendario.md` came first.
+    expect(matchesVaultRelPath("/v/gp/calendario.md", "gp/calendario")).toBe(true)
+    expect(matchesVaultRelPath("/v/otro/calendario.md", "gp/calendario")).toBe(false)
+  })
+
+  it("is case-insensitive and tolerates an explicit extension", () => {
+    expect(matchesVaultRelPath("/v/GP/Calendario.md", "gp/calendario")).toBe(true)
+    expect(matchesVaultRelPath("/v/gp/calendario.md", "gp/calendario.md")).toBe(true)
+  })
+
+  it("does not match a partial path segment", () => {
+    expect(matchesVaultRelPath("/v/gp/mi-calendario.md", "calendario")).toBe(false)
+  })
+
+  it("rejects an empty path", () => {
+    expect(matchesVaultRelPath("/v/gp/calendario.md", "  ")).toBe(false)
+  })
+})
+
+describe("findByVaultRelPath", () => {
+  const tree: FileNode[] = [
+    { name: "gp", path: "/v/gp", type: "dir", children: [
+      { name: "calendario.md", path: "/v/gp/calendario.md", type: "file" },
+    ] },
+    { name: "otro", path: "/v/otro", type: "dir", children: [
+      { name: "calendario.md", path: "/v/otro/calendario.md", type: "file" },
+    ] },
+  ]
+
+  it("finds the file addressed by its folder-qualified path", () => {
+    expect(findByVaultRelPath(tree, "gp/calendario")?.path).toBe("/v/gp/calendario.md")
+    expect(findByVaultRelPath(tree, "otro/calendario")?.path).toBe("/v/otro/calendario.md")
+  })
+
+  it("returns null for a missing path", () => {
+    expect(findByVaultRelPath(tree, "nope/calendario")).toBeNull()
   })
 })

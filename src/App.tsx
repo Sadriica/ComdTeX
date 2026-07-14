@@ -38,7 +38,7 @@ import { AiSessionProvider } from "./useAiSession"
 import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
-import { getFileNameSet, flatFiles, findByName } from "./wikilinks"
+import { getFileNameSet, flatFiles, findByName, findByVaultRelPath, matchesVaultRelPath } from "./wikilinks"
 import { pathJoin, displayBasename } from "./pathUtils"
 import { writeTextFileAtomic } from "./atomicWrite"
 import TitleBar from "./TitleBar"
@@ -607,6 +607,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       file.name.toLowerCase() === target.toLowerCase() ||
       file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`))
     return found?.content || null
+  }, [])
+
+  // Resolver for cross-file environment refs (`@gp/calendario@def:x`).
+  //
+  // Reads through `vaultFilesRef` for the same reason `transclusionResolver`
+  // does: STABLE identity. `vaultFiles` content comes from `vaultTextCache`,
+  // whose effect keys on the SET of vault file paths — not on keystrokes — so
+  // for any document other than the active tab this returns the identical
+  // string reference on every render. That is what lets the label cache in
+  // environments.ts short-circuit on a pointer compare instead of re-prescanning.
+  // Nothing here touches the filesystem.
+  const envRefResolver = useCallback((docPath: string): string | null => {
+    const files = vaultFilesRef.current
+    const found = files.find((file) => matchesVaultRelPath(file.path, docPath))
+    return found?.content ?? null
   }, [])
 
   // Export/import/compile handlers — extracted to useExportActions.ts.
@@ -1318,14 +1333,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!macrosReady) return ""
     try {
       return sanitizeRenderedHtml(
-        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, envRefResolver)
       )
     } catch (e) {
       return renderErrorHtml(e)
     }
     // mermaidVersion: included so re-renders that follow a mermaid SVG cache
     // population read the freshly-stored SVGs and embed them inline.
-  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, mermaidVersion, excalidrawVersion])
+  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, envRefResolver, mermaidVersion, excalidrawVersion])
 
   const deferredPreviewContent = useDeferredValue(previewContent)
 
@@ -2174,6 +2189,27 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const sceneB64 = exEdit.dataset.scene ?? ""
       const line = parseInt(exEdit.dataset.line ?? "", 10)
       setExcalidraw({ open: true, sceneB64, targetLine: Number.isFinite(line) && line > 0 ? line : null })
+      return
+    }
+
+    // ── Cross-file environment ref navigation ──────────────────────────────
+    // `@gp/calendario@def:x` → open the target file and jump to the env.
+    // Must run BEFORE the `data-source-line` fallback below, which would
+    // otherwise just move the cursor within the CURRENT file.
+    const envCross = el.closest(".env-ref-cross") as HTMLElement | null
+    if (envCross) {
+      e.preventDefault()
+      const docPath = envCross.dataset.target
+      if (!docPath) return
+      const node = findByVaultRelPath(vault.tree, docPath)
+      if (!node) return
+      const envLabel = envCross.dataset.envLabel
+      if (envLabel) {
+        const content = vaultFiles.find((file) => file.path === node.path)?.content ?? ""
+        const line = content.split("\n").findIndex((candidate) => candidate.includes(`{#${envLabel}}`))
+        if (line >= 0) pendingJumpRef.current = line + 1
+      }
+      handleOpenFileNode(node)
       return
     }
 

@@ -384,3 +384,54 @@ describe("renderMarkdown", () => {
     })
   })
 })
+
+describe("cross-file environment refs (end-to-end)", () => {
+  const calendario = [
+    ":::definition[Uno]{#def:uno}\na\n:::",
+    ":::definition[Valor integrado]{#def:valor}\nc\n:::",
+  ].join("\n\n")
+  const envRefResolver = (p: string) => (p === "gp/calendario" ? calendario : null)
+
+  it("renders a cross-file ref as a link with the target's number", () => {
+    const html = renderMarkdown(
+      "Como vimos en @gp/calendario@def:valor y sigue",
+      {}, undefined, undefined, undefined, undefined, envRefResolver,
+    )
+    expect(html).toContain("Definición 2")
+    expect(html).toContain('data-target="gp/calendario"')
+  })
+
+  it("does not collide with [@key] bibtex citations", () => {
+    // The `@` stays LEADING (`@doc@def:x`, never `[doc]@def:x`) precisely so a
+    // cross-file ref can never be mistaken for a `[@key]` citation, and a
+    // citation is never eaten by the ref resolver. Both must survive one render.
+    const bib = new Map([["knuth1984", {
+      key: "knuth1984", type: "article", fields: { author: "Knuth", year: "1984", title: "Literate Programming" },
+    }]])
+    const html = renderMarkdown(
+      "Cita [@knuth1984] y ref @gp/calendario@def:valor y sigue",
+      {}, undefined, undefined, bib as never, undefined, envRefResolver,
+    )
+    // The citation rendered as a citation (not as an env ref)…
+    expect(html).toContain("cite-ref")
+    expect(html).toContain("Knuth")
+    expect(html).not.toContain("env-ref-broken")
+    // …and the cross-file ref still rendered as a cross-file ref.
+    expect(html).toContain("env-ref-cross")
+    expect(html).toContain("Definición 2")
+  })
+
+  it("leaves a cross-file ref inside a code span verbatim", () => {
+    const html = renderMarkdown(
+      "Escribe `@gp/calendario@def:valor` para citar.",
+      {}, undefined, undefined, undefined, undefined, envRefResolver,
+    )
+    expect(html).toContain("@gp/calendario@def:valor")
+    expect(html).not.toContain("env-ref-cross")
+  })
+
+  it("renders a broken cross-ref without a resolver instead of throwing", () => {
+    const html = renderMarkdown("Ver @gp/calendario@def:valor y sigue")
+    expect(html).toContain("env-ref-broken")
+  })
+})

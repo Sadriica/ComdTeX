@@ -64,3 +64,31 @@ describe("exportReveal", () => {
     expect(html).toContain("theme/black.css")
   })
 })
+
+describe("cross-file environment refs → LaTeX", () => {
+  it("degrades a cross-file ref to plain text naming the source doc", () => {
+    const tex = exportToTex("Como vimos en @gp/calendario@def:valor, esto vale.")
+    expect(tex).toContain("Definición~(gp/calendario)")
+    // The whole point: NO dangling \ref to a label that isn't in this document.
+    expect(tex).not.toContain("\\ref{def:valor}")
+    // And the path must not survive as stray escaped prose.
+    expect(tex).not.toContain("@gp/calendario")
+  })
+
+  it("handles the bracketed escape form", () => {
+    const tex = exportToTex("Ver @[mi carpeta/mi nota]@lem:clave aqui.")
+    expect(tex).toContain("Lema~(mi carpeta/mi nota)")
+    expect(tex).not.toContain("\\ref{lem:clave}")
+  })
+
+  it("still emits a real \\ref for LOCAL env refs", () => {
+    const tex = exportToTex(":::theorem{#thm:main}\nx\n:::\n\nVer @thm:main")
+    expect(tex).toContain("Teorema~\\ref{thm:main}")
+  })
+
+  it("leaves an unknown cross-file prefix as literal text", () => {
+    const tex = exportToTex("@gp/calendario@zzz:valor")
+    expect(tex).toContain("zzz:valor")
+    expect(tex).not.toContain("\\ref{zzz:valor}")
+  })
+})

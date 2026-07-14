@@ -7,6 +7,8 @@ import {
   UNNUMBERED_ENVS,
   prescanEnvironmentLabels,
   resolveEnvironmentRefs,
+  clearEnvRefCache,
+  envRefCacheStats,
 } from "./environments"
 
 beforeEach(() => {
@@ -195,5 +197,150 @@ describe("environment labels", () => {
     } finally {
       warn.mockRestore()
     }
+  })
+})
+
+describe("cross-file environment references", () => {
+  // A target document whose THIRD definition carries the label we reference —
+  // so the test fails if resolution invents a number instead of prescanning.
+  const calendario = [
+    ":::definition[Uno]{#def:uno}\na\n:::",
+    ":::definition[Dos]{#def:dos}\nb\n:::",
+    ":::definition[Valor integrado]{#def:valor}\nc\n:::",
+    ":::theorem[Central]{#thm:central}\nd\n:::",
+  ].join("\n\n")
+
+  const vault: Record<string, string> = {
+    "gp/calendario": calendario,
+    "mi carpeta/mi nota": ":::lemma[Clave]{#lem:clave}\nx\n:::",
+  }
+  const resolver = (docPath: string): string | null => vault[docPath] ?? null
+
+  const noLocals = new Map()
+
+  beforeEach(() => clearEnvRefCache())
+
+  it("resolves a bare vault-relative path ref to the target's own numbering", () => {
+    const html = resolveEnvironmentRefs("Como vimos en @gp/calendario@def:valor", noLocals, resolver)
+    expect(html).toContain("Definición 3")
+    expect(html).toContain('data-target="gp/calendario"')
+    expect(html).toContain('data-env-label="def:valor"')
+    expect(html).toContain('href="#env-def:valor"')
+    expect(html).toContain("env-ref-cross")
+    // The literal path must be consumed, not left as stray prose.
+    expect(html).not.toContain("@gp/calendario")
+  })
+
+  it("resolves the bracketed escape form when the path has spaces", () => {
+    const html = resolveEnvironmentRefs("Ver @[mi carpeta/mi nota]@lem:clave", noLocals, resolver)
+    expect(html).toContain("Lema 1")
+    expect(html).toContain('data-target="mi carpeta/mi nota"')
+    expect(html).not.toContain("mi carpeta/mi nota]@")
+  })
+
+  it("counts each environment type independently across files", () => {
+    const html = resolveEnvironmentRefs("@gp/calendario@thm:central y @gp/calendario@def:dos", noLocals, resolver)
+    expect(html).toContain("Teorema 1")
+    expect(html).toContain("Definición 2")
+  })
+
+  it("does NOT let the inner @def:valor of a cross-file ref win", () => {
+    // The old local-only regex matched the inner `@def:valor` and rendered a
+    // broken LOCAL ref while leaving `@gp/calendario` as prose. Guard that.
+    const html = resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals, resolver)
+    expect(html).not.toContain("env-ref-broken")
+    expect(html).toContain("Definición 3")
+
+    // Same document, no resolver at all: still must not degrade into a local
+    // lookup — it degrades into a BROKEN CROSS ref.
+    const noResolver = resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals)
+    expect(noResolver).toBe('<span class="env-ref-broken">Definición (?)</span>')
+  })
+
+  it("leaves plain local refs untouched", () => {
+    const labels = prescanEnvironmentLabels(":::definition[L]{#def:local}\nx\n:::")
+    const html = resolveEnvironmentRefs("@def:local", labels, resolver)
+    expect(html).toContain("Definición 1")
+    expect(html).toContain('href="#env-def:local"')
+    expect(html).not.toContain("env-ref-cross")
+  })
+
+  it("renders a broken ref when the file is missing", () => {
+    const html = resolveEnvironmentRefs("@no/such/doc@def:valor", noLocals, resolver)
+    expect(html).toBe('<span class="env-ref-broken">Definición (?)</span>')
+  })
+
+  it("renders a broken ref when the label is missing from an existing file", () => {
+    const html = resolveEnvironmentRefs("@gp/calendario@def:ausente", noLocals, resolver)
+    expect(html).toBe('<span class="env-ref-broken">Definición (?)</span>')
+  })
+
+  it("ignores an unknown ref prefix rather than mangling it", () => {
+    const html = resolveEnvironmentRefs("@gp/calendario@zzz:valor", noLocals, resolver)
+    expect(html).toBe("@gp/calendario@zzz:valor")
+  })
+
+  it("does not throw when the resolver throws", () => {
+    const boom = () => { throw new Error("disk on fire") }
+    expect(() => resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals, boom)).not.toThrow()
+    expect(resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals, boom)).toContain("env-ref-broken")
+  })
+
+  it("escapes HTML in the doc path so a ref cannot inject markup", () => {
+    const evil: Record<string, string> = { '"><img src=x>': ":::definition{#def:x}\na\n:::" }
+    const html = resolveEnvironmentRefs('@["><img src=x>]@def:x', noLocals, (p) => evil[p] ?? null)
+    expect(html).not.toContain("<img")
+    expect(html).toContain("&quot;&gt;&lt;img")
+  })
+
+  // ── Cache behaviour (the per-keystroke performance contract) ──────────────
+
+  it("prescans a target document only ONCE across many renders", () => {
+    expect(envRefCacheStats().prescans).toBe(0)
+
+    // Simulate the typing debounce firing 50 times with the doc unchanged.
+    for (let i = 0; i < 50; i++) {
+      const html = resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals, resolver)
+      expect(html).toContain("Definición 3")
+    }
+    expect(envRefCacheStats().prescans).toBe(1)
+  })
+
+  it("prescans once per document, not once per reference", () => {
+    resolveEnvironmentRefs(
+      "@gp/calendario@def:uno @gp/calendario@def:dos @gp/calendario@thm:central",
+      noLocals,
+      resolver,
+    )
+    expect(envRefCacheStats().prescans).toBe(1)
+  })
+
+  it("re-prescans when the target document's content actually changes", () => {
+    const mutable: Record<string, string> = { doc: ":::definition{#def:a}\nx\n:::" }
+    const mutableResolver = (p: string): string | null => mutable[p] ?? null
+
+    expect(resolveEnvironmentRefs("@doc@def:a", noLocals, mutableResolver)).toContain("Definición 1")
+    expect(envRefCacheStats().prescans).toBe(1)
+
+    // Insert a definition BEFORE the labelled one — its number must change.
+    mutable.doc = ":::definition{#def:zero}\nz\n:::\n\n:::definition{#def:a}\nx\n:::"
+    expect(resolveEnvironmentRefs("@doc@def:a", noLocals, mutableResolver)).toContain("Definición 2")
+    expect(envRefCacheStats().prescans).toBe(2)
+  })
+
+  it("does not re-prescan an unrelated doc when a different doc changes", () => {
+    const mutable: Record<string, string> = {
+      stable: ":::definition{#def:s}\nx\n:::",
+      churn: ":::definition{#def:c}\nx\n:::",
+    }
+    const mutableResolver = (p: string): string | null => mutable[p] ?? null
+
+    resolveEnvironmentRefs("@stable@def:s @churn@def:c", noLocals, mutableResolver)
+    expect(envRefCacheStats().prescans).toBe(2)
+
+    mutable.churn = ":::definition{#def:c}\nedited\n:::"
+    resolveEnvironmentRefs("@stable@def:s @churn@def:c", noLocals, mutableResolver)
+    // Only `churn` re-prescanned; `stable` served from cache.
+    expect(envRefCacheStats().prescans).toBe(3)
   })
 })

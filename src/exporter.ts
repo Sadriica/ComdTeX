@@ -66,14 +66,55 @@ function refToTex(prefix: string, id: string): string {
   return envNames[prefix] ? `${envNames[prefix]}~\\ref{${label}}` : `@${label}`
 }
 
+const ENV_REF_NAMES: Record<string, string> = {
+  thm: "Teorema",
+  theorem: "Teorema",
+  lem: "Lema",
+  lemma: "Lema",
+  cor: "Corolario",
+  prop: "Proposición",
+  def: "Definición",
+  definition: "Definición",
+  ex: "Ejemplo",
+  example: "Ejemplo",
+  exc: "Ejercicio",
+  exercise: "Ejercicio",
+}
+
+/**
+ * Cross-file ref (`@gp/calendario@def:x`) → LaTeX.
+ *
+ * A `\ref{def:x}` here would be a DANGLING reference: the target environment
+ * lives in another vault document and is not part of this single-file export,
+ * so LaTeX would silently typeset "??". We cannot resolve the target's NUMBER
+ * either — that is a property of the other file, and this export path is
+ * synchronous with no vault resolver threaded through it.
+ *
+ * So the ref degrades to an honest plain-text mention naming the source
+ * document: `Definición~(gp/calendario)`. It compiles, it carries no broken
+ * cross-reference, and it tells the reader where the result lives.
+ */
+function crossRefToTex(docPath: string, prefix: string, id: string): string {
+  const name = ENV_REF_NAMES[prefix]
+  if (!name) return escTex(`@${docPath}@${prefix}:${id}`)
+  return `${name}~(${escTex(docPath)})`
+}
+
 function textRefsToTex(text: string): string {
   const out: string[] = []
-  const re = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+  // Cross-file alternatives first — otherwise the local pattern matches the
+  // INNER `@def:x` of `@doc@def:x` and emits a dangling `\ref{def:x}` while
+  // leaving `@doc` as escaped prose.
+  const re = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
     out.push(escTex(text.slice(last, m.index)))
-    out.push(refToTex(m[1], m[2]))
+    if (m[3] !== undefined) {
+      out.push(crossRefToTex((m[1] ?? m[2] ?? "").trim(), m[3], m[4]))
+    } else {
+      out.push(refToTex(m[5], m[6]))
+    }
     last = m.index + m[0].length
   }
   out.push(escTex(text.slice(last)))

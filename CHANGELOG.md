@@ -3,6 +3,14 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Cross-file environment references.** Environment refs (`@def:valor`) previously only resolved within a single document. They can now point at a labelled environment in another vault note: `@gp/calendario@def:valor` renders as a link reading "Definición 3" — the target's *own* number — and clicking it opens that file and jumps to the environment. Use `@[mi carpeta/mi nota]@def:valor` when the path contains spaces. Refs are vault-path-based (not filename-based) so vaults with two same-named notes resolve unambiguously, and the `@` stays leading so refs never collide with `[@key]` BibTeX citations. A missing file or missing label degrades to the same `Definición (?)` marker as a broken local ref. Resolution is cached per target document and short-circuits on an unchanged-content pointer compare, so typing does not re-read or re-scan the vault.
+
+### Changed
+- **LaTeX export names the source document for cross-file refs.** `@gp/calendario@def:valor` exports as `Definición~(gp/calendario)` rather than a `\ref{}` to a label that isn't in the exported file, which LaTeX would silently typeset as `??`. Local refs are unchanged and still emit `\ref{}`.
+
 ## [1.9.7] - 2026-07-14
 
 ### Fixed

@@ -516,12 +516,108 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
   return labels
 }
 
-export function resolveEnvironmentRefs(text: string, labels: Map<string, EnvironmentReference>): string {
-  return text.replace(/@([a-zA-Z]+):([\w.-]+)/g, (full, prefix, id) => {
-    if (!ENV_REF_PREFIXES[prefix]) return full
-    const label = `${prefix}:${id}`
+/**
+ * Resolves the text of another vault document, given a vault-relative path
+ * WITHOUT extension (e.g. `gp/calendario`). Must be synchronous: it is called
+ * from `renderMarkdown`, which runs on the typing debounce. Return `null` when
+ * the document doesn't exist. Mirrors `TransclusionResolver` in transclusion.ts.
+ */
+export type EnvironmentDocResolver = (docPath: string) => string | null
+
+// Matches, in priority order:
+//   1. `@[my folder/my note]@def:label` — escaped path (only needed for spaces)
+//   2. `@gp/calendario@def:label`       — bare vault-relative path
+//   3. `@def:label`                     — local ref (legacy form, unchanged)
+//
+// The cross-file alternatives MUST come first: the old local-only pattern
+// `/@([a-zA-Z]+):([\w.-]+)/` happily matches the INNER `@def:label` of
+// `@gp/calendario@def:label` and would render it as a broken LOCAL ref while
+// leaving `@gp/calendario` as stray prose. Ordered alternation consumes the
+// whole cross-file ref at the leading `@`, so the inner form never wins.
+const ENV_REF_RE = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w.-]+)/g
+
+// ── Cross-file label cache ───────────────────────────────────────────────────
+// An environment's NUMBER is a property of its file (it is that file's Nth
+// definition), so resolving `@doc@def:x` means prescanning `doc`. That prescan
+// must not run per keystroke: `renderMarkdown` re-runs on a ~150-700ms debounce
+// while typing, and a vault-wide re-prescan there is exactly the class of bug
+// v1.9.5 shipped to fix.
+//
+// The resolver hands us the target's text from an in-memory, keystroke-
+// independent cache (App.tsx `vaultTextCache`, rebuilt only when the SET of
+// vault files changes), so for any document the user is not currently editing
+// the returned string is the SAME reference every render. `hit.content ===
+// content` is then a pointer compare that short-circuits before any scan —
+// O(1) per ref per render, zero disk I/O, zero re-prescan.
+interface CrossDocCacheEntry {
+  content: string
+  labels: Map<string, EnvironmentReference>
+}
+const crossDocCache = new Map<string, CrossDocCacheEntry>()
+
+// Prescan accounting — the cache's contract is "no re-prescan while typing",
+// which is only meaningfully testable by counting actual prescans.
+let crossDocPrescans = 0
+export function envRefCacheStats(): { prescans: number; size: number } {
+  return { prescans: crossDocPrescans, size: crossDocCache.size }
+}
+export function clearEnvRefCache(): void {
+  crossDocCache.clear()
+  crossDocPrescans = 0
+}
+
+function labelsForDoc(docPath: string, resolver: EnvironmentDocResolver): Map<string, EnvironmentReference> | null {
+  let content: string | null
+  try { content = resolver(docPath) } catch { return null }
+  if (content == null) return null
+
+  const hit = crossDocCache.get(docPath)
+  if (hit && hit.content === content) return hit.labels
+
+  const labels = prescanEnvironmentLabels(content)
+  crossDocPrescans++
+  if (crossDocCache.size >= 200) crossDocCache.clear()
+  crossDocCache.set(docPath, { content, labels })
+  return labels
+}
+
+export function resolveEnvironmentRefs(
+  text: string,
+  labels: Map<string, EnvironmentReference>,
+  resolver?: EnvironmentDocResolver,
+): string {
+  return text.replace(ENV_REF_RE, (
+    full: string,
+    bracketPath: string | undefined,
+    barePath: string | undefined,
+    crossPrefix: string | undefined,
+    crossId: string | undefined,
+    localPrefix: string | undefined,
+    localId: string | undefined,
+  ) => {
+    // ── Cross-file: `@doc@prefix:id` / `@[doc with spaces]@prefix:id` ────────
+    if (crossPrefix !== undefined && crossId !== undefined) {
+      const kind = ENV_REF_PREFIXES[crossPrefix]
+      if (!kind) return full
+      const docPath = (bracketPath ?? barePath ?? "").trim()
+      const label = `${crossPrefix}:${crossId}`
+      // Missing file and missing label degrade identically to a broken LOCAL
+      // ref — a cross-ref must never throw out of the render pipeline.
+      const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
+      const ref = docLabels?.get(label)
+      if (!ref) return `<span class="env-ref-broken">${kind} (?)</span>`
+      const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+      const safeDoc = escHtml(docPath)
+      const safeLabel = escHtml(label)
+      return `<a class="env-ref env-ref-cross" data-target="${safeDoc}" data-env-label="${safeLabel}" title="${safeDoc}" href="#env-${safeLabel}">${display}</a>`
+    }
+
+    // ── Local: `@prefix:id` (unchanged behaviour) ────────────────────────────
+    if (localPrefix === undefined || localId === undefined) return full
+    if (!ENV_REF_PREFIXES[localPrefix]) return full
+    const label = `${localPrefix}:${localId}`
     const ref = labels.get(label)
-    if (!ref) return `<span class="env-ref-broken">${ENV_REF_PREFIXES[prefix]} (?)</span>`
+    if (!ref) return `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
     const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
     return `<a class="env-ref" href="#env-${label}">${display}</a>`
   })
