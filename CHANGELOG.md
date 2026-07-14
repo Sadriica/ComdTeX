@@ -3,6 +3,15 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Table labels no longer render as an extra table row.** `{#tbl:label}` written directly under a table (the documented form) was folded into the table by markdown-it as a lazy continuation, so the label text showed up as a cell. Both the documented form and the blank-line-separated form are now recognised by the prescan *and* consumed by the renderer, so the label never reaches the output either way.
+- **`@tbl:` references resolve again.** The prescan only accepted the no-blank-line form while the renderer only consumed the blank-line form, so no way of writing a table label worked end-to-end: one leaked the label, the other degraded every reference to "Tabla (?)".
+- **Table and figure cross-reference links are no longer dead.** `@tbl:data` linked to `#tbl-data` while the table was given `id="tbl-tbl:data"`, and `@fig:map` linked to `#fig-map` while the figure was given `id="fig-1"` (the label was smuggled through markdown-it in the title slot but read back from a `data-fig-label` attribute that was never emitted). Anchors are now derived from one canonical helper per module, so refs and ids always agree.
+- **Figure labels no longer surface as a tooltip.** The internal `title="fig-label:fig:..."` used to carry labels through markdown-it is now stripped from the rendered `<img>`.
+- **Pipe tables inside fenced code no longer shift table numbering.** The prescan counted them, the renderer did not, so `@tbl:` refs after a code sample containing a table resolved to the wrong number.
+
 ## [1.9.7] - 2026-07-14
 
 ### Fixed
