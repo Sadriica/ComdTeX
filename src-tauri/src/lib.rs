@@ -1,6 +1,12 @@
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
 
+/// Dot-prefixed files the app itself reads/writes inside a vault. These need an
+/// explicit literal-name grant because the `<vault>/**` glob cannot match a
+/// leading dot on Unix — see `allow_vault_dir`. Keep in sync with
+/// `COMMENTS_FILENAME` in `src/comments.ts`.
+const DOT_FILES_IN_VAULT: &[&str] = &[".comdtex-comments.json"];
+
 /// Extends the runtime fs-plugin scope and asset-protocol scope to allow
 /// access to the user's vault folder, which lives at an arbitrary,
 /// user-chosen path on disk and therefore cannot be granted statically in
@@ -28,6 +34,21 @@ fn allow_vault_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
     app.fs_scope()
         .allow_directory(dir, true)
         .map_err(|e| format!("failed to extend fs scope for vault: {e}"))?;
+
+    // `allow_directory` installs a `<vault>/**` glob, and the fs plugin matches
+    // with glob's `require_literal_leading_dot`, which defaults to true on Unix
+    // (tauri-plugin-fs `commands.rs`: `.unwrap_or(cfg!(unix))`). `**` therefore
+    // does NOT match a component with a leading dot, so every dot-prefixed file
+    // the app owns must be granted by literal name — a "." is not a glob
+    // metacharacter, so `Pattern::escape` leaves it intact and it matches.
+    // Setting `requireLiteralLeadingDot: false` in tauri.conf.json would NOT
+    // help here: the plugin builds this runtime scope from `FsScope::default()`
+    // and never threads the config value into its match options.
+    for hidden in DOT_FILES_IN_VAULT {
+        app.fs_scope()
+            .allow_file(dir.join(hidden))
+            .map_err(|e| format!("failed to allow {hidden} in vault scope: {e}"))?;
+    }
 
     app.asset_protocol_scope()
         .allow_directory(dir, true)

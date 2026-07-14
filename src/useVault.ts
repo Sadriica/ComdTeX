@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
-import { writeTextFileAtomic } from "./atomicWrite"
+import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
 import { allowVaultDir } from "./vaultScope"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
@@ -360,7 +360,9 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
   const nodes: FileNode[] = []
 
   for (const entry of entries) {
-    if (!entry.name || entry.name.startsWith(".")) continue
+    // Temp files from writeTextFileAtomic are no longer dot-prefixed (the fs
+    // scope rejects leading dots on Unix), so hide them by name instead.
+    if (!entry.name || entry.name.startsWith(".") || TEMP_FILE_RE.test(entry.name)) continue
     const fullPath = await pathJoin(dirPath, entry.name)
     if (entry.isDirectory) {
       if (IGNORED_TREE_DIRS.has(entry.name)) continue

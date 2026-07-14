@@ -9,11 +9,14 @@
  * or fully fails — there is no in-between truncated state visible at the
  * target path.
  *
- * The temp file's basename is dot-prefixed (`.name.tmp-xxxxxx`) so it reads
- * as a hidden file — `buildTree()` in useVault.ts already filters out any
- * entry whose name starts with "." (see `entry.name.startsWith(".")`), so a
- * stray temp file cannot show up in the FileTree even if a refresh races
- * with the write.
+ * The temp file's basename must NOT begin with a "." — Tauri's fs scope
+ * matches paths with glob's `require_literal_leading_dot`, which defaults to
+ * `true` on Unix (see tauri-plugin-fs `commands.rs`: `.unwrap_or(cfg!(unix))`).
+ * Under that option the `<vault>/**` pattern that `allow_vault_dir` installs
+ * does NOT match a component with a leading dot, so a dot-prefixed temp file
+ * is rejected with "forbidden path" and every save fails on Linux. Temp names
+ * are therefore `name.tmp-xxxxxx`, and `buildTree()` in useVault.ts hides them
+ * by matching TEMP_FILE_RE instead of relying on the dotfile filter.
  */
 import { writeTextFile, rename, remove } from "@tauri-apps/plugin-fs"
 import { pathDirname, pathBasename, pathJoin } from "./pathUtils"
@@ -26,13 +29,23 @@ export function randomSuffix(): string {
 }
 
 /**
- * Build the hidden temp-file basename for `basename` (the target file's own
- * basename, e.g. "note.md"). Pure/pathless so it's unit-testable without the
- * Tauri fs/path IPC. Dot-prefixed so `buildTree()` in useVault.ts (which
- * skips any entry whose name starts with ".") never surfaces it in the tree.
+ * Matches a temp file produced by `tempFileNameFor`. `buildTree()` in
+ * useVault.ts uses this to keep temp files out of the FileTree when a refresh
+ * races with a write.
+ */
+export const TEMP_FILE_RE = /\.tmp-[0-9a-f]{12}$/
+
+/**
+ * Build the temp-file basename for `basename` (the target file's own basename,
+ * e.g. "note.md"). Pure/pathless so it's unit-testable without the Tauri
+ * fs/path IPC.
+ *
+ * Any leading dots are stripped: `.comdtex-comments.json` would otherwise
+ * yield a temp name that still starts with "." and gets rejected by the fs
+ * scope (see the module docblock).
  */
 export function tempFileNameFor(basename: string, suffix: string = randomSuffix()): string {
-  return `.${basename}.tmp-${suffix}`
+  return `${basename.replace(/^\.+/, "")}.tmp-${suffix}`
 }
 
 /**
