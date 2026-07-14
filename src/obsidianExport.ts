@@ -2,8 +2,11 @@
  * Convert ComdTeX-flavored Markdown to Obsidian-friendly Markdown.
  *
  * Goal: keep notes readable in Obsidian even when academic numbering is not
- * reproduced there. Structural labels are removed from visible text.
+ * reproduced there. Structural labels are removed from visible text, and
+ * editor-only keep marks (`^^def: …^^`) collapse to their plain text.
  */
+
+import { stripKeepMarks } from "./keepMarks"
 
 const ENV_LABELS: Record<string, string> = {
   theorem: "theorem",
@@ -18,8 +21,10 @@ const ENV_LABELS: Record<string, string> = {
   note: "note",
 }
 
-export function exportToObsidianMarkdown(markdown: string): string {
-  return markdown
+export function exportToObsidianMarkdown(rawMarkdown: string): string {
+  // Keep marks are editor-only. Strip first: `stripKeepMarks` is math/code-aware
+  // and needs the document still shaped as prose. See keepMarks.ts.
+  return stripKeepMarks(rawMarkdown)
     .replace(/^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#[\w:.-]+\})?\s*\n([\s\S]*?)^:::\s*$/gm,
       (_full, rawName: string, title: string | undefined, body: string) => {
         const name = rawName.toLowerCase()

@@ -2,6 +2,7 @@ import type * as monacoApi from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import katex from "katex"
 import { lintFile, type LintContext } from "./contentLinter"
+import { parseKeepMarks } from "./keepMarks"
 import { pathBasename } from "./pathUtils"
 
 interface Completion {
@@ -937,6 +938,85 @@ export function setupCommentDecorations(
   return {
     update,
     dispose() {
+      clickDisposable.dispose()
+      collection.clear()
+    },
+  }
+}
+
+// ── Keep marks ───────────────────────────────────────────────────────────────
+
+const KEEP_MARK_DEBOUNCE_MS = 400
+
+export interface KeepMarkDecorationsHandle extends monacoApi.IDisposable {
+  /** Re-scan the current model and refresh the decorations. */
+  refresh(): void
+}
+
+/**
+ * Decorate keep marks (`^^texto^^` / `^^def: texto^^`) in the editor.
+ *
+ * This is the ONLY surface where a keep mark is visible — the preview and every
+ * export collapse it to plain text (see keepMarks.ts). The decoration is
+ * deliberately subtle: a faint underline on the marked range plus a gutter
+ * glyph, so the writer can see their own marks without the document looking
+ * annotated.
+ *
+ * Scanning goes through `parseKeepMarks`, so math (`$x^{2^^3}$` — `^` is
+ * LaTeX superscript) and code (`` `^^x^^` ``, fences) are excluded here exactly
+ * as they are everywhere else.
+ */
+export function setupKeepMarkDecorations(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  monaco: typeof monacoApi,
+  onClickGlyph: () => void,
+): KeepMarkDecorationsHandle {
+  editor.updateOptions({ glyphMargin: true })
+  const collection = editor.createDecorationsCollection([])
+  let glyphLines = new Set<number>()
+
+  const refresh = () => {
+    const model = editor.getModel()
+    if (!model) return
+    const marks = parseKeepMarks(model.getValue())
+    glyphLines = new Set(marks.map((m) => m.line))
+    collection.set(marks.map((m) => {
+      const start = model.getPositionAt(m.index)
+      const end = model.getPositionAt(m.index + m.raw.length)
+      return {
+        range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
+        options: {
+          inlineClassName: "keep-mark-inline",
+          glyphMarginClassName: "keep-mark-glyph",
+          hoverMessage: { value: m.category ? `${m.category}: ${m.text}` : m.text },
+        },
+      }
+    }))
+  }
+
+  // Debounced like the content linter: a full-document scan on every keystroke
+  // is exactly the class of work v1.9.5 spent a release removing.
+  let debounce: ReturnType<typeof setTimeout> | null = null
+  const schedule = () => {
+    if (debounce) clearTimeout(debounce)
+    debounce = setTimeout(refresh, KEEP_MARK_DEBOUNCE_MS)
+  }
+
+  const changeDisposable = editor.onDidChangeModelContent(schedule)
+  const modelDisposable = editor.onDidChangeModel(schedule)
+  const clickDisposable = editor.onMouseDown((e) => {
+    if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) return
+    const line = e.target.position?.lineNumber
+    if (line && glyphLines.has(line)) onClickGlyph()
+  })
+  refresh()
+
+  return {
+    refresh,
+    dispose() {
+      if (debounce) clearTimeout(debounce)
+      changeDisposable.dispose()
+      modelDisposable.dispose()
       clickDisposable.dispose()
       collection.clear()
     },

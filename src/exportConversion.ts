@@ -1,5 +1,6 @@
 import { toStorageMd } from "./cmdxFormat"
 import { exportToObsidianMarkdown } from "./obsidianExport"
+import { stripKeepMarks } from "./keepMarks"
 
 /**
  * Export conversion starts from CMDX editor content but does not represent a
@@ -17,5 +18,7 @@ export function toExportMarkdownContent(cmdxContent: string): string {
 }
 
 export function toPandocMarkdownInput(cmdxContent: string): string {
-  return toStorageMd(cmdxContent)
+  // Keep marks are editor-only — strip before Pandoc sees the document, so no
+  // `^^` reaches a .docx / .typ / Beamer / PDF output. See keepMarks.ts.
+  return toStorageMd(stripKeepMarks(cmdxContent))
 }

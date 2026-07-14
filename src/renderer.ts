@@ -16,6 +16,7 @@ import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./refe
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
+import { stripKeepMarks } from "./keepMarks"
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .use(footnotePlugin)
@@ -510,6 +511,15 @@ export function renderMarkdown(
 
   content = resolveTransclusions(content, transclusionResolver)
   content = processBlockIds(content)
+
+  // Keep marks (`^^texto^^` / `^^def: texto^^`) are invisible outside the
+  // editor: collapse them to their plain inner text before anything else looks
+  // at the document, so the preview is byte-identical to the same prose written
+  // without marks. Runs AFTER transclusion so marks in embedded notes are
+  // stripped too. `stripKeepMarks` is math/code-aware and bails on a single
+  // `indexOf` when the document has no marks, so this costs nothing on the
+  // per-keystroke render path for documents that don't use the feature.
+  content = stripKeepMarks(content)
 
   // Auto-generated table of contents: a standalone `[[toc]]` / `[toc]` line
   // becomes a placeholder now and is expanded into a live list (always in sync

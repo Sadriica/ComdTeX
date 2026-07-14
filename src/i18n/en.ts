@@ -329,7 +329,22 @@ export const en: T = {
     cloudSync: "Sync",
     focusTimer: "Focus",
     ai: "AI assistant",
+    keep: "Keep",
     more: "More",
+  },
+
+  keepPanel: {
+    title: "Keep",
+    filterPlaceholder: "Filter marks…",
+    allCategories: "All categories",
+    uncategorized: "No category",
+    count: (n) => `${n} mark${n === 1 ? "" : "s"}`,
+    exportGlossary: "Export glossary",
+    exportDialogTitle: "Export glossary",
+    exported: "Glossary exported",
+    glossaryTitle: "Glossary",
+    emptyIcon: "❰❱",
+    emptyMessage: "No keep marks yet. Wrap a fragment in `^^double carets^^` to keep it, or add a category with `^^def: text^^`. Marks stay invisible in the preview and in exports.",
   },
 
   ai: {

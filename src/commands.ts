@@ -160,6 +160,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     { id: "graph",         label: t.palette.openPanel(t.sidebar.graph),   category: "Vista", action: () => openPanel("graph") },
     { id: "tags",          label: t.palette.openPanel(t.sidebar.tags),    category: "Vista", action: () => openPanel("tags") },
     { id: "labels",        label: t.palette.openPanel(t.sidebar.labels),  category: "Vista", action: () => openPanel("labels") },
+    { id: "keep",          label: t.palette.openPanel(t.sidebar.keep),    category: "Vista", action: () => openPanel("keep") },
     { id: "properties",    label: t.palette.openPanel(t.sidebar.properties), category: "Vista", action: () => openPanel("properties") },
     { id: "viewComments",  label: t.palette.openPanel(t.sidebar.comments), category: "Vista", action: () => openPanel("comments") },
     { id: "todo",          label: t.palette.openPanel(t.sidebar.todo),    category: "Vista", action: () => openPanel("todo") },

@@ -11,7 +11,7 @@ import { renderMarkdown } from "./renderer"
 import { MERMAID_CONFIG } from "./mermaidConfig"
 import type { CmdKAnchor } from "./CmdKEdit"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
-import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker } from "./monacoSetup"
+import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, setupKeepMarkDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker, type KeepMarkDecorationsHandle } from "./monacoSetup"
 import {
   loadComments,
   addComment as addCommentToVault,
@@ -57,6 +57,7 @@ import Resizer from "./Resizer"
 import Breadcrumb from "./Breadcrumb"
 import TagPanel from "./TagPanel"
 import LabelsPanel from "./LabelsPanel"
+import KeepPanel from "./KeepPanel"
 import DocumentLabPanel from "./DocumentLabPanel"
 import FrontmatterPanel from "./FrontmatterPanel"
 import SymbolPickerPanel from "./SymbolPickerPanel"
@@ -107,7 +108,7 @@ const RECENT_KEY = STORAGE_KEYS.RECENT_FILES
 const BOOKMARKS_KEY = STORAGE_KEYS.BOOKMARKS
 const CURSOR_KEY = STORAGE_KEYS.CURSOR_POSITIONS
 const MAX_RECENT = 10
-export type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
+export type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "keep" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
 
 function loadRecentFiles(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
@@ -484,6 +485,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [pdfPath, setPdfPath] = useState<string | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const commentDecorationsRef = useRef<CommentDecorationsHandle | null>(null)
+  const keepMarkDecorationsRef = useRef<KeepMarkDecorationsHandle | null>(null)
   const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">("idle")
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -1202,6 +1204,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     mathHoverDisposableRef.current?.dispose()
     mathPreviewDisposableRef.current?.dispose()
     commentDecorationsRef.current?.dispose()
+    keepMarkDecorationsRef.current?.dispose()
     if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
   }, [])
@@ -1692,6 +1695,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     commentDecorationsRef.current = setupCommentDecorations(editor, monaco, () => {
       // Click on a glyph: surface the comments panel.
       openPanel("comments")
+    })
+
+    // Keep-mark decorations — the ONLY place a `^^…^^` mark is visible.
+    keepMarkDecorationsRef.current?.dispose()
+    keepMarkDecorationsRef.current = setupKeepMarkDecorations(editor, monaco, () => {
+      openPanel("keep")
     })
 
     // ── Editor → Preview double-click sync ───────────────────────────────────
@@ -3161,6 +3170,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             )}
             {sidebarMode === "labels" && (
               <LabelsPanel
+                files={vaultFiles}
+                onOpenFile={(path, line) => {
+                  const node = findVaultNodeByPath(path)
+                  if (node) {
+                    if (line !== undefined) pendingJumpRef.current = line
+                    handleOpenFileNode(node)
+                    setSidebarMode("files")
+                  }
+                }}
+              />
+            )}
+            {sidebarMode === "keep" && (
+              <KeepPanel
                 files={vaultFiles}
                 onOpenFile={(path, line) => {
                   const node = findVaultNodeByPath(path)
