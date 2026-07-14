@@ -6,8 +6,8 @@ describe("toc", () => {
     const content = "# Introducción {#intro}\n\n## Método Ágil\n\n#### Ignored"
 
     expect(extractTocEntries(content)).toEqual([
-      { level: 1, text: "Introducción", slug: "intro", line: 1 },
-      { level: 2, text: "Método Ágil", slug: "metodo-agil", line: 3 },
+      { level: 1, text: "Introducción", slug: "intro", label: "intro", line: 1 },
+      { level: 2, text: "Método Ágil", slug: "metodo-agil", label: null, line: 3 },
     ])
     expect(buildTocMarkdown(content)).toBe("- [Introducción](#intro)\n  - [Método Ágil](#metodo-agil)")
   })

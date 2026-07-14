@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Table and figure cross-reference links are no longer dead.** `@tbl:data` linked to `#tbl-data` while the table was given `id="tbl-tbl:data"`, and `@fig:map` linked to `#fig-map` while the figure was given `id="fig-1"` (the label was smuggled through markdown-it in the title slot but read back from a `data-fig-label` attribute that was never emitted). Anchors are now derived from one canonical helper per module, so refs and ids always agree.
 - **Figure labels no longer surface as a tooltip.** The internal `title="fig-label:fig:..."` used to carry labels through markdown-it is now stripped from the rendered `<img>`.
 - **Pipe tables inside fenced code no longer shift table numbering.** The prescan counted them, the renderer did not, so `@tbl:` refs after a code sample containing a table resolved to the wrong number.
+- **`@sec:` references resolve again.** `numberHeadings` stored heading labels with their `sec:` prefix while `resolveSectionRefs` looked them up without it, so the documented `@sec:intro` form never matched and the raw `@sec:intro` text appeared in the preview. Only the accidental `@sec:sec:intro` double-prefix form worked; both are now accepted.
+- **Headings get an `id` in every document, not just ones containing a `[[toc]]`.** Heading ids were only assigned as a side effect of expanding the TOC, so in a document without one every in-page link was dead. Id assignment now always runs, and the auto-TOC links to the ids the headings actually have instead of re-deriving its own.
+- **Explicit `{#sec:label}` ids now reach the rendered heading**, so a `@sec:` link points at the labeled heading rather than at a slug of its text.
+- **`@sec:` / `@thm:`-family references at the end of a sentence resolve again.** Their label pattern swallowed the trailing period, so "ver @thm:main." looked up `main.` and rendered as unresolved. Dots inside a label (`@thm:1.2`) still work.
+- **Clicking a cross-reference now scrolls the preview to its target.** In-page anchors are handled before the source-line fallback, which previously hijacked the click and jumped the editor to the line the reference was written on.
+- **Unknown `@sec:` labels render as a broken-reference marker** (`sección (?)`) instead of leaking the raw `@sec:…` source text, matching how `@tbl:` and `@fig:` already behaved.
 
 ## [1.9.7] - 2026-07-14
 

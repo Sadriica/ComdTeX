@@ -12,7 +12,7 @@ import { resolveCitations, renderBibliography } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preprocessFigureLabels } from "./figures"
-import { numberHeadings, resolveSectionRefs } from "./references"
+import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./references"
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
@@ -390,16 +390,51 @@ const TOC_PLACEHOLDER = "\x02TOC\x03"
  * blockquote headings, etc. are all handled because we read the real DOM output
  * rather than re-scanning the markdown source.
  */
-function injectToc(html: string): string {
-  if (!html.includes(TOC_PLACEHOLDER)) return html
+interface HeadingItem {
+  level: number
+  text: string
+  slug: string
+}
 
+/**
+ * Stamp the explicit `{#sec:label}` ids carried through markdown-it by
+ * `numberHeadings` onto their rendered `<h*>` element. Runs for every document,
+ * so `@sec:` links work with or without a `[[toc]]`.
+ */
+function attachSectionIds(html: string): string {
+  const out = html.replace(/<h([1-6])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
+    const marker = SECTION_ID_MARKER_RE.exec(inner)
+    if (!marker) return full
+    const cleaned = inner.replace(SECTION_ID_MARKER_RE, "").replace(/\s+$/, "")
+    if (/\sid=/.test(attrs)) return `<h${lvl}${attrs}>${cleaned}</h${lvl}>`
+    return `<h${lvl}${attrs} id="${marker[1]}">${cleaned}</h${lvl}>`
+  })
+  // Drop any stray marker (e.g. a heading written inside a code sample, which
+  // `numberHeadings` also rewrites) so control chars never reach the output.
+  return out.replace(/\x02SECID:[\w:.-]+\x03/g, "")
+}
+
+/**
+ * Give every h1–h3 a stable `id` and collect them for the TOC. Headings that
+ * already carry an explicit id (from `attachSectionIds`) keep it, and the TOC
+ * links to that same id — the two can never desync.
+ */
+function assignHeadingIds(html: string): { html: string; items: HeadingItem[] } {
   const used = new Set<string>()
-  const items: { level: number; text: string; slug: string }[] = []
+  const items: HeadingItem[] = []
 
   const withIds = html.replace(/<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
     // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
     const text = inner.replace(/<[^>]+>/g, "").replace(/^\s*\d+(?:\.\d+)*\s+/, "").trim()
     if (!text) return full
+
+    const existing = /\sid="([^"]+)"/.exec(attrs)
+    if (existing) {
+      used.add(existing[1])
+      items.push({ level: Number(lvl), text, slug: existing[1] })
+      return full
+    }
+
     let slug = slugifyHeading(text) || "section"
     if (used.has(slug)) {
       let k = 2
@@ -408,9 +443,14 @@ function injectToc(html: string): string {
     }
     used.add(slug)
     items.push({ level: Number(lvl), text, slug })
-    if (/\sid=/.test(attrs)) return full
     return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
   })
+
+  return { html: withIds, items }
+}
+
+function injectToc(html: string, items: HeadingItem[]): string {
+  if (!html.includes(TOC_PLACEHOLDER)) return html
 
   // `text` is already HTML-escaped (it came out of rendered HTML), so it is
   // safe to drop straight into the link.
@@ -420,7 +460,7 @@ function injectToc(html: string): string {
         .join("")}</ul></nav>`
     : ""
 
-  return withIds
+  return html
     .replace(new RegExp(`<p>${TOC_PLACEHOLDER}</p>`, "g"), toc)
     .replace(new RegExp(TOC_PLACEHOLDER, "g"), toc)
 }
@@ -532,8 +572,11 @@ export function renderMarkdown(
   }
   const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
 
-  // Expand the `[[toc]]` placeholder + assign heading ids for navigation.
-  html = injectToc(html)
+  // Assign heading ids for navigation (always — `@sec:` anchors must resolve in
+  // documents with no TOC), then expand the `[[toc]]` placeholder against them.
+  html = attachSectionIds(html)
+  const headings = assignHeadingIds(html)
+  html = injectToc(headings.html, headings.items)
 
   // Hoist block-id placeholders to their parent elements before sanitizer runs.
   html = attachBlockIds(html)
