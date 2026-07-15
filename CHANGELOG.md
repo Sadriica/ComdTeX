@@ -3,6 +3,18 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.10.1] - 2026-07-15
+
+### Fixed
+- **Unsaved edits no longer vanish on window focus.** Refocusing the window (very frequent on Wayland/Sway — tooltips, dialogs, workspace switches, external file managers) re-ran the full vault load, which rebuilt every open tab from disk/draft and silently discarded in-memory edits not yet flushed (drafts flush at 300 ms, autosave at 800 ms). Focus now only refreshes the file tree. `restoreTabs` also refuses to overwrite an already-open tab that has unsaved edits (defense in depth).
+- **Autosave race could lose the last edit.** A keystroke landing while a save was in flight had its "unsaved" signal (`pendingContent` / `isDirty`) cleared when that save completed, stranding the newer text so it was lost on the next tab close, vault switch, or app quit. The signal is now only cleared when nothing newer arrived.
+- **Search-and-replace no longer clobbers unsaved edits.** Replacing in an open, dirty file read from disk (ignoring the in-memory edits) and wrote directly without cancelling the pending autosave. It now uses the tab's current content and the safe write path.
+- **Empty and unsupported-only folders appear in the file tree again.** A directory was hidden unless it contained a renderable file, so a newly created empty folder (or one holding only images/`.txt`/etc.) never showed up no matter how many reloads. Directories are now always listed, and an unreadable subdirectory no longer aborts the entire tree walk.
+- **`:::code` blocks with a language survive saving.** A `:::code python` block (code with a language) was invisible to the special-block guard, so shorthand tokens in its body (`abs`, `sqrt`, `frac`, `table`, …) were expanded and the code corrupted on disk. Fixed, plus the case of a special block nested inside a normal environment (its callout prefix was applied to only the first line, garbling the block on reopen).
+- **Equation numbering stays in sync around code fences.** `$$…$$` inside a fenced code block was numbered and rendered as live math, desyncing every following `@eq:` reference from the visible number. Fenced blocks are now excluded, matching the reference prescan.
+- **DOCX / Beamer export can no longer destroy an extension-less target.** The temporary file was derived by swapping the `.docx`/`.pdf` suffix; when the Linux save dialog didn't append the extension, the temp path equalled the chosen path and the export overwrote then deleted the user's file. The temp path is now independent of the extension.
+- **Frontmatter search (`fm:`) matches keys case-insensitively** — a document using `Author:` / `Title:` is no longer excluded by an `fm:author=…` filter. Also fixed a stray orphaned draft when renaming a file immediately after typing.
+
 ## [1.10.0] - 2026-07-14
 
 ### Added
