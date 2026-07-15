@@ -148,8 +148,18 @@ function preRenderDisplayMath(
   // appearing inside backticks (e.g. documentation about the syntax itself) is
   // NOT treated as numbered math. We mask with whitespace of identical length
   // so positions are preserved, then re-overlay the original code spans.
+  // Also blank fenced code blocks (length-preserving, so byte offsets into the
+  // ORIGINAL text stay valid) BEFORE scanning. Without this, `$$...$$` inside a
+  // ``` fence is counted here and KaTeX-rendered, while prescanEquations (which
+  // strips fences) excludes it — so the visible (N) desyncs from what every
+  // `@eq:` reference resolves to, and math renders inside what should be a
+  // literal code listing. Mirror equations.ts stripCodeFences' fence pattern.
   const codeSpans: Array<{ start: number; end: number; text: string }> = []
-  const masked = text.replace(/(`+)([^`\n]*?)\1/g, (m, _t, _c, offset: number) => {
+  const fenceBlanked = text.replace(
+    /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm,
+    (m) => " ".repeat(m.length),
+  )
+  const masked = fenceBlanked.replace(/(`+)([^`\n]*?)\1/g, (m, _t, _c, offset: number) => {
     codeSpans.push({ start: offset, end: offset + m.length, text: m })
     return " ".repeat(m.length)
   })

@@ -306,7 +306,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     }
     const outPath = await save({ filters: [{ name: "Word Document", extensions: ["docx"] }] })
     if (!outPath) return
-    const tmpPath = outPath.replace(/\.docx$/i, "_tmp.md")
+    // Derive the temp path by APPENDING, not by swapping a `.docx` suffix: the
+    // GTK save dialog on Linux doesn't reliably auto-append the filter
+    // extension, so a `.replace(/\.docx$/…)` would be a no-op and tmpPath would
+    // equal outPath — pandoc would then read+write the same path and `remove`
+    // would delete the user's chosen file, destroying it.
+    const tmpPath = `${outPath}.comdtex-tmp.md`
     try {
       await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"])
@@ -330,7 +335,10 @@ export function useExportActions(ctx: ExportActionsCtx) {
     }
     const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
     if (!outPath) return
-    const tmpPath = outPath.replace(/\.pdf$/i, "_tmp.md")
+    // Append rather than swap the `.pdf` suffix — see handleExportDocx: an
+    // extension-less outPath would otherwise make tmpPath === outPath and the
+    // final `remove` would destroy the user's chosen file.
+    const tmpPath = `${outPath}.comdtex-tmp.md`
     try {
       await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"])

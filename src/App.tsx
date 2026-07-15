@@ -987,7 +987,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     let unlisten: (() => void) | undefined
     let cancelled = false
     win.onFocusChanged(({ payload: focused }) => {
-      if (focused && vault.vaultPath) vault.loadVault()
+      // Only refresh the file tree on refocus — NOT loadVault(). loadVault runs
+      // restoreTabs(), which rebuilds every tab from disk/draft and would
+      // clobber unsaved in-memory edits (drafts flush at 300ms, autosave at
+      // 800ms, so recent keystrokes aren't persisted yet). On Wayland/Sway
+      // focus events fire constantly, so this was silently discarding edits.
+      if (focused && vault.vaultPath) vault.refreshTree(vault.vaultPath)
     }).then((fn) => {
       // If the effect was cleaned up before the listener finished registering,
       // immediately tear down the listener instead of leaking it.
@@ -1538,6 +1543,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (cursorSaveRef.current) {
       clearTimeout(cursorSaveRef.current)
       cursorSaveRef.current = undefined
+    }
+    // Cancel a pending preview debounce from the PREVIOUS file too. Otherwise,
+    // typing in file A and switching to file B within the debounce window lets
+    // A's queued setPreviewContent fire after this effect set B's content — the
+    // preview would render A while the editor shows B until the next keystroke.
+    if (previewDebounceRef.current) {
+      clearTimeout(previewDebounceRef.current)
+      previewDebounceRef.current = undefined
     }
     // Jump to pending search line OR restore saved cursor position
     const timeoutId = setTimeout(() => {
@@ -2557,16 +2570,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     target?: SearchReplaceTarget,
   ): Promise<number> => {
     try {
-      const diskText = await readTextFile(filePath)
-      const text = toEditorContent(filePath, diskText)
+      // Prefer the open tab's in-memory content over disk: if the file has
+      // unsaved edits, reading disk would run the replace against stale bytes
+      // and then overwrite the user's edits. Route the write through
+      // writeFileSafe so the pending autosave is cancelled (otherwise it could
+      // fire after our write and clobber the replacement with the pre-edit
+      // buffer) and the tab/draft/mtime stay consistent.
+      const openTab = vault.openTabs.find((tb) => tb.path === filePath)
+      const text = openTab ? openTab.content : toEditorContent(filePath, await readTextFile(filePath))
       const re = buildSearchRegExp(search, opts)
       if (!re) return 0
       const { count, content: newContent } = target
         ? replaceMatchAt(text, re, replace, target)
         : replaceMatches(text, re, replace)
       if (count === 0) return 0
-      await writeTextFileAtomic(filePath, toDiskContent(filePath, newContent))
-      vault.patchTabContent(filePath, newContent)
+      await vault.writeFileSafe(filePath, newContent)
       return count
     } catch (e) {
       showToast(t.app.replaceError((e as Error).message), "error")

@@ -40,6 +40,42 @@ describe("special-block CMDX round-trip (lossless)", () => {
     expect(onDisk).not.toContain("\\exp")
   })
 
+  // Regression: `:::code <lang>` (a code block WITH a language) was invisible to
+  // the special-block mask because CMDX_ENV_START_RE rejects the trailing token,
+  // so a shorthand token in the body (`lim`, `frac`, `abs`, `sqrt`, `table`, …)
+  // got expanded — corrupting the code listing on disk. Must be verbatim.
+  it("does not shorthand-expand a :::code block that has a language (tex)", () => {
+    const src = ":::code python\nreturn abs(x) + sqrt(y)\n:::"
+    const onDisk = toStorage(src, "tex")
+    expect(onDisk).toContain("abs(x) + sqrt(y)")
+    expect(onDisk).not.toContain("\\left|")
+    expect(onDisk).not.toContain("\\sqrt")
+    expect(toCmdx(onDisk, "tex")).toBe(src)
+  })
+
+  it("preserves a :::code block with a language and a table shorthand (md)", () => {
+    const src = ":::code python\ndf = table(A, B)\n:::"
+    const onDisk = toStorage(src, "md")
+    expect(onDisk).toContain("table(A, B)")
+    expect(onDisk).not.toContain("|")
+    expect(toCmdx(onDisk, "md")).toBe(src)
+  })
+
+  // Regression: a special block nested inside a normal environment. The env
+  // becomes a `> ` callout on save; the special block's placeholder used to get
+  // the `> ` prefix on only its first line, so on reopen every later line
+  // (incl. the closing `:::`) fell out of the callout and the structure garbled.
+  it("preserves a :::code nested inside a :::theorem across a md round-trip", () => {
+    const src = ":::theorem[T]\n:::code\nx = 1\ny = 2\n:::\n:::"
+    const onDisk = toStorage(src, "md")
+    expect(onDisk).toContain("[!abstract]")
+    // Every line of the nested block stays inside the callout body.
+    expect(onDisk).toContain("> :::code")
+    expect(onDisk).toContain("> x = 1")
+    expect(onDisk).toContain("> :::")
+    expect(toCmdx(onDisk, "md")).toBe(src)
+  })
+
   it("still converts ordinary environments to Obsidian callouts (md)", () => {
     // Sanity: the masking must not affect normal theorem/note envs.
     const onDisk = toStorage(":::theorem[Pitágoras]\na^2 + b^2 = c^2\n:::", "md")

@@ -215,7 +215,12 @@ export class VaultSearchIndex {
       if (filters.frontmatter.length > 0) {
         const data = entry.frontmatterData
         const ok = filters.frontmatter.every(({ key, value }) => {
-          const actual = data[key]
+          // `key` is lowercased by parseSearchQuery, but frontmatter keys are
+          // stored verbatim (frontmatter.ts preserves case), so a document with
+          // `Author:`/`Title:` would never match a `fm:author=…` filter with a
+          // direct `data[key]` lookup. Resolve the key case-insensitively.
+          const actualKey = Object.keys(data).find((k) => k.toLowerCase() === key)
+          const actual = actualKey != null ? data[actualKey] : undefined
           if (actual == null) return false
           if (!value) return true
           return String(actual).toLowerCase().includes(value)

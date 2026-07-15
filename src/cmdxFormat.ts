@@ -287,6 +287,27 @@ const SPECIAL_ENVS = new Set([
   "pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw",
 ])
 
+// A `:::code` block may carry a language after a space (`:::code python`),
+// which `environments.ts` (CODE_ENV_RE) renders as a real code listing. The
+// generic CMDX_ENV_START_RE rejects that trailing token (it ends in `\s*$`
+// after the name), so masking would miss it and the body would be
+// shorthand-expanded — silently corrupting the code on disk. Recognize the
+// language form explicitly so these blocks are masked like any other special
+// block. `parseCmdxEnvStart` already handles bare `:::code` and the rest.
+const CODE_ENV_START_RE = /^:::code(?:[ \t]+\S+)?[ \t]*$/
+
+/** True if `line` opens a special (verbatim-preserved) block, incl. `:::code <lang>`. */
+function isSpecialEnvStart(line: string): boolean {
+  const parsed = parseCmdxEnvStart(line)
+  if (parsed && SPECIAL_ENVS.has(parsed.rawName.toLowerCase())) return true
+  return CODE_ENV_START_RE.test(line)
+}
+
+/** True if `line` opens ANY cmdx env (used to track nesting depth while masking). */
+function isAnyEnvStart(line: string): boolean {
+  return parseCmdxEnvStart(line) !== null || CODE_ENV_START_RE.test(line)
+}
+
 /**
  * Replace special `:::type … :::` blocks with placeholders so the storage
  * conversions (shorthand expansion + env→callout/LaTeX mapping) never touch
@@ -299,12 +320,11 @@ function maskSpecialBlocks(text: string): { masked: string; restore: (s: string)
   const slots: string[] = []
   const out: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    const parsed = parseCmdxEnvStart(lines[i])
-    if (parsed && SPECIAL_ENVS.has(parsed.rawName.toLowerCase())) {
+    if (isSpecialEnvStart(lines[i])) {
       let depth = 1
       let close = -1
       for (let j = i + 1; j < lines.length; j++) {
-        if (parseCmdxEnvStart(lines[j])) depth++
+        if (isAnyEnvStart(lines[j])) depth++
         else if (CMDX_ENV_END_RE.test(lines[j])) { depth--; if (depth === 0) { close = j; break } }
       }
       if (close >= 0) {
@@ -317,7 +337,23 @@ function maskSpecialBlocks(text: string): { masked: string; restore: (s: string)
     out.push(lines[i])
   }
   const restore = (s: string): string =>
-    s.replace(/\x00CMDXSPECIAL(\d+)\x00/g, (_, n) => slots[Number(n)] ?? "")
+    s
+      // When a special block was nested inside a normal environment that became
+      // an Obsidian callout, its one-line placeholder gets a leading `> ` (or
+      // `> > `) callout prefix. Re-apply that prefix to EVERY line of the
+      // restored multi-line block — otherwise only the first line stays in the
+      // callout body and the rest (incl. the block's closing `:::`) fall out,
+      // garbling the structure on reopen.
+      .replace(
+        /^((?:[ \t]*>[ \t]?)+)\x00CMDXSPECIAL(\d+)\x00[ \t]*$/gm,
+        (_, prefix: string, n: string) => {
+          const block = slots[Number(n)] ?? ""
+          return block.split("\n").map((l) => prefix + l).join("\n")
+        },
+      )
+      // Any remaining placeholder (the common standalone case, and the TeX path
+      // where env bodies carry no per-line prefix) restores verbatim.
+      .replace(/\x00CMDXSPECIAL(\d+)\x00/g, (_, n) => slots[Number(n)] ?? "")
   return { masked: out.join("\n"), restore }
 }
 

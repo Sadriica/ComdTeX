@@ -366,9 +366,15 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
     const fullPath = await pathJoin(dirPath, entry.name)
     if (entry.isDirectory) {
       if (IGNORED_TREE_DIRS.has(entry.name)) continue
-      const children = await buildTree(fullPath, depth + 1)
-      if (children.length > 0)
-        nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
+      // Recurse defensively: an unreadable subdirectory (broken symlink,
+      // socket/FIFO, permission-denied folder) must NOT abort the whole walk,
+      // or one bad entry freezes the entire tree. Show the directory node
+      // unconditionally — an empty folder, or one holding only unsupported
+      // files, still belongs in the tree (previously such folders vanished).
+      let children: FileNode[] = []
+      try { children = await buildTree(fullPath, depth + 1) }
+      catch { /* keep the directory node, just with no children */ }
+      nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
       if (ext === "md" || ext === "tex" || ext === "bib" || ext === "pdf")
@@ -473,6 +479,17 @@ function clearDraft(path: string) {
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
 }
 
+/**
+ * Latest draft content for `path`, checking the in-memory `draftQueue` first
+ * (edits from the last <300ms not yet flushed to localStorage) and falling back
+ * to the persisted drafts. `getDrafts()` alone misses queued-but-unflushed
+ * drafts — e.g. a rename right after a keystroke would strand the draft.
+ */
+function peekDraft(path: string): string | undefined {
+  if (draftQueue.has(path)) return draftQueue.get(path)
+  return getDrafts().find((d) => d.path === path)?.content
+}
+
 // ── Main hook ────────────────────────────────────────────────────────────────
 
 export interface UseVaultOptions {
@@ -575,6 +592,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
       for (const path of savedPaths) {
         // Only restore files from the current vault
         if (!isPathInsideVault(path, vaultP)) continue
+        // Never clobber an already-open tab that has unsaved in-memory edits
+        // with the (older) disk/draft content. restoreTabs runs on refresh
+        // paths too, and reading disk here would silently overwrite text the
+        // user typed within the autosave/draft-flush window.
+        const existingDirty = openTabsRef.current.find((tb) => tb.path === path)
+        if (existingDirty?.isDirty) { tabs.push(existingDirty); continue }
         const ext = path.split(".").pop()?.toLowerCase() ?? ""
         // PDFs restore as preview-mode tabs, no text content
         if (ext === "pdf") {
@@ -956,15 +979,27 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // Update mtime after successful save
       let newMtime: number | undefined
       try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
+      // A keystroke can land WHILE this write is in flight (updateContent runs
+      // synchronously and re-arms the debounce). If pendingContent now holds
+      // bytes NEWER than what we just wrote, the tab is still dirty and that
+      // newer content must survive: clearing isDirty/pendingContent/draft here
+      // would strand it, because closeTab and flushPending both gate the flush
+      // on exactly those signals — so the edit is silently lost on the next tab
+      // close, vault switch, or app quit. Only clear when nothing newer arrived.
+      const superseded = pendingContent.current.has(path) && pendingContent.current.get(path) !== content
       setOpenTabs((tabs) => tabs.map((tab) =>
-        tab.path === path ? { ...tab, isDirty: false, cachedMtime: newMtime ?? tab.cachedMtime } : tab
+        tab.path === path
+          ? { ...tab, isDirty: superseded ? tab.isDirty : false, cachedMtime: newMtime ?? tab.cachedMtime }
+          : tab
       ))
-      // Only drop the draft AFTER the bytes are confirmed on disk; if the
-      // write threw above the catch block returns false and the draft remains
-      // for crash recovery.
-      pendingContent.current.delete(path)
       conflictPaths.current.delete(path)
-      clearDraft(path)
+      if (!superseded) {
+        // Only drop the draft/pending AFTER the bytes are confirmed on disk; if
+        // the write threw above the catch block returns false and the draft
+        // remains for crash recovery.
+        pendingContent.current.delete(path)
+        clearDraft(path)
+      }
       // Keep the index in sync with what we just wrote so the next search
       // doesn't need to re-read this file at all.
       if (newMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, newMtime, content)
@@ -1115,10 +1150,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
         void saveFile(newPath, pending, { force: true })
       }, autoSaveMs))
     }
-    const draft = getDrafts().find((d) => d.path === oldPath)
-    if (draft) {
+    // peekDraft (not getDrafts) so a draft still sitting in the un-flushed
+    // in-memory queue migrates too, instead of being orphaned under oldPath.
+    const draftContent = peekDraft(oldPath)
+    if (draftContent !== undefined) {
       clearDraft(oldPath)
-      saveDraft(newPath, draft.content)
+      saveDraft(newPath, draftContent)
     }
   }, [autoSaveMs, saveFile])
 
