@@ -3,6 +3,17 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.10.2] - 2026-07-15
+
+### Changed
+- **Typing in large documents is dramatically smoother.** A KaTeX-heavy document's rendered HTML (easily multi-MB — each equation expands into hundreds of spans) was being HTML-parsed **three times and re-serialized twice on every preview refresh**, all on the same thread that handles keystrokes: once to annotate source lines (inside `renderMarkdown`), once to sanitize (DOMPurify string round-trip), and once to commit (`template.innerHTML`). The preview now uses a single-parse pipeline: DOMPurify returns its sanitized DOM directly (`sanitizeRenderedHtmlToFragment`), source-line annotation walks that fragment in place, and the block-level morph consumes it — one parse, zero re-serializes (measured ~2× faster commits). The new `commitPreview()` helper is the only sanctioned path from render output to the DOM, so sanitization can never be skipped.
+- **The adaptive preview debounce now measures the real cost.** It previously timed only the DOM commit (a third of the work), so heavy documents under-throttled and saturated the editor's thread. It now measures the full render + commit, backs off up to 1.5 s on very heavy documents (typing stays smooth; the preview just follows a beat behind), keeps its 150 ms floor for light ones, resets when the preview is hidden, and the split reference pane no longer contaminates the active document's timing.
+- **Held-key deletion no longer rebuilds the whole UI ~30× per second.** Menus, the command palette (~130 entries), and the top bars were being rebuilt and re-rendered on every keystroke. They are now memoized end-to-end (the vault handle is read through refs by action handlers, so their identities survive keystrokes), and the menu/toolbar subtrees skip per-keystroke re-renders entirely. Redundant per-keystroke localStorage writes for tab persistence were also eliminated.
+
+### Fixed
+- **Preview click-to-jump stays accurate.** Two annotation regressions from the pipeline rework were caught by review and fixed before release: line annotations could go stale after edits that shift lines without changing the rendered output (e.g. inserting a blank line), and a frontmatter title identical to a body heading could steal its jump target (annotation now skips the frontmatter header and bibliography, as before).
+- Exported standalone HTML no longer ships internal `data-source-line` bookkeeping attributes.
+
 ## [1.10.1] - 2026-07-15
 
 ### Fixed

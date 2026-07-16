@@ -359,17 +359,40 @@ const ANNOTATABLE_SELECTOR =
  */
 export function annotateSourceLines(html: string, raw: string): string {
   if (typeof DOMParser === "undefined") return html
+  const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html")
+  const root = doc.getElementById("root")
+  if (!root) return html
+  annotateSourceLinesIn(root, raw)
+  return root.innerHTML
+}
+
+/**
+ * Same as `annotateSourceLines`, but operates IN PLACE on an already-parsed
+ * DOM subtree (element or fragment) — no HTML parse, no re-serialize. This is
+ * the hot-path variant: the preview pipeline calls it on the DocumentFragment
+ * DOMPurify already produced, so the (potentially multi-MB, KaTeX-heavy)
+ * document HTML is parsed exactly once per render instead of three times.
+ */
+export function annotateSourceLinesIn(root: ParentNode, raw: string): void {
   const map = buildParagraphLineMap(raw)
   // Track consumed indices per key so duplicate keys map to distinct lines.
   const consumed = new Map<string, number>()
 
-  const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html")
-  const root = doc.getElementById("root")
-  if (!root) return html
-
   const targets = [...root.querySelectorAll(ANNOTATABLE_SELECTOR)] as HTMLElement[]
   for (const el of targets) {
     if (el.hasAttribute("data-source-line")) continue
+    // `renderMarkdown` returns `frontmatterHtml + html + bibHtml`, but the
+    // line map built above (`buildParagraphLineMap`) only reflects `raw`,
+    // i.e. the BODY source — the same scope the old string-based annotation
+    // pass used. Elements from the frontmatter header (`renderFrontmatterHeader`
+    // in frontmatter.ts, e.g. `<h1 class="fm-title">`) or the bibliography
+    // (`renderBibliography` in bibtex.ts, wrapped in `.bibliography`) can match
+    // ANNOTATABLE_SELECTOR and share text with a body line (e.g. a frontmatter
+    // `title: Notas` next to a body `# Notas` heading). Without this guard such
+    // an element would silently consume an index from the duplicate-key line
+    // list, shifting every subsequent body annotation to the wrong line. Skip
+    // anything outside the body to restore the old body-only scope.
+    if (el.closest(".frontmatter-header, .bibliography")) continue
     const key = elementTextKey(el)
     if (!key) continue
     const lines = map.get(key)
@@ -379,8 +402,6 @@ export function annotateSourceLines(html: string, raw: string): string {
     consumed.set(key, idx + 1)
     el.setAttribute("data-source-line", String(line))
   }
-
-  return root.innerHTML
 }
 
 // A standalone `[[toc]]` or `[toc]` line (case-insensitive) → auto TOC.
@@ -510,6 +531,17 @@ export function renderMarkdown(
   bibMap?: Map<string, BibEntry>,
   transclusionResolver?: TransclusionResolver,
   envRefResolver?: EnvironmentDocResolver,
+  opts?: {
+    /**
+     * Add `data-source-line` attributes for preview↔editor sync (default true).
+     * Costs a full DOMParser parse + innerHTML re-serialize of the rendered
+     * document. The preview pipeline passes `false` and instead annotates the
+     * sanitized DocumentFragment in place (`annotateSourceLinesIn`) — one parse
+     * total. Callers that never use the annotations (AI panel, hover cards,
+     * copy-as-HTML) also pass `false` to skip the cost outright.
+     */
+    annotate?: boolean
+  },
 ): string {
   resetEnvCounters()
   resetEqCounters()
@@ -605,7 +637,7 @@ export function renderMarkdown(
   // Annotate block elements with their source line for preview ↔ editor sync.
   // Use the original raw input so headings/lists/callouts carry an accurate
   // line number for the click-to-jump handler in the preview pane.
-  html = annotateSourceLines(html, raw)
+  if (opts?.annotate !== false) html = annotateSourceLines(html, raw)
 
   return frontmatterHtml + html + bibHtml
 }

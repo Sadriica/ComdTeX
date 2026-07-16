@@ -84,7 +84,7 @@ import TableEditor from "./TableEditor"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
-import { morphPreviewContent } from "./previewMorph"
+import { commitPreview } from "./previewMorph"
 import { handleGlobalShortcut } from "./appShortcuts"
 import { useTouchpadGestures } from "./useTouchpadGestures"
 import ErrorBoundary from "./ErrorBoundary"
@@ -392,11 +392,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const vimStatusRef = useRef<HTMLDivElement>(null)
   const pendingJumpRef = useRef<number | null>(null)
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  // Last measured preview DOM-commit cost (ms); drives the ADAPTIVE preview
-  // debounce: cheap docs re-render the preview ~150ms after a keystroke; an
-  // SVG-heavy doc (whose commit costs 50-100ms+) backs off toward ~550ms so the
-  // main thread isn't saturated while typing.
+  // Last measured preview DOM-commit cost (ms): sanitize-to-fragment +
+  // annotate + morph + following layout. One half of the adaptive debounce.
   const previewCostRef = useRef(0)
+  // Last measured MAIN-pane render cost (ms): the renderMarkdown string
+  // pipeline, timed separately from the DOM-commit cost above. Passed to
+  // `renderPreviewHtml` as an explicit sink so the split reference pane
+  // (which calls the same function) never writes into it and poisons the
+  // main pane's adaptive delay.
+  const renderCostRef = useRef(0)
+  // Adaptive preview delay: 4× the last full refresh cost (render + commit),
+  // clamped to [150ms, 1500ms] — a refresh may take at most ~1/5 of the
+  // main-thread budget while typing. Reads refs only, so it's stable.
+  const previewDelayMs = () =>
+    Math.min(1500, Math.max(150, Math.round((renderCostRef.current + previewCostRef.current) * 4)))
   const [dragOver, setDragOver] = useState(false)
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
   const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
@@ -545,9 +554,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // current path at execution time (avoids stale-closure data bugs on tab switch).
   const activeFilePathRef = useRef<string | null>(null)
   activeFilePathRef.current = vault.openFile?.path ?? null
+  // vault gets a new identity on every keystroke (its state lives in the returned
+  // object). Handlers that only run on explicit user actions read the CURRENT
+  // vault through this ref and stay identity-stable, so the menus/palette memos
+  // below don't recompute per keystroke.
+  const vaultRef = useRef(vault)
+  vaultRef.current = vault
   const previewPaneRef = useRef<HTMLDivElement>(null)
   // The .preview-content divs are committed imperatively (block-level morph) so a
-  // one-block edit doesn't blow away every diagram SVG; see morphPreviewContent.
+  // one-block edit doesn't blow away every diagram SVG; see commitPreview.
   const previewContentRef = useRef<HTMLDivElement>(null)
   const splitContentRef = useRef<HTMLDivElement>(null)
   // Set when the cursor change originates from a preview click. The preview
@@ -636,7 +651,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // messages aren't re-rendered through the KaTeX pipeline on every streamed
   // token (the prop identity stays put until its inputs actually change).
   const aiRenderHtml = useCallback((md: string) => sanitizeRenderedHtml(
-    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, undefined, { annotate: false })
   ), [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver])
 
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
@@ -1317,7 +1332,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // re-runs and picks up the cached SVGs (embedded inline by environments.ts).
   const [mermaidVersion, setMermaidVersion] = useState(0)
 
-  const renderPreviewHtml = useCallback((content: string) => {
+  // `costSink`, when passed, receives the elapsed ms of THIS call's
+  // renderMarkdown + sanitize pipeline — written in a `finally` so it's
+  // recorded even when rendering throws (renderErrorHtml is then what the
+  // user sees, and its own refresh should still get a fresh, non-stale
+  // delay). Only the main preview pane passes a sink (`renderCostRef`); the
+  // split reference pane calls this same function but passes nothing, so it
+  // can never poison the main pane's adaptive debounce.
+  const renderPreviewHtml = useCallback((content: string, costSink?: { current: number }) => {
     // Defer rendering until the macros file has been loaded once for this
     // vault. Without this gate the first paint of a freshly-opened file uses
     // `macros = {}`, so any equation that relies on a user-defined macro
@@ -1326,12 +1348,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // render that fixes things — exactly the "top renders raw, scroll/edit
     // makes it correct" symptom users were reporting.
     if (!macrosReady) return ""
+    const t0 = performance.now()
     try {
-      return sanitizeRenderedHtml(
-        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, envRefResolver)
-      )
+      // RAW pipeline output — NOT sanitized and NOT line-annotated here. The
+      // commit effects hand this string to commitPreview() (previewMorph.ts),
+      // which sanitizes to a DocumentFragment, annotates it in place, and
+      // morphs — so the (KaTeX-heavy, potentially multi-MB) document HTML is
+      // parsed ONCE per refresh instead of three times with two re-serializes.
+      // This string must never reach the DOM by any other path.
+      return renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, envRefResolver, { annotate: false })
     } catch (e) {
       return renderErrorHtml(e)
+    } finally {
+      if (costSink) costSink.current = performance.now() - t0
     }
     // mermaidVersion: included so re-renders that follow a mermaid SVG cache
     // population read the freshly-stored SVGs and embed them inline.
@@ -1343,29 +1372,32 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Previously this ran on every (debounced) keystroke regardless of visibility,
   // so drafting with the preview collapsed still paid the whole render cost.
   const previewHtml = useMemo(
-    () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent) : ""),
+    () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent, renderCostRef) : ""),
     [settings.previewVisible, renderPreviewHtml, deferredPreviewContent]
   )
 
-  // Commit previewHtml via BLOCK-LEVEL morph instead of dangerouslySetInnerHTML.
-  // Only the top-level blocks that actually changed are replaced; unchanged blocks
+  // Commit previewHtml via `commitPreview` (sanitize → annotate → block-level
+  // morph, single parse) instead of `dangerouslySetInnerHTML`. Only the
+  // top-level blocks that actually changed are replaced; unchanged blocks
   // (and their already-rendered diagram SVGs) keep their live DOM nodes, so a
   // one-character edit no longer re-parses + re-lays-out the whole document.
+  // Deps include `deferredPreviewContent` (previewHtml's own source text) so
+  // an edit that shifts source lines WITHOUT changing the rendered HTML byte
+  // for byte (e.g. a blank line inserted) still re-annotates `data-source-line`
+  // instead of leaving click-to-jump/scroll-sync pointing at stale lines.
   useLayoutEffect(() => {
     const el = previewContentRef.current
-    if (el) morphPreviewContent(el, previewHtml)
-  }, [previewHtml])
-
-  // Measure the cost of committing previewHtml into the DOM (morph + layout of any
-  // changed inline SVGs). It feeds the ADAPTIVE preview debounce (below) so heavy
-  // docs re-render less often, keeping typing smooth, while light docs stay snappy.
-  useLayoutEffect(() => {
-    const __t = performance.now()
+    if (!el) return
+    // Measure the WHOLE commit (sanitize parse + annotate + morph + the layout
+    // that follows, via rAF) — it feeds the ADAPTIVE preview debounce below so
+    // heavy docs re-render less often while light docs stay snappy.
+    const t0 = performance.now()
+    commitPreview(el, previewHtml, deferredPreviewContent)
     const id = requestAnimationFrame(() => {
-      previewCostRef.current = performance.now() - __t
+      previewCostRef.current = performance.now() - t0
     })
     return () => cancelAnimationFrame(id)
-  }, [previewHtml])
+  }, [previewHtml, deferredPreviewContent])
 
   const splitTab = useMemo(
     () => vault.openTabs.find((t) => t.path === splitFile) ?? null,
@@ -1379,11 +1411,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     [renderPreviewHtml, splitTab, deferredSplitContent]
   )
 
-  // Same block-level morph for the split reference pane.
+  // Same single-parse commit (sanitize → annotate → morph) for the split
+  // reference pane. Deps include `deferredSplitContent` for the same
+  // stale-annotation reason as the main pane's commit effect above.
   useLayoutEffect(() => {
     const el = splitContentRef.current
-    if (el) morphPreviewContent(el, splitPreviewHtml)
-  }, [splitPreviewHtml])
+    if (!el) return
+    commitPreview(el, splitPreviewHtml, deferredSplitContent)
+  }, [splitPreviewHtml, deferredSplitContent])
+
+  // While the preview pane is hidden, `previewHtml` short-circuits to "" (see
+  // the memo above) — a refresh is just a cheap string state update, not a
+  // real render/commit. Freezing the cost refs at their last (possibly heavy)
+  // measured value would pin the adaptive preview delay near its ceiling for
+  // consumers that keep reading `previewContent` while hidden (OutlinePanel,
+  // breadcrumb heading, spellcheck lang, StatusBar counts) — a 10x staleness
+  // regression vs. the intended 150ms floor. Reset to 0 on hide; the refs
+  // re-learn real costs once the preview is shown again.
+  useEffect(() => {
+    if (!settings.previewVisible) {
+      renderCostRef.current = 0
+      previewCostRef.current = 0
+    }
+  }, [settings.previewVisible])
 
   const previewNeedsMermaid = useMemo(
     () => previewHtml.includes("language-mermaid"),
@@ -1770,7 +1820,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     // Debounce preview 150ms to avoid re-rendering on every keystroke
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(content), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(content), previewDelayMs())
   }, [vault])
 
   // Push EXTERNAL content changes into the Monaco model. The editor is now
@@ -1829,7 +1879,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.setValue(newContent)
     vault.updateContent(newContent)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), previewDelayMs())
   }, [vault])
 
   // ── OutlinePanel: drag-to-reorder document sections ──────────────────────
@@ -1850,7 +1900,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.pushUndoStop()
     vault.updateContent(next)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), Math.min(700, Math.max(150, Math.round(previewCostRef.current * 4))))
+    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), previewDelayMs())
   }, [vault])
 
   // ── Recent files ─────────────────────────────────────────────────────────
@@ -1882,9 +1932,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const node = findVaultNodeByPath(prev)
     if (!node) return
     setNavHistory((h) => h.slice(0, -1))
-    if (vault.activeTabPath) setNavFuture((f) => [vault.activeTabPath!, ...f.slice(0, 49)])
-    vault.openFileNode(node)
-  }, [navHistory, vault, findVaultNodeByPath])
+    if (vaultRef.current.activeTabPath) setNavFuture((f) => [vaultRef.current.activeTabPath!, ...f.slice(0, 49)])
+    vaultRef.current.openFileNode(node)
+  }, [navHistory, findVaultNodeByPath])
 
   const goForward = useCallback(() => {
     if (navFuture.length === 0) return
@@ -1892,15 +1942,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const node = findVaultNodeByPath(next)
     if (!node) return
     setNavFuture((f) => f.slice(1))
-    if (vault.activeTabPath) setNavHistory((h) => [...h.slice(-49), vault.activeTabPath!])
-    vault.openFileNode(node)
-  }, [navFuture, vault, findVaultNodeByPath])
+    if (vaultRef.current.activeTabPath) setNavHistory((h) => [...h.slice(-49), vaultRef.current.activeTabPath!])
+    vaultRef.current.openFileNode(node)
+  }, [navFuture, findVaultNodeByPath])
 
   // ── Per-line comment handlers ─────────────────────────────────────────────
   const handleAddCommentAtCursor = useCallback(async () => {
-    if (!vault.vaultPath) { showToast(t.comments.noVault, "error"); return }
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) { showToast(t.comments.noVault, "error"); return }
     const editor = editorRef.current
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!editor || !file) { showToast(t.comments.noFile, "error"); return }
     const pos = editor.getPosition()
     if (!pos) return
@@ -1914,7 +1965,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!trimmed) return
     const comment: Comment = {
       id: generateCommentId(),
-      filePath: commentToRelative(file.path, vault.vaultPath),
+      filePath: commentToRelative(file.path, vaultPath),
       line,
       lineSnippet: makeLineSnippet(lineText),
       body: trimmed,
@@ -1924,7 +1975,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     setComments((prev) => [...prev, comment])
     try {
-      await addCommentToVault(vault.vaultPath, comment)
+      await addCommentToVault(vaultPath, comment)
       showToast(t.comments.addedToast, "success")
       openPanel("comments")
     } catch (e) {
@@ -1932,7 +1983,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       setComments((prev) => prev.filter((c) => c.id !== comment.id))
       showToast(e instanceof Error ? e.message : String(e), "error")
     }
-  }, [vault.vaultPath, vault.openFile, t, openPanel])
+  }, [t, openPanel])
 
   const handleDeleteComment = useCallback(async (id: string) => {
     if (!vault.vaultPath) return
@@ -1976,19 +2027,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault.vaultPath, comments])
 
   const handleToggleCommentAtCursor = useCallback(() => {
-    if (!vault.vaultPath) return
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) return
     const editor = editorRef.current
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!editor || !file) return
     const pos = editor.getPosition()
     if (!pos) return
     const filePath = file.path
     const match = comments.find((c) =>
-      commentToAbsolute(c.filePath, vault.vaultPath!) === filePath && c.line === pos.lineNumber,
+      commentToAbsolute(c.filePath, vaultPath) === filePath && c.line === pos.lineNumber,
     )
     if (!match) { showToast(t.comments.noCommentAtCursor, "info"); return }
     void handleToggleCommentResolved(match.id)
-  }, [vault.vaultPath, vault.openFile, comments, handleToggleCommentResolved, t])
+  }, [comments, handleToggleCommentResolved, t])
 
   const handleJumpToComment = useCallback((absolutePath: string, line: number) => {
     const editor = editorRef.current
@@ -2365,7 +2417,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           const body = parsed?.content ?? content
           const lines = body.split("\n").filter((l) => l.trim() !== "").slice(0, 10).join("\n")
           try {
-            const rendered = renderMarkdown(lines, data.macros, data.vaultPath ?? undefined, data.wikiNames, data.bibMap, data.transclusionResolver)
+            const rendered = renderMarkdown(lines, data.macros, data.vaultPath ?? undefined, data.wikiNames, data.bibMap, data.transclusionResolver, undefined, { annotate: false })
             html = sanitizeRenderedHtml(rendered)
           } catch {
             html = `<div class="wikilink-hover-empty">${escapeHoverText(data.hoverNotFound)}</div>`
@@ -2425,27 +2477,27 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── File actions ──────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
-    const f = vault.openFile; const editor = editorRef.current
+    const f = vaultRef.current.openFile; const editor = editorRef.current
     // PDF tabs render via PdfPreviewPanel, not the Monaco editor — calling
     // editor.getValue() on a PDF tab returns the text-tab placeholder content
     // ("") and writing that back overwrites the user's PDF. Block save.
-    if (f && f.mode !== "pdf" && editor) vault.saveFile(f.path, editor.getValue())
-  }, [vault])
+    if (f && f.mode !== "pdf" && editor) vaultRef.current.saveFile(f.path, editor.getValue())
+  }, [])
 
   const handleSaveAs = useCallback(async () => {
     const editor = editorRef.current; if (!editor) return
     const path = await save({
       title: t.menus.saveAs,
       filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
-      defaultPath: vault.openFile?.name,
+      defaultPath: vaultRef.current.openFile?.name,
     })
     if (!path) return
     // Save As must persist the document faithfully (round-trippable), so write
     // the masked CMDX via toDiskContent — extension-aware (.md / .tex) — never a
     // lossy Obsidian transform. (Obsidian/GFM export is handled by Export Markdown.)
     await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
-    await vault.loadVault()
-  }, [vault, t])
+    await vaultRef.current.loadVault()
+  }, [t])
 
   // Debounced: when autoRebuildPdf is on, the PDF panel is active, and there
   // is an existing pdfPath, recompile ~3s after content changes.
@@ -2506,23 +2558,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vault.vaultPath, t, deps])
 
   const handleCopyHtml = useCallback(async () => {
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!file) return
     try {
-      const html = renderMarkdown(file.content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+      const html = renderMarkdown(file.content, macros, vaultRef.current.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, undefined, { annotate: false })
       await navigator.clipboard.writeText(sanitizeRenderedHtml(html))
       showToast(t.app.copiedHtml, "success")
     } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
-  }, [vault.openFile, macros, wikiNames, bibMap, vault.vaultPath, transclusionResolver, t])
+  }, [macros, wikiNames, bibMap, transclusionResolver, t])
 
   const handleCopyLatex = useCallback(async () => {
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!file) return
     try {
       let macrosText = ""
-      if (vault.vaultPath) {
+      const vaultPath = vaultRef.current.vaultPath
+      if (vaultPath) {
         try {
-          const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+          const mp = await pathJoin(vaultPath, MACROS_FILENAME)
           if (await exists(mp)) macrosText = await readTextFile(mp)
         } catch { /* ok */ }
       }
@@ -2540,7 +2593,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       await navigator.clipboard.writeText(tex)
       showToast(t.app.copiedLatex, "success")
     } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
-  }, [vault.openFile, vault.vaultPath, transclusionResolver, t])
+  }, [transclusionResolver, t])
 
   const handleSaveBib = useCallback(async (bibtexString: string) => {
     if (!vault.vaultPath) return
@@ -2689,12 +2742,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   const handleOpenMacros = useCallback(async () => {
-    if (!vault.vaultPath) return
-    const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) return
+    const mp = await pathJoin(vaultPath, MACROS_FILENAME)
     if (!(await exists(mp))) await writeTextFile(mp, MACROS_TEMPLATE)
-    await vault.loadVault()
-    await vault.openFilePath(mp)
-  }, [vault])
+    await vaultRef.current.loadVault()
+    await vaultRef.current.openFilePath(mp)
+  }, [])
 
   const handleCreateFromTemplate = useCallback(async (name: string, content: string) => {
     await vault.createFile(name, content)
@@ -2769,12 +2823,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe])
 
   const handleOpenBib = useCallback(async () => {
-    if (!vault.vaultPath) return
-    const bp = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) return
+    const bp = await pathJoin(vaultPath, BIBTEX_FILENAME)
     if (!(await exists(bp))) await writeTextFile(bp, BIB_TEMPLATE)
-    await vault.loadVault()
-    await vault.openFilePath(bp)
-  }, [vault])
+    await vaultRef.current.loadVault()
+    await vaultRef.current.openFilePath(bp)
+  }, [])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   /** Elimina componentes de path para evitar traversal (../../../ etc.) */
@@ -2931,7 +2986,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Daily notes ─────────────────────────────────────────────────────────
   const handleOpenDailyNote = useCallback(async () => {
-    if (!vault.vaultPath) {
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) {
       showToast(t.app.dailyNoteNoVault, "error")
       return
     }
@@ -2944,11 +3000,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       let filePath: string
       if (folder) {
-        const dir = await pathJoin(vault.vaultPath, folder)
+        const dir = await pathJoin(vaultPath, folder)
         if (!(await exists(dir))) await mkdir(dir, { recursive: true })
         filePath = await pathJoin(dir, filename)
       } else {
-        filePath = await pathJoin(vault.vaultPath, filename)
+        filePath = await pathJoin(vaultPath, filename)
       }
 
       const fileExists = await exists(filePath)
@@ -2956,16 +3012,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         const tplRaw = settings.dailyNotesTemplate || "# {{date:YYYY-MM-DD}}\n\n"
         const content = processTemplateVariables(tplRaw, filename)
         await writeTextFile(filePath, content)
-        await vault.loadVault()
+        await vaultRef.current.loadVault()
         showToast(t.app.dailyNoteCreated(filename), "success")
       } else {
         showToast(t.app.dailyNoteOpened(filename), "info")
       }
-      await vault.openFilePath(filePath)
+      await vaultRef.current.openFilePath(filePath)
     } catch (err) {
       showToast(t.app.dailyNoteError(err instanceof Error ? err.message : String(err)), "error")
     }
-  }, [vault, t, settings.dailyNotesFolder, settings.dailyNotesTemplate])
+  }, [t, settings.dailyNotesFolder, settings.dailyNotesTemplate])
 
   // Daily notes shortcut (Ctrl+Shift+D)
   useEffect(() => {
@@ -2993,7 +3049,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }
 
   // ── Command palette entries ───────────────────────────────────────────────
-  const paletteCommands: PaletteCommand[] = buildPaletteCommands({
+  // Memoized because AppContent re-renders per keystroke (~30/s during held-key
+  // deletion); all ctx fields are stable callbacks/setters or rarely-changing
+  // values, so recomputing the ~130-entry command list on every keystroke would
+  // be wasted work.
+  const paletteCommands: PaletteCommand[] = useMemo(() => buildPaletteCommands({
     t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
     setTableEditorOpen, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
     setFocusMode, typewriterMode, syncScroll, wordWrap, minimapEnabled, spellcheck,
@@ -3001,13 +3061,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     selectVault: vault.selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros,
     handleOpenBib, setSettingsOpen, checkForUpdate, setUpdateInfo, handleAddCommentAtCursor,
     handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
-  })
+  }), [
+    t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
+    handleInsertToc, handleInsertExcalidraw, typewriterMode, syncScroll, wordWrap,
+    minimapEnabled, spellcheck, updateSettings, handleCopyHtml, handleCopyLatex,
+    handleVaultBackup, vault.selectVault, handleOpenDailyNote, handleOpenMacros,
+    handleOpenBib, handleAddCommentAtCursor, handleToggleCommentAtCursor, goBack, goForward,
+  ])
 
   // ── Menu ──────────────────────────────────────────────────────────────────
   const hasFile = !!vault.openFile
   const hasVault = !!vault.vaultPath
 
-  const recentEntries: MenuEntry[] = recentFiles.length > 0
+  const recentEntries: MenuEntry[] = useMemo(() => recentFiles.length > 0
     ? [
         { separator: true } as MenuEntry,
         { label: t.menus.recent, disabled: true, action: () => {} } as MenuEntry,
@@ -3018,17 +3084,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         { separator: true } as MenuEntry,
         { label: t.menus.clearRecent, action: clearRecent } as MenuEntry,
       ]
-    : []
+    : [], [recentFiles, t, handleOpenRecent, clearRecent])
 
-  const menus: MenuDef[] = buildMenus({
+  const menus: MenuDef[] = useMemo(() => buildMenus({
     t, hasFile, hasVault, deps, exportActions, selectVault: vault.selectVault, setTemplateOpen,
     handleSave, handleSaveAs, handleFind, openPanel, setPaletteOpen, setFocusMode,
     handleOpenMacros, handleOpenBib, setSettingsOpen, setHelpOpen, recentEntries,
-  })
+  }), [
+    t, hasFile, hasVault, deps, exportActions, vault.selectVault, handleSave, handleSaveAs,
+    handleFind, openPanel, handleOpenMacros, handleOpenBib, recentEntries,
+  ])
 
   const currentContent = vault.openFile?.content ?? WELCOME
   const editorFlex = editorWidth || undefined
   const showWelcome = !vault.vaultPath
+
+  // Stable element so MenuBar's memo isn't defeated by a fresh child
+  // element identity on every keystroke re-render.
+  const gitBarEl = useMemo(() => <GitBar vaultPath={vault.vaultPath} />, [vault.vaultPath])
 
   const themeAttr =
     settings.theme === "vs" ? "light" : settings.theme === "hc-black" ? "hc" : "dark"
@@ -3073,7 +3146,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
       <TitleBar filename={vault.openFile?.name} isDirty={vault.openFile?.isDirty} onClose={handleCloseRequest} onSettingsClick={() => setSettingsOpen(true)} />
       <MenuBar menus={menus}>
-        <GitBar vaultPath={vault.vaultPath} />
+        {gitBarEl}
       </MenuBar>
       {deps && (!deps.pandoc || !deps.zip) && (
         <DepsWarning

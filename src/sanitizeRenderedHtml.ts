@@ -106,17 +106,36 @@ function configurePurify() {
   })
 }
 
+// Shared between the string and DocumentFragment entry points below so the
+// two can never drift apart into different sanitization policies.
+const PURIFY_OPTIONS = {
+  USE_PROFILES: { html: true, svg: true, svgFilters: true, mathMl: true },
+  // `iframe` (YouTube embeds only, filtered above) is in no profile.
+  // `semantics`/`annotation` are KaTeX's MathML mirror of the TeX source
+  // (in DOMPurify's mathMlDisallowed set by default). `foreignobject` is
+  // used by Mermaid for HTML-in-SVG diagram labels (svg profile omits it).
+  ADD_TAGS: ["iframe", "semantics", "annotation", "foreignobject"],
+  ADD_ATTR: ["aria-hidden", "target", "rel", "allowfullscreen", "sandbox", "referrerpolicy"],
+  ALLOW_DATA_ATTR: true,
+}
+
 export function sanitizeRenderedHtml(html: string): string {
   configurePurify()
+  return DOMPurify.sanitize(html, PURIFY_OPTIONS) as unknown as string
+}
 
+/**
+ * Same sanitization policy as `sanitizeRenderedHtml`, but returns a
+ * DOMPurify-built `DocumentFragment` (`RETURN_DOM_FRAGMENT`) instead of a
+ * re-serialized string. Used by the preview commit hot path
+ * (`previewMorph.ts` `commitPreview`) so the (potentially multi-MB,
+ * KaTeX-heavy) document HTML is parsed exactly once per render instead of
+ * being parsed here and then re-parsed again downstream by the DOM morph.
+ */
+export function sanitizeRenderedHtmlToFragment(html: string): DocumentFragment {
+  configurePurify()
   return DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true, svg: true, svgFilters: true, mathMl: true },
-    // `iframe` (YouTube embeds only, filtered above) is in no profile.
-    // `semantics`/`annotation` are KaTeX's MathML mirror of the TeX source
-    // (in DOMPurify's mathMlDisallowed set by default). `foreignobject` is
-    // used by Mermaid for HTML-in-SVG diagram labels (svg profile omits it).
-    ADD_TAGS: ["iframe", "semantics", "annotation", "foreignobject"],
-    ADD_ATTR: ["aria-hidden", "target", "rel", "allowfullscreen", "sandbox", "referrerpolicy"],
-    ALLOW_DATA_ATTR: true,
-  }) as unknown as string
+    ...PURIFY_OPTIONS,
+    RETURN_DOM_FRAGMENT: true,
+  }) as unknown as DocumentFragment
 }

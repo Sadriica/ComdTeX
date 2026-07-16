@@ -6,7 +6,7 @@
  * same lookup the preview click handler uses (`App.tsx` → handlePreviewClick).
  */
 import { describe, expect, it } from "vitest"
-import { annotateSourceLines, renderMarkdown } from "./renderer"
+import { annotateSourceLines, annotateSourceLinesIn, renderMarkdown } from "./renderer"
 
 const DOC = `# El ciclo de decisiones {#sec:decisiones}
 
@@ -88,5 +88,33 @@ describe("preview cross-reference anchors", () => {
     expect(ref?.closest("[data-source-line]")).not.toBeNull()
     // ...and the anchor branch has a real target to land on instead.
     expect(lookup(el, "#sec-intro")?.tagName).toBe("H1")
+  })
+
+  it("does not let a frontmatter title with the same text as a body heading steal its source line", () => {
+    // Regression: `renderMarkdown` returns `frontmatterHtml + html + bibHtml`,
+    // and `annotateSourceLinesIn` used to walk that WHOLE fragment. A
+    // frontmatter `title: Notas` renders as `<h1 class="fm-title">Notas</h1>`
+    // (frontmatter.ts renderFrontmatterHeader) which matches the same
+    // duplicate-key line list as a body `# Notas` heading, consuming index 0
+    // and shifting every body annotation for that text to the wrong line.
+    const doc = `---\ntitle: Notas\n---\n# Notas\n\nPrimer bloque.\n\n# Notas\n\nSegundo bloque.`
+    const html = renderMarkdown(doc, {}, undefined, undefined, undefined, undefined, undefined, { annotate: false })
+    // Build the fragment the same way the preview pipeline does before calling
+    // `annotateSourceLinesIn` (a DOMParser parse, no sanitizer needed for this
+    // assertion — we only care about the in-place annotation pass itself).
+    const parsed = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html")
+    const fragment = parsed.getElementById("root")!
+    annotateSourceLinesIn(fragment, doc)
+
+    const fmTitle = fragment.querySelector("h1.fm-title")
+    expect(fmTitle).not.toBeNull()
+    expect(fmTitle?.hasAttribute("data-source-line")).toBe(false)
+
+    const bodyHeadings = [...fragment.querySelectorAll("h1:not(.fm-title)")]
+    expect(bodyHeadings.length).toBe(2)
+    // The FIRST body "# Notas" is on source line 4 (1-indexed) — it must not
+    // be shifted to line 8 (the second heading) by the frontmatter h1.
+    expect(bodyHeadings[0].getAttribute("data-source-line")).toBe("4")
+    expect(bodyHeadings[1].getAttribute("data-source-line")).toBe("8")
   })
 })

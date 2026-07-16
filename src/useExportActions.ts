@@ -1,7 +1,7 @@
 // Extracted from App.tsx: the export/import/compile handlers. These are thin
 // wrappers over exportActions.ts, moved verbatim (no behavior change) to keep
 // App.tsx smaller. See CLAUDE.md — App.tsx is a documented refactor target.
-import { useCallback, useMemo, type RefObject } from "react"
+import { useCallback, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"
 import { writeTextFile, readTextFile, exists, copyFile, remove } from "@tauri-apps/plugin-fs"
@@ -57,28 +57,35 @@ export function useExportActions(ctx: ExportActionsCtx) {
     macros, wikiNames, bibMap, pdfPath, setLatexDiagnostics, setPdfPath, setTexEngineState,
   } = ctx
 
+  // vault (and openFile) get a new identity on every keystroke; handlers only
+  // run on explicit user actions, so they read the CURRENT vault through this
+  // ref and stay identity-stable — keeping the returned object (and the host's
+  // menus/palette memos) stable across keystrokes.
+  const vaultRef = useRef(vault)
+  vaultRef.current = vault
+
   const handleExportMd = useCallback(async () => {
     const editor = editorRef.current; if (!editor) return
     const path = await save({
       title: t.app.dialogExportMd,
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
     })
     if (!path) return
     // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
     await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
-  }, [vault, t, editorRef])
+  }, [t, editorRef])
 
   const handleExportTex = useCallback(async () => {
     const editor = editorRef.current; if (!editor) return
     let macrosText = ""
-    if (vault.vaultPath) {
+    if (vaultRef.current.vaultPath) {
       try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+        const mp = await pathJoin(vaultRef.current.vaultPath, MACROS_FILENAME)
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
-    const titleGuess = vault.openFile?.name.replace(/\.[^.]+$/, "") ?? ""
+    const titleGuess = vaultRef.current.openFile?.name.replace(/\.[^.]+$/, "") ?? ""
     const content = resolveTransclusions(editor.getValue(), transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
@@ -93,28 +100,28 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const path = await save({
       title: t.app.dialogExportTex,
       filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
+      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
     })
     if (!path) return
     await writeTextFile(path, tex)
-  }, [vault, t, transclusionResolver, editorRef])
+  }, [t, transclusionResolver, editorRef])
 
   const handleExportProjectTex = useCallback(async () => {
     let macrosText = ""
-    if (vault.vaultPath) {
+    if (vaultRef.current.vaultPath) {
       try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+        const mp = await pathJoin(vaultRef.current.vaultPath, MACROS_FILENAME)
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
-    const content = composeProjectMarkdown(vaultFiles, vault.activeTabPath)
+    const content = composeProjectMarkdown(vaultFiles, vaultRef.current.activeTabPath)
     if (!content) {
       showToast(t.app.noMainDocument, "error")
       return
     }
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
-    const title = (fm?.title as string) || vault.openFile?.name.replace(/\.[^.]+$/, "") || "project"
+    const title = (fm?.title as string) || vaultRef.current.openFile?.name.replace(/\.[^.]+$/, "") || "project"
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
     const path = await save({
       title: t.palette.exportProjectTex,
@@ -123,13 +130,13 @@ export function useExportActions(ctx: ExportActionsCtx) {
     })
     if (!path) return
     await writeTextFile(path, tex)
-  }, [vault.vaultPath, vault.activeTabPath, vault.openFile, vaultFiles, t])
+  }, [vaultFiles, t])
 
   const handleCompileLatexPdf = useCallback(async (opts?: { forceWasm?: boolean }) => {
     await compileLatexPdfAction({
-      activeFile: vault.openFile,
-      vaultPath: vault.vaultPath,
-      activePath: vault.activeTabPath,
+      activeFile: vaultRef.current.openFile,
+      vaultPath: vaultRef.current.vaultPath,
+      activePath: vaultRef.current.activeTabPath,
       vaultFiles,
       deps,
       dialogs: {
@@ -160,7 +167,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
         wasmTexUnavailable: t.settings.wasmTexUnavailable,
       },
       readEditorContent: () => editorRef.current?.getValue() ?? null,
-      reloadVault: async () => { await vault.loadVault?.() },
+      reloadVault: async () => { await vaultRef.current.loadVault?.() },
       resolveTransclusion: transclusionResolver,
       toast: showToast,
       writeClipboard: (text) => navigator.clipboard.writeText(text),
@@ -169,18 +176,18 @@ export function useExportActions(ctx: ExportActionsCtx) {
       onPdfSaved: setPdfPath,
       onWasmStatus: (state) => setTexEngineState(state),
     })
-  }, [vault, t, deps, vaultFiles, transclusionResolver, useWasmTex, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
+  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
 
   // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
   // We recompile to the existing pdfPath, no dialog. Skips silently on error.
   const rebuildPdfInPlace = useCallback(async () => {
     const editor = editorRef.current
-    const currentFile = vault.openFile
+    const currentFile = vaultRef.current.openFile
     if (!editor || !currentFile || !pdfPath) return
     let macrosText = ""
-    if (vault.vaultPath) {
+    if (vaultRef.current.vaultPath) {
       try {
-        const mp = await pathJoin(vault.vaultPath, MACROS_FILENAME)
+        const mp = await pathJoin(vaultRef.current.vaultPath, MACROS_FILENAME)
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
@@ -221,37 +228,37 @@ export function useExportActions(ctx: ExportActionsCtx) {
       await remove(`${dir}/${base}.comdtex-rebuild.aux`).catch(() => {})
       await remove(`${dir}/${base}.comdtex-rebuild.log`).catch(() => {})
     }
-  }, [vault.openFile, vault.vaultPath, pdfPath, transclusionResolver, editorRef, setPdfPath])
+  }, [pdfPath, transclusionResolver, editorRef, setPdfPath])
 
   const handleExportPdf = useCallback(async () => {
     await exportPdfAction({
-      activeFile: vault.openFile,
-      vaultPath: vault.vaultPath,
-      activePath: vault.activeTabPath,
+      activeFile: vaultRef.current.openFile,
+      vaultPath: vaultRef.current.vaultPath,
+      activePath: vaultRef.current.activeTabPath,
       vaultFiles,
       deps,
       dialogs: { saveAs: "Save as", exportMd: t.app.dialogExportMd, exportTex: t.app.dialogExportTex, exportPdf: t.app.dialogExportPdf, exportReveal: "Export Reveal.js" },
       messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing },
       readEditorContent: () => editorRef.current?.getValue() ?? null,
-      reloadVault: async () => { await vault.loadVault?.() },
+      reloadVault: async () => { await vaultRef.current.loadVault?.() },
       resolveTransclusion: transclusionResolver,
       toast: showToast,
       writeClipboard: (text) => navigator.clipboard.writeText(text),
       onLatexError: (diags) => setLatexDiagnostics(diags),
       onPdfSaved: (path) => setPdfPath(path),
     })
-  }, [vault, t, deps, vaultFiles, transclusionResolver, editorRef, setLatexDiagnostics, setPdfPath])
+  }, [t, deps, vaultFiles, transclusionResolver, editorRef, setLatexDiagnostics, setPdfPath])
 
   const handleExportAnki = useCallback(async () => {
     await exportAnkiCardsToFile(
-      { activeFile: vault.openFile, readEditorContent: () => editorRef.current?.getValue() ?? null, toast: showToast },
+      { activeFile: vaultRef.current.openFile, readEditorContent: () => editorRef.current?.getValue() ?? null, toast: showToast },
       { ankiNoCards: t.ankiExport.ankiNoCards, ankiExported: t.ankiExport.ankiExported },
     )
-  }, [vault.openFile, t, editorRef])
+  }, [t, editorRef])
 
   const handleImportDocument = useCallback(async () => {
     await importDocumentAction({
-      vaultPath: vault.vaultPath,
+      vaultPath: vaultRef.current.vaultPath,
       deps,
       dialogTitle: t.app.importDocTitle,
       messages: {
@@ -261,10 +268,10 @@ export function useExportActions(ctx: ExportActionsCtx) {
         importError: t.app.importError,
       },
       toast: showToast,
-      reloadVault: vault.loadVault,
-      openFilePath: vault.openFilePath,
+      reloadVault: vaultRef.current.loadVault,
+      openFilePath: vaultRef.current.openFilePath,
     })
-  }, [vault.vaultPath, vault.loadVault, vault.openFilePath, t, deps])
+  }, [t, deps])
 
   const typstMessages = useMemo(() => ({
     pandocMissing: t.app.pandocMissingTypst,
@@ -277,28 +284,28 @@ export function useExportActions(ctx: ExportActionsCtx) {
 
   const handleExportTypst = useCallback(async () => {
     await exportTypstAction({
-      activeFile: vault.openFile,
+      activeFile: vaultRef.current.openFile,
       deps,
       dialogTitle: t.app.typstExportTitle,
       messages: typstMessages,
       readEditorContent: () => editorRef.current?.getValue() ?? null,
       toast: showToast,
     })
-  }, [vault.openFile, deps, t, typstMessages, editorRef])
+  }, [deps, t, typstMessages, editorRef])
 
   const handleExportTypstPdf = useCallback(async () => {
     await exportTypstPdfAction({
-      activeFile: vault.openFile,
+      activeFile: vaultRef.current.openFile,
       deps,
       dialogTitle: t.app.typstExportTitle,
       messages: typstMessages,
       readEditorContent: () => editorRef.current?.getValue() ?? null,
       toast: showToast,
     })
-  }, [vault.openFile, deps, t, typstMessages, editorRef])
+  }, [deps, t, typstMessages, editorRef])
 
   const handleExportDocx = useCallback(async () => {
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!file) return
     if (deps && !deps.pandoc) {
       showToast(t.app.pandocMissingDocx, "error", 6000)
@@ -324,10 +331,10 @@ export function useExportActions(ctx: ExportActionsCtx) {
       showToast(t.app.exportDocxError, "error")
       console.error(e)
     }
-  }, [vault.openFile, t, deps, editorRef])
+  }, [t, deps, editorRef])
 
   const handleExportBeamer = useCallback(async () => {
-    const file = vault.openFile
+    const file = vaultRef.current.openFile
     if (!file) return
     if (deps && !deps.pandoc) {
       showToast(t.app.pandocMissingBeamer, "error", 6000)
@@ -352,20 +359,21 @@ export function useExportActions(ctx: ExportActionsCtx) {
       showToast(t.app.exportBeamerError, "error")
       console.error(e)
     }
-  }, [vault.openFile, t, deps, editorRef])
+  }, [t, deps, editorRef])
 
   // ── Reveal.js export ──────────────────────────────────────────────────────
   const handleExportReveal = useCallback(async () => {
     const editor = editorRef.current
-    if (!editor || !vault.openFile) return
+    const openFile = vaultRef.current.openFile
+    if (!editor || !openFile) return
     const content = editor.getValue()
-    const title = vault.openFile.name.replace(/\.[^.]+$/, "")
+    const title = openFile.name.replace(/\.[^.]+$/, "")
     const html = exportReveal(content, title)
     try {
       const path = await save({
         title: t.palette.exportReveal,
         filters: [{ name: "HTML", extensions: ["html"] }],
-        defaultPath: vault.openFile.name.replace(/\.[^.]+$/, ".html"),
+        defaultPath: openFile.name.replace(/\.[^.]+$/, ".html"),
       })
       if (!path) return
       await writeTextFile(path, html)
@@ -374,17 +382,22 @@ export function useExportActions(ctx: ExportActionsCtx) {
     } catch {
       showToast(t.app.revealExportError, "error")
     }
-  }, [vault.openFile, t, editorRef])
+  }, [t, editorRef])
 
   // ── HTML export ───────────────────────────────────────────────────────────
   const handleExportHtml = useCallback(async () => {
     const editor = editorRef.current
-    if (!editor || !vault.openFile) return
+    const openFile = vaultRef.current.openFile
+    if (!editor || !openFile) return
     const content = editor.getValue()
     let html: string
     try {
+      // annotate:false — data-source-line attrs are internal preview↔editor
+      // sync bookkeeping; skipping the annotation avoids shipping them as
+      // noise in the exported standalone HTML AND skips the full-document
+      // DOMParser+reserialize pass it would cost.
       html = sanitizeRenderedHtml(
-        renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver)
+        renderMarkdown(content, macros, vaultRef.current.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, undefined, { annotate: false })
       )
     } catch { return }
 
@@ -406,7 +419,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${vault.openFile.name.replace(/\.[^.]+$/, "")}</title>
+<title>${openFile.name.replace(/\.[^.]+$/, "")}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <style>${previewCss}</style>
 </head>
@@ -418,27 +431,31 @@ ${html}
     const path = await save({
       title: t.palette.exportHtml,
       filters: [{ name: "HTML", extensions: ["html"] }],
-      defaultPath: vault.openFile.name.replace(/\.[^.]+$/, ".html"),
+      defaultPath: openFile.name.replace(/\.[^.]+$/, ".html"),
     })
     if (!path) return
     await writeTextFile(path, standalone)
     showToast(t.app.htmlExported, "success")
     await openPath(path)
-  }, [vault, macros, wikiNames, bibMap, transclusionResolver, t, editorRef])
+  }, [macros, wikiNames, bibMap, transclusionResolver, t, editorRef])
 
   const handleExportObsidian = useCallback(async () => {
     const editor = editorRef.current; if (!editor) return
     const path = await save({
       title: t.palette.exportObsidian,
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vault.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
     })
     if (!path) return
     await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
     showToast(t.app.revealExportSuccess, "success")
-  }, [vault, t, editorRef])
+  }, [t, editorRef])
 
-  return {
+  // Memoized: every handler above is a useCallback, so this object's identity
+  // only changes when one of them actually changes. Returning a fresh object
+  // per render would invalidate the host's `menus`/`paletteCommands` useMemos
+  // on every keystroke (AppContent re-renders per keystroke), defeating them.
+  return useMemo(() => ({
     handleExportMd,
     handleExportTex,
     handleExportProjectTex,
@@ -454,5 +471,10 @@ ${html}
     handleExportReveal,
     handleExportHtml,
     handleExportObsidian,
-  }
+  }), [
+    handleExportMd, handleExportTex, handleExportProjectTex, handleCompileLatexPdf,
+    rebuildPdfInPlace, handleExportPdf, handleExportAnki, handleImportDocument,
+    handleExportTypst, handleExportTypstPdf, handleExportDocx, handleExportBeamer,
+    handleExportReveal, handleExportHtml, handleExportObsidian,
+  ])
 }

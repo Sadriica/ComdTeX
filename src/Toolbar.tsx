@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, type ReactNode } from "react"
+import { memo, useRef, useState, useEffect, useCallback, type ReactNode } from "react"
 import type * as monaco from "monaco-editor"
 import type { T } from "./i18n"
 import { useT } from "./i18n"
@@ -485,7 +485,7 @@ function SectionMenu({
 
 // ── Toolbar (unified menu bar) ───────────────────────────────────────────────
 
-export default function Toolbar({ editorRef, sidebarMode, setSidebarMode }: ToolbarProps) {
+function Toolbar({ editorRef, sidebarMode, setSidebarMode }: ToolbarProps) {
   const t = useT()
   const sections = getSections(t)
   const directButtons = getDirectButtons(t)
@@ -551,3 +551,7 @@ export default function Toolbar({ editorRef, sidebarMode, setSidebarMode }: Tool
     </div>
   )
 }
+
+// Memoized: props are a stable ref + rarely-changing sidebar mode/callback, so
+// the toolbar subtree (sections, symbol grid) skips per-keystroke re-renders.
+export default memo(Toolbar)

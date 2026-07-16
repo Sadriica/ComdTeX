@@ -565,8 +565,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const openFile = openTabs.find((tab) => tab.path === activeTabPath) ?? null
 
   // ── Persist tabs ─────────────────────────────────────────────────────────
+  // openTabs' identity changes on every keystroke (content/isDirty edits), but
+  // the persisted paths list rarely does. Skip the localStorage write when the
+  // serialized paths are unchanged, so typing doesn't do a setItem per keystroke.
+  const lastPersistedTabsRef = useRef<string | null>(null)
   useEffect(() => {
-    localStorage.setItem(TABS_KEY, JSON.stringify(openTabs.map((tab) => tab.path)))
+    const serialized = JSON.stringify(openTabs.map((tab) => tab.path))
+    if (serialized === lastPersistedTabsRef.current) return
+    lastPersistedTabsRef.current = serialized
+    localStorage.setItem(TABS_KEY, serialized)
   }, [openTabs])
 
   useEffect(() => {
@@ -1020,7 +1027,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // editor onChange (e.g. when an extension fires) would queue an autosave
     // that overwrites the binary PDF file with empty/text content, destroying
     // the user's document.
-    const tab = openTabs.find((t) => t.path === path)
+    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+    const tab = openTabsRef.current.find((t) => t.path === path)
     if (tab?.mode === "pdf") return
     setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, content, isDirty: true } : t))
     pendingContent.current.set(path, content)
@@ -1035,7 +1043,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       saveTimers.current.delete(path)
       void saveFile(path, content)
     }, autoSaveMs))
-  }, [saveFile, autoSaveMs, openTabs])
+  }, [saveFile, autoSaveMs])
 
   const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return

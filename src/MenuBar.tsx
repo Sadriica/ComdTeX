@@ -68,7 +68,7 @@ function MenuDropdown({ label, entries }: MenuDef) {
   )
 }
 
-export default function MenuBar({ menus, children }: { menus: MenuDef[]; children?: React.ReactNode }) {
+function MenuBar({ menus, children }: { menus: MenuDef[]; children?: React.ReactNode }) {
   return (
     <div className="menu-bar">
       {menus.map((m) => <MenuDropdown key={m.label} {...m} />)}
@@ -76,3 +76,7 @@ export default function MenuBar({ menus, children }: { menus: MenuDef[]; childre
     </div>
   )
 }
+
+// Memoized: AppContent re-renders per keystroke; with `menus` and `children`
+// memoized by the host, this skips the whole menu subtree on every keystroke.
+export default React.memo(MenuBar)
