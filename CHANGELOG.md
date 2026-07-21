@@ -3,7 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.11.1] - 2026-07-21
+
+### Fixed
+- **The window could not be closed — quit silently did nothing.** The close-confirmation handler (`onCloseRequested`) relies on the Tauri JS API calling `window.destroy()` once the event is not prevented, but the capability only granted `core:window:allow-close`, so the ACL denied the destroy and the window stayed open with no visible error — every quit path (titlebar ✕, WM close, `$mod+Shift+q`) was affected. Added `core:window:allow-destroy` to `capabilities/default.json`.
+- **Blank white window on Arch-based distros (installer).** On Arch/Manjaro/EndeavourOS the AppImage's bundled `libwayland-client/cursor/server` are older than the system Mesa/Wayland stack, making WebKit's EGL init abort with `EGL_BAD_PARAMETER` — the window opened but never rendered. `scripts/install.sh` now detects Arch-like distros (`/etc/os-release`), extracts the AppImage to `~/.local/opt/comdtex`, removes the bundled `libwayland-*` so the system copies are used, and installs a `comdtex` wrapper that launches the patched tree. It also strips the CI-baked `WEBKIT_DISABLE_DMABUF_RENDERER=1` from the AppRun hooks — unnecessary once the system wayland libs are in use, and it forced software rendering (sluggish Excalidraw canvas and visible preview repaints while typing). Other distros keep the plain AppImage install; `--uninstall` cleans up both layouts.
 
 ### Added
 - **One-line Linux installer with desktop integration** (`scripts/install.sh`). Downloads the latest AppImage, verifies the published sha256, installs to `~/.local` (no sudo), creates the launcher entry (rofi/wofi/GNOME/KDE) + icon + `comdtex` CLI symlink, and uninstalls cleanly with `--uninstall`.
