@@ -8,6 +8,12 @@
 #   ~/.local/share/applications/com.comdtex.desktop
 #   ~/.local/share/icons/hicolor/128x128/apps/comdtex.png
 #
+# On Arch-based distros (Arch/Manjaro/EndeavourOS/CachyOS…) the AppImage is
+# instead extracted to ~/.local/opt/comdtex with its bundled libwayland-*
+# removed — they are older than the system's Mesa/Wayland stack and crash the
+# WebKit renderer with EGL_BAD_PARAMETER (blank white window). The comdtex
+# launcher then runs the patched tree via the system libraries.
+#
 # Usage:
 #   ./install.sh                 install/update to the latest release
 #   ./install.sh --version v1.11.0
@@ -27,6 +33,7 @@ DESKTOP_DIR="${HOME}/.local/share/applications"
 DESKTOP_PATH="${DESKTOP_DIR}/${APP_ID}.desktop"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/128x128/apps"
 ICON_PATH="${ICON_DIR}/comdtex.png"
+OPT_DIR="${HOME}/.local/opt/comdtex"
 
 VERSION=""
 DO_DESKTOP=1
@@ -40,7 +47,7 @@ while [[ $# -gt 0 ]]; do
     --version)    VERSION="${2:?--version needs an argument}"; shift 2 ;;
     --no-desktop) DO_DESKTOP=0; shift ;;
     --uninstall)  DO_UNINSTALL=1; shift ;;
-    -h|--help)    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)    sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
 done
@@ -48,6 +55,7 @@ done
 if [[ $DO_UNINSTALL -eq 1 ]]; then
   msg "Uninstalling ComdTeX from ~/.local"
   rm -f "$APP_PATH" "$LINK_PATH" "$DESKTOP_PATH" "$ICON_PATH"
+  rm -rf "$OPT_DIR"
   command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$DESKTOP_DIR" || true
   msg "Done. Your vaults and settings were not touched."
   exit 0
@@ -88,12 +96,51 @@ else
   msg "No checksum published for ${VERSION}; skipping verification."
 fi
 
-# ── Install binary + CLI symlink ─────────────────────────────────────────────
+# ── Install binary + CLI launcher ────────────────────────────────────────────
 mkdir -p "$BIN_DIR"
 chmod +x "${TMP_DIR}/${ASSET}"
-mv "${TMP_DIR}/${ASSET}" "$APP_PATH"
-ln -sf "$APP_PATH" "$LINK_PATH"
-msg "Installed ${APP_PATH}"
+
+# Do NOT source /etc/os-release — it defines VERSION and would clobber ours.
+is_arch_like() {
+  [[ -r /etc/os-release ]] || return 1
+  local id id_like
+  id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
+  id_like=$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '"')
+  [[ "$id" == "arch" || " $id_like " == *" arch "* ]]
+}
+
+if is_arch_like; then
+  # The AppImage bundles libwayland-client/cursor/server from its build distro,
+  # older than a rolling release's Mesa/Wayland stack. Loading them makes
+  # WebKit's EGL init abort with EGL_BAD_PARAMETER — the window opens blank.
+  # Extract the AppImage and drop them so the system copies are used instead.
+  msg "Arch-based distro detected — extracting the AppImage and removing bundled libwayland…"
+  ( cd "$TMP_DIR" && "./${ASSET}" --appimage-extract >/dev/null ) \
+    || die "could not extract ${ASSET}"
+  rm -f "${TMP_DIR}/squashfs-root/usr/lib/"libwayland-*.so*
+  # CI also bakes WEBKIT_DISABLE_DMABUF_RENDERER=1 into the AppImage as a
+  # blanket EGL workaround. With the system wayland libs in use it is no longer
+  # needed and only forces software rendering (visibly slow canvas + typing) —
+  # drop it so WebKit uses hardware DMA-BUF rendering.
+  sed -i '/WEBKIT_DISABLE_DMABUF_RENDERER/d' \
+    "${TMP_DIR}/squashfs-root/apprun-hooks/"*.sh 2>/dev/null || true
+  rm -rf "$OPT_DIR"
+  mkdir -p "$(dirname "$OPT_DIR")"
+  mv "${TMP_DIR}/squashfs-root" "$OPT_DIR"
+  rm -f "$APP_PATH" # drop any AppImage left by a previous unpatched install
+  # AppRun resolves its resources relative to $0, so a symlink won't work —
+  # install a wrapper instead.
+  cat > "$LINK_PATH" <<EOF
+#!/usr/bin/env bash
+exec "${OPT_DIR}/AppRun" "\$@"
+EOF
+  chmod +x "$LINK_PATH"
+  msg "Installed ${OPT_DIR} (patched) — launcher: ${LINK_PATH}"
+else
+  mv "${TMP_DIR}/${ASSET}" "$APP_PATH"
+  ln -sf "$APP_PATH" "$LINK_PATH"
+  msg "Installed ${APP_PATH}"
+fi
 
 case ":$PATH:" in
   *":${BIN_DIR}:"*) ;;
@@ -105,9 +152,13 @@ if [[ $DO_DESKTOP -eq 1 ]]; then
   msg "Integrating with the desktop (launcher + icon)…"
   mkdir -p "$DESKTOP_DIR" "$ICON_DIR"
 
-  # Pull the icon out of the AppImage itself so it always matches the version.
-  ( cd "$TMP_DIR" && "$APP_PATH" --appimage-extract 'usr/share/icons/hicolor/128x128/apps/*' >/dev/null 2>&1 ) || true
-  EXTRACTED=$(find "${TMP_DIR}/squashfs-root" -name '*.png' 2>/dev/null | head -1 || true)
+  # Pull the icon out of the app itself so it always matches the version.
+  if [[ -d "$OPT_DIR" ]]; then
+    EXTRACTED=$(find "$OPT_DIR/usr/share/icons" -name '*.png' 2>/dev/null | head -1 || true)
+  else
+    ( cd "$TMP_DIR" && "$APP_PATH" --appimage-extract 'usr/share/icons/hicolor/128x128/apps/*' >/dev/null 2>&1 ) || true
+    EXTRACTED=$(find "${TMP_DIR}/squashfs-root" -name '*.png' 2>/dev/null | head -1 || true)
+  fi
   if [[ -n "$EXTRACTED" ]]; then
     cp "$EXTRACTED" "$ICON_PATH"
   else
@@ -120,7 +171,7 @@ if [[ $DO_DESKTOP -eq 1 ]]; then
 Type=Application
 Name=ComdTeX
 Comment=Markdown + LaTeX IDE for academic writing
-Exec=${APP_PATH} %F
+Exec=${LINK_PATH} %F
 Icon=comdtex
 Terminal=false
 Categories=Office;TextEditor;

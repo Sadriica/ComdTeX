@@ -402,7 +402,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ### Linux — one-line installer (recommended)
 
-Downloads the latest AppImage, verifies its checksum, and integrates it with your desktop — launcher entry (rofi / wofi / GNOME / KDE), icon, and a `comdtex` command. Everything under `~/.local`, no sudo:
+Downloads the latest AppImage, verifies its checksum, and integrates it with your desktop — launcher entry (rofi / wofi / GNOME / KDE), icon, and a `comdtex` command. Everything under `~/.local`, no sudo. On Arch-based distros it additionally extracts the AppImage and removes its bundled `libwayland-*` (older than the system's Mesa/Wayland stack — they crash WebKit's EGL init and leave a blank white window), so the app runs against the system libraries:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sadriica/ComdTeX/main/scripts/install.sh | bash
@@ -434,7 +434,9 @@ chmod +x ComdTeX_*.AppImage
 ./ComdTeX_*.AppImage
 ```
 
-The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Arch, Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros — no system install required.
+The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros — no system install required.
+
+> **Blank white window on Arch/Manjaro?** The AppImage's bundled `libwayland-client/cursor/server` can be older than your Mesa/Wayland stack, aborting WebKit's EGL init (`EGL_BAD_PARAMETER`). Use the one-line installer above — it extracts the AppImage, removes those libraries, and also drops the baked-in `WEBKIT_DISABLE_DMABUF_RENDERER=1` (with system libs in place it only forces slow software rendering). Manual equivalent: `./ComdTeX_*.AppImage --appimage-extract`, delete `squashfs-root/usr/lib/libwayland-*.so*`, remove the `WEBKIT_DISABLE_DMABUF_RENDERER` line from `squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh`, run `squashfs-root/AppRun`.
 
 ### Linux — Debian/Ubuntu (.deb)
 
@@ -453,7 +455,7 @@ sudo apt install libwebkit2gtk-4.1-0
 
 ### Linux — Arch / Manjaro / Fedora / other rolling distros
 
-Use the one-line installer or the PKGBUILD above — the AppImage is already patched for Mesa 24+ and runs on all rolling distros.
+Use the one-line installer or the PKGBUILD above. The installer applies the extra Arch patch (removing the AppImage's bundled `libwayland-*`) that the raw AppImage still needs on rolling distros — see the note in the AppImage section.
 
 ### Windows
 
