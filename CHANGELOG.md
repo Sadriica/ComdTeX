@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.11.0] - 2026-07-21
 
 ### Added
 - **The preview respects manual line breaks and leading indentation inside paragraphs.** Paragraph text now renders with `pre-wrap` semantics plus dedicated indent markers, so hand-indented lines (common in poetry, addresses, or aligned notes) no longer collapse into a single flowed line.
