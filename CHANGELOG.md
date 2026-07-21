@@ -3,6 +3,13 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **One-line Linux installer with desktop integration** (`scripts/install.sh`). Downloads the latest AppImage, verifies the published sha256, installs to `~/.local` (no sudo), creates the launcher entry (rofi/wofi/GNOME/KDE) + icon + `comdtex` CLI symlink, and uninstalls cleanly with `--uninstall`.
+- **Build-from-source helper** (`scripts/build-from-source.sh`). Checks prerequisites with per-distro install hints (pacman/apt/dnf, including the webkit2gtk-4.1 pitfall), applies the Arch `NO_STRIP` AppImage workaround automatically, and `--install` integrates the locally built binary with the desktop.
+- **AUR packaging** (`packaging/aur/comdtex-bin/`). PKGBUILD that repackages the official `.deb` with correct dependencies and optdepends (pandoc, typst, zip, git, TeX fonts); `packaging/aur/update.sh` bumps it to a release pulling the published checksum.
+
 ## [1.11.0] - 2026-07-21
 
 ### Added

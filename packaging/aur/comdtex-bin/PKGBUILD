@@ -1,0 +1,28 @@
+# Maintainer: sadriica <santirodrigmoca@outlook.com>
+# Repackages the official .deb release. Regenerate checksums for a new
+# version with ../update.sh <version> (it pulls the published .sha256).
+pkgname=comdtex-bin
+pkgver=1.11.0
+pkgrel=1
+pkgdesc="Desktop IDE for academic writing in Markdown + LaTeX (binary release)"
+arch=('x86_64')
+url="https://github.com/Sadriica/ComdTeX"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'hicolor-icon-theme')
+optdepends=(
+  'pandoc-cli: DOCX/Beamer/Typst export and document import'
+  'typst: Typst → PDF export'
+  'zip: vault backup'
+  'git: in-app Git panel'
+  'texlive-fontsrecommended: local XeLaTeX compilation'
+)
+provides=('comdtex')
+conflicts=('comdtex')
+source=("${url}/releases/download/v${pkgver}/comdtex_${pkgver}_amd64.deb")
+sha256sums=('c8d551556e5bb35628db297e617e925134f1d564a91a957f688727b49a661d97')
+
+package() {
+  # The .deb payload mirrors the final filesystem layout.
+  bsdtar -xf data.tar.gz -C "$pkgdir"
+  chmod -R go-w "$pkgdir/usr"
+}

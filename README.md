@@ -400,6 +400,31 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ## Installation
 
+### Linux — one-line installer (recommended)
+
+Downloads the latest AppImage, verifies its checksum, and integrates it with your desktop — launcher entry (rofi / wofi / GNOME / KDE), icon, and a `comdtex` command. Everything under `~/.local`, no sudo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sadriica/ComdTeX/main/scripts/install.sh | bash
+```
+
+Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settings untouched).
+
+### Linux — Arch (AUR-style package)
+
+`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration, updates via your AUR helper once published):
+
+```bash
+cd packaging/aur/comdtex-bin && makepkg -si
+```
+
+### Linux — build from source
+
+```bash
+git clone https://github.com/Sadriica/ComdTeX && cd ComdTeX
+./scripts/build-from-source.sh --install   # checks deps (per-distro hints), builds, integrates
+```
+
 ### Linux — AppImage (universal)
 
 Download the `.AppImage` from the [latest release](https://github.com/sadriica/comdtex/releases/latest), make it executable, and run it:
@@ -428,7 +453,7 @@ sudo apt install libwebkit2gtk-4.1-0
 
 ### Linux — Arch / Manjaro / Fedora / other rolling distros
 
-Use the `.AppImage` above — it is already patched for Mesa 24+ and is the recommended way to install on rolling distros.
+Use the one-line installer or the PKGBUILD above — the AppImage is already patched for Mesa 24+ and runs on all rolling distros.
 
 ### Windows
 
