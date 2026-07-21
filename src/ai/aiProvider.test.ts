@@ -13,6 +13,7 @@ function baseSettings(overrides: Partial<Settings> = {}): Settings {
     fontSize: 15,
     previewFontSize: 15,
     autoSaveMs: 800,
+    texliveUrl: "https://texlive2.swiftlatex.com/",
     theme: "vs-dark",
     vimMode: false,
     typewriterMode: false,

@@ -668,6 +668,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     vaultFiles,
     transclusionResolver,
     useWasmTex: settings.useWasmTex,
+    texliveUrl: settings.texliveUrl,
     macros,
     wikiNames,
     bibMap,

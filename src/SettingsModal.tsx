@@ -299,6 +299,20 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ useWasmTex: !settings.useWasmTex })}
                   />
                 </label>
+                {settings.useWasmTex && (
+                  <label className="setting-row">
+                    <span>
+                      {t.settings.texliveUrl}
+                      <span className="setting-help"> — {t.settings.texliveUrlDesc}</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={settings.texliveUrl}
+                      placeholder="https://texlive2.swiftlatex.com/"
+                      onChange={(e) => onChange({ texliveUrl: e.target.value })}
+                    />
+                  </label>
+                )}
                 <label className="setting-row">
                   <span>
                     {t.settings.autoRebuildPdf}

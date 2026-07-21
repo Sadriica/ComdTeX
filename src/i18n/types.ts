@@ -111,6 +111,7 @@ export interface T {
     dailyNotesTemplateHint: string
     sectionPdf: string
     useWasmTex: string; useWasmTexDesc: string
+    texliveUrl: string; texliveUrlDesc: string
     autoRebuildPdf: string; autoRebuildPdfDesc: string
     wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
     wasmTexUnavailable: string

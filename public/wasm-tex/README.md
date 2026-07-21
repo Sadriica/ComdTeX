@@ -43,6 +43,10 @@ compiler. Total size is roughly 8–14 MB plus a `.tar.gz` of base packages.
 ## Lazy package fetching
 
 By default, SwiftLaTeX engines fetch missing `.sty`/`.cls` files on demand
-from `https://texlive2.swiftlatex.com/`. This needs an internet connection
-the first time a package is requested, and the result is cached in IndexedDB
-inside the engine. See `docs/wasm-tex.md` for full details.
+from the package server configured in Settings → PDF (default
+`https://texlive2.swiftlatex.com/` — a community server with a history of
+outages). This needs an internet connection the first time a package is
+requested; results are cached only in worker memory (per session, NOT
+persisted). `swiftlatexpdftex.js` is patched to check the local mirror at
+`texlive/` (see `texlive/README.md`) before hitting the network. See
+`docs/wasm-tex.md` for full details.

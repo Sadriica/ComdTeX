@@ -53,9 +53,22 @@ The SwiftLaTeX engines ship with the **TeX Live core** required for plain
 `article`, `book`, `report`, and `beamer` documents, plus `amsmath`,
 `amsfonts`, `amssymb`, `amsthm`, `hyperref`, `graphicx`, `geometry`,
 `fontspec`, `inputenc`, `fontenc`, and `babel-english`. The engine
-**lazy-fetches** any other package from
-<https://texlive2.swiftlatex.com/> on first use; results are cached in the
-engine's IndexedDB store, so subsequent compiles are offline-capable.
+**lazy-fetches** any other package from the server configured in
+**Settings → PDF** (default <https://texlive2.swiftlatex.com/>) on first use.
+Results are cached **only in worker memory** — the cache does not survive an
+app restart, so a fresh session needs the server again. Two mitigations exist:
+
+- **Local mirror**: files dropped into `public/wasm-tex/texlive/` (flat,
+  keyed by filename) are served to the engine before any network request —
+  see `public/wasm-tex/texlive/README.md`.
+- **Configurable endpoint**: the package-server URL is a setting
+  (`texliveUrl`), so users can point at a self-hosted or alternative mirror
+  when the default is down. Remember the host must also be allowed by the
+  CSP `connect-src` in `tauri.conf.json` (the default one already is).
+
+When every engine fails (WASM *and* the local `tectonic`/`xelatex`/`pdflatex`
+fallbacks), the error modal appears — the WASM diagnostics are held until the
+fallback chain also fails, so a successful local compile never shows an error.
 
 What this means in practice:
 

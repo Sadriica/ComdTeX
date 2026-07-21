@@ -22,6 +22,8 @@ interface SwiftLatexEngine {
   writeMemFSFile(filename: string, data: string | Uint8Array): void
   makeMemFSFolder(path: string): void
   flushCache(): void
+  /** Point the engine at a different TeX package server (SwiftLaTeX layout). */
+  setTexliveEndpoint?(url: string): void
   closeWorker?(): void
   /**
    * Read a file back out of the engine's virtual filesystem. Optional: present
@@ -51,6 +53,7 @@ interface CompileMessage {
   tex: string
   mainFile?: string
   files?: Record<string, string>
+  texliveUrl?: string
 }
 
 interface DisposeMessage {
@@ -172,6 +175,9 @@ async function compile(msg: CompileMessage): Promise<void> {
     return
   }
   try {
+    if (msg.texliveUrl && typeof engine.setTexliveEndpoint === "function") {
+      try { engine.setTexliveEndpoint(msg.texliveUrl) } catch { /* keep default */ }
+    }
     post({ type: "progress", id, message: "Writing source files" })
     const mainFile = msg.mainFile ?? "main.tex"
     engine.writeMemFSFile(mainFile, msg.tex)

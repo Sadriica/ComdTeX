@@ -42,6 +42,7 @@ export interface ExportActionsCtx {
   vaultFiles: ProjectFile[]
   transclusionResolver: (target: string) => string | null
   useWasmTex: boolean
+  texliveUrl?: string
   macros: KatexMacros
   wikiNames: Set<string>
   bibMap: Map<string, BibEntry>
@@ -53,7 +54,7 @@ export interface ExportActionsCtx {
 
 export function useExportActions(ctx: ExportActionsCtx) {
   const {
-    editorRef, vault, t, deps, vaultFiles, transclusionResolver, useWasmTex,
+    editorRef, vault, t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl,
     macros, wikiNames, bibMap, pdfPath, setLatexDiagnostics, setPdfPath, setTexEngineState,
   } = ctx
 
@@ -173,10 +174,11 @@ export function useExportActions(ctx: ExportActionsCtx) {
       writeClipboard: (text) => navigator.clipboard.writeText(text),
       onLatexError: (diags) => setLatexDiagnostics(diags),
       useWasmTex: opts?.forceWasm ?? useWasmTex,
+      texliveUrl,
       onPdfSaved: setPdfPath,
       onWasmStatus: (state) => setTexEngineState(state),
     })
-  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
+  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
 
   // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
   // We recompile to the existing pdfPath, no dialog. Skips silently on error.

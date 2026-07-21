@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest"
 import { exportToTex, exportReveal } from "./exporter"
 
 describe("exportToTex", () => {
+  it("loads babel with es-noquoting so literal ->> / >-> text survives", () => {
+    // Plain [spanish]{babel} treats << / >> as guillemet shorthands backed by
+    // an internal `quoting` environment: literal arrow text (\texttt{->>})
+    // then emits a stray \end{quoting} and aborts the whole compile.
+    const tex = exportToTex("Flechas: `->>` y `>->`.", "", "t")
+    expect(tex).toContain("\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}")
+  })
+
   it("uses frontmatter metadata without exporting raw YAML as document body", () => {
     const tex = exportToTex("---\ntitle: Front Title\nauthor: Ada\n---\n# Body", "", "Front Title", "Ada")
 

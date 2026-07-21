@@ -116,6 +116,8 @@ export const es: T = {
     sectionPdf: "Compilación PDF",
     useWasmTex: "Usar motor LaTeX integrado (WASM)",
     useWasmTexDesc: "Compila PDF sin necesidad de instalar pandoc o xelatex. Si falta el motor, se usa el LaTeX local.",
+    texliveUrl: "Servidor de paquetes TeX",
+    texliveUrlDesc: "El motor WASM descarga paquetes (.sty, fuentes) de este servidor. Cámbialo si el predeterminado está caído o tienes un espejo propio.",
     autoRebuildPdf: "Reconstruir PDF automáticamente",
     autoRebuildPdfDesc: "Reconstruye la vista previa del PDF automáticamente al editar el documento.",
     wasmTexInitializing: "Inicializando motor LaTeX (WASM)…",

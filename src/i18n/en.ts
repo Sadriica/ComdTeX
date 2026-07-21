@@ -116,6 +116,8 @@ export const en: T = {
     sectionPdf: "PDF compilation",
     useWasmTex: "Use built-in LaTeX engine (WASM)",
     useWasmTexDesc: "Compile PDF without installing pandoc or xelatex. Falls back to local LaTeX if the engine is unavailable.",
+    texliveUrl: "TeX package server",
+    texliveUrlDesc: "The WASM engine downloads packages (.sty, fonts) from this server. Change it if the default is down or you self-host a mirror.",
     autoRebuildPdf: "Auto-rebuild PDF",
     autoRebuildPdfDesc: "Automatically rebuild the PDF preview as you edit the document.",
     wasmTexInitializing: "Initializing LaTeX engine (WASM)…",

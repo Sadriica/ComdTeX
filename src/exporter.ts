@@ -370,7 +370,12 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     "\\documentclass[12pt,a4paper]{article}",
     "\\usepackage[utf8]{inputenc}",
     "\\usepackage[T1]{fontenc}",
-    "\\usepackage[spanish]{babel}",
+    // es-noquoting: without it babel-spanish treats << / >> as guillemet
+    // shorthands backed by an internal `quoting` environment, so literal
+    // arrow text like \texttt{->>} emits a stray \end{quoting} and kills the
+    // compile. es-noshorthands disables the remaining active-char surprises
+    // ("n, "u, …) — exported docs use real Unicode, never babel shorthands.
+    "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
     buildTheoremPreamble(),
     "\\usepackage{ulem}",   // \sout

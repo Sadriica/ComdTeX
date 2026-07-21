@@ -76,6 +76,11 @@ export interface ExportActionsContext {
    */
   useWasmTex?: boolean
   /**
+   * TeX package server used by the WASM engine for on-demand `.sty`/font
+   * downloads. Omitted → the engine's built-in default.
+   */
+  texliveUrl?: string
+  /**
    * Notified once the PDF is written to disk so callers can refresh the
    * preview pane.
    */
@@ -203,6 +208,7 @@ async function tryCompileWithWasm(
     }
     const result = await engine.compile(tex, {
       mainFile: "main.tex",
+      texliveUrl: ctx.texliveUrl,
       onProgress: (m) => {
         // Surface package-level progress as a fleeting toast.
         if (m) ctx.toast(`LaTeX: ${m}`, "info", 1500)
@@ -233,6 +239,10 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   if (!outPath) return
 
   // ── Step 1 — try the bundled WASM engine if enabled ─────────────────────
+  // WASM diagnostics are HELD here, not shown yet: a local engine may still
+  // succeed (Step 2), and popping an error modal over a successful export
+  // reads as failure. The modal only appears if every engine failed.
+  let wasmDiags: LatexDiagnostic[] = []
   const wantWasm = ctx.useWasmTex !== false
   if (wantWasm) {
     const wasm = await tryCompileWithWasm(tex, ctx)
@@ -244,12 +254,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
       return
     }
     if (wasm && wasm.status === "error") {
-      // Real LaTeX compile error — surface diagnostics, then still try local
-      // as a courtesy in case the user has a richer toolchain installed.
-      if (ctx.onLatexError) {
-        const diags = parseLatexStderr(wasm.log)
-        if (diags.length > 0) ctx.onLatexError(diags)
-      }
+      wasmDiags = parseLatexStderr(wasm.log)
     }
     if (wasm && wasm.status === "unavailable" && ctx.messages.wasmTexFallback) {
       ctx.toast(ctx.messages.wasmTexFallback, "info", 3000)
@@ -283,6 +288,11 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err)
       }
+    }
+    // Every engine failed — NOW surface the held WASM diagnostics (they are
+    // usually the most readable), falling back to the local engines' stderr.
+    if (ctx.onLatexError && wasmDiags.length > 0) {
+      ctx.onLatexError(wasmDiags)
     }
     ctx.toast(ctx.messages.compilationFailed(lastError), "error", 8000)
   } finally {

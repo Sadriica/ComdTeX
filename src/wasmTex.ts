@@ -50,6 +50,11 @@ export interface WasmTexCompileOptions {
   extraFiles?: Record<string, string>
   /** Receives human-readable progress strings ("loading amsmath", …). */
   onProgress?: (message: string) => void
+  /**
+   * TeX package server URL (SwiftLaTeX texlive-server layout) applied to the
+   * engine before compiling. Omit to keep the engine's current endpoint.
+   */
+  texliveUrl?: string
   /** Abort signal — terminates the worker and rejects with status "error". */
   signal?: AbortSignal
 }
@@ -192,6 +197,7 @@ export class WasmTexEngine {
         tex,
         mainFile: opts.mainFile ?? "main.tex",
         files: opts.extraFiles ?? {},
+        texliveUrl: opts.texliveUrl,
       })
     })
   }

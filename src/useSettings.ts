@@ -28,6 +28,12 @@ export interface Settings {
    * Falls back automatically if the WASM engine is unavailable in the build.
    */
   useWasmTex: boolean
+  /**
+   * TeX package server the WASM engine downloads missing `.sty`/`.cls`/font
+   * files from (SwiftLaTeX texlive-server layout). The default public server
+   * has a history of outages — this lets users point at a mirror.
+   */
+  texliveUrl: string
   /** Focus & Writing Session (Pomodoro) durations, in minutes. */
   pomodoroWorkMin: number
   pomodoroBreakMin: number
@@ -86,6 +92,7 @@ const DEFAULTS: Settings = {
   dailyNotesTemplate: "# {{date:YYYY-MM-DD}}\n\n## Tasks\n\n- [ ] \n\n## Notes\n\n",
   autoRebuildPdf: false,
   useWasmTex: true,
+  texliveUrl: "https://texlive2.swiftlatex.com/",
   pomodoroWorkMin: 25,
   pomodoroBreakMin: 5,
   pomodoroLongBreakMin: 15,

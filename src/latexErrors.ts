@@ -66,7 +66,7 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       const fileMatch = /File `(.+?)' not found/.exec(msg)
       if (fileMatch) {
         const fname = fileMatch[1]
-        suggestion = `Missing package file '${fname}'. Install it or remove the \\usepackage command.`
+        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
       }
       diags.push({ severity: "error", message: msg, suggestion })
       i++
@@ -108,7 +108,7 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       else if (/I can't find file/.test(rawMsg)) {
         const fnMatch = /`(.+?)'/.exec(rawMsg)
         const fname = fnMatch ? fnMatch[1] : "unknown"
-        suggestion = `Missing package file '${fname}'. Install it or remove the \\usepackage command.`
+        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
       }
       // Pattern 11 — Font not loadable (XeLaTeX defaults to Latin Modern OTF,
       // which lives in the TeX distribution's fonts package, not the engine's)

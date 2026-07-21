@@ -3,6 +3,16 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **PDF export died with `\begin{document} ended by \end{quoting}` on documents containing `->>` / `>->` arrow text.** `babel-spanish` treats `<<`/`>>` as guillemet shorthands backed by an internal `quoting` environment, so literal arrow sequences (e.g. the commutative-diagram help text) emitted a stray `\end{quoting}`. The exporter now loads babel with `es-noquoting,es-noshorthands` — exported documents use real Unicode, never babel shorthands.
+- **A successful fallback compile no longer shows the LaTeX error modal.** When the WASM engine failed but a local engine (`tectonic`/`xelatex`/`pdflatex`) then produced the PDF, the WASM error modal still popped over the successful export. Diagnostics are now held and only surfaced if every engine fails.
+
+### Added
+- **Configurable TeX package server** (Settings → PDF, `texliveUrl`). The WASM engine downloads `.sty`/font files on demand from `texlive2.swiftlatex.com`, a community server with a history of outages (down at the time of writing, which made WASM PDF compiles fail with `File 'xcolor.sty' not found`). The URL is now a setting so users can point at a mirror; the package-not-found error suggestion explains the server/offline cause and the tectonic alternative.
+- **Local TeX package mirror (infrastructure).** The bundled engine glue is patched to serve files from `public/wasm-tex/texlive/` (flat, filename-keyed) before hitting the network; the directory ships empty with population instructions (`public/wasm-tex/texlive/README.md`).
+
 ## [1.11.1] - 2026-07-21
 
 ### Fixed

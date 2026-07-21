@@ -71,7 +71,7 @@ describe("parseLatexStderr", () => {
     expect(diags[0].severity).toBe("error")
     expect(diags[0].message).toBe("I can't find file `myimage.png'.")
     expect(diags[0].suggestion).toBe(
-      "Missing package file 'myimage.png'. Install it or remove the \\usepackage command."
+      "Missing package file 'myimage.png'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command."
     )
   })
 
@@ -88,7 +88,7 @@ describe("parseLatexStderr", () => {
     expect(diags[0]).toEqual({
       severity: "error",
       message: "File `foo.sty' not found.",
-      suggestion: "Missing package file 'foo.sty'. Install it or remove the \\usepackage command.",
+      suggestion: "Missing package file 'foo.sty'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
     })
   })
 
