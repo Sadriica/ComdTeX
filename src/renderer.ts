@@ -220,12 +220,42 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
     return saveMath(renderKatex(expr, false, macros))
   })
 
+  text = preserveParagraphIndentationSource(text)
   let html = md.render(text)
+  html = preserveParagraphIndentation(html)
 
   html = html.replace(/\x02MATH(\d+)\x03/g, (_, i) => mathSlots[parseInt(i)] ?? "")
   html = html.replace(/\x02ENV(\d+)\x03/g,  (_, i) => envSlots[parseInt(i)] ?? "")
 
   return html
+}
+
+function preserveParagraphIndentation(html: string): string {
+  return html.replace(/<p>([\s\S]*?)<\/p>/g, (match, body: string) => {
+    const next = body.replace(/\n([ \t]+)(?=\S)/g, (_m, indent: string) => {
+      const spaces = indent.replace(/\t/g, "    ").length
+      return `\n<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>`
+    })
+    return next === body ? match : `<p>${next}</p>`
+  })
+}
+
+function preserveParagraphIndentationSource(text: string): string {
+  const lines = text.split("\n")
+  let inFence = false
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (/^(```|~~~)/.test(trimmed)) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence || i === 0 || lines[i - 1].trim() === "") continue
+    const match = /^([ \t]{2,})(?=\S)/.exec(lines[i])
+    if (!match) continue
+    const spaces = match[1].replace(/\t/g, "    ").length
+    lines[i] = `<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>` + lines[i].slice(match[1].length)
+  }
+  return lines.join("\n")
 }
 
 function resolveImages(html: string, vaultPath: string): string {

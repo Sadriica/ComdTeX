@@ -68,6 +68,7 @@ interface ActiveZone {
   id: string
   startLine: number
   endLine: number
+  html: string
   domNode: HTMLElement
 }
 
@@ -160,7 +161,7 @@ export function setupDisplayMathPreview(
               domNode,
               suppressMouseDown: false,
             })
-            newZones.push({ id, startLine: b.startLine, endLine: b.endLine, domNode })
+            newZones.push({ id, startLine: b.startLine, endLine: b.endLine, html, domNode })
           }
         })
         document.body.removeChild(probe)
@@ -172,7 +173,10 @@ export function setupDisplayMathPreview(
         const fresh = toShow[i]
         if (!fresh) continue
         const html = renderMathHtml(fresh.expr, macros)
-        if (html) zones[i].domNode.innerHTML = html
+        if (html && html !== zones[i].html) {
+          zones[i].html = html
+          zones[i].domNode.innerHTML = html
+        }
       }
     }
 

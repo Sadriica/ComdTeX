@@ -13,6 +13,8 @@ export interface PaletteCommand {
   shortcut?: string
   /** Legacy field — still rendered as a dim description when present. */
   description?: string
+  /** Extra hidden terms used only for search. */
+  keywords?: string[]
   category?: PaletteCategory
   icon?: ReactNode
   /** Leaf commands run `action`; parents drill into `children`. */
@@ -67,6 +69,31 @@ function fuzzy(query: string, text: string): boolean {
     if (t[i] === q[qi]) qi++
   }
   return qi === q.length
+}
+
+function commandMatches(query: string, command: PaletteCommand, categoryLabel?: string): boolean {
+  if (!query) return true
+  const terms = [
+    command.label,
+    command.description,
+    command.shortcut,
+    categoryLabel,
+    ...(command.keywords ?? []),
+  ].filter(Boolean) as string[]
+  return terms.some((term) => fuzzy(query, term))
+}
+
+function flattenCommands(commands: PaletteCommand[]): PaletteCommand[] {
+  const out: PaletteCommand[] = []
+  const visit = (items: PaletteCommand[], inheritedCategory?: PaletteCategory) => {
+    for (const item of items) {
+      const category = item.category ?? inheritedCategory
+      if (item.children?.length) visit(item.children, category)
+      if (item.action) out.push({ ...item, category })
+    }
+  }
+  visit(commands)
+  return out
 }
 
 function flatFiles(tree: FileNode[]): FileNode[] {
@@ -125,7 +152,7 @@ export default function CommandPalette({ open, onClose, files, commands, onOpenF
     items = [
       { kind: "back", label: t.palette.back, icon: "←", action: back },
       ...parent.children
-        .filter((c) => !query || fuzzy(query, c.label))
+        .filter((c) => commandMatches(query, c, c.category ? t.palette.categories[c.category] : parent.category ? t.palette.categories[parent.category] : undefined))
         .map<PaletteItem>((c) => ({
           kind: "command",
           label: c.label,
@@ -159,8 +186,8 @@ export default function CommandPalette({ open, onClose, files, commands, onOpenF
           description: f.path,
           action: () => { onOpenFile(f); onClose() },
         })),
-      ...commands
-        .filter((c) => !query || fuzzy(query, c.label) || (c.category && fuzzy(query, t.palette.categories[c.category])))
+      ...(query ? flattenCommands(commands) : commands)
+        .filter((c) => commandMatches(query, c, c.category ? t.palette.categories[c.category] : undefined))
         .map<PaletteItem>((c) => ({
           kind: "command",
           label: c.label,

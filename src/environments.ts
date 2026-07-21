@@ -100,6 +100,9 @@ function specialEnvError(kind: string, e: unknown): string {
 // inline (no flash of source code, no async wait, no GPU repaint loop).
 const flowchartSvgCache = new Map<string, string>()
 export function setFlowchartSvg(source: string, svg: string): void {
+  // Bounded like specialRenderCache: every edit of a diagram creates a new key
+  // and stale entries were never evicted, growing for the whole session.
+  if (flowchartSvgCache.size >= 300) flowchartSvgCache.clear()
   flowchartSvgCache.set(source, svg)
 }
 export function clearFlowchartSvgCache(): void {
@@ -115,6 +118,11 @@ export function clearFlowchartSvgCache(): void {
 // no repaint loop).
 const excalidrawSvgCache = new Map<string, string>()
 export function setExcalidrawSvg(sceneB64: string, svg: string): void {
+  // Bounded: keys are whole base64 scenes and values full SVGs — with embedded
+  // images both can reach MBs, and every save of a drawing mints a new key, so
+  // an unbounded map is a session-long leak. Wholesale clear (the project's
+  // cache pattern) just re-renders visible drawings once via the App effect.
+  if (excalidrawSvgCache.size >= 30) excalidrawSvgCache.clear()
   excalidrawSvgCache.set(sceneB64, svg)
 }
 export function getExcalidrawSvg(sceneB64: string): string | undefined {
@@ -163,7 +171,11 @@ function buildExcalidrawHTML(title: string, number: string, sceneB64: string): s
   return [
     `<div class="excalidraw-block" data-excalidraw-scene="${safeB64}">`,
     `<div class="excalidraw-header"><span class="excalidraw-title">${header}</span>`,
-    `<button class="excalidraw-edit" data-scene="${safeB64}" data-line="$LINE$" title="${escHtml(excalidrawPlaceholderText)}">✏</button>`,
+    // The scene lives ONCE on the parent block's data-excalidraw-scene — the
+    // edit button must not repeat it: with image-heavy scenes the duplicate
+    // attribute doubled the preview HTML that gets parsed + sanitized +
+    // morphed on every debounced render.
+    `<button class="excalidraw-edit" data-line="$LINE$" title="${escHtml(excalidrawPlaceholderText)}">✏</button>`,
     `</div>`,
     body,
     `</div>`,

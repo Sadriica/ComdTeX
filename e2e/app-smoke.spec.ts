@@ -48,3 +48,14 @@ test("Ctrl+P opens the command palette even before a vault is loaded", async ({ 
   await expect(page.locator(".palette-overlay")).toHaveCount(0)
   await expect(page.locator(".welcome-logo")).toBeVisible()
 })
+
+test("command palette searches editor snippets such as flowchart", async ({ page }) => {
+  await stubTauriInternals(page)
+  await page.goto("/")
+  await expect(page.locator(".welcome-logo")).toBeVisible()
+
+  await page.keyboard.press("Control+p")
+  await page.locator(".palette-input").fill("flowchart")
+
+  await expect(page.getByRole("button", { name: /flowchart\s+:::flowchart/ })).toBeVisible()
+})

@@ -277,6 +277,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ### Editor
 - Monaco Editor with syntax highlighting
+- Rich autocompletion: `:::` block types, `\` LaTeX commands, `[[` wikilinks, `[@` citations, `@eq:`/`@sec:`/… labels, Tab-expanding shorthands, and context-aware keyword suggestions inside special blocks (pseudocode, truth tables, plots…) — see [docs/autocomplete.md](docs/autocomplete.md)
 - Vim mode (toggle in Settings)
 - Offline spellcheck (Hunspell dictionaries via `nspell`, Spanish + English) — gated by a Settings toggle; no network required
 - Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers

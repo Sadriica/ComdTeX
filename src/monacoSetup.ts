@@ -5,7 +5,7 @@ import { lintFile, type LintContext } from "./contentLinter"
 import { parseKeepMarks } from "./keepMarks"
 import { pathBasename } from "./pathUtils"
 
-interface Completion {
+export interface Completion {
   label: string
   detail: string
   snippet: string
@@ -23,6 +23,8 @@ export const COMPLETIONS: Completion[] = [
   { label: "proof",       detail: ":::proof → proof (with □)",         snippet: ":::proof\n${1:proof}\n:::" },
   { label: "remark",      detail: ":::remark → remark",                snippet: ":::remark\n${1:remark}\n:::" },
   { label: "note",        detail: ":::note → note",                    snippet: ":::note\n${1:note}\n:::" },
+  { label: "flowchart",   detail: ":::flowchart → flowchart block",     snippet: ":::flowchart[${1:title}]\n${2:START\n  INPUT: value\n  IF condition THEN\n    OUTPUT: result\n  END IF}\n:::" },
+  { label: "pseudocode",  detail: ":::pseudocode → pseudocode block",   snippet: ":::pseudocode[${1:title}]\n${2:INPUT: value\nFOR i ← 1 TO n DO\n  statement\nEND FOR}\n:::" },
   // ── Truth table ─────────────────────────────────────────────────────────────
   { label: ":::truth", detail: ":::truth → truth table block", snippet: ":::truth[${1:title}]\n${2:p ∧ q}\n:::" },
   // ── Graph visualizer ────────────────────────────────────────────────────────
@@ -93,6 +95,135 @@ export const COMPLETIONS: Completion[] = [
 // ── Precomputed lowercase labels for fast prefix matching ────────────────────
 // Avoids re-lowercasing on every keystroke and fixes mixed-case label comparison.
 const COMPLETIONS_LC: string[] = COMPLETIONS.map((c) => c.label.toLowerCase())
+
+// ── In-block completions for special blocks ──────────────────────────────────
+// Static catalogs (~40 entries total — negligible footprint). Keyword grammar
+// mirrors the real parsers (pseudocodeFlowchart.ts, truthTable.ts,
+// graphViz.ts, functionPlot.ts, commDiag.ts).
+
+const PSEUDOCODE_BLOCK_COMPLETIONS: Completion[] = [
+  { label: "INPUT",  detail: "INPUT: value (I/O)",            snippet: "INPUT: ${1:valor}" },
+  { label: "OUTPUT", detail: "OUTPUT: result (I/O)",          snippet: "OUTPUT: ${1:resultado}" },
+  { label: "PRINT",  detail: "PRINT message (I/O)",           snippet: "PRINT ${1:mensaje}" },
+  { label: "IF",     detail: "IF … THEN / END IF",            snippet: "IF ${1:condición} THEN\n  ${2}\nEND IF" },
+  { label: "IFELSE", detail: "IF … THEN / ELSE / END IF",     snippet: "IF ${1:condición} THEN\n  ${2}\nELSE\n  ${3}\nEND IF" },
+  { label: "ELSEIF", detail: "ELSE IF … THEN",                snippet: "ELSE IF ${1:condición} THEN\n  ${2}" },
+  { label: "ELSE",   detail: "ELSE branch",                   snippet: "ELSE\n  ${1}" },
+  { label: "FOR",    detail: "FOR i ← 1 TO n DO / END FOR",   snippet: "FOR ${1:i} ← ${2:1} TO ${3:n} DO\n  ${4}\nEND FOR" },
+  { label: "WHILE",  detail: "WHILE … DO / END WHILE",        snippet: "WHILE ${1:condición} DO\n  ${2}\nEND WHILE" },
+  { label: "REPEAT", detail: "REPEAT / UNTIL …",              snippet: "REPEAT\n  ${1}\nUNTIL ${2:condición}" },
+  { label: "SWAP",   detail: "SWAP a ↔ b",                    snippet: "SWAP ${1:A[i]} ↔ ${2:A[j]}" },
+  { label: "RETURN", detail: "RETURN value (terminal)",       snippet: "RETURN ${1:valor}" },
+  { label: "END",    detail: "END (terminal)",                snippet: "END" },
+]
+
+const SPECIAL_BLOCK_COMPLETIONS: Record<string, Completion[]> = {
+  pseudocode: PSEUDOCODE_BLOCK_COMPLETIONS,
+  flowchart: PSEUDOCODE_BLOCK_COMPLETIONS,
+  truth: [
+    { label: "AND",     detail: "p ∧ q (also * or &&)",   snippet: "∧ " },
+    { label: "OR",      detail: "p ∨ q (also + or ||)",   snippet: "∨ " },
+    { label: "NOT",     detail: "¬p (also !)",            snippet: "¬" },
+    { label: "IMPLIES", detail: "p → q (also ->)",        snippet: "→ " },
+    { label: "IFF",     detail: "p ↔ q (also <-> or ≡)",  snippet: "↔ " },
+  ],
+  graph: [
+    { label: "edge",     detail: "A -- B (undirected)",     snippet: "${1:A} -- ${2:B}" },
+    { label: "arrow",    detail: "A -> B (directed)",       snippet: "${1:A} -> ${2:B}" },
+    { label: "weighted", detail: "A -- B : 5 (with weight)", snippet: "${1:A} -- ${2:B} : ${3:5}" },
+  ],
+  plot: [
+    { label: "f",     detail: "f(x) = expression",            snippet: "f(${1:x}) = ${2:sin(x)}" },
+    { label: "range", detail: "range: [-5, 5] (x domain)",    snippet: "range: [${1:-5}, ${2:5}]" },
+    { label: "sin",  detail: "sin(x)",  snippet: "sin(${1:x})" },
+    { label: "cos",  detail: "cos(x)",  snippet: "cos(${1:x})" },
+    { label: "tan",  detail: "tan(x)",  snippet: "tan(${1:x})" },
+    { label: "sqrt", detail: "sqrt(x)", snippet: "sqrt(${1:x})" },
+    { label: "abs",  detail: "abs(x)",  snippet: "abs(${1:x})" },
+    { label: "exp",  detail: "exp(x)",  snippet: "exp(${1:x})" },
+    { label: "log",  detail: "log(x)",  snippet: "log(${1:x})" },
+    { label: "pi",   detail: "π",       snippet: "pi" },
+  ],
+  commdiag: [
+    { label: "arrow",  detail: "A -> B [f]",                  snippet: "${1:A} -> ${2:B} [${3:f}]" },
+    { label: "iso",    detail: "A <-> B [f] (isomorphism)",   snippet: "${1:A} <-> ${2:B} [${3:f}]" },
+    { label: "epi",    detail: "A ->> B [f] (epimorphism)",   snippet: "${1:A} ->> ${2:B} [${3:f}]" },
+    { label: "mono",   detail: "A >-> B [f] (monomorphism)",  snippet: "${1:A} >-> ${2:B} [${3:f}]" },
+    { label: "double", detail: "A ==> B [f]",                 snippet: "${1:A} ==> ${2:B} [${3:f}]" },
+    { label: "square", detail: "full commutative square",     snippet: "${1:A} -> ${2:B} [${3:f}]\n${1:A} -> ${4:C} [${5:g}]\n${2:B} -> ${6:D} [${7:h}]\n${4:C} -> ${6:D} [${8:k}]" },
+  ],
+}
+
+/** In-block catalog for a special-block type. Returns null for types with no
+ *  catalog (math environments, code, excalidraw). */
+export function getSpecialBlockCompletions(type: string): Completion[] | null {
+  return SPECIAL_BLOCK_COMPLETIONS[type] ?? null
+}
+
+/** Walks upward from the line ABOVE `lineNumber` looking for an unclosed
+ *  `:::type` opener. A bare `:::` closer found first means we're outside.
+ *  Bounded scan — O(maxScan) string work, no allocation beyond trims. */
+export function findEnclosingSpecialBlock(
+  getLine: (line: number) => string,
+  lineNumber: number,
+  maxScan = 400,
+): string | null {
+  for (let n = lineNumber - 1; n >= 1 && lineNumber - n <= maxScan; n--) {
+    const line = getLine(n).trim()
+    if (line === ":::") return null
+    const m = /^:::(?:sm\s+|lg\s+)?([A-Za-z][\w-]*)/.exec(line)
+    if (m) return m[1].toLowerCase()
+  }
+  return null
+}
+
+/** Tab-expansion resolution restricted to an in-block catalog: unique prefix
+ *  or exact label match wins (case-insensitive). */
+export function resolveSpecialBlockTabCompletion(
+  completions: Completion[],
+  word: string,
+): TabCompletionResolution | null {
+  if (!word) return null
+  const typed = word.toLowerCase()
+  const matches = completions.filter((c) => c.label.toLowerCase().startsWith(typed))
+  const completion =
+    matches.length === 1
+      ? matches[0]
+      : matches.find((c) => c.label.toLowerCase() === typed)
+  return completion ? { completion, overwriteBefore: word.length } : null
+}
+
+export interface TabCompletionResolution {
+  completion: Completion
+  overwriteBefore: number
+}
+
+export function resolveTabCompletion(beforeCursor: string, word: string): TabCompletionResolution | null {
+  const blockPrefixMatch = /:::([A-Za-z][\w:-]*)$/.exec(beforeCursor)
+  const triggerText = blockPrefixMatch?.[0] ?? word
+  if (!triggerText || triggerText.length < 1) return null
+
+  const typed = triggerText.toLowerCase()
+  const normalizedTyped = typed.startsWith(":::") ? typed.slice(3) : typed
+  // After a ::: prefix only block snippets qualify — otherwise `:::t` would
+  // match shorthands like `table`/`tan` and expand them mid-block.
+  const matches = COMPLETIONS.filter((c) => {
+    if (blockPrefixMatch && !c.snippet.startsWith(":::")) return false
+    const label = c.label.toLowerCase()
+    const normalizedLabel = label.startsWith(":::") ? label.slice(3) : label
+    return label.startsWith(typed) || normalizedLabel.startsWith(normalizedTyped)
+  })
+  const completion =
+    matches.length === 1
+      ? matches[0]
+      : matches.find((c) => {
+          const label = c.label.toLowerCase()
+          const normalizedLabel = label.startsWith(":::") ? label.slice(3) : label
+          return label === typed || normalizedLabel === normalizedTyped
+        })
+
+  return completion ? { completion, overwriteBefore: triggerText.length } : null
+}
 
 // ── LaTeX command list for \ autocomplete ─────────────────────────────────────
 
@@ -189,7 +320,7 @@ let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 export function setupMonaco(monaco: typeof monacoApi) {
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
-    triggerCharacters: ["[", "@", "\\", "^"],
+    triggerCharacters: ["[", "@", "\\", "^", ":"],
     provideCompletionItems(model, position) {
       const lineText = model.getLineContent(position.lineNumber)
       const beforeCursor = lineText.slice(0, position.column - 1)
@@ -237,8 +368,45 @@ export function setupMonaco(monaco: typeof monacoApi) {
       }
 
       const word = model.getWordUntilPosition(position)
-      if (word.word.length < 2) return { suggestions: [] }
-      const range = {
+      // Bare `:::` (no letters yet) also triggers, listing every block type.
+      const blockPrefixMatch = /:::([A-Za-z][\w:-]*)?$/.exec(beforeCursor)
+
+      // Context-aware suggestions inside special blocks (catalog lazy-loads on
+      // first use). Inside such a block the global shorthands don't apply.
+      const enclosingBlock = findEnclosingSpecialBlock((n) => model.getLineContent(n), position.lineNumber)
+      const inBlockCompletions = enclosingBlock ? getSpecialBlockCompletions(enclosingBlock) : null
+      if (inBlockCompletions) {
+        // A ::: being typed here is the block's closing fence, not an opener.
+        if (blockPrefixMatch) return { suggestions: [] }
+        const partial = word.word.toLowerCase()
+        const wordRange = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        }
+        return {
+          suggestions: inBlockCompletions
+            .filter((c) => !partial || c.label.toLowerCase().startsWith(partial))
+            .map((c) => ({
+              label: { label: c.label, description: c.detail },
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: c.snippet,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: wordRange,
+              sortText: "0" + c.label,
+            })),
+        }
+      }
+
+      if (!blockPrefixMatch && word.word.length < 2) return { suggestions: [] }
+      const completionQuery = (blockPrefixMatch ? blockPrefixMatch[1] ?? "" : word.word).toLowerCase()
+      const range = blockPrefixMatch ? {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: position.column - blockPrefixMatch[0].length,
+        endColumn: position.column,
+      } : {
         startLineNumber: position.lineNumber,
         endLineNumber: position.lineNumber,
         startColumn: word.startColumn,
@@ -354,11 +522,14 @@ export function setupMonaco(monaco: typeof monacoApi) {
         return { suggestions }
       }
 
-      const wordLower = word.word.toLowerCase()
       const userSnippetSuggestions: monacoApi.languages.CompletionItem[] = []
       for (let i = 0; i < userSnippets.length; i++) {
         const c = userSnippets[i]
-        if (!c.label.toLowerCase().startsWith(wordLower)) continue
+        // In ::: block context only offer block snippets (never `frac`, `table`…).
+        if (blockPrefixMatch && !c.snippet.startsWith(":::")) continue
+        const label = c.label.toLowerCase()
+        const normalizedLabel = label.startsWith(":::") ? label.slice(3) : label
+        if (!label.startsWith(completionQuery) && !normalizedLabel.startsWith(completionQuery)) continue
         userSnippetSuggestions.push({
           label: { label: c.label, description: c.detail },
           kind: monaco.languages.CompletionItemKind.Snippet,
@@ -366,13 +537,19 @@ export function setupMonaco(monaco: typeof monacoApi) {
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range,
           sortText: "00" + c.label,
+          // The range swallows the ::: prefix, so Monaco's own filter must
+          // match against a :::-prefixed term or it hides unprefixed labels.
+          ...(blockPrefixMatch ? { filterText: ":::" + normalizedLabel } : {}),
         })
       }
 
       const builtinSuggestions: monacoApi.languages.CompletionItem[] = []
       for (let i = 0; i < COMPLETIONS.length; i++) {
-        if (!COMPLETIONS_LC[i].startsWith(wordLower)) continue
         const c = COMPLETIONS[i]
+        if (blockPrefixMatch && !c.snippet.startsWith(":::")) continue
+        const label = COMPLETIONS_LC[i]
+        const normalizedLabel = label.startsWith(":::") ? label.slice(3) : label
+        if (!label.startsWith(completionQuery) && !normalizedLabel.startsWith(completionQuery)) continue
         builtinSuggestions.push({
           label: { label: c.label, description: c.detail },
           kind: monaco.languages.CompletionItemKind.Snippet,
@@ -380,6 +557,7 @@ export function setupMonaco(monaco: typeof monacoApi) {
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range,
           sortText: "0" + c.label,
+          ...(blockPrefixMatch ? { filterText: ":::" + normalizedLabel } : {}),
         })
       }
 
@@ -843,17 +1021,17 @@ export function setupEditorCommands(
     const model = editor.getModel()
     if (!position || !model) return
 
+    const lineText = model.getLineContent(position.lineNumber)
+    const beforeCursor = lineText.slice(0, position.column - 1)
     const word = model.getWordUntilPosition(position)
-    if (!word.word || word.word.length < 1) return
-
-    const typed = word.word.toLowerCase()
-    const matches = COMPLETIONS.filter((c) => c.label.startsWith(typed))
-    const match =
-      matches.length === 1
-        ? matches[0]
-        : matches.find((c) => c.label === typed)
-
-    if (!match) return
+    // Inside a special block only its own keywords expand — never the global
+    // shorthands (`sin` inside :::plot must stay plain sin(), not \sin).
+    const enclosingBlock = findEnclosingSpecialBlock((n) => model.getLineContent(n), position.lineNumber)
+    const inBlockCompletions = enclosingBlock ? getSpecialBlockCompletions(enclosingBlock) : null
+    const resolution = inBlockCompletions
+      ? resolveSpecialBlockTabCompletion(inBlockCompletions, word.word)
+      : resolveTabCompletion(beforeCursor, word.word)
+    if (!resolution) return
 
     // Take control of Tab: prevent any other handler
     e.preventDefault()
@@ -863,9 +1041,27 @@ export function setupEditorCommands(
     editor.trigger("keyboard", "hideSuggestWidget", null)
 
     // Insert the snippet using snippetController2
-    ctrl?.insert(match.snippet, {
-      overwriteBefore: word.endColumn - word.startColumn,
+    ctrl?.insert(resolution.completion.snippet, {
+      overwriteBefore: resolution.overwriteBefore,
       overwriteAfter: 0,
+    })
+  })
+
+  // quickSuggestions is off globally (App.tsx editor options) so the widget
+  // doesn't pop while writing prose. Inside a special block with a catalog we
+  // flip it on so keywords suggest as you type, and off again on exit. The
+  // scan is bounded and only runs on cursor moves; options update only on
+  // boundary crossings.
+  let blockSuggestActive = false
+  editor.onDidChangeCursorPosition((e) => {
+    const model = editor.getModel()
+    if (!model) return
+    const type = findEnclosingSpecialBlock((n) => model.getLineContent(n), e.position.lineNumber)
+    const active = type !== null && type in SPECIAL_BLOCK_COMPLETIONS
+    if (active === blockSuggestActive) return
+    blockSuggestActive = active
+    editor.updateOptions({
+      quickSuggestions: { other: active, comments: false, strings: false },
     })
   })
 }

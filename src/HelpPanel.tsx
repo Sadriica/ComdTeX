@@ -119,7 +119,14 @@ export default function HelpPanel() {
           {hp.headingsPurpose}
         </p>
 
+        <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.envRefs}</div>
+        <Row code=":::definition[Valor absoluto]{#def:valor}" desc={hp.envRefLabelDesc} />
+        <Row code="@def:valor"                    desc={hp.envRefLocalDesc} render="Definición 1" />
+        <Row code="@gp/calendario@def:valor"      desc={hp.envRefCrossDesc} render="Definición 2" />
+        <Row code="@[mi carpeta/mi nota]@def:valor" desc={hp.envRefSpacesDesc} render="Definición 3" />
+
         <p className="hp-intro" style={{ marginTop: "0.6rem" }}>{hp.specialBlocksNote}</p>
+        <p className="hp-intro" style={{ marginTop: "0.4rem" }}>{hp.blockAutocompleteNote}</p>
 
         <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.pseudocode}</div>
         <p className="hp-intro">{hp.pseudocodeDesc}</p>
@@ -151,10 +158,12 @@ export default function HelpPanel() {
         <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.flowchart}</div>
         <p className="hp-intro">{hp.flowchartDesc}</p>
         <Row code=":::flowchart[title]" desc={hp.flowchartDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.flowchartExample}</pre>
 
         <div className="hp-label" style={{ marginTop: "0.6rem" }}>{hp.excalidraw}</div>
         <p className="hp-intro">{hp.excalidrawDesc}</p>
         <Row code=":::excalidraw[title]" desc={hp.excalidrawDesc} />
+        <pre className="hp-code" style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}>{hp.excalidrawExample}</pre>
 
         <div className="hp-label" style={{ marginTop: "0.8rem" }}>{hp.symbolPickerHelp}</div>
         <p className="hp-intro">{hp.symbolPickerDesc}</p>
@@ -222,10 +231,10 @@ export default function HelpPanel() {
         <Row code="pder(f, x)"     desc={hp.partialDer}     render={math("\\frac{\\partial f}{\\partial x}")} />
 
         <div className="hp-label">{hp.matrices}</div>
-        <Row code="mat(1,0,0,1)"             desc={hp.matAuto} />
-        <Row code="matf(2,3, a,b,c, d,e,f)"  desc={hp.matFixed} />
-        <Row code="table(Col1, Col2)"         desc={hp.matTable} />
-        <Row code="[[1,2],[3,4]]"             desc={hp.matLiteral} />
+        <Row code="mat(1,0,0,1)"             desc={hp.matAuto}    render={math("\\begin{bmatrix}1&0\\\\0&1\\end{bmatrix}")} />
+        <Row code="matf(2,3, a,b,c, d,e,f)"  desc={hp.matFixed}   render={math("\\begin{bmatrix}a&b&c\\\\d&e&f\\end{bmatrix}")} />
+        <Row code="table(Col1, Col2)"         desc={hp.matTable} render="<table><thead><tr><th>Col1</th><th>Col2</th></tr></thead><tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table>" />
+        <Row code="[[1,2],[3,4]]"             desc={hp.matLiteral} render={math("\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}")} />
 
         <div className="hp-label">{hp.trigFunctions}</div>
         <Row code="sin(x)"         desc={hp.hpSin}          render={math("\\sin(x)")} />
@@ -249,10 +258,11 @@ export default function HelpPanel() {
       {/* ── Equations ── */}
       <Section title={hp.equations}>
         <div className="hp-codeblock">{hp.eqCodeBlock}</div>
-        <Row code="$$ ... $$ {#eq:etq}" desc={hp.numberedEq} />
-        <Row code="$$ ... $$"           desc={hp.numberedNoLabel} />
-        <Row code="@eq:etq"             desc={hp.refLabel} />
-        <Row code="@eq:3"               desc={hp.directRef} />
+        <Row code="$$ ... $$ {#eq:etq}" desc={hp.numberedEq} render="(1)" />
+        <Row code="$$ ... $$"           desc={hp.numberedNoLabel} render="(2)" />
+        <Row code="@eq:etq"             desc={hp.refLabel} render="(1)" />
+        <Row code="@eq:3"               desc={hp.directRef} render="(3)" />
+        <Row code="$E = mc^2$ {#eq:masa}" desc={hp.inlineNumberedDesc} render={math("E=mc^2") + " (4)"} />
         <p className="hp-intro" style={{ marginTop: "0.5em" }}>
           {hp.inlineExample} <code className="hp-code">{"$x^2 + y^2 = r^2$"}</code>
           {" → "}
@@ -263,10 +273,10 @@ export default function HelpPanel() {
       {/* ── Structural labels ── */}
       <Section title={hp.structuralLabels}>
         <p className="hp-intro">{hp.structuralLabelsDesc}</p>
-        <Row code="# Introducción {#sec:intro}" desc={hp.sectionLabelDesc} />
-        <Row code="![Leyenda](img.png){#fig:diagrama}" desc={hp.figureLabelDesc} />
-        <Row code={"| A | B |\n|---|---|\n| 1 | 2 |\n{#tbl:constants}"} desc={hp.tableLabelDesc} />
-        <Row code=":::theorem[Título]{#thm:main}" desc={hp.envLabelDesc} />
+        <Row code="# Introducción {#sec:intro}" desc={hp.sectionLabelDesc} render="@sec:intro → sección 1" />
+        <Row code="![Leyenda](img.png){#fig:diagrama}" desc={hp.figureLabelDesc} render="@fig:diagrama → Figura 1" />
+        <Row code={"| A | B |\n|---|---|\n| 1 | 2 |\n{#tbl:constants}"} desc={hp.tableLabelDesc} render="@tbl:constants → Tabla 1" />
+        <Row code=":::theorem[Título]{#thm:main}" desc={hp.envLabelDesc} render="@thm:main → Teorema 1" />
         <Row code="@eq:energia, @fig:diagrama, @tbl:constants" desc={hp.labelAutocompleteDesc} />
         <Row code={t.labelsPanel.title} desc={hp.labelsPanelDesc} />
       </Section>
@@ -293,8 +303,8 @@ export default function HelpPanel() {
       <Section title={hp.bibtex}>
         <p className="hp-intro">{hp.bibtexDesc}</p>
         <div className="hp-codeblock">{`@article{einstein05,\n  author = {Einstein, Albert},\n  title  = {Zur Elektrodynamik…},\n  year   = {1905},\n}`}</div>
-        <Row code="[@einstein05]"        desc={hp.cite} />
-        <Row code="[@einstein05, p. 42]" desc={hp.citeNote} />
+        <Row code="[@einstein05]"        desc={hp.cite}     render="<sup>[1]</sup>" />
+        <Row code="[@einstein05, p. 42]" desc={hp.citeNote} render="<sup>[1, p. 42]</sup>" />
       </Section>
 
       {/* ── Front matter ── */}
@@ -308,7 +318,7 @@ export default function HelpPanel() {
 
       {/* ── Wikilinks & backlinks ── */}
       <Section title={hp.wikilinks}>
-        <Row code="[[nombre-nota]]"   desc={hp.wikilinkRow} />
+        <Row code="[[nombre-nota]]"   desc={hp.wikilinkRow} render='<span style="text-decoration:underline">nombre-nota</span>' />
         <Row code={hp.transclusionFile}    desc={hp.transclusionFileDesc} />
         <Row code={hp.transclusionHeading} desc={hp.transclusionHeadingDesc} />
         <Row code={hp.transclusionBlock}   desc={hp.transclusionBlockDesc} />
@@ -342,31 +352,31 @@ export default function HelpPanel() {
       {/* ── Callouts ── */}
       <Section title={hp.callouts}>
         <p className="hp-intro">{hp.calloutsDesc}</p>
-        <Row code={hp.calloutNote}      desc={hp.calloutNoteDesc} />
-        <Row code={hp.calloutWarning}   desc={hp.calloutWarningDesc} />
-        <Row code={hp.calloutTip}       desc={hp.calloutTipDesc} />
-        <Row code={hp.calloutImportant} desc={hp.calloutImportantDesc} />
+        <Row code={hp.calloutNote}      desc={hp.calloutNoteDesc}      render="📝" />
+        <Row code={hp.calloutWarning}   desc={hp.calloutWarningDesc}   render="⚠️" />
+        <Row code={hp.calloutTip}       desc={hp.calloutTipDesc}       render="💡" />
+        <Row code={hp.calloutImportant} desc={hp.calloutImportantDesc} render="❗" />
       </Section>
 
       {/* ── Footnotes ── */}
       <Section title={hp.footnotes}>
         <p className="hp-intro">{hp.footnotesDesc}</p>
-        <Row code={hp.footnoteInline} desc={hp.footnoteInlineDesc} />
+        <Row code={hp.footnoteInline} desc={hp.footnoteInlineDesc} render="texto<sup>1</sup>" />
         <Row code={hp.footnoteDef}    desc={hp.footnoteDefDesc} />
       </Section>
 
       {/* ── Checkboxes ── */}
       <Section title={hp.checkboxes}>
         <p className="hp-intro">{hp.checkboxesDesc}</p>
-        <Row code={hp.checkboxUnchecked} desc={hp.checkboxUncheckedDesc} />
-        <Row code={hp.checkboxChecked}   desc={hp.checkboxCheckedDesc} />
+        <Row code={hp.checkboxUnchecked} desc={hp.checkboxUncheckedDesc} render="☐" />
+        <Row code={hp.checkboxChecked}   desc={hp.checkboxCheckedDesc}   render="☑" />
       </Section>
 
       {/* ── Figures ── */}
       <Section title={hp.figures}>
         <p className="hp-intro">{hp.figuresDesc}</p>
-        <Row code={hp.figureLabel} desc={hp.figureLabelDesc} />
-        <Row code={hp.figureRef}   desc={hp.figureRefDesc} />
+        <Row code={hp.figureLabel} desc={hp.figureLabelDesc} render="Figura 1: Leyenda" />
+        <Row code={hp.figureRef}   desc={hp.figureRefDesc}   render="Figura 1" />
       </Section>
 
       {/* ── User snippets ── */}

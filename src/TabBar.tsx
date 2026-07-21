@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { memo, useState } from "react"
 import type { OpenFile } from "./types"
 import type { LintSummary } from "./contentLinter"
 import { useT } from "./i18n"
@@ -14,7 +14,7 @@ interface TabBarProps {
   onReorder?: (from: number, to: number) => void
 }
 
-export default function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPaths, onTogglePin, onReorder }: TabBarProps) {
+function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPaths, onTogglePin, onReorder }: TabBarProps) {
   const t = useT()
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
@@ -75,3 +75,41 @@ export default function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCou
     </div>
   )
 }
+
+function sameTabsForDisplay(a: OpenFile[], b: OpenFile[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i]
+    const right = b[i]
+    if (
+      left.path !== right.path ||
+      left.name !== right.name ||
+      left.isDirty !== right.isDirty ||
+      left.mode !== right.mode
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function samePinnedPaths(a?: Set<string>, b?: Set<string>): boolean {
+  if (a === b) return true
+  if (!a || !b || a.size !== b.size) return false
+  for (const path of a) {
+    if (!b.has(path)) return false
+  }
+  return true
+}
+
+export default memo(TabBar, (prev, next) =>
+  prev.activeTabPath === next.activeTabPath &&
+  prev.onSwitch === next.onSwitch &&
+  prev.onClose === next.onClose &&
+  prev.onTogglePin === next.onTogglePin &&
+  prev.onReorder === next.onReorder &&
+  prev.lintCounts === next.lintCounts &&
+  samePinnedPaths(prev.pinnedPaths, next.pinnedPaths) &&
+  sameTabsForDisplay(prev.tabs, next.tabs)
+)

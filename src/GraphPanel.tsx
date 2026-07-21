@@ -313,6 +313,9 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
       <svg
         ref={svgRef}
         className="graph-svg"
+        // Zooms itself — keep the app-level Ctrl+wheel font zoom out (see
+        // data-gesture-optout in useTouchpadGestures.ts).
+        data-gesture-optout=""
         onMouseDown={handleSvgMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

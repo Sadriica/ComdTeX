@@ -11,6 +11,7 @@ import type { Settings } from "./useSettings"
 import type { useExportActions } from "./useExportActions"
 import type { UpdateInfo } from "./useUpdater"
 import { showToast } from "./toastService"
+import { COMPLETIONS } from "./monacoSetup"
 
 export interface PaletteCommandsCtx {
   t: T
@@ -63,6 +64,18 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
   } = ctx
 
+  const snippetCommands: PaletteCommand[] = COMPLETIONS.map((completion, index) => {
+    const normalizedLabel = completion.label.replace(/^:::/, "")
+    return {
+      id: `snippet:${index}:${completion.label}`,
+      label: completion.label,
+      description: completion.detail,
+      keywords: [normalizedLabel, completion.detail, "snippet", "autocompletado"],
+      category: "Insertar",
+      action: () => palInsert(completion.snippet),
+    }
+  })
+
   return [
     // ── Edición ──────────────────────────────────────────────────────────────
     { id: "save",       label: t.palette.save,       shortcut: "Ctrl+S", category: "Edición", action: handleSave },
@@ -103,7 +116,22 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     { id: "ins:sep",    label: t.toolbar.separator,    category: "Insertar", action: () => palInsert("\n---\n") },
     { id: "ins:mathInline", label: t.toolbar.mathInline, category: "Insertar", action: () => palInsert("$${1}$") },
     { id: "ins:mathBlock",  label: t.toolbar.mathBlock,  category: "Insertar", action: () => palInsert("$$\n${1}\n$$") },
-    { id: "insertExcalidraw", label: t.palette.insertExcalidraw, category: "Insertar", action: handleInsertExcalidraw },
+    { id: "ins:lineBreak", label: "Salto de línea", description: "Nueva línea", keywords: ["newline", "line break", "br"], category: "Insertar", action: () => palInsert("\n") },
+    { id: "ins:snippets", label: "Snippets / autocompletado", description: "Todos los snippets del editor", keywords: ["flowchart", "example", "pseudocode", "truth", "graph", "plot", "commdiag"], category: "Insertar", children: snippetCommands },
+    { id: "insertExcalidraw", label: t.palette.insertExcalidraw, keywords: ["excalidraw", ":::excalidraw", "dibujo", "drawing", "sketch"], category: "Insertar", action: handleInsertExcalidraw },
+    { id: "ins:wikilink",     label: t.palette.insertWikilink,     keywords: ["wikilink", "[[", "enlace", "link"],                category: "Insertar", action: () => palInsert("[[${1:nota}]]") },
+    { id: "ins:transclusion", label: t.palette.insertTransclusion, keywords: ["transclusion", "transclusión", "![["],            category: "Insertar", action: () => palInsert("![[${1:nota}]]") },
+    { id: "ins:footnote",     label: t.palette.insertFootnote,     keywords: ["footnote", "nota al pie", "[^"],                  category: "Insertar", action: () => palInsert("${1:texto}[^${2:1}]\n\n[^${2:1}]: ${3:nota al pie}") },
+    { id: "ins:citation",     label: t.palette.insertCitation,     keywords: ["citation", "cita", "bibtex", "[@"],               category: "Insertar", action: () => palInsert("[@${1:clave}]") },
+    { id: "ins:figure",       label: t.palette.insertFigure,       keywords: ["figure", "figura", "imagen", "image", "#fig"],    category: "Insertar", action: () => palInsert("![${1:Leyenda}](${2:imagen.png}){#fig:${3:etiqueta}}") },
+    { id: "ins:frontmatter",  label: t.palette.insertFrontmatter,  keywords: ["frontmatter", "yaml", "metadata", "título"],      category: "Insertar", action: () => palInsert("---\ntitle: ${1:Título}\nauthor: ${2:Autor}\ndate: ${3:" + new Date().toISOString().slice(0, 10) + "}\ntags: [${4}]\n---\n") },
+    { id: "ins:envref",       label: t.palette.insertEnvRef,       keywords: ["referencia", "reference", "@def", "@thm", "envref"], category: "Insertar", action: () => palInsert("@${1:def}:${2:etiqueta}") },
+    { id: "ins:callout", label: t.palette.insertCallout, keywords: ["callout", "admonition", "[!note]"], category: "Insertar", children: [
+      { id: "callout:note",      label: "> [!NOTE]",      keywords: ["nota", "note"],           category: "Insertar", action: () => palInsert("> [!NOTE]\n> ${1:contenido}") },
+      { id: "callout:warning",   label: "> [!WARNING]",   keywords: ["advertencia", "warning"], category: "Insertar", action: () => palInsert("> [!WARNING]\n> ${1:contenido}") },
+      { id: "callout:tip",       label: "> [!TIP]",       keywords: ["consejo", "tip"],         category: "Insertar", action: () => palInsert("> [!TIP]\n> ${1:contenido}") },
+      { id: "callout:important", label: "> [!IMPORTANT]", keywords: ["importante", "important"],category: "Insertar", action: () => palInsert("> [!IMPORTANT]\n> ${1:contenido}") },
+    ] },
 
     // ── Matemáticas ──────────────────────────────────────────────────────────
     { id: "math:symbols", label: t.toolbar.symbols, category: "Matemáticas", children: [
@@ -139,15 +167,26 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       { id: "op:lim",  label: t.toolbar.lbl_limit,    category: "Matemáticas", action: () => palInsert("lim(${1:x}, ${2:0})") },
       { id: "op:der",  label: t.toolbar.lbl_derivative, category: "Matemáticas", action: () => palInsert("der(${1:f}, ${2:x})") },
       { id: "op:pder", label: t.toolbar.lbl_partialDer, category: "Matemáticas", action: () => palInsert("pder(${1:f}, ${2:x})") },
+      { id: "op:sup",  label: t.toolbar.lbl_superscript, category: "Matemáticas", action: () => palInsert("sup(${1:x}, ${2:n})") },
+      { id: "op:sub",  label: t.toolbar.lbl_subscript,   category: "Matemáticas", action: () => palInsert("sub(${1:x}, ${2:n})") },
+      { id: "op:grad", label: t.toolbar.lbl_gradient,    category: "Matemáticas", action: () => palInsert("$\\nabla ${1:f}$") },
+      { id: "op:inv",  label: t.toolbar.lbl_inverse,     category: "Matemáticas", action: () => palInsert("inv(${1:A})") },
+      { id: "op:trans",label: t.toolbar.lbl_transpose,   category: "Matemáticas", action: () => palInsert("trans(${1:A})") },
+      { id: "op:mat",  label: t.toolbar.lbl_matAuto,     category: "Matemáticas", action: () => palInsert("mat(${1:1}, ${2:2}, ${3:3}, ${4:4})") },
+      { id: "op:matf", label: t.toolbar.lbl_matFixed,    category: "Matemáticas", action: () => palInsert("matf(${1:2}, ${2:3}, ${3:a}, ${4:b}, ${5:c}, ${6:d}, ${7:e}, ${8:f})") },
+      { id: "op:matlit", label: t.toolbar.lbl_matLiteral, category: "Matemáticas", action: () => palInsert("[[${1:1},${2:2}],[${3:3},${4:4}]]") },
     ] },
     { id: "math:envs", label: t.toolbar.environments, category: "Matemáticas", children: [
-      { id: "env:thm",   label: t.toolbar.lbl_theorem,     category: "Matemáticas", action: () => palInsert(":::theorem[${1:título}]\n${2:enunciado}\n:::") },
-      { id: "env:lem",   label: t.toolbar.lbl_lemma,       category: "Matemáticas", action: () => palInsert(":::lemma[${1:título}]\n${2:enunciado}\n:::") },
-      { id: "env:cor",   label: t.toolbar.lbl_corollary,   category: "Matemáticas", action: () => palInsert(":::corollary\n${1:enunciado}\n:::") },
-      { id: "env:prop",  label: t.toolbar.lbl_proposition, category: "Matemáticas", action: () => palInsert(":::proposition\n${1:enunciado}\n:::") },
-      { id: "env:defn",  label: t.toolbar.lbl_definition,  category: "Matemáticas", action: () => palInsert(":::definition\n${1:definición}\n:::") },
-      { id: "env:ex",    label: t.toolbar.lbl_example,     category: "Matemáticas", action: () => palInsert(":::example\n${1:ejemplo}\n:::") },
-      { id: "env:proof", label: t.toolbar.lbl_proof,       category: "Matemáticas", action: () => palInsert(":::proof\n${1:demostración}\n:::") },
+      { id: "env:thm",   label: t.toolbar.lbl_theorem,     keywords: [":::theorem"],     category: "Matemáticas", action: () => palInsert(":::theorem[${1:título}]\n${2:enunciado}\n:::") },
+      { id: "env:lem",   label: t.toolbar.lbl_lemma,       keywords: [":::lemma"],       category: "Matemáticas", action: () => palInsert(":::lemma[${1:título}]\n${2:enunciado}\n:::") },
+      { id: "env:cor",   label: t.toolbar.lbl_corollary,   keywords: [":::corollary"],   category: "Matemáticas", action: () => palInsert(":::corollary\n${1:enunciado}\n:::") },
+      { id: "env:prop",  label: t.toolbar.lbl_proposition, keywords: [":::proposition"], category: "Matemáticas", action: () => palInsert(":::proposition\n${1:enunciado}\n:::") },
+      { id: "env:defn",  label: t.toolbar.lbl_definition,  keywords: [":::definition"],  category: "Matemáticas", action: () => palInsert(":::definition\n${1:definición}\n:::") },
+      { id: "env:ex",    label: t.toolbar.lbl_example,     keywords: [":::example"],     category: "Matemáticas", action: () => palInsert(":::example\n${1:ejemplo}\n:::") },
+      { id: "env:exc",   label: t.toolbar.lbl_exercise,    keywords: [":::exercise"],    category: "Matemáticas", action: () => palInsert(":::exercise\n${1:ejercicio}\n:::") },
+      { id: "env:proof", label: t.toolbar.lbl_proof,       keywords: [":::proof"],       category: "Matemáticas", action: () => palInsert(":::proof\n${1:demostración}\n:::") },
+      { id: "env:rem",   label: t.toolbar.lbl_remark,      keywords: [":::remark"],      category: "Matemáticas", action: () => palInsert(":::remark\n${1:observación}\n:::") },
+      { id: "env:note",  label: t.toolbar.lbl_note,        keywords: [":::note"],        category: "Matemáticas", action: () => palInsert(":::note\n${1:nota}\n:::") },
     ] },
     { id: "symbols", label: t.palette.symbolPicker, category: "Matemáticas", action: () => openPanel("symbols") },
 

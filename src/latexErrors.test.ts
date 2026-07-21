@@ -182,6 +182,25 @@ describe("parseLatexStderr", () => {
     expect(errors.some((d) => d.message === "Undefined control sequence")).toBe(true)
     expect(errors.some((d) => d.message === "File `missing.sty' not found.")).toBe(true)
   })
+
+  it("rejoins log lines hard-wrapped at the TeX 80-column limit", () => {
+    // Real xelatex-via-pandoc output: the engine wraps at max_print_line
+    // (default 79), so the message splits mid-word ("not lo" / "adable").
+    const first = "! Font TU/lmr/m/n/10.95=[lmroman10-regular]:mapping=tex-text; at 10.95pt not lo"
+    expect(first.length).toBe(79)
+    const stderr = [first, "adable: Metric (TFM) file or installed font not found.", ""].join("\n")
+    const diags = parseLatexStderr(stderr)
+    expect(diags).toHaveLength(1)
+    expect(diags[0].message).toContain("not loadable: Metric (TFM) file or installed font not found")
+    expect(diags[0].message).not.toMatch(/not lo$/)
+  })
+
+  it("suggests installing the TeX fonts package on font-not-loadable errors", () => {
+    const stderr = "! Font TU/lmr/m/n/10 not loadable: Metric (TFM) file or installed font not found."
+    const diags = parseLatexStderr(stderr)
+    expect(diags[0].severity).toBe("error")
+    expect(diags[0].suggestion).toContain("texlive-fontsrecommended")
+  })
 })
 
 describe("formatDiagnosticsText", () => {

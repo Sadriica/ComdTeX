@@ -60,11 +60,27 @@ export interface ExcalidrawModalProps {
   onClose: () => void
 }
 
+/** Cheap edit signature: Excalidraw bumps each element's `version` on any real
+ *  modification (move, resize, delete → isDeleted+bump), while selection-only
+ *  changes leave versions untouched — so this never false-positives on clicks. */
+function sceneSignature(elements: readonly unknown[]): string {
+  return elements
+    .map((el) => {
+      const e = el as { id?: string; version?: number }
+      return `${e.id}:${e.version}`
+    })
+    .join("|")
+}
+
 export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose }: ExcalidrawModalProps) {
   const t = useT()
   const ref = useRef<HTMLDivElement>(null)
   const [api, setApi] = useState<ExcalidrawAPI | null>(null)
-  useFocusTrap(ref, open, onClose)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  // Baseline captured on the FIRST onChange (after Excalidraw restores/normalizes
+  // the loaded scene) — comparing against the raw initialData would flag the
+  // normalization itself as an edit.
+  const baselineRef = useRef<string | null>(null)
 
   // Recompute initialData only when the incoming scene changes, so typing in the
   // canvas doesn't reset it.
@@ -79,15 +95,32 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
     onSave(b64)
   }, [api, onSave, onClose])
 
+  // Every close path (Esc, overlay click, Cancel) funnels through here: with
+  // unsaved edits it asks save/discard/keep-editing instead of silently
+  // dropping the drawing.
+  const requestClose = useCallback(() => {
+    const current = api?.getSceneElements()
+    const dirty =
+      current !== undefined &&
+      baselineRef.current !== null &&
+      sceneSignature(current) !== baselineRef.current
+    if (dirty) setConfirmOpen(true)
+    else onClose()
+  }, [api, onClose])
+
+  useFocusTrap(ref, open, requestClose)
+
   if (!open) return null
 
   return (
-    <div className="excalidraw-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    // data-gesture-optout: the canvas zooms/pans itself — app-level touchpad
+    // gestures (Ctrl+wheel/pinch → app font zoom) must not double-fire here.
+    <div className="excalidraw-modal-overlay" data-gesture-optout="" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}>
       <div className="excalidraw-modal" ref={ref} role="dialog" aria-modal="true" aria-label={t.excalidraw.modalTitle}>
         <div className="excalidraw-modal-header">
           <span className="excalidraw-modal-title">{t.excalidraw.modalTitle}</span>
           <div className="excalidraw-modal-actions">
-            <button className="excalidraw-modal-cancel" onClick={onClose}>{t.excalidraw.cancel}</button>
+            <button className="excalidraw-modal-cancel" onClick={requestClose}>{t.excalidraw.cancel}</button>
             <button className="excalidraw-modal-save" onClick={handleSave}>{t.excalidraw.save}</button>
           </div>
         </div>
@@ -99,9 +132,24 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
               // generic Record shape, so cast at the boundary.
               initialData={(initialData ?? undefined) as never}
               excalidrawAPI={(a: unknown) => setApi(a as ExcalidrawAPI)}
+              onChange={(elements: readonly unknown[]) => {
+                if (baselineRef.current === null) baselineRef.current = sceneSignature(elements)
+              }}
             />
           </Suspense>
         </div>
+        {confirmOpen && (
+          <div className="excalidraw-confirm-overlay">
+            <div className="excalidraw-confirm" role="alertdialog" aria-label={t.excalidraw.unsavedPrompt}>
+              <p className="excalidraw-confirm-text">{t.excalidraw.unsavedPrompt}</p>
+              <div className="excalidraw-confirm-actions">
+                <button className="excalidraw-modal-save" onClick={handleSave}>{t.excalidraw.save}</button>
+                <button className="excalidraw-confirm-discard" onClick={onClose}>{t.excalidraw.discard}</button>
+                <button className="excalidraw-modal-cancel" onClick={() => setConfirmOpen(false)}>{t.excalidraw.keepEditing}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -830,7 +830,13 @@ html, body, #root {
 }
 .preview-content h1 { font-size: 2em; border-bottom: 1px solid #333; padding-bottom: 0.3em; }
 .preview-content h2 { font-size: 1.4em; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.2em; }
-.preview-content p { margin-bottom: 1em; }
+.preview-content p {
+  margin-bottom: 1em;
+  white-space: pre-wrap;
+}
+.preview-content .md-soft-indent {
+  white-space: nowrap;
+}
 
 /* ── Text highlighting: ==text== → <mark>, plus colour variants ──────────── */
 .preview-content mark, .hp-render mark {
@@ -6407,6 +6413,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
   max-width: 1400px;
   display: flex;
   flex-direction: column;
+  position: relative; /* anchors .excalidraw-confirm-overlay */
   background: var(--bg, #1e1e1e);
   border: 1px solid var(--border, #444);
   border-radius: 8px;
@@ -6439,6 +6446,44 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
   color: #fff;
 }
 .excalidraw-modal-save:hover { filter: brightness(1.1); }
+.excalidraw-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 10;
+}
+.excalidraw-confirm {
+  background: var(--panel-bg, #252526);
+  border: 1px solid var(--border, #3c3c3c);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  max-width: 26rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.excalidraw-confirm-text {
+  color: var(--fg, #d4d4d4);
+  margin: 0 0 0.8rem;
+}
+.excalidraw-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.excalidraw-confirm-actions button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #3c3c3c);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.excalidraw-confirm-discard {
+  background: transparent;
+  color: var(--error-fg, #f48771);
+  border-color: var(--error-fg, #f48771);
+}
 .excalidraw-modal-canvas { flex: 1; position: relative; min-height: 0; }
 .excalidraw-modal-canvas .excalidraw,
 .excalidraw-modal-canvas .excalidraw-container { height: 100%; }

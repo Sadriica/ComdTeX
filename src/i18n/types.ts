@@ -230,6 +230,9 @@ export interface T {
     exportTypst: string
     exportTypstPdf: string
     insertExcalidraw: string
+    insertWikilink: string; insertTransclusion: string; insertFootnote: string
+    insertCallout: string; insertCitation: string; insertFigure: string
+    insertFrontmatter: string; insertEnvRef: string
     back: string
     openPanel: (name: string) => string
     insertCodeBlock: string
@@ -254,6 +257,9 @@ export interface T {
     cancel: string
     loading: string
     placeholder: string
+    unsavedPrompt: string
+    discard: string
+    keepEditing: string
   }
 
   ankiExport: {
@@ -635,6 +641,7 @@ export interface T {
     hpExp: string; hpLn: string; hpLog: string
     // equations section
     numberedEq: string; numberedNoLabel: string; refLabel: string; directRef: string
+    inlineNumberedDesc: string
     structuralLabels: string; structuralLabelsDesc: string
     sectionLabelDesc: string; tableLabelDesc: string; envLabelDesc: string
     labelsPanelDesc: string; labelAutocompleteDesc: string
@@ -665,6 +672,8 @@ export interface T {
     headingsNote: string; headingsPurpose: string
     // env intro
     envSyntaxCode: string; envSyntaxMid: string; envCapabilities: string
+    envRefs: string; envRefLabelDesc: string; envRefLocalDesc: string
+    envRefCrossDesc: string; envRefSpacesDesc: string
     // eq code block
     eqCodeBlock: string
     // env card syntax titles
@@ -709,6 +718,7 @@ export interface T {
     htmlMark: string; htmlMarkDesc: string
     htmlAllowed: string; htmlBlocked: string
     specialBlocksNote: string
+    blockAutocompleteNote: string
     // pseudocode section
     pseudocode: string; pseudocodeDesc: string
     pseudocodeExample: string; pseudocodeKeywords: string
@@ -722,9 +732,9 @@ export interface T {
     // commutative diagram section
     commDiag: string; commDiagDesc: string; commDiagExample: string
     // flowchart section
-    flowchart: string; flowchartDesc: string
+    flowchart: string; flowchartDesc: string; flowchartExample: string
     // excalidraw section
-    excalidraw: string; excalidrawDesc: string
+    excalidraw: string; excalidrawDesc: string; excalidrawExample: string
     // AI assistant section
     aiAssistant: string; aiAssistantDesc: string
     aiPanelRow: string; aiPanelRowDesc: string

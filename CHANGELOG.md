@@ -3,6 +3,29 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **The preview respects manual line breaks and leading indentation inside paragraphs.** Paragraph text now renders with `pre-wrap` semantics plus dedicated indent markers, so hand-indented lines (common in poetry, addresses, or aligned notes) no longer collapse into a single flowed line.
+- **Inserting a list over a selection converts it.** Applying the bullet/ordered/task-list insert action with several lines selected now turns each selected line into a list item (numbering sequentially for ordered lists, preserving indentation) instead of replacing the selection with placeholder items. Inline-math inserts wrap the selection correctly as well.
+- **Command Palette entries match hidden keywords.** Palette search now looks at label, description, shortcut, category and per-command keyword lists (Spanish and English), covered by an e2e test searching `flowchart`.
+- **Closing the Excalidraw editor with unsaved changes now asks first.** Esc, clicking outside the modal, or Cancel used to silently discard the drawing; with real edits present (element-version comparison — selection changes don't count) a save / discard / keep-editing prompt appears instead.
+- **Contextual autocomplete inside special blocks.** With the cursor inside a `:::pseudocode`, `:::flowchart`, `:::truth`, `:::graph`, `:::plot` or `:::commdiag` block, suggestions switch to that block's own grammar (e.g. `for` + Tab expands the full `FOR i ← 1 TO n DO … END FOR` template; `and` + Tab inserts `∧` in a truth table; `square` drops a complete commutative square). The quick-suggest popup is enabled only while inside such a block, so prose writing stays undisturbed. Global shorthands are suppressed there — `sin` inside a `:::plot` stays plain `sin(x)`, never `\sin` — and typing the closing `:::` no longer pops the block-type list. See [docs/autocomplete.md](docs/autocomplete.md).
+- **Typing bare `:::` now lists every block type.** Previously nothing appeared until the first letter was typed.
+- **The Command Palette now covers practically everything.** New insert commands: wikilink, transclusion, footnote (mark + definition), BibTeX citation, numbered figure, YAML frontmatter, environment reference, and callouts (`[!NOTE]`/`[!WARNING]`/`[!TIP]`/`[!IMPORTANT]`). The environments submenu gains exercise/remark/note; the math submenu gains superscript/subscript/gradient/inverse/transpose and the three matrix forms. Entries match by name, syntax (`:::theorem`), or Spanish/English keywords.
+- **Help panel: every syntax feature now shows a worked example** (code → rendered result): equation/section/figure/table/environment references show their resolved output, citations show the superscript marker, matrices render, and the previously undocumented cross-file environment references, inline-labeled math, flowchart and Excalidraw examples were added.
+
+### Changed
+- **More keystroke-stability work in large vaults.** The tab bar is memoized on display-relevant fields only, per-file content commits are debounced so rapid typing doesn't thrash React state, a stale render can no longer roll the in-memory tab content back behind newer keystrokes, and the display-math hover preview skips re-writing unchanged zones.
+
+### Fixed
+- **Tab after `:::` + letters could expand a math shorthand.** `:::ta` + Tab matched `table(...)`/`tan(...)` and replaced the block prefix with a math snippet; after `:::` only block snippets qualify now.
+- **Zooming inside the Excalidraw editor (and the vault graph) was janky.** Touchpad pinch is delivered as a synthetic Ctrl+wheel, so every zoom tick inside the canvas also fired the app-wide font zoom — a full UI re-render per tick behind the modal. Surfaces with their own zoom now opt out of the global gesture handlers.
+- **Session-long memory leak in the drawing/diagram caches.** The Excalidraw and Mermaid SVG caches were never evicted; every save of a drawing (whole base64 scenes and SVGs, MBs each with embedded images) added a new entry for the lifetime of the session. Both caches are now bounded.
+- **Preview renders carried each Excalidraw scene twice.** The base64 scene was embedded in two attributes per block, doubling the HTML that is parsed, sanitized and morphed on every debounced preview refresh of image-heavy documents.
+- **PDF export (pandoc) survives a TeX install without the Latin Modern fonts.** Pandoc ran only `--pdf-engine=xelatex`; on systems with the XeTeX engine but not the LM OpenType fonts (e.g. Arch's `texlive-xetex` without `texlive-fontsrecommended`) every export died with `Font TU/lmr … not loadable`. The export now retries with pdflatex before surfacing an error.
+- **LaTeX error messages are no longer truncated mid-word.** TeX hard-wraps its log at 79 columns, so the error modal showed cut-off messages ("…not lo"). Wrapped log lines are now rejoined before parsing, and font-not-loadable errors carry a targeted suggestion naming the distro package to install.
+
 ## [1.10.2] - 2026-07-15
 
 ### Changed

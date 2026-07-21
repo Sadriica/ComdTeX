@@ -540,6 +540,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const contentCommitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   // Pending un-flushed content per path (set on every keystroke, cleared after
   // a successful save). Lets closeTab flush synchronously and lets the conflict
   // resolution flow access the latest in-memory edits.
@@ -555,7 +556,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // closeTab → deleteFile, changing the identity of vault methods passed to memo'd
   // children (FileTree) and forcing a full re-render of the file tree per keystroke.
   const openTabsRef = useRef(openTabs)
-  openTabsRef.current = openTabs
+  useEffect(() => {
+    // React state is intentionally debounced while typing. If a render carrying
+    // older tab.content lands after newer keystrokes have already updated
+    // pendingContent/openTabsRef, do not let this effect roll the ref backward.
+    openTabsRef.current = openTabs.map((tab) => {
+      const pending = pendingContent.current.get(tab.path)
+      return pending !== undefined ? { ...tab, content: pending, isDirty: true } : tab
+    })
+  }, [openTabs])
   // In-memory search index for the current vault — content/mtime cache so
   // repeat searches don't re-read+re-parse every unchanged file. One index
   // per vault: cleared whenever the user switches vaults (selectVault /
@@ -706,6 +715,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // Cancel pending autosaves from the previous vault
     saveTimers.current.forEach(clearTimeout)
     saveTimers.current.clear()
+    contentCommitTimers.current.forEach(clearTimeout)
+    contentCommitTimers.current.clear()
     // Drop the previous vault's cached file contents — paths are only unique
     // within a vault, so a stale entry could otherwise "match" under the new
     // vault before its real content is ever synced.
@@ -755,6 +766,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     setRecentVaults(loadRecentVaults())
     saveTimers.current.forEach(clearTimeout)
     saveTimers.current.clear()
+    contentCommitTimers.current.forEach(clearTimeout)
+    contentCommitTimers.current.clear()
     searchIndexRef.current.clear()
     setOpenTabs([])
     setActiveTabPath(null)
@@ -1030,7 +1043,27 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // openTabs read via openTabsRef so this callback stays stable across keystrokes.
     const tab = openTabsRef.current.find((t) => t.path === path)
     if (tab?.mode === "pdf") return
-    setOpenTabs((tabs) => tabs.map((t) => t.path === path ? { ...t, content, isDirty: true } : t))
+    const wasDirty = tab?.isDirty ?? false
+    openTabsRef.current = openTabsRef.current.map((t) => (
+      t.path === path ? { ...t, content, isDirty: true } : t
+    ))
+    if (!wasDirty) {
+      setOpenTabs((tabs) => tabs.map((t) => (
+        t.path === path ? { ...t, content, isDirty: true } : t
+      )))
+    }
+    const existingContentCommit = contentCommitTimers.current.get(path)
+    if (existingContentCommit) clearTimeout(existingContentCommit)
+    contentCommitTimers.current.set(path, setTimeout(() => {
+      contentCommitTimers.current.delete(path)
+      const latest = openTabsRef.current.find((t) => t.path === path)
+      if (!latest) return
+      setOpenTabs((tabs) => tabs.map((t) => (
+        t.path === path
+          ? { ...t, content: latest.content, isDirty: latest.isDirty }
+          : t
+      )))
+    }, 250))
     pendingContent.current.set(path, content)
     saveDraft(path, content)
     // If there is an unresolved external-mod conflict, do NOT schedule an
@@ -1048,6 +1081,11 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return
     const closedTab = openTabsRef.current.find((t) => t.path === path)
+    const contentCommitTimer = contentCommitTimers.current.get(path)
+    if (contentCommitTimer) {
+      clearTimeout(contentCommitTimer)
+      contentCommitTimers.current.delete(path)
+    }
     // Flush any pending autosave SYNCHRONOUSLY before tearing down the tab.
     // Without this, three failure modes are possible:
     //   (a) timer fires after closeTab and re-creates a draft for a closed tab,

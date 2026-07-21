@@ -365,7 +365,16 @@ export async function exportPdf(ctx: ExportActionsContext) {
       pandocArgs.push("--include-in-header", tempHdrPath)
     }
 
-    const result = await Command.create("pandoc", pandocArgs).execute()
+    // XeLaTeX first (full Unicode). If it fails — most commonly because the
+    // Latin Modern OTF fonts aren't installed in the TeX system — retry with
+    // pdflatex before surfacing an error; the xelatex stderr is kept for the
+    // diagnostics modal when both fail (it names the root cause).
+    let result = await Command.create("pandoc", pandocArgs).execute()
+    if (result.code !== 0) {
+      const retryArgs = pandocArgs.map((a) => (a === "--pdf-engine=xelatex" ? "--pdf-engine=pdflatex" : a))
+      const retry = await Command.create("pandoc", retryArgs).execute()
+      if (retry.code === 0) result = retry
+    }
     await remove(tempInputPath).catch(() => {})
     if (hasHeaderFooter) await remove(tempHdrPath).catch(() => {})
     if (result.code !== 0) {

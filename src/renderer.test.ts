@@ -11,6 +11,36 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("{#sec-")
   })
 
+  it("keeps soft line breaks in plain paragraphs for preview CSS to display", () => {
+    const html = renderMarkdown("Datos:\nIncognitas:\nSolucion:")
+
+    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+  })
+
+  it("preserves leading indentation on paragraph continuation lines", () => {
+    const html = renderMarkdown("**Datos:**\n    $Altura (\\nabla y) = h$")
+
+    expect(html).toContain('class="md-soft-indent"')
+    expect(html).toContain("&nbsp;&nbsp;&nbsp;&nbsp;")
+    expect(html).toContain('class="katex"')
+  })
+
+  it("keeps soft line breaks inside prose environments for preview CSS to display", () => {
+    const html = renderMarkdown(":::example\nDatos:\nIncognitas:\nSolucion:\n:::")
+
+    expect(html).toContain('class="math-env math-env-example"')
+    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+  })
+
+  it("renders markdown formatting inside prose environments", () => {
+    const html = renderMarkdown(":::example\n**Incognitas:** $t = ?$\n`Dato:` $g = 9.8$\n:::")
+
+    expect(html).toContain('class="math-env math-env-example"')
+    expect(html).toContain("<strong>Incognitas:</strong>")
+    expect(html).toContain("<code>Dato:</code>")
+    expect(html).toContain('class="katex"')
+  })
+
   describe("display equation labels and references", () => {
     it("strips {#eq:label} from output and resolves @eq:label to (n)", () => {
       const text = `$$ x = 1 $$ {#eq:foo}\n\nSee @eq:foo for details.`

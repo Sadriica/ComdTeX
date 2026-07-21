@@ -459,7 +459,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [vaultTextCache, setVaultTextCache] = useState<Map<string, string>>(new Map())
   const [previewContent, setPreviewContent] = useState("")
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
+  const cursorPosRef = useRef(cursorPos)
+  useEffect(() => { cursorPosRef.current = cursorPos }, [cursorPos])
+  const cursorUiTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [selectedWords, setSelectedWords] = useState(0)
+  const selectedWordsRef = useRef(selectedWords)
+  useEffect(() => { selectedWordsRef.current = selectedWords }, [selectedWords])
   const [tabLintCounts, setTabLintCounts] = useState<Record<string, LintSummary>>({})
   const [focusMode, setFocusMode] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -536,7 +541,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
     padding: { top: 16, bottom: 16 },
     readOnly: editorReadOnly,
-    quickSuggestions: { other: true, comments: false, strings: true },
+    // Keep prose typing cheap. Math/editor shorthands still expand with Tab
+    // (setupEditorCommands), and Monaco still offers contextual completions via
+    // trigger chars such as "[", "@", "\" plus manual Ctrl+Space.
+    quickSuggestions: { other: false, comments: false, strings: false },
     suggestOnTriggerCharacters: true,
     snippetSuggestions: "top",
     // Smooth caret animation keeps the GPU compositor busy (~6% CPU on
@@ -583,8 +591,31 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     (path: string) => vaultFileNodeByPath.get(path) ?? null,
     [vaultFileNodeByPath],
   )
+
+  // Latest open tabs for action handlers and derived vault-wide views. Keep the
+  // ref fresh without forcing every consumer to depend on per-keystroke content.
+  const openTabsRef = useRef(vault.openTabs)
+  useEffect(() => { openTabsRef.current = vault.openTabs }, [vault.openTabs])
+
+  const openTabsShapeKey = useMemo(
+    () => vault.openTabs.map((tab) => `${tab.path}\x1f${tab.name}\x1f${tab.mode}`).join("\x1e"),
+    [vault.openTabs],
+  )
+  const [vaultFilesContentVersion, setVaultFilesContentVersion] = useState(0)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVaultFilesContentVersion((version) => version + 1)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [vault.openTabs])
+
   const vaultFiles = useMemo(() => {
-    const openContent = new Map(vault.openTabs.map((tab) => [tab.path, tab.content]))
+    // Recompute when the open-tab shape changes immediately, or when debounced
+    // content changes are allowed through. The actual content is read from the
+    // ref so typing does not force a vault-wide map on every keystroke.
+    void openTabsShapeKey
+    void vaultFilesContentVersion
+    const openContent = new Map(openTabsRef.current.map((tab) => [tab.path, tab.content]))
     return vaultFileNodes
       .filter((file) => file.ext === "md" || file.ext === "tex")
       .map((file) => ({
@@ -592,7 +623,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         name: file.name,
         content: openContent.get(file.path) ?? vaultTextCache.get(file.path) ?? "",
       }))
-  }, [vaultFileNodes, vault.openTabs, vaultTextCache])
+  }, [vaultFileNodes, vaultTextCache, openTabsShapeKey, vaultFilesContentVersion])
 
   // Keep a ref to vaultFiles so the resolver below has STABLE identity.
   // Without this, `vaultFiles` changes on every keystroke (via `vault.openTabs`
@@ -710,7 +741,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [wikiNames])
 
   useEffect(() => {
-    updateOpenFilesSnapshot(vault.openTabs.map((t) => ({ name: t.name, content: t.content })))
+    const timer = setTimeout(() => {
+      updateOpenFilesSnapshot(openTabsRef.current.map((t) => ({ name: t.name, content: t.content })))
+    }, 600)
+    return () => clearTimeout(timer)
   }, [vault.openTabs])
 
   useEffect(() => {
@@ -728,8 +762,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // re-read per keystroke for users with large vaults. Live tab content is
   // overlaid via vault.openTabs, but we read it through a ref so the effect
   // doesn't itself depend on per-keystroke content changes.
-  const openTabsRef = useRef(vault.openTabs)
-  useEffect(() => { openTabsRef.current = vault.openTabs }, [vault.openTabs])
   const vaultFilePathsKey = useMemo(
     () => vaultFileNodes.filter((f) => f.ext === "md" || f.ext === "tex").map((f) => f.path).sort().join("\x00"),
     [vaultFileNodes],
@@ -1226,6 +1258,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     commentDecorationsRef.current?.dispose()
     keepMarkDecorationsRef.current?.dispose()
     if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
+    if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
   }, [])
 
@@ -1710,7 +1743,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       () => openCmdkRef.current(),
     )
     editor.onDidChangeCursorPosition((e) => {
-      setCursorPos({ line: e.position.lineNumber, col: e.position.column })
+      const nextCursor = { line: e.position.lineNumber, col: e.position.column }
+      const previousCursor = cursorPosRef.current
+      cursorPosRef.current = nextCursor
+      if (nextCursor.line !== previousCursor.line) {
+        if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
+        cursorUiTimerRef.current = undefined
+        setCursorPos(nextCursor)
+      } else {
+        if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
+        cursorUiTimerRef.current = setTimeout(() => {
+          cursorUiTimerRef.current = undefined
+          setCursorPos(cursorPosRef.current)
+        }, 100)
+      }
       // Debounce-save cursor position for session restore.
       // Capture path at SCHEDULE time so a late tab switch can be detected at fire time.
       if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
@@ -1733,12 +1779,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.onDidChangeCursorSelection(() => {
       const model = editor.getModel()
       const sel = editor.getSelection()
+      let nextSelectedWords = 0
       if (model && sel && !sel.isEmpty()) {
         const text = model.getValueInRange(sel)
-        const wc = text.trim() ? text.trim().split(/\s+/).length : 0
-        setSelectedWords(wc)
-      } else {
-        setSelectedWords(0)
+        nextSelectedWords = text.trim() ? text.trim().split(/\s+/).length : 0
+      }
+      if (nextSelectedWords !== selectedWordsRef.current) {
+        selectedWordsRef.current = nextSelectedWords
+        setSelectedWords(nextSelectedWords)
       }
     })
 
@@ -2263,7 +2311,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (exEdit) {
       e.preventDefault()
       e.stopPropagation()
-      const sceneB64 = exEdit.dataset.scene ?? ""
+      const sceneB64 = exEdit.closest<HTMLElement>(".excalidraw-block")?.getAttribute("data-excalidraw-scene") ?? ""
       const line = parseInt(exEdit.dataset.line ?? "", 10)
       setExcalidraw({ open: true, sceneB64, targetLine: Number.isFinite(line) && line > 0 ? line : null })
       return

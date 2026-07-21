@@ -23,6 +23,15 @@ const PINCH_ZOOM_THRESHOLD = 0.02
 const GESTURE_TIMEOUT_MS = 500
 const EDGE_SWIPE_THRESHOLD = 100
 
+// Surfaces that handle their own zoom/pan (e.g. the Excalidraw canvas) mark a
+// container with data-gesture-optout: events starting there must never reach
+// the app-level handlers. Note pinch on touchpads is delivered as a synthetic
+// Ctrl+wheel, so without this the app zoom (font-size change → full re-render)
+// fired on every tick of an in-canvas zoom.
+function inGestureOptOut(target: EventTarget | null): boolean {
+  return target instanceof Element && !!target.closest("[data-gesture-optout]")
+}
+
 export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled = true) {
   const state = useRef<GestureState | null>(null)
   const gestureTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -43,7 +52,7 @@ export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled =
   }, [clearGestureTimeout])
 
   const handlePointerDown = useCallback((e: PointerEvent) => {
-    if (!enabled) return
+    if (!enabled || inGestureOptOut(e.target)) return
 
     if (!state.current) {
       state.current = {
@@ -114,7 +123,9 @@ export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled =
 
   // Ctrl/Cmd + wheel → zoom (universally reliable).
   const handleWheel = useCallback((e: WheelEvent) => {
-    if (!enabled) return
+    // No preventDefault in the opt-out case — the surface underneath (e.g.
+    // Excalidraw) consumes the event with its own zoom handling.
+    if (!enabled || inGestureOptOut(e.target)) return
 
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault()

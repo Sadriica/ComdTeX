@@ -6,8 +6,27 @@ export interface LatexDiagnostic {
   suggestion?: string
 }
 
+/** TeX engines hard-wrap log output at `max_print_line` (79–80 columns),
+ *  splitting messages mid-word ("…not lo" / "adable: …"). Rejoin those
+ *  continuations so patterns match the full message. A line of exactly the
+ *  wrap width is treated as continued — a natural 79/80-char line is rare and
+ *  the cost of a false join is only a slightly longer message. */
+function unwrapLogLines(raw: string): string[] {
+  const src = raw.split("\n")
+  const out: string[] = []
+  for (let i = 0; i < src.length; i++) {
+    let line = src[i]
+    while ((line.length === 79 || line.length === 80) && i + 1 < src.length && src[i + 1].trim() !== "") {
+      i++
+      line += src[i]
+    }
+    out.push(line)
+  }
+  return out
+}
+
 export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
-  const lines = stderr.split("\n")
+  const lines = unwrapLogLines(stderr)
   const diags: LatexDiagnostic[] = []
 
   let i = 0
@@ -90,6 +109,15 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
         const fnMatch = /`(.+?)'/.exec(rawMsg)
         const fname = fnMatch ? fnMatch[1] : "unknown"
         suggestion = `Missing package file '${fname}'. Install it or remove the \\usepackage command.`
+      }
+      // Pattern 11 — Font not loadable (XeLaTeX defaults to Latin Modern OTF,
+      // which lives in the TeX distribution's fonts package, not the engine's)
+      else if (/not loadable:|Metric \(TFM\) file/.test(rawMsg)) {
+        suggestion =
+          "A font required by the document is not installed in the TeX system. " +
+          "XeLaTeX's default fonts (Latin Modern) ship separately from the engine — " +
+          "on Arch install 'texlive-fontsrecommended', on Debian/Ubuntu 'texlive-fonts-recommended'. " +
+          "Alternatively, compile with the built-in WASM engine (Settings → PDF)."
       }
       // Pattern 8 — Missing \begin{document}
       else if (/Missing \\begin\{document\}/.test(rawMsg)) {
