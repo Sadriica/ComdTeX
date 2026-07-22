@@ -375,16 +375,25 @@ export async function exportPdf(ctx: ExportActionsContext) {
       pandocArgs.push("--include-in-header", tempHdrPath)
     }
 
-    // XeLaTeX first (full Unicode). If it fails — most commonly because the
-    // Latin Modern OTF fonts aren't installed in the TeX system — retry with
-    // pdflatex before surfacing an error; the xelatex stderr is kept for the
-    // diagnostics modal when both fail (it names the root cause).
-    let result = await Command.create("pandoc", pandocArgs).execute()
-    if (result.code !== 0) {
-      const retryArgs = pandocArgs.map((a) => (a === "--pdf-engine=xelatex" ? "--pdf-engine=pdflatex" : a))
-      const retry = await Command.create("pandoc", retryArgs).execute()
-      if (retry.code === 0) result = retry
+    // Engine preference: tectonic first — it fetches missing packages on
+    // demand, so it survives the partial TeX installs that break xelatex/
+    // pdflatex with "xcolor.sty not found"-style errors. Then XeLaTeX (full
+    // Unicode), then pdflatex. The FIRST failure's stderr is kept for the
+    // diagnostics modal when every engine fails (it names the root cause;
+    // later engines usually just repeat a vaguer variant of it).
+    let result: { code: number | null; stderr: string; stdout: string } | null = null
+    let firstFailure: { code: number | null; stderr: string; stdout: string } | null = null
+    for (const engine of ["tectonic", "xelatex", "pdflatex"]) {
+      const args = pandocArgs.map((a) => (a === "--pdf-engine=xelatex" ? `--pdf-engine=${engine}` : a))
+      try {
+        const attempt = await Command.create("pandoc", args).execute()
+        if (attempt.code === 0) { result = attempt; break }
+        if (!firstFailure) firstFailure = attempt
+      } catch {
+        // pandoc itself unavailable/denied — try the next engine anyway
+      }
     }
+    if (!result) result = firstFailure ?? { code: -1, stderr: "pandoc failed", stdout: "" }
     await remove(tempInputPath).catch(() => {})
     if (hasHeaderFooter) await remove(tempHdrPath).catch(() => {})
     if (result.code !== 0) {

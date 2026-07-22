@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **"Export as PDF" (pandoc) now tries `tectonic` before `xelatex`/`pdflatex`.** With a partial TeX install (e.g. Arch `texlive-basic` + `texlive-latex` without `texlive-latexrecommended`), pandoc's xelatex/pdflatex engines die with `File 'xcolor.sty' not found` — the same message the WASM engine produces when its package server is down, which made the two failures easy to conflate. Tectonic fetches missing packages on demand, so the pandoc export now survives incomplete TeX installations.
 - **PDF export died with `\begin{document} ended by \end{quoting}` on documents containing `->>` / `>->` arrow text.** `babel-spanish` treats `<<`/`>>` as guillemet shorthands backed by an internal `quoting` environment, so literal arrow sequences (e.g. the commutative-diagram help text) emitted a stray `\end{quoting}`. The exporter now loads babel with `es-noquoting,es-noshorthands` — exported documents use real Unicode, never babel shorthands.
 - **A successful fallback compile no longer shows the LaTeX error modal.** When the WASM engine failed but a local engine (`tectonic`/`xelatex`/`pdflatex`) then produced the PDF, the WASM error modal still popped over the successful export. Diagnostics are now held and only surfaced if every engine fails.
 
