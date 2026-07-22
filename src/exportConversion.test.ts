@@ -19,3 +19,29 @@ describe("exportConversion", () => {
     expect(output).toContain("> [!note]")
   })
 })
+
+describe("specialBlocksToPandoc", () => {
+  it("degrades special blocks to captioned code fences", () => {
+    const out = toPandocMarkdownInput(":::truth[Contrapositiva]\n(p → q) ↔ (¬q → ¬p)\n:::")
+    expect(out).toContain("**Truth Table — Contrapositiva**")
+    expect(out).toContain("```\n(p → q) ↔ (¬q → ¬p)\n```")
+    expect(out).not.toContain(":::truth")
+  })
+
+  it("omits excalidraw bodies but keeps the caption", () => {
+    const out = toPandocMarkdownInput(':::excalidraw[Boceto]\n{"type":"excalidraw"}\n:::')
+    expect(out).toContain("**Excalidraw — Boceto**")
+    expect(out).not.toContain('{"type":"excalidraw"}')
+  })
+
+  it("leaves unclosed blocks and math environments untouched", () => {
+    const out = toPandocMarkdownInput(":::pseudocode[X]\nA ← 1")
+    expect(out).toContain(":::pseudocode[X]")
+  })
+
+  it("handles the ':::code lang' language variant", () => {
+    const out = toPandocMarkdownInput(":::code python\nprint('hola')\n:::")
+    expect(out).toContain("**Code**")
+    expect(out).toContain("```python\nprint('hola')\n```")
+  })
+})
