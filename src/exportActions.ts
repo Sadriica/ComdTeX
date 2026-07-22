@@ -234,7 +234,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   const outPath = await save({
     title: ctx.dialogs.exportPdf,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
-    defaultPath: currentFile.name.replace(/\.[^.]+$/, ".pdf"),
+    defaultPath: `${pathDirname(currentFile.path) || "."}/${currentFile.name.replace(/\.[^.]+$/, ".pdf")}`,
   })
   if (!outPath) return
 
@@ -249,7 +249,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     if (wasm && wasm.status === "ok" && wasm.pdf) {
       await writeFile(outPath, wasm.pdf)
       ctx.onPdfSaved?.(outPath)
-      await openPath(outPath)
+      await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
       ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
       return
     }
@@ -280,7 +280,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         if (result.code === 0 && await exists(tmpPdf)) {
           await copyFile(tmpPdf, outPath)
           ctx.onPdfSaved?.(outPath)
-          await openPath(outPath)
+          await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
           return
         }
@@ -318,7 +318,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
   const outPath = await save({
     title: ctx.dialogs.exportPdf,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
-    defaultPath: currentFile.name.replace(/\.[^.]+$/, ".pdf"),
+    defaultPath: `${pathDirname(currentFile.path) || "."}/${currentFile.name.replace(/\.[^.]+$/, ".pdf")}`,
   })
   if (!outPath) return
 
@@ -410,7 +410,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
     }
     ctx.toast(ctx.messages.pdfDone, "success")
     ctx.onPdfSaved?.(outPath)
-    await openPath(outPath)
+    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
   } catch (err) {
     await remove(`${currentFile.path}.comdtex-export.tmp.md`).catch(() => {})
     if (hasHeaderFooter) await remove(tempHdrPath).catch(() => {})
@@ -431,7 +431,7 @@ export async function backupVault(ctx: ExportActionsContext) {
     const result = await Command.create("zip", ["-r", outPath, vaultName], { cwd: ctx.vaultPath + "/.." }).execute()
     if (result.code !== 0) throw new Error(result.stderr)
     ctx.toast(ctx.messages.backupSuccess, "success")
-    await openPath(outPath)
+    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
   } catch (e) {
     ctx.toast(ctx.messages.backupError, "error")
     console.error(e)
@@ -645,7 +645,7 @@ export async function exportTypstPdf(ctx: TypstExportContext) {
     const typst = await Command.create("typst", ["compile", tmpTyp, outPath]).execute()
     if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
     ctx.toast(ctx.messages.typstPdfSuccess, "success")
-    await openPath(outPath)
+    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
   } catch (e) {
     ctx.toast(ctx.messages.typstPdfError(e instanceof Error ? e.message : String(e)), "error", 8000)
     console.error(e)
