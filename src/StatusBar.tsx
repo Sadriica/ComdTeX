@@ -22,6 +22,10 @@ interface StatusBarProps {
   onCloudSyncClick?: () => void
   /** Number of unresolved conflict files; turns the badge into a warning. */
   cloudConflictCount?: number
+  /** Reading speed used for the "~N min" estimate. Configurable in Settings. */
+  readingWpm?: number
+  /** Shows a cancellable-looking progress chip while the AI fills {{?}} gaps. */
+  fillingGaps?: boolean
 }
 
 function wordCount(text: string): number {
@@ -32,15 +36,18 @@ function charCount(text: string): number {
   return text.length
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount }: StatusBarProps) {
+export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount, readingWpm = 200, fillingGaps = false }: StatusBarProps) {
   const t = useT()
   // Memoized so the cursor moving (line/col change every keystroke) doesn't
   // re-run these O(n) document scans — they only recompute when `content` (the
   // debounced preview content) actually changes.
   const { wc, cc, readMin } = useMemo(() => {
     const w = wordCount(content)
-    return { wc: w, cc: charCount(content), readMin: Math.max(1, Math.ceil(w / 200)) }
-  }, [content])
+    // Guard the divisor: a settings field the user can clear would otherwise
+    // produce Infinity/NaN minutes.
+    const wpm = readingWpm > 0 ? readingWpm : 200
+    return { wc: w, cc: charCount(content), readMin: Math.max(1, Math.ceil(w / wpm)) }
+  }, [content, readingWpm])
   const showTexEngine = texEngine !== undefined || (texEngineState && texEngineState !== "idle")
   const texEngineLabel =
     texEngineState && texEngineState !== "idle"
@@ -100,6 +107,11 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
           </span>
         ) : (
           <span className="status-item">{t.statusBar.words(wc)}</span>
+        )}
+        {fillingGaps && (
+          <span className="status-item status-ai-busy" aria-live="polite">
+            <span className="status-ai-spinner" aria-hidden="true">⟳</span> {t.aiGaps.working}
+          </span>
         )}
         <span className="status-item status-readtime" title={t.statusBar.readingTimeTitle}>
           ~{readMin} min

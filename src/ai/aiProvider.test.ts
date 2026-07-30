@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { AiError, PROVIDER_PRESETS, getPreset, isAiReady } from "./aiProvider"
-import type { Settings } from "../useSettings"
+import { DEFAULTS, type Settings } from "../useSettings"
 
 // NOTE: `assertSafeBaseUrl`, `resolveBaseUrl`, `stripWrappingFence`, `sendMessage`,
 // `warmUp` and `sendInlineEdit` are either not exported from aiProvider.ts or
@@ -9,45 +9,11 @@ import type { Settings } from "../useSettings"
 // already-exported pure helpers below are covered here.
 
 function baseSettings(overrides: Partial<Settings> = {}): Settings {
-  return {
-    fontSize: 15,
-    previewFontSize: 15,
-    autoSaveMs: 800,
-    texliveUrl: "https://texlive2.swiftlatex.com/",
-    theme: "vs-dark",
-    vimMode: false,
-    typewriterMode: false,
-    previewVisible: true,
-    language: "es",
-    wordGoal: 0,
-    touchpadGestures: true,
-    previewTheme: "same",
-    mathPreview: true,
-    wordWrap: true,
-    minimapEnabled: false,
-    spellcheck: false,
-    syncScroll: true,
-    dailyNotesEnabled: true,
-    dailyNotesFolder: "daily",
-    dailyNotesTemplate: "",
-    autoRebuildPdf: false,
-    useWasmTex: true,
-    pomodoroWorkMin: 25,
-    pomodoroBreakMin: 5,
-    pomodoroLongBreakMin: 15,
-    pomodoroCyclesBeforeLongBreak: 4,
-    aiEnabled: false,
-    aiProviderId: "anthropic",
-    aiBaseUrl: "",
-    aiModel: "",
-    aiApiKey: "",
-    aiCliCommand: "",
-    aiWarmupEnabled: true,
-    cloudSyncBannerEnabled: true,
-    cloudSyncDetectEnabled: true,
-    ...overrides,
-  }
+  // Spread the real defaults: these tests care about the AI fields only, and a
+  // full literal would need editing every time an unrelated setting is added.
+  return { ...DEFAULTS, aiEnabled: true, ...overrides }
 }
+
 
 describe("PROVIDER_PRESETS", () => {
   it("lists exactly the five supported provider ids", () => {

@@ -1707,7 +1707,8 @@ html, body, #root {
 .setting-control { display: flex; align-items: center; gap: 8px; }
 .setting-value { font-size: 12px; color: #888; min-width: 30px; }
 
-.setting-row select, .setting-row input[type="range"] {
+.setting-row select, .setting-row input[type="range"],
+.folder-rules-field select, .folder-rules-generated-row select {
   /* Match the modal background so the control reads as a label, not a chip;
      contrast comes from the text color, not a darker fill. Without
      `appearance: none` the native widget on Linux/GTK ignores our colors. */
@@ -1736,10 +1737,16 @@ html, body, #root {
   background-image: none;
   padding: 0;
 }
-.setting-row select:hover, .setting-row select:focus { border-color: #569cd6; }
+.setting-row select:hover, .setting-row select:focus,
+.folder-rules-field select:hover, .folder-rules-field select:focus,
+.folder-rules-generated-row select:hover, .folder-rules-generated-row select:focus { border-color: #569cd6; }
 /* `<option>` items use OS dropdown colors — force readable contrast */
-.setting-row select option { background: #1e1e1e; color: #f0f0f0; }
-.app[data-theme="light"] .setting-row select {
+.setting-row select option,
+.folder-rules-field select option,
+.folder-rules-generated-row select option { background: #1e1e1e; color: #f0f0f0; }
+.app[data-theme="light"] .setting-row select,
+.app[data-theme="light"] .folder-rules-field select,
+.app[data-theme="light"] .folder-rules-generated-row select {
   color: #1f1f1f; border-color: #c0c0c0;
   background-image:
     linear-gradient(45deg, transparent 50%, #1f1f1f 50%),
@@ -1748,9 +1755,15 @@ html, body, #root {
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
 }
-.app[data-theme="light"] .setting-row select option { background: #ffffff; color: #1f1f1f; }
-.app[data-theme="hc"] .setting-row select { color: #ffffff; border-color: #ffffff; }
-.app[data-theme="hc"] .setting-row select option { background: #000000; color: #ffffff; }
+.app[data-theme="light"] .setting-row select option,
+.app[data-theme="light"] .folder-rules-field select option,
+.app[data-theme="light"] .folder-rules-generated-row select option { background: #ffffff; color: #1f1f1f; }
+.app[data-theme="hc"] .setting-row select,
+.app[data-theme="hc"] .folder-rules-field select,
+.app[data-theme="hc"] .folder-rules-generated-row select { color: #ffffff; border-color: #ffffff; }
+.app[data-theme="hc"] .setting-row select option,
+.app[data-theme="hc"] .folder-rules-field select option,
+.app[data-theme="hc"] .folder-rules-generated-row select option { background: #000000; color: #ffffff; }
 .setting-row input[type="checkbox"] {
   width: 16px; height: 16px; cursor: pointer;
   accent-color: var(--accent, #569cd6);
@@ -1988,6 +2001,64 @@ html, body, #root {
   cursor: pointer;
   font-size: 12px;
 }
+/* ── Folder rules modal ─────────────────────────────────────────────────── */
+/* Colors come from the theme palette at the top of this file (--surface2,
+   --fg, --muted, --border). An earlier version invented --bg-input/--text/
+   --text-muted, which resolve to nothing, so `background` fell back to the
+   native widget and the selects rendered white. Select styling itself is
+   shared with `.setting-row select` above — see the appearance:none note. */
+.folder-rules-body { display: flex; flex-direction: column; gap: 14px; }
+.folder-rules-intro {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.folder-rules-field { display: flex; flex-direction: column; gap: 4px; }
+.folder-rules-field > span { font-size: 12px; font-weight: 600; }
+.folder-rules-field > small { font-size: 11px; color: var(--muted); }
+.folder-rules-field input[type="text"],
+.folder-rules-field textarea,
+.folder-rules-generated-row input[type="text"] {
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.folder-rules-field textarea {
+  font-family: var(--mono);
+  resize: vertical;
+}
+.folder-rules-generated-row {
+  display: grid;
+  /* Filename takes the slack; the two selects and the remove button are fixed. */
+  grid-template-columns: 1fr auto auto auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+.folder-rules-add,
+.folder-rules-remove {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.folder-rules-add { align-self: flex-start; margin-top: 8px; }
+.folder-rules-add:hover, .folder-rules-remove:hover { background: var(--surface2); }
+.tree-new-target {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 4px 2px;
+}
+
 .template-editor { display: flex; flex-direction: column; gap: 8px; }
 .template-content-input {
   width: 100%;
@@ -6495,3 +6566,88 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
   color: var(--status-fg, #aaa);
 }
 .app[data-theme="hc"] .excalidraw-modal-save { color: #000; }
+
+/* ── Panel filter box (PanelSearch) ─────────────────────────────────────── */
+.panel-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-search-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.panel-search-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.panel-search-clear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.panel-search-clear:hover { color: var(--fg); }
+
+/* ── Focus-session clock in the top bar ─────────────────────────────────── */
+.menubar-focus-clock {
+  /* Pinned right: the section menus flow from the left, this is a readout. */
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.menubar-focus-clock:hover { background: var(--surface2); }
+.menubar-focus-dot { font-size: 8px; line-height: 1; }
+.menubar-focus-clock.running .menubar-focus-dot { color: #4caf50; }
+.menubar-focus-clock.paused .menubar-focus-dot { color: var(--muted); }
+
+/* AI gap-filling progress chip in the status bar. */
+.status-ai-busy { display: inline-flex; align-items: center; gap: 4px; }
+.status-ai-spinner {
+  display: inline-block;
+  animation: comdtex-spin 1s linear infinite;
+}
+@keyframes comdtex-spin { to { transform: rotate(360deg); } }
+
+/* ── Focus view, detached from the top bar ──────────────────────────────── */
+/* Anchored to the top-right rather than rendered in the sidebar: the timer is
+   glanced at and clicked, and it should not displace the file tree. The `top`
+   offset clears the title bar + both menu rows; matching the popup z-index
+   above keeps it over the editor but under modals. */
+.focus-popover {
+  position: fixed;
+  top: 78px;
+  right: 12px;
+  z-index: 1000;
+  width: 300px;
+  max-height: min(70vh, 620px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.app[data-theme="light"] .focus-popover { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18); }

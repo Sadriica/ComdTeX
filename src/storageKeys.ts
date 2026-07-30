@@ -45,8 +45,13 @@ export const STORAGE_KEYS = {
   RECENT_FILES: "comdtex_recent",
   /** JSON map of bookmarked lines, keyed by an internal id. Owner: App.tsx */
   BOOKMARKS: "comdtex_bookmarks",
-  /** JSON map of last cursor position per file path. Owner: App.tsx */
+  /** JSON map of last cursor position per file path. Owner: App.tsx.
+   *  LEGACY: superseded by EDITOR_VIEW_STATES, which also carries scroll and
+   *  folding. Still READ once per file as a migration fallback; no longer written. */
   CURSOR_POSITIONS: "comdtex_cursor_positions",
+  /** JSON map of Monaco `ICodeEditorViewState` per file path — cursor, scroll and
+   *  collapsed regions. Owner: editorViewState.ts */
+  EDITOR_VIEW_STATES: "comdtex_editor_view_states",
   /** JSON array of optional-dependency names the user dismissed the warning banner for. Owner: App.tsx */
   DEPS_DISMISSED: "comdtex_deps_dismissed",
   /** "1" once the user dismisses the "move vault into cloud folder" suggestion banner.

@@ -291,4 +291,61 @@ describe("useVault CMDX integration", () => {
     expect(fsMock.files.get(pdfPath)?.content).toBe("%PDF-1.7 binary-ish needle")
     expect(vi.mocked(readTextFile)).not.toHaveBeenCalledWith(pdfPath)
   })
+
+  // Regression: a file created in-session had no `cachedMtime`, so the
+  // external-change guard had no disk baseline. A version of that guard fell
+  // back to comparing the file against `openTab.content` — the LIVE buffer —
+  // which differs from disk the moment anything is typed, so the "changed
+  // externally" prompt fired on the first autosave of every new file and the
+  // save was refused. Note `message` is absent from the dialog mock, so if the
+  // conflict branch is reached at all, saveFile bails out and writes nothing.
+  it("saves an edit to a file created in this session without a false conflict", async () => {
+    localStorage.setItem("comdtex_vault", VAULT)
+    const { result } = renderHook(() => useVault())
+    await act(async () => {
+      await result.current.loadVault()
+    })
+
+    await act(async () => {
+      await result.current.createFile("nueva.md", "# Nueva\n")
+    })
+    const path = `${VAULT}/nueva.md`
+    await waitFor(() => expect(result.current.openFile?.path).toBe(path))
+    // A created tab must carry a disk baseline, or it is saved unguarded for
+    // the rest of the session.
+    expect(result.current.openTabs.find((tab) => tab.path === path)?.cachedMtime).toBeGreaterThan(0)
+
+    const edited = "# Nueva\n\nTexto recién escrito.\n"
+    let saved = false
+    await act(async () => {
+      saved = await result.current.saveFile(path, edited)
+    })
+
+    expect(saved).toBe(true)
+    expect(fsMock.files.get(path)?.content).toContain("Texto recién escrito.")
+  })
+
+  // The guard must still fire for a genuine external change.
+  it("refuses to overwrite a file that really changed on disk", async () => {
+    const path = `${VAULT}/note.md`
+    fsMock.touch(path, "original")
+    localStorage.setItem("comdtex_vault", VAULT)
+
+    const { result } = renderHook(() => useVault())
+    await act(async () => {
+      await result.current.openFilePath(path)
+    })
+    await waitFor(() => expect(result.current.openFile?.path).toBe(path))
+
+    // Something else rewrites the file, bumping its mtime past the baseline.
+    fsMock.touch(path, "cambiado por otro programa")
+
+    let saved = true
+    await act(async () => {
+      saved = await result.current.saveFile(path, "mi version")
+    })
+
+    expect(saved).toBe(false)
+    expect(fsMock.files.get(path)?.content).toBe("cambiado por otro programa")
+  })
 })

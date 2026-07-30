@@ -1,30 +1,11 @@
 import { useCallback, useMemo, useState } from "react"
 import type { OpenFile } from "./types"
 import { displayBasename } from "./pathUtils"
+import { parseTasks, type TaskItem } from "./generators"
 import { useT } from "./i18n"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
-interface TodoItem {
-  filePath: string
-  fileName: string
-  line: number
-  text: string
-  done: boolean
-}
-
-function parseTasks(tabs: OpenFile[]): TodoItem[] {
-  const items: TodoItem[] = []
-  for (const tab of tabs) {
-    tab.content.split("\n").forEach((ln, i) => {
-      const m = /^\s*-\s*\[([ xX])\]\s+(.+)$/.exec(ln)
-      if (m) items.push({
-        filePath: tab.path, fileName: tab.name,
-        line: i + 1, text: m[2].trim(), done: m[1].toLowerCase() === "x",
-      })
-    })
-  }
-  return items
-}
+type TodoItem = TaskItem
 
 interface TodoPanelProps {
   openTabs: OpenFile[]
@@ -35,6 +16,8 @@ interface TodoPanelProps {
 export default function TodoPanel({ openTabs, onNavigate, onToggle }: TodoPanelProps) {
   const t = useT()
   const [filter, setFilter] = useState<"all" | "pending" | "done">("all")
+  // Same parser the generated `_tareas.md` uses, so the panel and the file can
+  // never disagree about what counts as a task.
   const items = useMemo(() => parseTasks(openTabs), [openTabs])
 
   const handleToggle = useCallback((item: TodoItem) => {

@@ -1,6 +1,15 @@
-import { useState } from "react"
+import { Children, createContext, isValidElement, useContext, useMemo, useState, type ReactNode } from "react"
 import katex from "katex"
 import { useT } from "./i18n"
+import PanelSearch, { matchesQuery } from "./PanelSearch"
+
+/**
+ * Active filter text, read by `Section` so it can drop the rows that do not
+ * match. A context rather than prop-drilling: the panel is ~130 rows spread over
+ * a dozen sections written as literal JSX, and threading a prop through every
+ * one of them would be pure noise.
+ */
+const HelpQueryContext = createContext("")
 
 function math(tex: string, display = false) {
   try {
@@ -12,6 +21,29 @@ function math(tex: string, display = false) {
 
 // ── Collapsible section ───────────────────────────────────────────────────────
 
+/**
+ * The `Row`s inside `children` that match `query`.
+ *
+ * When filtering, only rows survive — the surrounding prose, labels and examples
+ * are dropped. That is the right trade for a search result: the user asked for
+ * the entries that mention a term, not for the chapters around them.
+ */
+function matchingRows(children: ReactNode, query: string): ReactNode[] {
+  const out: ReactNode[] = []
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return
+    if (child.type === Row) {
+      const { code, desc } = child.props as { code: string; desc: string }
+      if (matchesQuery(code, query) || matchesQuery(desc, query)) out.push(child)
+      return
+    }
+    // Sections nest rows one level deep inside fragments in a few places.
+    const nested = (child.props as { children?: ReactNode }).children
+    if (nested) out.push(...matchingRows(nested, query))
+  })
+  return out
+}
+
 function Section({
   title,
   defaultOpen = false,
@@ -21,14 +53,31 @@ function Section({
   defaultOpen?: boolean
   children: React.ReactNode
 }) {
+  const query = useContext(HelpQueryContext)
+  const filtering = query.trim().length > 0
+  // A section whose TITLE matches keeps all of its content — the user is asking
+  // for the whole topic, not for individual rows inside it.
+  const titleMatches = filtering && matchesQuery(title, query)
+  const body = useMemo(
+    () => (!filtering || titleMatches ? children : matchingRows(children, query)),
+    [children, query, filtering, titleMatches],
+  )
   const [open, setOpen] = useState(defaultOpen)
+
+  // Nothing matched here: hide the section entirely rather than leaving an
+  // empty header the user has to click to discover is empty.
+  if (filtering && !titleMatches && (body as ReactNode[]).length === 0) return null
+
+  // While filtering, every surviving section is expanded — results the user has
+  // to go hunting for behind a chevron are not results.
+  const isOpen = filtering || open
   return (
-    <div className={`hp-section ${open ? "hp-section-open" : ""}`}>
+    <div className={`hp-section ${isOpen ? "hp-section-open" : ""}`}>
       <button className="hp-section-title" onClick={() => setOpen((o) => !o)}>
         <span>{title}</span>
-        <span className="hp-section-chevron">{open ? "▾" : "▸"}</span>
+        <span className="hp-section-chevron">{isOpen ? "▾" : "▸"}</span>
       </button>
-      {open && <div className="hp-section-body">{children}</div>}
+      {isOpen && <div className="hp-section-body">{body}</div>}
     </div>
   )
 }
@@ -77,9 +126,12 @@ function EnvCard({
 export default function HelpPanel() {
   const t = useT()
   const hp = t.helpPanel
+  const [query, setQuery] = useState("")
 
   return (
+    <HelpQueryContext.Provider value={query}>
     <div className="hp-panel">
+      <PanelSearch value={query} onChange={setQuery} placeholder={t.panelSearch.helpPlaceholder} />
 
       {/* ── Math environments ── */}
       <Section title={hp.environments} defaultOpen>
@@ -339,6 +391,32 @@ export default function HelpPanel() {
         <Row code={hp.tplHomework} desc={hp.tplHomeworkDesc} />
         <Row code={hp.tplTheorems} desc={hp.tplTheoremsDesc} />
         <Row code={hp.tplResearch} desc={hp.tplResearchDesc} />
+        <Row code={hp.tplFromFile}  desc={hp.tplFromFileDesc} />
+      </Section>
+
+      {/* ── Per-folder rules & generated files ── */}
+      <Section title={hp.folderRules}>
+        <p className="hp-intro">{hp.folderRulesDesc}</p>
+        <Row code={hp.frOpen}       desc={hp.frOpenDesc} />
+        <Row code={hp.frTemplate}   desc={hp.frTemplateDesc} />
+        <Row code={hp.frPattern}    desc={hp.frPatternDesc} />
+        <Row code={hp.frFrontmatter} desc={hp.frFrontmatterDesc} />
+        <div className="hp-label">{hp.frGeneratedLabel}</div>
+        <p className="hp-intro">{hp.frGeneratedDesc}</p>
+        <Row code={hp.frTasks}      desc={hp.frTasksDesc} />
+        <Row code={hp.frCalendar}   desc={hp.frCalendarDesc} />
+        <Row code={hp.frIndex}      desc={hp.frIndexDesc} />
+        <Row code={hp.frRegenerate} desc={hp.frRegenerateDesc} />
+        <Row code={hp.frMarker}     desc={hp.frMarkerDesc} />
+      </Section>
+
+      {/* ── Long documents ── */}
+      <Section title={hp.longDocs}>
+        <p className="hp-intro">{hp.longDocsDesc}</p>
+        <Row code={hp.ldFold}     desc={hp.ldFoldDesc} />
+        <Row code={hp.ldSplit}    desc={hp.ldSplitDesc} />
+        <Row code={hp.ldEnter}    desc={hp.ldEnterDesc} />
+        <Row code={hp.ldNormalizeTable} desc={hp.ldNormalizeTableDesc} />
       </Section>
 
       {/* ── Mermaid diagrams ── */}
@@ -458,8 +536,10 @@ export default function HelpPanel() {
         <p className="hp-intro">{hp.aiAssistantDesc}</p>
         <Row code={hp.aiPanelRow}  desc={hp.aiPanelRowDesc} />
         <Row code={hp.aiInlineRow} desc={hp.aiInlineRowDesc} />
+        <Row code={hp.aiGapRow}    desc={hp.aiGapRowDesc} />
       </Section>
 
     </div>
+    </HelpQueryContext.Provider>
   )
 }

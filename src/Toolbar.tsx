@@ -52,6 +52,14 @@ interface ToolbarProps {
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
   sidebarMode: PanelMode | string
   setSidebarMode: (m: PanelMode) => void
+  /** Live Pomodoro readout, or null when no session is running. */
+  focusClock?: { clock: string; phase: string; running: boolean } | null
+  /** Whether the detached focus popover is currently showing. */
+  focusOpen?: boolean
+  /** Toggles the focus popover. Focus hangs off the bar rather than living in
+   *  the sidebar: starting and resetting a timer is a glance-and-click action,
+   *  not something worth giving up the file tree for. */
+  onToggleFocus?: () => void
 }
 
 // ── Menu item model ───────────────────────────────────────────────────────────
@@ -485,7 +493,7 @@ function SectionMenu({
 
 // ── Toolbar (unified menu bar) ───────────────────────────────────────────────
 
-function Toolbar({ editorRef, sidebarMode, setSidebarMode }: ToolbarProps) {
+function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen, onToggleFocus }: ToolbarProps) {
   const t = useT()
   const sections = getSections(t)
   const directButtons = getDirectButtons(t)
@@ -534,20 +542,40 @@ function Toolbar({ editorRef, sidebarMode, setSidebarMode }: ToolbarProps) {
       ))}
 
       {directButtons.map((b) => {
-        const active = sidebarMode === b.mode
+        // Focus is a popover anchored to this bar, not a sidebar panel.
+        const isFocus = b.mode === "focusTimer" && !!onToggleFocus
+        const active = isFocus ? !!focusOpen : sidebarMode === b.mode
         return (
           <button
             key={b.mode}
             type="button"
             className={`menubar-direct-btn${active ? " active" : ""}`}
             title={b.label}
-            onMouseDown={(e) => { e.preventDefault(); setSidebarMode(b.mode) }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              if (isFocus) onToggleFocus!()
+              else setSidebarMode(b.mode)
+            }}
           >
             <span className="menubar-section-icon">{b.icon}</span>
             <span className="menubar-section-label">{b.label}</span>
           </button>
         )
       })}
+
+      {/* Live Pomodoro readout, pinned right. Only rendered while a session
+          exists, so the bar is unchanged for anyone not using the timer. */}
+      {focusClock && (
+        <button
+          type="button"
+          className={`menubar-focus-clock${focusClock.running ? " running" : " paused"}`}
+          title={`${t.focusTimer.barTitle} — ${focusClock.phase}`}
+          onMouseDown={(e) => { e.preventDefault(); onToggleFocus?.() }}
+        >
+          <span className="menubar-focus-dot" aria-hidden="true">●</span>
+          <span className="menubar-focus-time">{focusClock.clock}</span>
+        </button>
+      )}
     </div>
   )
 }

@@ -9,6 +9,8 @@ import { showToast } from "./toastService"
 import { useT } from "./i18n"
 import { analyzeConversion, storageFormatForPath, toEditorContent, toDiskContent } from "./cmdxFormat"
 import { VaultSearchIndex, parseSearchQuery, buildSearchRegex, type SearchCandidate } from "./searchIndex"
+import { forgetViewState, renameViewState } from "./editorViewState"
+import { diffLineSummary } from "./textDiff"
 import { STORAGE_KEYS } from "./storageKeys"
 
 const VAULT_KEY   = STORAGE_KEYS.VAULT_PATH
@@ -677,7 +679,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
         return
       }
     }
-    const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content: toEditorContent(readmePath, content), isDirty: false, mode: "md" }
+    let readmeMtime: number | undefined
+    try { readmeMtime = (await stat(readmePath)).mtime?.getTime() } catch { /* no mtime support */ }
+    const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content: toEditorContent(readmePath, content), isDirty: false, mode: "md", cachedMtime: readmeMtime }
     setOpenTabs((tabs) => tabs.find((t) => t.path === readmePath) ? tabs : [...tabs, newTab])
     setActiveTabPath(readmePath)
   }, [t])
@@ -921,6 +925,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // Read-only modes (currently just PDF) must never write to disk —
       // doing so would overwrite the binary file with text content.
       if (openTab?.mode === "pdf") return false
+      // The external-change guard needs a DISK baseline (`cachedMtime`). Every
+      // path that opens or creates an editable tab now sets one, so a missing
+      // baseline means we genuinely cannot tell — and must not prompt.
+      //
+      // Do NOT "fall back" to comparing the file against `openTab.content`:
+      // that field is the LIVE buffer including unsaved edits, so it differs
+      // from disk on the very first keystroke and the conflict dialog fires on
+      // every autosave. A content-based check would need the last known disk
+      // text as its baseline, which is what `cachedMtime` already stands in for.
       if (!saveOpts.force && openTab?.cachedMtime) {
         try {
           const info = await stat(path)
@@ -937,17 +950,30 @@ export function useVault(options: UseVaultOptions | number = {}) {
             if (queued) { clearTimeout(queued); saveTimers.current.delete(path) }
             // Three-way prompt: Yes = reload from disk (lose edits),
             // No = keep my version (overwrite disk), Cancel = decide later.
+            // Quantify the divergence so the choice is informed: "3 lines
+            // differ" and "400 lines differ" warrant very different decisions.
+            let diffLine = ""
+            try {
+              const onDisk = toEditorContent(path, await readTextFile(path))
+              const summary = diffLineSummary(onDisk, content)
+              if (!summary.identical) diffLine = `\n${t.vault.conflictDiff(summary.added, summary.removed)}`
+            } catch { /* unreadable — the prompt still works without the summary */ }
+
             let choice: string
             try {
               choice = await message(
-                `${openTab.name} ${t.vault.fileChangedExternally(openTab.name)}\n\n` +
-                "Yes = Reload from disk (lose your edits)\n" +
-                "No  = Keep mine (overwrite disk)\n" +
-                "Cancel = Leave as-is (autosave stays paused)",
+                `${t.vault.fileChangedExternally(openTab.name)}${diffLine}\n\n` +
+                `${t.vault.conflictReloadHint}\n` +
+                `${t.vault.conflictKeepHint}\n` +
+                `${t.vault.conflictCancelHint}`,
                 {
                   title: "ComdTeX",
                   kind: "warning",
-                  buttons: { yes: "Reload", no: "Keep mine", cancel: "Cancel" },
+                  buttons: {
+                    yes: t.vault.conflictReload,
+                    no: t.vault.conflictKeepMine,
+                    cancel: t.vault.conflictCancel,
+                  },
                 },
               )
             } catch {
@@ -1078,6 +1104,18 @@ export function useVault(options: UseVaultOptions | number = {}) {
     }, autoSaveMs))
   }, [saveFile, autoSaveMs])
 
+  /**
+   * True while `path` has edits typed but not yet written to disk.
+   *
+   * Consumers use this to decide that the editor's buffer is NEWER than
+   * anything a tree refresh or a re-read produced, and must not be overwritten.
+   * Stable across renders (reads refs), so effects can depend on it freely.
+   */
+  const hasPendingSave = useCallback(
+    (path: string) => saveTimers.current.has(path) || pendingContent.current.has(path),
+    [],
+  )
+
   const closeTab = useCallback(async (path: string) => {
     if (pinnedPaths.has(path)) return
     const closedTab = openTabsRef.current.find((t) => t.path === path)
@@ -1130,25 +1168,47 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // openTabs read via openTabsRef so this callback stays stable across keystrokes.
   }, [pinnedPaths, saveFile, t])
 
-  const createFile = useCallback(async (name: string, content = "") => {
+  /**
+   * The directory a new file/folder should land in: `parentDir` when it is a
+   * real directory inside the vault, the vault root otherwise.
+   *
+   * The containment check is the security-relevant part — `parentDir` reaches
+   * here from the file tree, and a path outside the vault would both escape the
+   * runtime fs grant (`allowVaultDir`) and write where the user cannot see it.
+   */
+  const resolveParentDir = useCallback((parentDir?: string): string => {
+    if (!vaultPath) return ""
+    if (!parentDir || parentDir === vaultPath) return vaultPath
+    const normalized = parentDir.replace(/[/\\]+$/, "")
+    const inside = normalized.startsWith(`${vaultPath}/`) || normalized.startsWith(`${vaultPath}\\`)
+    if (!inside || normalized.includes("..")) return vaultPath
+    return normalized
+  }, [vaultPath])
+
+  const createFile = useCallback(async (name: string, content = "", parentDir?: string) => {
     if (!vaultPath) return
     const v = validate(name.replace(/\.[^.]+$/, ""))
     if (!v.valid) { showToast(v.error!, "error"); return }
     const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") ? name : `${name}.md`
-    const filePath = await pathJoin(vaultPath, fileName)
+    const targetDir = resolveParentDir(parentDir)
+    const filePath = await pathJoin(targetDir, fileName)
     try {
       await writeTextFile(filePath, toDiskContent(filePath, content))
       await refreshTree(vaultPath)
       // Brand-new path: make sure no stale cache entry lingers (shouldn't
       // normally exist, but a rename/delete race could leave one behind).
       searchIndexRef.current.invalidate(filePath)
-      const newTab: OpenFile = { path: filePath, name: fileName, content: toEditorContent(filePath, content), isDirty: false, mode: editorModeForPath(filePath) }
+      // Baseline for the external-change guard. Without it a freshly created
+      // file is saved unguarded for the rest of the session.
+      let cachedMtime: number | undefined
+      try { cachedMtime = (await stat(filePath)).mtime?.getTime() } catch { /* no mtime support */ }
+      const newTab: OpenFile = { path: filePath, name: fileName, content: toEditorContent(filePath, content), isDirty: false, mode: editorModeForPath(filePath), cachedMtime }
       setOpenTabs((tabs) => [...tabs, newTab])
       setActiveTabPath(filePath)
     } catch (e) {
       showToast(t.vault.errorCreating(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, validate, t])
+  }, [vaultPath, refreshTree, validate, resolveParentDir, t])
 
   const deleteFile = useCallback(async (path: string) => {
     try {
@@ -1160,6 +1220,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       conflictPaths.current.delete(path)
       await remove(path)
       searchIndexRef.current.invalidate(path)
+      forgetViewState(path)
       if (vaultPath) await refreshTree(vaultPath)
       await closeTab(path)
       clearDraft(path)
@@ -1216,6 +1277,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // rename can't leave a re-armed timer that recreates the file at newPath.
       migratePending(oldPath, newPath)
       searchIndexRef.current.rename(oldPath, newPath)
+      renameViewState(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) => tab.path === oldPath ? { ...tab, path: newPath, name: newName } : tab))
       if (activeTabPathRef.current === oldPath) setActiveTabPath(newPath)
@@ -1234,6 +1296,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // Re-key pending autosave only after a successful rename (see renameFile).
       migratePending(oldPath, newPath)
       searchIndexRef.current.rename(oldPath, newPath)
+      renameViewState(oldPath, newPath)
       if (vaultPath) await refreshTree(vaultPath)
       setOpenTabs((tabs) => tabs.map((tab) =>
         tab.path === oldPath ? { ...tab, path: newPath } : tab
@@ -1246,17 +1309,17 @@ export function useVault(options: UseVaultOptions | number = {}) {
     }
   }, [vaultPath, refreshTree, migratePending, t])
 
-  const createFolder = useCallback(async (name: string) => {
+  const createFolder = useCallback(async (name: string, parentDir?: string) => {
     if (!vaultPath) return
     const v = validate(name)
     if (!v.valid) { showToast(v.error!, "error"); return }
     try {
-      await mkdir(await pathJoin(vaultPath, name), { recursive: true })
+      await mkdir(await pathJoin(resolveParentDir(parentDir), name), { recursive: true })
       await refreshTree(vaultPath)
     } catch (e) {
       showToast(t.vault.errorCreatingFolder(e instanceof Error ? e.message : String(e)), "error")
     }
-  }, [vaultPath, refreshTree, validate, t])
+  }, [vaultPath, refreshTree, validate, resolveParentDir, t])
 
   /**
    * Update the content of any open tab without making it active.
@@ -1458,7 +1521,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     selectVault, createVault, loadVault, refreshTree,
     openFileNode, openFilePath, closeTab, switchTab,
     reopenTab, getClosedTabs,
-    updateContent, saveFile, patchTabContent, writeFileSafe, flushPending,
+    updateContent, saveFile, patchTabContent, writeFileSafe, flushPending, hasPendingSave,
     createFile, createFolder, deleteFile, renameFile, moveFile,
     search, replaceInVault,
   }

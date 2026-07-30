@@ -97,8 +97,22 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
         {stats ? (
           <>
             <Row label={t.focusTimer.wordsThisSession} value={stats.wordsWritten} accent />
+            {/* Peak only earns a row once it differs — otherwise it is noise. */}
+            {stats.peakWordsWritten > stats.wordsWritten && (
+              <Row label={t.focusTimer.peakWords} value={stats.peakWordsWritten} />
+            )}
             <Row label={t.focusTimer.elapsed} value={formatClock(stats.elapsedSec)} />
+            <Row label={t.focusTimer.activeTime} value={formatClock(stats.activeSec)} />
+            {stats.pausedSec > 0 && (
+              <Row label={t.focusTimer.pausedTime} value={formatClock(stats.pausedSec)} />
+            )}
             <Row label={t.focusTimer.wpm} value={stats.wpm} />
+            <Row label={t.focusTimer.activeWpm} value={stats.activeWpm} />
+            <Row label={t.focusTimer.pomodorosDone} value={stats.pomodorosCompleted} />
+            {stats.pomodorosCompleted > 0 && (
+              <Row label={t.focusTimer.wordsPerPomodoro} value={stats.wordsPerPomodoro} />
+            )}
+            <Row label={t.focusTimer.filesTouched} value={stats.filesTouched} />
           </>
         ) : (
           <Row label={t.focusTimer.wordsThisSession} value="—" />

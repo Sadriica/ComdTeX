@@ -65,6 +65,9 @@ export interface T {
     sortAZ: string; sortZA: string
     filterPlaceholder: string
     clearFilter: string
+    newFileHere: string; newFolderHere: string; newFromTemplateHere: string
+    folderRules: string; saveAsTemplate: string
+    creatingIn: (folder: string) => string
   }
 
   search: {
@@ -82,6 +85,7 @@ export interface T {
 
   outline: {
     noHeadings: string
+    filterPlaceholder: string
     lineTitle: (n: number) => string
     totalWords: string
     wordsAbbr: string
@@ -101,6 +105,9 @@ export interface T {
     dark: string; light: string; highContrast: string
     wordGoal: string; wordGoalOff: string; words: string
     wordWrap: string; minimap: string; spellcheck: string; syncScroll: string; previewVisible: string
+    listContinuation: string; listContinuationDesc: string
+    autoFoldExcalidraw: string; autoFoldExcalidrawDesc: string
+    readingWpm: string; readingWpmDesc: string
     closeAriaLabel: string
     sectionEditor: string; sectionPreview: string; sectionGeneral: string
     sectionDailyNotes: string
@@ -166,6 +173,47 @@ export interface T {
     closedTabsIcon: string; closedTabsMessage: string
   }
 
+  aiGaps: {
+    fillAtCursor: string; fillAll: string
+    noGapAtCursor: string; noneFound: string; nothingGenerated: string
+    filled: (n: number) => string
+    working: string
+    insertGap: string
+  }
+
+  splitSections: {
+    title: string
+    needSections: string
+    confirm: (n: number, name: string) => string
+    exists: (file: string) => string
+    done: (n: number) => string
+    command: string
+  }
+
+  panelSearch: {
+    placeholder: string; helpPlaceholder: string; clear: string
+    count: (shown: number, total: number) => string
+  }
+
+  folderRules: {
+    title: (folder: string) => string
+    close: string; intro: string
+    defaultTemplate: string; noTemplate: string
+    filenamePattern: string; filenameHint: string
+    frontmatter: string; frontmatterHint: string
+    generatedFiles: string; generatedHint: string; addGenerated: string; removeGenerated: string
+    generatedFileName: string; generatedType: string; generatedScope: string
+    scopeFolder: string; scopeVault: string
+    generatorNames: { tasks: string; calendar: string; index: string }
+    save: string; cancel: string; saved: string
+    regenerate: string
+    regenerated: (n: number) => string
+    regenerateNoRules: string
+    skippedNotGenerated: (file: string) => string
+    savedAsTemplate: (name: string) => string
+    templateNamePrompt: string
+  }
+
   templateModal: {
     title: string; filenameLabel: string; filenamePlaceholder: string
     cancel: string; create: string
@@ -213,6 +261,7 @@ export interface T {
     viewEnvironments: string; citationManager: string
     vaultBackup: string; copyHtml: string; copyLatex: string
     searchReplace: string; tableEditor: string; exportReveal: string
+    normalizeTable: string; normalizeTableNone: string; normalizeTableDone: string
     checkUpdates: string
     exportAnkiCards: string
     symbolPicker: string
@@ -413,6 +462,9 @@ export interface T {
     durations: string; workMin: string; breakMin: string; longBreakMin: string; cyclesLabel: string
     session: string
     wordsThisSession: string
+    peakWords: string; activeTime: string; pausedTime: string; activeWpm: string
+    pomodorosDone: string; wordsPerPomodoro: string; filesTouched: string
+    barTitle: string
     elapsed: string
     wpm: string
     goalProgress: string
@@ -506,6 +558,8 @@ export interface T {
     exportTypst: string; exportTypstPdf: string
     recent: string; clearRecent: string
     findInFile: string; searchVault: string; commandPalette: string
+    undo: string; redo: string; cut: string; copy: string; paste: string; selectAll: string
+    duplicateLine: string; moveLineUp: string; moveLineDown: string; toggleComment: string
     focusMode: string; files: string; search: string; outline: string
     editMacros: string; editBib: string; settings: string; shortcuts: string
   }
@@ -588,6 +642,9 @@ export interface T {
     errorCreatingFolder: (e: string) => string
     errorSaving: (e: string) => string
     fileChangedExternally: (name: string) => string
+    conflictDiff: (added: number, removed: number) => string
+    conflictReload: string; conflictKeepMine: string; conflictCancel: string
+    conflictReloadHint: string; conflictKeepHint: string; conflictCancelHint: string
     recentlyClosed: string
     copiedLatex: string
     bookmarkToggled: string; bookmarks: string; noBookmarks: string; removeBookmark: string
@@ -607,6 +664,23 @@ export interface T {
   helpPanel: {
     environments: string; shorthands: string; equations: string
     macros: string; bibtex: string; frontmatter: string; wikilinks: string
+    tplFromFile: string; tplFromFileDesc: string
+    folderRules: string; folderRulesDesc: string
+    frOpen: string; frOpenDesc: string
+    frTemplate: string; frTemplateDesc: string
+    frPattern: string; frPatternDesc: string
+    frFrontmatter: string; frFrontmatterDesc: string
+    frGeneratedLabel: string; frGeneratedDesc: string
+    frTasks: string; frTasksDesc: string
+    frCalendar: string; frCalendarDesc: string
+    frIndex: string; frIndexDesc: string
+    frRegenerate: string; frRegenerateDesc: string
+    frMarker: string; frMarkerDesc: string
+    longDocs: string; longDocsDesc: string
+    ldFold: string; ldFoldDesc: string
+    ldSplit: string; ldSplitDesc: string
+    ldEnter: string; ldEnterDesc: string
+    ldNormalizeTable: string; ldNormalizeTableDesc: string
     templates: string; greekLetters: string; operators: string
     // markdown formatting section
     formatting: string; formattingIntro: string
@@ -739,6 +813,7 @@ export interface T {
     // AI assistant section
     aiAssistant: string; aiAssistantDesc: string
     aiPanelRow: string; aiPanelRowDesc: string
+    aiGapRow: string; aiGapRowDesc: string
     aiInlineRow: string; aiInlineRowDesc: string
     // symbol picker / math preview section
     symbolPickerHelp: string; symbolPickerDesc: string

@@ -65,12 +65,23 @@ export interface Settings {
 
   // ── Cloud sync (BYO cloud, Option A) ───────────────────────────────────────
   /** Show the cloud-sync banner/hints (e.g. "move vault into synced folder"). */
+  /** Words per minute used for the status-bar reading-time estimate. */
+  readingWpm: number
+  /** Collapse `:::excalidraw` blocks the first time a file is opened. */
+  autoFoldExcalidraw: boolean
+  /** Continue lists, task items, quotes and table rows when pressing Enter. */
+  listContinuation: boolean
   cloudSyncBannerEnabled: boolean
   /** Detect cloud-sync conflict copies + show the sync StatusBar indicator. */
   cloudSyncDetectEnabled: boolean
 }
 
-const DEFAULTS: Settings = {
+/**
+ * Factory defaults. Exported so tests can build a valid `Settings` by spreading
+ * these and overriding what they care about — a hand-written literal has to be
+ * updated every time a setting is added, which is churn with no coverage value.
+ */
+export const DEFAULTS: Settings = {
   fontSize: 15,
   previewFontSize: 15,
   autoSaveMs: 800,
@@ -104,6 +115,9 @@ const DEFAULTS: Settings = {
   aiApiKey: "",
   aiCliCommand: "",
   aiWarmupEnabled: true,
+  readingWpm: 200,
+  autoFoldExcalidraw: true,
+  listContinuation: true,
   cloudSyncBannerEnabled: true,
   cloudSyncDetectEnabled: true,
 }

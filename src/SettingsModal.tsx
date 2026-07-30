@@ -192,6 +192,44 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ spellcheck: !settings.spellcheck })}
                   />
                 </label>
+
+                <label className="setting-row">
+                  <span>{t.settings.listContinuation}</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.listContinuation}
+                    onChange={() => onChange({ listContinuation: !settings.listContinuation })}
+                  />
+                </label>
+                <p className="setting-hint">{t.settings.listContinuationDesc}</p>
+
+                <label className="setting-row">
+                  <span>{t.settings.autoFoldExcalidraw}</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.autoFoldExcalidraw}
+                    onChange={() => onChange({ autoFoldExcalidraw: !settings.autoFoldExcalidraw })}
+                  />
+                </label>
+                <p className="setting-hint">{t.settings.autoFoldExcalidrawDesc}</p>
+
+                <label className="setting-row">
+                  <span>{t.settings.readingWpm}</span>
+                  <input
+                    type="number"
+                    min={50}
+                    max={1000}
+                    step={10}
+                    value={settings.readingWpm}
+                    onChange={(e) => {
+                      // Clamp rather than trust the spinner: typing into a number
+                      // field bypasses min/max, and 0 would make the estimate NaN.
+                      const n = Number(e.target.value)
+                      if (Number.isFinite(n)) onChange({ readingWpm: Math.min(1000, Math.max(50, Math.round(n))) })
+                    }}
+                  />
+                </label>
+                <p className="setting-hint">{t.settings.readingWpmDesc}</p>
               </>
             )}
 

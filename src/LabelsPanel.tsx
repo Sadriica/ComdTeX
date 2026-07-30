@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { LABEL_KIND_TITLES, scanStructuralLabels, type StructuralLabel, type StructuralLabelKind } from "./structuralLabels"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface LabelsPanelProps {
@@ -19,7 +20,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
   const index = useMemo(() => scanStructuralLabels(files), [files])
   const filtered = index.labels
     .filter((label) => kind === "all" || label.kind === kind)
-    .filter((label) => !filter || label.id.toLowerCase().includes(filter.toLowerCase()) || label.context.toLowerCase().includes(filter.toLowerCase()))
+    .filter((label) => matchesQuery(`${label.id} ${label.context}`, filter))
 
   const grouped = filtered.reduce<Record<string, StructuralLabel[]>>((acc, label) => {
     ;(acc[label.kind] ??= []).push(label)

@@ -27,6 +27,7 @@ describe("storageKeys", () => {
       RECENT_FILES: "comdtex_recent",
       BOOKMARKS: "comdtex_bookmarks",
       CURSOR_POSITIONS: "comdtex_cursor_positions",
+      EDITOR_VIEW_STATES: "comdtex_editor_view_states",
       DEPS_DISMISSED: "comdtex_deps_dismissed",
       CLOUD_BANNER_DISMISSED: "comdtex_cloud_banner_dismissed",
       WINDOW_STATE: "comdtex_window_state",

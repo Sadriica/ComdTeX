@@ -279,6 +279,8 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Monaco Editor with syntax highlighting
 - Rich autocompletion: `:::` block types, `\` LaTeX commands, `[[` wikilinks, `[@` citations, `@eq:`/`@sec:`/… labels, Tab-expanding shorthands, and context-aware keyword suggestions inside special blocks (pseudocode, truth tables, plots…) — see [docs/autocomplete.md](docs/autocomplete.md)
 - Vim mode (toggle in Settings)
+- Structure-aware Enter: lists, numbered lists (renumbering), `- [ ]` task items, `>` quotes and pipe-table rows continue on their own; an abandoned marker outdents or clears instead of piling up empty bullets
+- Section folding by heading, with cursor / scroll / fold state remembered per file across tab switches — see [docs/long-documents.md](docs/long-documents.md)
 - Offline spellcheck (Hunspell dictionaries via `nspell`, Spanish + English) — gated by a Settings toggle; no network required
 - Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers
 - Per-line comments — annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
@@ -328,6 +330,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Vault backup (exports as `.zip`)
 
 ### Export
+- **AI gap filling** — leave `{{?}}` or `{{? a hint}}` while writing and fill it later, on demand. Explicit markers rather than ghost-text autocompletion; every fill lands in the undo stack. See [docs/ai-gaps.md](docs/ai-gaps.md).
 - **PDF via built-in WASM LaTeX engine (SwiftLaTeX)** — bundled at v1.3.0; compiles real LaTeX to PDF in-process, no `pandoc` / `xelatex` install required. Status bar shows `TeX: WASM | local`. See [docs/wasm-tex.md](docs/wasm-tex.md).
 - Local LaTeX PDF fallback: if the WASM engine fails, ComdTeX automatically tries `tectonic`, then `xelatex`, then `pdflatex`
 - LaTeX (`.tex`) with preamble, environments, and macros — Overleaf-compatible
@@ -491,6 +494,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | AI assistant is bring-your-own | Off by default; you supply your own provider and API key. ComdTeX ships no keys and makes no AI requests until enabled. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
 | No mobile support | Desktop only (Linux, Windows). |
+| Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`) — see [docs/folder-rules.md](docs/folder-rules.md). |
 | Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel — see [docs/cloud-sync.md](docs/cloud-sync.md). |
 | Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js assets from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
 | SyncTeX forward/inverse sync is not available yet | The `.synctex` parser exists, but the bundled WASM LaTeX engine ships without synctex output, so no engine currently emits the data it needs. |

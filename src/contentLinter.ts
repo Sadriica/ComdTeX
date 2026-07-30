@@ -8,6 +8,8 @@
  *  - Broken [[wikilinks]] (target not in vault)
  *  - Broken [@citation] keys (not in references.bib)
  *  - Shorthand call issues: unclosed parens, wrong arg count
+ *  - Pipe-table rows whose column count differs from the header's
+ *  - `{{?}}` gaps left for the AI to fill
  *
  * Also provides dedicated linters for:
  *  - BibTeX files (.bib): duplicate keys, missing required fields, unknown types
@@ -16,6 +18,8 @@
 
 import type * as monacoApi from "monaco-editor"
 import { checkText, type SpellLang } from "./spellcheck"
+import { raggedTableRows } from "./markdownEditing"
+import { findGaps } from "./aiGaps"
 
 export interface LintContext {
   /** Base names of vault files, lowercased, without extension. */
@@ -564,6 +568,58 @@ function lintSpelling(
 /**
  * Lint a Markdown/LaTeX document (the main editor format).
  */
+/**
+ * Pipe-table rows whose column count differs from their header's.
+ *
+ * markdown-it follows GFM here: extra cells are dropped and missing ones are
+ * rendered empty, so the preview quietly disagrees with the source and the
+ * author never finds out. A warning (not an error) plus the "Normalizar tabla"
+ * command is the fix — the document still renders.
+ */
+function lintTables(
+  text: string,
+  lineIdx: number[],
+  Severity: typeof monacoApi.MarkerSeverity,
+): monacoApi.editor.IMarkerData[] {
+  const lines = text.split("\n")
+  return raggedTableRows(lines).map(({ line, expected, actual }) => {
+    const start = lineIdx[line] ?? 0
+    return mkMarker(
+      lineIdx,
+      start,
+      start + lines[line].length,
+      `Esta fila tiene ${actual} columna${actual === 1 ? "" : "s"} y la cabecera ${expected}. ` +
+        `Usa "Normalizar tabla" para rellenar las celdas que faltan.`,
+      Severity.Warning,
+    )
+  })
+}
+
+/**
+ * `{{?}}` gaps waiting to be filled.
+ *
+ * Info severity, not a warning: an unfilled gap is a deliberate to-do, not a
+ * defect. The marker makes them visible in the overview ruler so a long document
+ * does not quietly accumulate holes.
+ */
+function lintGaps(
+  text: string,
+  lineIdx: number[],
+  Severity: typeof monacoApi.MarkerSeverity,
+): monacoApi.editor.IMarkerData[] {
+  return findGaps(text).map((gap) =>
+    mkMarker(
+      lineIdx,
+      gap.start,
+      gap.end,
+      gap.hint
+        ? `Hueco pendiente: ${gap.hint}. Usa "Completar hueco" para rellenarlo con la IA.`
+        : `Hueco pendiente. Usa "Completar hueco" para rellenarlo con la IA.`,
+      Severity.Info,
+    ),
+  )
+}
+
 export function lintContent(
   text: string,
   context: LintContext,
@@ -579,6 +635,8 @@ export function lintContent(
     ...lintWikilinks(clean, lineIdx, context.vaultFileNames, Severity),
     ...lintCitations(clean, lineIdx, context.bibKeys, Severity),
     ...lintShorthands(clean, lineIdx, Severity),
+    ...lintTables(clean, lineIdx, Severity),
+    ...lintGaps(text, lineIdx, Severity),
   ]
 
   if (context.spellcheck) {

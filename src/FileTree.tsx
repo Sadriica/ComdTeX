@@ -2,7 +2,7 @@ import { memo, useRef, useMemo, useState } from "react"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import type { FileNode } from "./types"
 import ContextMenu from "./ContextMenu"
-import { displayBasename } from "./pathUtils"
+import { displayBasename, pathDirname } from "./pathUtils"
 import { useT } from "./i18n"
 
 interface FileTreeProps {
@@ -12,11 +12,18 @@ interface FileTreeProps {
   isLoading?: boolean
   onSelectVault: () => void
   onOpenFile: (node: FileNode) => void
-  onCreateFile: (name: string) => void
-  onCreateFolder: (name: string) => void
+  /** `parentDir` omitted means the vault root. */
+  onCreateFile: (name: string, parentDir?: string) => void
+  onCreateFolder: (name: string, parentDir?: string) => void
   onDeleteFile: (path: string) => void
   onRenameFile: (oldPath: string, newName: string) => void
   onMoveFile?: (from: string, toFolder: string) => void
+  /** Opens the template picker with `parentDir` preselected as the destination. */
+  onNewFromTemplate?: (parentDir: string) => void
+  /** Opens the per-folder rules editor for `dirPath`. */
+  onEditFolderRules?: (dirPath: string) => void
+  /** Turns an existing file into a reusable custom template. */
+  onSaveAsTemplate?: (node: FileNode) => void
   /** Absolute paths that should display the cloud-sync conflict marker. */
   conflictPaths?: Set<string>
   /** Click handler for the conflict marker — typically opens the conflicts panel. */
@@ -85,7 +92,9 @@ function FileNodeRow({
           className={`tree-row tree-dir${isDragOver ? " tree-drop-target" : ""}`}
           style={{ paddingLeft: 8 + indent }}
           tabIndex={-1}
-          onClick={() => setOpen((o) => !o)}
+          // Selecting the folder (not just expanding it) is what makes "new
+          // file" land inside it rather than at the vault root.
+          onClick={() => { onFocus(node.path); setOpen((o) => !o) }}
           onFocus={() => onFocus(node.path)}
           onContextMenu={(e) => onContextMenu(e, node)}
           aria-label={t.fileTree.folderLabel(node.name)}
@@ -132,7 +141,7 @@ function FileNodeRow({
       className={`tree-row tree-file ${isActive ? "tree-active" : ""} ${isFocused ? "tree-focused" : ""}${hasConflict ? " tree-conflict" : ""}`}
       style={{ paddingLeft: 8 + indent }}
       tabIndex={isFocused ? 0 : -1}
-      onClick={() => !renaming && onOpenFile(node)}
+      onClick={() => { if (renaming) return; onFocus(node.path); onOpenFile(node) }}
       onDoubleClick={startRename}
       onFocus={() => onFocus(node.path)}
       onContextMenu={(e) => onContextMenu(e, node)}
@@ -213,6 +222,9 @@ function FileTree({
   onMoveFile,
   conflictPaths,
   onConflictClick,
+  onNewFromTemplate,
+  onEditFolderRules,
+  onSaveAsTemplate,
 }: FileTreeProps) {
   const t = useT()
   const [sortAsc, setSortAsc] = useState(true)
@@ -226,14 +238,50 @@ function FileTree({
   const [ctx, setCtx] = useState<CtxState | null>(null)
   const [renamingCtx, setRenamingCtx] = useState<FileNode | null>(null)
   const [focusedPath, setFocusedPath] = useState<string | null>(null)
+  /** Destination for the next create, when it came from a folder's context menu. */
+  const [creatingIn, setCreatingIn] = useState<string | null>(null)
   const treeRef = useRef<HTMLDivElement>(null)
 
-  const submitCreate = () => {
-    if (!newName.trim()) { setCreating(null); return }
-    if (creating === "file") onCreateFile(newName.trim())
-    else onCreateFolder(newName.trim())
-    setCreating(null)
+  /** Index of every node by path, so the header buttons can find the selection. */
+  const nodesByPath = useMemo(() => {
+    const map = new Map<string, FileNode>()
+    const walk = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        map.set(n.path, n)
+        if (n.children) walk(n.children)
+      }
+    }
+    walk(tree)
+    return map
+  }, [tree])
+
+  /**
+   * Where a create started from the header toolbar should go: the selected
+   * folder, or the folder containing the selected file. Undefined (vault root)
+   * when nothing is selected — creating at the root stays the default, it is
+   * just no longer the ONLY option.
+   */
+  const selectedDir = useMemo((): string | undefined => {
+    const node = focusedPath ? nodesByPath.get(focusedPath) : undefined
+    if (!node) return undefined
+    return node.type === "dir" ? node.path : pathDirname(node.path)
+  }, [focusedPath, nodesByPath])
+
+  const startCreate = (kind: "file" | "folder", parentDir?: string) => {
     setNewName("")
+    setCreatingIn(parentDir ?? null)
+    setCreating(kind)
+  }
+
+  const submitCreate = () => {
+    const name = newName.trim()
+    const parentDir = creatingIn ?? selectedDir
+    setCreating(null)
+    setCreatingIn(null)
+    setNewName("")
+    if (!name) return
+    if (creating === "file") onCreateFile(name, parentDir)
+    else onCreateFolder(name, parentDir)
   }
 
   const handleContextMenu = (e: React.MouseEvent, node: FileNode) => {
@@ -278,11 +326,12 @@ function FileTree({
     } else if (e.key === "Enter" && focused?.type === "file") {
       e.preventDefault()
       onOpenFile(focused)
-    } else if (e.key === "F2" && focused?.type === "file") {
+    } else if (e.key === "F2" && focused) {
+      // Folders rename too — `renameFile` is a plain FS rename either way.
       e.preventDefault()
       setNewName(focused.name)
       setRenamingCtx(focused)
-    } else if (e.key === "Delete" && focused?.type === "file") {
+    } else if (e.key === "Delete" && focused) {
       e.preventDefault()
       handleConfirmDelete(focused)
     }
@@ -311,8 +360,8 @@ function FileTree({
       <div className="tree-header">
         <span className="tree-vault-name" title={vaultPath}>{vaultName}</span>
         <div className="tree-actions">
-          <button title={t.fileTree.newFile} aria-label={t.fileTree.newFileLabel} onClick={() => { setNewName(""); setCreating("file") }}>+</button>
-          <button title={t.fileTree.newFolder} aria-label={t.fileTree.newFolderLabel} onClick={() => { setNewName(""); setCreating("folder") }}>⊞</button>
+          <button title={t.fileTree.newFile} aria-label={t.fileTree.newFileLabel} onClick={() => startCreate("file")}>+</button>
+          <button title={t.fileTree.newFolder} aria-label={t.fileTree.newFolderLabel} onClick={() => startCreate("folder")}>⊞</button>
           <button
             title={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
             aria-label={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
@@ -344,6 +393,15 @@ function FileTree({
 
       {creating && (
         <div className="tree-new-input">
+          {/* Say where it will land — silently creating at the root when the
+              user had a folder selected was the original complaint. */}
+          <span className="tree-new-target">
+            {t.fileTree.creatingIn(
+              (creatingIn ?? selectedDir)
+                ? displayBasename(creatingIn ?? selectedDir!)
+                : vaultName,
+            )}
+          </span>
           <input
             autoFocus
             placeholder={creating === "file" ? t.fileTree.filenamePlaceholder : t.fileTree.folderPlaceholder}
@@ -423,6 +481,9 @@ function FileTree({
                       setRenamingCtx(ctx.node)
                     },
                   },
+                  ...(onSaveAsTemplate
+                    ? [{ label: t.fileTree.saveAsTemplate, action: () => onSaveAsTemplate(ctx.node) }]
+                    : []),
                   {
                     label: t.fileTree.delete,
                     danger: true,
@@ -430,6 +491,21 @@ function FileTree({
                   },
                 ]
               : [
+                  { label: t.fileTree.newFileHere, action: () => startCreate("file", ctx.node.path) },
+                  { label: t.fileTree.newFolderHere, action: () => startCreate("folder", ctx.node.path) },
+                  ...(onNewFromTemplate
+                    ? [{ label: t.fileTree.newFromTemplateHere, action: () => onNewFromTemplate(ctx.node.path) }]
+                    : []),
+                  {
+                    label: t.fileTree.rename,
+                    action: () => {
+                      setNewName(ctx.node.name)
+                      setRenamingCtx(ctx.node)
+                    },
+                  },
+                  ...(onEditFolderRules
+                    ? [{ label: t.fileTree.folderRules, action: () => onEditFolderRules(ctx.node.path) }]
+                    : []),
                   {
                     label: t.fileTree.deleteFolder,
                     danger: true,

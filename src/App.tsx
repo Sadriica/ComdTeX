@@ -3,7 +3,7 @@ import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
-import { writeTextFile, readTextFile, exists, mkdir, copyFile } from "@tauri-apps/plugin-fs"
+import { writeTextFile, readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
@@ -40,7 +40,8 @@ import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName, findByVaultRelPath, matchesVaultRelPath } from "./wikilinks"
-import { pathJoin, displayBasename } from "./pathUtils"
+import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
+import type { FileNode } from "./types"
 import { writeTextFileAtomic } from "./atomicWrite"
 import TitleBar from "./TitleBar"
 import MenuBar from "./MenuBar"
@@ -65,7 +66,7 @@ import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand } from "./CommandPalette"
 import { buildPaletteCommands } from "./commands"
-import { buildMenus } from "./menus"
+import { buildMenus, type EditorActionId } from "./menus"
 import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
@@ -98,16 +99,71 @@ import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
-import { processTemplateVariables } from "./templates"
+import { processTemplateVariables, parameterizeDocument, saveCustomTemplate, loadCustomTemplates, TEMPLATES } from "./templates"
 import { setFlowchartSvg, setExcalidrawSvg, getExcalidrawSvg, setExcalidrawPlaceholderText } from "./environments"
 import { STORAGE_KEYS } from "./storageKeys"
+import { saveViewState, restoreViewState, readLegacyCursor } from "./editorViewState"
+import { findSpecialBlockStarts, findTableBlock, normalizeTableBlock, splitIntoSections, sectionSlug } from "./markdownEditing"
+import { minimalEdit } from "./textDiff"
+import { findGaps, gapAtOffset, gapContext, cleanGapCompletion } from "./aiGaps"
+import { isAiReady, sendInlineEdit } from "./ai/aiProvider"
+import { formatClock } from "./pomodoro"
+import { useFolderRules } from "./useFolderRules"
+import FolderRulesModal from "./FolderRulesModal"
+import { applyFilenamePattern, applyFolderFrontmatter, isGeneratedFile, type FolderRules } from "./folderRules"
+import { runGenerator, type SourceFile } from "./generators"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
 const RECENT_KEY = STORAGE_KEYS.RECENT_FILES
 const BOOKMARKS_KEY = STORAGE_KEYS.BOOKMARKS
-const CURSOR_KEY = STORAGE_KEYS.CURSOR_POSITIONS
 const MAX_RECENT = 10
+/** Block types collapsed automatically the first time a file is opened. */
+const AUTO_FOLD_BLOCKS = ["excalidraw"] as const
+
+/** `20260728-094512` — a filename-safe local timestamp for generated assets. */
+function timestampSlug(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+}
+
+/**
+ * Markdown files under `root` (recursively when `recursive`), as generator input.
+ *
+ * Skips dotfiles and dot-directories so the rules file, comment store and any VCS
+ * metadata never end up in a generated index.
+ */
+async function collectSourceFiles(root: string, recursive: boolean): Promise<SourceFile[]> {
+  const out: SourceFile[] = []
+  const walk = async (dir: string) => {
+    let entries
+    try { entries = await readDir(dir) } catch { return }
+    for (const entry of entries) {
+      if (!entry.name || entry.name.startsWith(".")) continue
+      const full = await pathJoin(dir, entry.name)
+      if (entry.isDirectory) {
+        if (recursive) await walk(full)
+      } else if (/\.(md|tex)$/i.test(entry.name)) {
+        try { out.push({ path: full, content: await readTextFile(full) }) } catch { /* unreadable */ }
+      }
+    }
+  }
+  await walk(root)
+  return out
+}
+
+/** Character offsets in a Monaco model → the equivalent line/column range. */
+function monacoRange(model: monaco.editor.ITextModel, start: number, end: number): monaco.IRange {
+  const from = model.getPositionAt(start)
+  const to = model.getPositionAt(end)
+  return {
+    startLineNumber: from.lineNumber,
+    startColumn: from.column,
+    endLineNumber: to.lineNumber,
+    endColumn: to.column,
+  }
+}
 export type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "keep" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
 
 function loadRecentFiles(): string[] {
@@ -384,6 +440,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const mathHoverDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mathPreviewDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mathPreviewEnabledRef = useRef(settings.mathPreview ?? true)
+  // Read inside the onMount placement callback, which is bound once per editor.
+  const autoFoldExcalidrawRef = useRef(settings.autoFoldExcalidraw ?? true)
+  const listContinuationRef = useRef(settings.listContinuation ?? true)
+  // Latest settings for async AI handlers, which must read the CURRENT provider
+  // config at send time rather than whatever was captured when they were bound.
+  const settingsRef = useRef(settings)
+  const [fillingGaps, setFillingGaps] = useState(false)
+  const [focusPopoverOpen, setFocusPopoverOpen] = useState(false)
+  const focusPopoverRef = useRef<HTMLDivElement>(null)
+  const toggleFocusPopover = useCallback(() => setFocusPopoverOpen((open) => !open), [])
   // Ctrl/Cmd+K inline AI edit: a ref-backed opener so the Monaco command (bound
   // once at mount) always calls the latest handler / reads the latest setting.
   const aiEnabledRef = useRef(settings.aiEnabled)
@@ -481,7 +547,23 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     longBreakMin: settings.pomodoroLongBreakMin,
     cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
   }), [settings.pomodoroWorkMin, settings.pomodoroBreakMin, settings.pomodoroLongBreakMin, settings.pomodoroCyclesBeforeLongBreak])
-  const focusTimer = useFocusTimer(pomodoroConfig, vault.openFile?.content ?? "")
+  const focusTimer = useFocusTimer(pomodoroConfig, vault.openFile?.content ?? "", vault.activeTabPath)
+  /**
+   * Compact timer readout for the top bar, so the countdown stays visible while
+   * the Enfoque panel is closed. Null until a session exists — the bar looks
+   * exactly as before for anyone not using the timer.
+   */
+  const focusClock = useMemo(() => {
+    if (!focusTimer.session) return null
+    const phase = focusTimer.timer.phase
+    return {
+      clock: formatClock(focusTimer.timer.remainingSec),
+      phase: phase === "work" ? t.focusTimer.phaseWork
+        : phase === "break" ? t.focusTimer.phaseBreak
+          : t.focusTimer.phaseLongBreak,
+      running: focusTimer.timer.running,
+    }
+  }, [focusTimer.session, focusTimer.timer.remainingSec, focusTimer.timer.phase, focusTimer.timer.running, t])
   // Search & Replace inputs/results, lifted so they survive the panel unmounting.
   const searchReplaceState = useSearchReplaceState()
   // Ctrl/Cmd+K inline AI edit — null when the floating widget is closed.
@@ -503,12 +585,28 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">("idle")
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Read inside togglePanel's updater, which must not close over a stale mode.
+  const sidebarModeRef = useRef(sidebarMode)
+  sidebarModeRef.current = sidebarMode
   // Shared panel opener: switching the panel is useless if the sidebar is
   // collapsed (the panel changes but nothing renders), so every panel-open path
   // must also un-collapse. Use this everywhere instead of bare setSidebarMode.
   const openPanel = useCallback((m: SidebarMode) => {
     setSidebarMode(m)
     setSidebarCollapsed(false)
+  }, [])
+  /**
+   * Toolbar behaviour: pressing the button of the panel already on screen puts
+   * it away again. Used by the toolbar's own buttons — programmatic opens (a
+   * search result, a comment glyph) keep using `openPanel`, which must always
+   * show the panel rather than toggle it off under the user.
+   */
+  const togglePanel = useCallback((m: SidebarMode) => {
+    setSidebarCollapsed((collapsed) => {
+      const alreadyShowing = sidebarModeRef.current === m && !collapsed
+      if (!alreadyShowing) setSidebarMode(m)
+      return alreadyShowing
+    })
   }, [])
   // Stable callbacks for FileTree so its React.memo holds — otherwise the inline
   // arrows would change identity every render and the (potentially huge) file
@@ -788,6 +886,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   useEffect(() => { macrosRef.current = macros }, [macros])
   useEffect(() => { mathPreviewEnabledRef.current = settings.mathPreview ?? true }, [settings.mathPreview])
+  useEffect(() => { autoFoldExcalidrawRef.current = settings.autoFoldExcalidraw ?? true }, [settings.autoFoldExcalidraw])
+  useEffect(() => { listContinuationRef.current = settings.listContinuation ?? true }, [settings.listContinuation])
+  useEffect(() => { settingsRef.current = settings }, [settings])
   useEffect(() => { aiEnabledRef.current = settings.aiEnabled }, [settings.aiEnabled])
 
   // ── Custom preview CSS ────────────────────────────────────────────────────
@@ -1618,17 +1719,27 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setExcalidrawPlaceholderText(t.excalidraw.placeholder)
   }, [t.excalidraw.placeholder])
 
+  // ── Save the outgoing tab's view state ───────────────────────────────────
+  // This runs during RENDER on purpose. The Editor is keyed by the active tab
+  // path, so React disposes the old editor while committing this render — an
+  // effect would fire too late and `editorRef.current` would already be the new
+  // instance (or gone). Snapshotting here, synchronously, is also what fixes a
+  // fast Ctrl+Tab landing on the wrong line: the old debounced save never ran.
+  // `saveViewState` is idempotent, so StrictMode's double-render is harmless.
+  const previousTabPathRef = useRef<string | null>(null)
+  {
+    const nextPath = vault.activeTabPath ?? null
+    if (previousTabPathRef.current !== nextPath) {
+      const outgoing = previousTabPathRef.current
+      previousTabPathRef.current = nextPath
+      if (outgoing && editorRef.current) saveViewState(outgoing, editorRef.current)
+    }
+  }
+
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
     setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
-    // Cancel pending cursor save: it belongs to the previous file and would
-    // either fire after we replace the editor model (no-op) or write the wrong
-    // path. The new file restores its own cursor below.
-    if (cursorSaveRef.current) {
-      clearTimeout(cursorSaveRef.current)
-      cursorSaveRef.current = undefined
-    }
-    // Cancel a pending preview debounce from the PREVIOUS file too. Otherwise,
+    // Cancel a pending preview debounce from the PREVIOUS file. Otherwise,
     // typing in file A and switching to file B within the debounce window lets
     // A's queued setPreviewContent fire after this effect set B's content — the
     // preview would render A while the editor shows B until the next keystroke.
@@ -1636,28 +1747,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       clearTimeout(previewDebounceRef.current)
       previewDebounceRef.current = undefined
     }
-    // Jump to pending search line OR restore saved cursor position
-    const timeoutId = setTimeout(() => {
-      const editor = editorRef.current
-      if (!editor) return
-      if (pendingJumpRef.current !== null) {
-        const line = pendingJumpRef.current
-        pendingJumpRef.current = null
-        editor.revealLineInCenter(line)
-        editor.setPosition({ lineNumber: line, column: 1 })
-        editor.focus()
-      } else if (vault.openFile?.path) {
-        try {
-          const saved = JSON.parse(localStorage.getItem(CURSOR_KEY) ?? "{}")
-          const pos = saved[vault.openFile.path]
-          if (pos) {
-            editor.setPosition({ lineNumber: pos.line, column: pos.col })
-            editor.revealLineInCenter(pos.line)
-          }
-        } catch {}
-      }
-    }, 100)
-    return () => clearTimeout(timeoutId)
+    // The cursor/scroll/fold restore now happens synchronously in the editor's
+    // onMount (see `restoreEditorPlacement`) — no timer, so it can neither race
+    // the user's first keystrokes nor visibly jump after the file appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.openFile?.path])
 
@@ -1679,9 +1771,44 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Editor setup ─────────────────────────────────────────────────────────
   const handleBeforeMount: BeforeMount = useCallback((m) => setupMonaco(m), [])
 
+  /**
+   * Put a freshly mounted editor back where the user left it: caret, scroll and
+   * collapsed regions. Called from onMount, synchronously — the old 100 ms timer
+   * both jumped visibly and raced the first keystrokes after a tab switch.
+   */
+  const restoreEditorPlacement = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
+    // An explicit jump (search hit, outline click, backlink) outranks the
+    // remembered position — the user asked to go somewhere specific.
+    if (pendingJumpRef.current !== null) {
+      const line = pendingJumpRef.current
+      pendingJumpRef.current = null
+      editor.revealLineInCenter(line)
+      editor.setPosition({ lineNumber: line, column: 1 })
+      return
+    }
+    const path = activeFilePathRef.current
+    if (!path) return
+    if (restoreViewState(path, editor)) return
+
+    // No stored state: this file is new to us. Honour the legacy cursor-only
+    // map (pre-view-state builds) so upgrading users don't lose their place.
+    const legacy = readLegacyCursor(path)
+    if (legacy) {
+      editor.setPosition({ lineNumber: legacy.line, column: legacy.col })
+      editor.revealLineInCenter(legacy.line)
+    }
+    // Collapse the blocks that would otherwise bury the prose. An Excalidraw
+    // scene is one base64 line that word-wraps into dozens of screen lines.
+    const model = editor.getModel()
+    if (!model) return
+    if (!autoFoldExcalidrawRef.current) return
+    const starts = findSpecialBlockStarts(model.getLinesContent(), AUTO_FOLD_BLOCKS)
+    if (starts.length > 0) editor.trigger("comdtex", "editor.fold", { selectionLines: starts })
+  }, [])
+
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor
-    setupEditorCommands(editor, monaco)
+    setupEditorCommands(editor, monaco, () => listContinuationRef.current)
     // Note: Monaco has built-in spell-check via browser (no config needed)
     linterDisposableRef.current?.dispose()
     linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
@@ -1758,21 +1885,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           setCursorPos(cursorPosRef.current)
         }, 100)
       }
-      // Debounce-save cursor position for session restore.
-      // Capture path at SCHEDULE time so a late tab switch can be detected at fire time.
+      // Debounced view-state snapshot, so closing the app (or crashing) keeps
+      // the place without waiting for a tab switch. The switch itself saves
+      // synchronously during render — this timer is only the "still here" case,
+      // and aborting on a path change keeps file A's state off file B's key.
       if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
       const scheduledPath = activeFilePathRef.current
       cursorSaveRef.current = setTimeout(() => {
-        // Read the current path at execution time — if the user switched tabs
-        // during the debounce window, abort to avoid writing the cursor of file
-        // A under the key of file B.
         const currentPath = activeFilePathRef.current
         if (!currentPath || currentPath !== scheduledPath) return
-        try {
-          const saved = JSON.parse(localStorage.getItem(CURSOR_KEY) ?? "{}")
-          saved[currentPath] = { line: e.position.lineNumber, col: e.position.column }
-          localStorage.setItem(CURSOR_KEY, JSON.stringify(saved))
-        } catch {}
+        saveViewState(currentPath, editor)
       }, 500)
     })
     // Expose a ref to current scroll state for syncScroll
@@ -1846,6 +1968,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     editor.focus()
 
+    // Put the caret, the scroll and the collapsed regions back — synchronously,
+    // while the editor is fresh and before the user can type into it.
+    restoreEditorPlacement(editor)
+
     // Apply vim mode if already enabled in settings
     if (settings.vimMode && vimStatusRef.current) {
       enableVimMode(editor, vimStatusRef.current).then((vm) => {
@@ -1855,7 +1981,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     // Apply typewriter mode from settings
     applyTypewriterMode(editor, settings.typewriterMode)
-  }, [vault, settings.vimMode, settings.typewriterMode, t, openPanel])
+  }, [vault, settings.vimMode, settings.typewriterMode, t, openPanel, restoreEditorPlacement])
 
   const handleChange = useCallback((value: string | undefined) => {
     const content = value ?? ""
@@ -1884,12 +2010,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const file = vault.openFile
     if (!ed || !file || file.mode === "pdf") return
     if (file.content === lastEditorContentRef.current) return // O(1): the user's own typing
+    // The editor is authoritative while the user is typing into it and their
+    // edits have not reached disk yet. Anything we'd push in now (a tree
+    // refresh, a re-read, a stale patch) is OLDER than what they can see, and
+    // applying it is exactly the "text pastes/deletes itself mid-sentence" bug.
+    // Leave `lastEditorContentRef` alone so the update is reconsidered, not lost.
+    if (ed.hasTextFocus() && vault.hasPendingSave(file.path)) return
     lastEditorContentRef.current = file.content
     try {
-      if (ed.getValue() === file.content) return // already in sync (e.g. just switched tabs)
-      const pos = ed.getPosition()
-      ed.setValue(file.content)
-      if (pos) ed.setPosition(pos)
+      const model = ed.getModel()
+      if (!model) return
+      const current = model.getValue()
+      if (current === file.content) return // already in sync (e.g. just switched tabs)
+      // Smallest edit that reconciles the two, applied through the model's edit
+      // stack: undo, folding, decorations and the selection all survive, where
+      // `setValue()` would reset every one of them.
+      const edit = minimalEdit(current, file.content)
+      if (!edit) return
+      const range = monacoRange(model, edit.start, edit.end)
+      ed.executeEdits("externalSync", [{ range, text: edit.text }])
     } catch { /* editor disposed mid-swap — the key remount re-seeds it */ }
     // Intentionally key on the content/mode PRIMITIVES, not the `vault.openFile`
     // object (whose identity changes every keystroke — depending on it would run
@@ -2790,6 +2929,80 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     editor.focus()
   }, [])
 
+  /**
+   * Run one of the editor's built-in edit commands from the menu bar.
+   *
+   * Paste is the odd one out: Chromium refuses `editor.action.clipboardPasteAction`
+   * when it is not driven by a real paste gesture, so it silently does nothing.
+   * Reading the clipboard ourselves and inserting through `executeEdits` gives a
+   * working menu entry that still lands in the native undo stack.
+   */
+  const runEditorAction = useCallback((id: EditorActionId) => {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.focus()
+
+    if (id === "paste") {
+      void navigator.clipboard.readText().then((text) => {
+        if (!text) return
+        const selection = editor.getSelection()
+        if (!selection) return
+        editor.executeEdits("menu-paste", [{ range: selection, text }])
+      }).catch(() => showToast(t.app.copyError, "error"))
+      return
+    }
+
+    const ACTIONS: Record<Exclude<EditorActionId, "paste">, string> = {
+      undo: "undo",
+      redo: "redo",
+      cut: "editor.action.clipboardCutAction",
+      copy: "editor.action.clipboardCopyAction",
+      selectAll: "editor.action.selectAll",
+      duplicateLine: "editor.action.duplicateSelection",
+      moveLineUp: "editor.action.moveLinesUpAction",
+      moveLineDown: "editor.action.moveLinesDownAction",
+      toggleComment: "editor.action.commentLine",
+    }
+    editor.trigger("menu", ACTIONS[id], null)
+  }, [t])
+
+  /**
+   * Pad the table under the cursor so every row has the header's column count,
+   * and re-align the pipes. Rows with missing cells still render — GFM just
+   * fills them in silently — so this is a tidy-up, not a repair of broken output.
+   */
+  const handleNormalizeTable = useCallback(() => {
+    const editor = editorRef.current
+    const model = editor?.getModel()
+    const pos = editor?.getPosition()
+    if (!editor || !model || !pos) return
+
+    const lines = model.getLinesContent()
+    const block = findTableBlock(lines, pos.lineNumber - 1)
+    if (!block) { showToast(t.palette.normalizeTableNone, "info"); return }
+
+    const normalized = normalizeTableBlock(lines.slice(block.start, block.end + 1))
+    const original = lines.slice(block.start, block.end + 1)
+    if (normalized.join("\n") === original.join("\n")) {
+      showToast(t.palette.normalizeTableDone, "info")
+      return
+    }
+    // One executeEdits over the whole block: a single undo step, and the caret
+    // stays on the same row even though every line's width changed.
+    editor.executeEdits("normalize-table", [{
+      range: {
+        startLineNumber: block.start + 1,
+        startColumn: 1,
+        endLineNumber: block.end + 1,
+        endColumn: lines[block.end].length + 1,
+      },
+      text: normalized.join(model.getEOL()),
+    }])
+    editor.setPosition({ lineNumber: pos.lineNumber, column: 1 })
+    editor.focus()
+    showToast(t.palette.normalizeTableDone, "success")
+  }, [t])
+
   const handleOpenMacros = useCallback(async () => {
     const vaultPath = vaultRef.current.vaultPath
     if (!vaultPath) return
@@ -2799,9 +3012,284 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     await vaultRef.current.openFilePath(mp)
   }, [])
 
+  // Dismiss the focus popover on Escape or a click outside it. The toolbar
+  // button is excluded: it toggles, and letting this handler also fire would
+  // close and reopen on the same press.
+  useEffect(() => {
+    if (!focusPopoverOpen) return
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (focusPopoverRef.current?.contains(target)) return
+      if ((target as HTMLElement).closest?.(".menubar-direct-btn, .menubar-focus-clock")) return
+      setFocusPopoverOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFocusPopoverOpen(false) }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [focusPopoverOpen])
+
+  // ── Folder rules ──────────────────────────────────────────────────────────
+  const folderRules = useFolderRules(vault.vaultPath)
+  /** The open rules editor, with the folder's rules already read from disk. */
+  const [folderRulesEditor, setFolderRulesEditor] = useState<{ dirPath: string; rules: FolderRules | null } | null>(null)
+  /** Folder preselected as the destination by "New from template" on a folder. */
+  const [templateTargetDir, setTemplateTargetDir] = useState<string | undefined>(undefined)
+
+  // Read the rules BEFORE opening: the modal seeds its form from them on mount,
+  // so handing it a null that fills in later would leave the form blank.
+  const handleEditFolderRules = useCallback(async (dirPath: string) => {
+    const rules = await folderRules.readOwn(dirPath)
+    setFolderRulesEditor({ dirPath, rules })
+  }, [folderRules])
+
+  const handleSaveFolderRules = useCallback(async (dirPath: string, rules: FolderRules) => {
+    try {
+      await folderRules.write(dirPath, rules)
+      showToast(t.folderRules.saved, "success")
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [folderRules, t])
+
+  /**
+   * Create a file honouring the destination folder's rules: filename pattern,
+   * default template and default frontmatter.
+   *
+   * `explicitContent` short-circuits the template lookup — the template picker
+   * already resolved which template to use, and the folder's default must not
+   * override the user's explicit choice.
+   */
+  const createFileWithRules = useCallback(async (
+    name: string,
+    parentDir?: string,
+    explicitContent?: string,
+  ) => {
+    const dir = parentDir ?? vaultRef.current.vaultPath
+    const rules = dir ? await folderRules.resolve(dir) : null
+
+    const fileName = applyFilenamePattern(rules, name)
+    let content = explicitContent
+    if (content === undefined) {
+      const templateId = rules?.defaultTemplate
+      const template = templateId
+        ? [...TEMPLATES, ...loadCustomTemplates()].find((tpl) => tpl.id === templateId)
+        : undefined
+      content = template ? processTemplateVariables(template.content, fileName) : ""
+    }
+    await vaultRef.current.createFile(fileName, applyFolderFrontmatter(rules, content), parentDir)
+  }, [folderRules])
+
+  const handleTreeCreateFile = useCallback((name: string, parentDir?: string) => {
+    void createFileWithRules(name, parentDir)
+  }, [createFileWithRules])
+
+  const handleTreeCreateFolder = useCallback((name: string, parentDir?: string) => {
+    void vaultRef.current.createFolder(name, parentDir)
+  }, [])
+
+  const handleNewFromTemplateIn = useCallback((parentDir: string) => {
+    setTemplateTargetDir(parentDir)
+    setTemplateOpen(true)
+  }, [])
+
   const handleCreateFromTemplate = useCallback(async (name: string, content: string) => {
-    await vault.createFile(name, content)
-  }, [vault])
+    await createFileWithRules(name, templateTargetDir, content)
+    setTemplateTargetDir(undefined)
+  }, [createFileWithRules, templateTargetDir])
+
+  /**
+   * Split the active document at its H2s into sibling files, replacing each
+   * section with a `![[transclusion]]`.
+   *
+   * The intended use is the long "one file per subject, written class by class"
+   * note: it keeps rendering identically (the transclusions inline the parts)
+   * while each class becomes independently editable and linkable.
+   */
+  const handleSplitIntoSections = useCallback(async () => {
+    const file = vaultRef.current.openFile
+    const vaultPath = vaultRef.current.vaultPath
+    if (!file || !vaultPath) return
+
+    const { preamble, sections } = splitIntoSections(file.content, 2)
+    if (sections.length < 2) {
+      showToast(t.splitSections.needSections, "info")
+      return
+    }
+
+    const dir = pathDirname(file.path)
+    const stem = displayBasename(file.path).replace(/\.[^.]+$/, "")
+    const ok = await tauriConfirm(
+      t.splitSections.confirm(sections.length, stem),
+      { title: t.splitSections.title, kind: "warning" },
+    )
+    if (!ok) return
+
+    try {
+      const links: string[] = []
+      for (const [i, section] of sections.entries()) {
+        const name = `${stem}-${sectionSlug(section.title, i)}`
+        const target = await pathJoin(dir, `${name}.md`)
+        // Never clobber: a name collision means an existing note, and losing it
+        // would be far worse than refusing to split.
+        if (await exists(target)) {
+          showToast(t.splitSections.exists(`${name}.md`), "error")
+          return
+        }
+        await vaultRef.current.writeFileSafe(target, section.text)
+        links.push(`![[${name}]]`)
+      }
+      // The original keeps its preamble and becomes an index of transclusions,
+      // so the rendered output is unchanged.
+      const rewritten = `${preamble.replace(/\s+$/, "")}\n\n${links.join("\n\n")}\n`
+      await vaultRef.current.writeFileSafe(file.path, rewritten)
+      await vaultRef.current.refreshTree(vaultPath)
+      showToast(t.splitSections.done(sections.length), "success")
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [t])
+
+  /**
+   * Fill `{{?}}` gaps with the AI.
+   *
+   * With no argument it fills the gap under the cursor; `"all"` sweeps the whole
+   * document. Every replacement goes through `executeEdits`, so the result is a
+   * normal undo step and never touches the disk directly — the project's
+   * standing rule for AI edits.
+   */
+  const handleFillGaps = useCallback(async (scope: "cursor" | "all" = "cursor") => {
+    const editor = editorRef.current
+    const model = editor?.getModel()
+    if (!editor || !model) return
+    if (!isAiReady(settingsRef.current)) {
+      showToast(t.ai.cmdk.disabledHint, "info")
+      return
+    }
+
+    const initialText = model.getValue()
+    const cursorGap = gapAtOffset(
+      initialText,
+      model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }),
+    )
+    const remaining = scope === "all" ? findGaps(initialText).length : cursorGap ? 1 : 0
+
+    if (remaining === 0) {
+      showToast(scope === "all" ? t.aiGaps.noneFound : t.aiGaps.noGapAtCursor, "info")
+      return
+    }
+
+    setFillingGaps(true)
+    let filled = 0
+    // Leading gaps the model returned nothing for. A successful fill REMOVES its
+    // marker, so the list shrinks and this index keeps pointing at the next
+    // unprocessed gap; without it, one unanswerable gap was re-sent on every
+    // remaining iteration and the rest were never reached.
+    let skipped = 0
+    try {
+      // Offsets are re-derived from the CURRENT model on every iteration:
+      // filling one gap shifts every later offset, so precomputed ranges would
+      // land in the wrong place.
+      for (let n = 0; n < remaining; n++) {
+        const current = model.getValue()
+        const gap = scope === "all"
+          ? findGaps(current)[skipped]
+          : gapAtOffset(current, model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }))
+        if (!gap) break
+
+        const answer = cleanGapCompletion(await sendInlineEdit(settingsRef.current, {
+          instruction: gap.hint
+            ? `Fill in the gap. The author's hint for what belongs here: ${gap.hint}`
+            : "Fill in the gap with the text that belongs at this position.",
+          selection: "",
+          hasSelection: false,
+          documentContext: gapContext(current, gap),
+        }))
+        if (!answer) { skipped++; continue }
+
+        editor.executeEdits("fill-gap", [{
+          range: monacoRange(model, gap.start, gap.end),
+          text: answer,
+        }])
+        filled++
+      }
+      showToast(filled > 0 ? t.aiGaps.filled(filled) : t.aiGaps.nothingGenerated, filled > 0 ? "success" : "info")
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    } finally {
+      setFillingGaps(false)
+    }
+  }, [t])
+
+  /** Turn an existing note into a reusable custom template. */
+  const handleSaveAsTemplate = useCallback(async (node: FileNode) => {
+    try {
+      // Prefer the open tab's buffer: it may hold edits not yet on disk.
+      const openTab = openTabsRef.current.find((tab) => tab.path === node.path)
+      const raw = openTab ? openTab.content : toEditorContent(node.path, await readTextFile(node.path))
+      const suggested = node.name.replace(/\.[^.]+$/, "")
+      const name = window.prompt(t.folderRules.templateNamePrompt, suggested)?.trim()
+      if (!name) return
+      saveCustomTemplate({
+        name,
+        description: t.templateModal.defaultDescription,
+        icon: "◇",
+        content: parameterizeDocument(raw, node.name),
+      })
+      showToast(t.folderRules.savedAsTemplate(name), "success")
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), "error")
+    }
+  }, [t])
+
+  /**
+   * Rewrite the generated files declared by the folder under the cursor.
+   *
+   * A target that already holds hand-written content is skipped with a toast
+   * rather than overwritten — regeneration must never destroy prose.
+   */
+  const handleRegenerateFolderFiles = useCallback(async (dirPath?: string) => {
+    const vaultPath = vaultRef.current.vaultPath
+    if (!vaultPath) return
+    const dir = dirPath
+      ?? (activeFilePathRef.current ? pathDirname(activeFilePathRef.current) : vaultPath)
+
+    const rules = await folderRules.resolve(dir)
+    if (!rules?.generated || rules.generated.length === 0) {
+      showToast(t.folderRules.regenerateNoRules, "info")
+      return
+    }
+
+    let written = 0
+    for (const rule of rules.generated) {
+      const targetPath = await pathJoin(dir, rule.file)
+      try {
+        if (await exists(targetPath)) {
+          const current = await readTextFile(targetPath)
+          if (!isGeneratedFile(current)) {
+            showToast(t.folderRules.skippedNotGenerated(rule.file), "error")
+            continue
+          }
+        }
+        // The generated file must never feed itself: excluding it keeps a task
+        // list from re-collecting the tasks it just wrote out.
+        const scopeRoot = rule.scope === "vault" ? vaultPath : dir
+        const sources = (await collectSourceFiles(scopeRoot, rule.scope === "vault"))
+          .filter((file) => file.path !== targetPath)
+        await vaultRef.current.writeFileSafe(targetPath, runGenerator(rule.type, sources))
+        written++
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    }
+    if (written > 0) {
+      await vaultRef.current.refreshTree(vaultPath)
+      showToast(t.folderRules.regenerated(written), "success")
+    }
+  }, [folderRules, t])
 
   // ── Rename with wikilink refactor ─────────────────────────────────────────
   // ── Todo panel handlers ────────────────────────────────────────────────────
@@ -2885,6 +3373,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const sanitizeFileName = (name: string) =>
     name.replace(/[/\\]/g, "_").replace(/\.\./g, "__").replace(/[<>:"|?*]/g, "_") || "file"
 
+  /**
+   * `name`, or `name-2`, `name-3`… until it does not exist inside `dir`.
+   * Pasted screenshots very often share a name, and overwriting one silently
+   * would destroy an image already referenced by another note.
+   */
+  const uniqueAssetName = useCallback(async (dir: string, name: string): Promise<string> => {
+    const dot = name.lastIndexOf(".")
+    const stem = dot > 0 ? name.slice(0, dot) : name
+    const ext = dot > 0 ? name.slice(dot) : ""
+    for (let n = 1; n < 1000; n++) {
+      const candidate = n === 1 ? name : `${stem}-${n}${ext}`
+      if (!(await exists(await pathJoin(dir, candidate)))) return candidate
+    }
+    return `${stem}-${timestampSlug()}${ext}`
+  }, [])
+
   // ── Drag-and-drop images ──────────────────────────────────────────────────
   const handleDragOver = useCallback((e: React.DragEvent) => {
     const hasFiles = Array.from(e.dataTransfer.items).some((i) => i.kind === "file")
@@ -2963,26 +3467,35 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       for (const file of images) {
         const ext = IMAGE_EXTS[file.type] ?? "png"
-        const rawName = file.name || `pasted-${Date.now()}.${ext}`
-        const fileName = sanitizeFileName(rawName)
-        // @ts-expect-error — Tauri expone file.path
-        const sourcePath: string | undefined = file.path
-        if (!sourcePath) {
-          showToast(t.app.noClipboardPath, "error")
-          continue
-        }
+        // A screenshot pasted straight from the clipboard has no name at all;
+        // a timestamp keeps successive pastes apart.
+        const rawName = file.name || `pegada-${timestampSlug()}.${ext}`
         try {
           const assetsDir = await pathJoin(vault.vaultPath, "assets")
           await mkdir(assetsDir, { recursive: true })
+          // Never clobber an existing asset — two screenshots both called
+          // "image.png" would otherwise silently overwrite each other.
+          const fileName = await uniqueAssetName(assetsDir, sanitizeFileName(rawName))
           const destPath = await pathJoin(assetsDir, fileName)
-          await copyFile(sourcePath, destPath)
-          await vault.loadVault()
+
+          // @ts-expect-error — Tauri expone file.path en los File del portapapeles
+          const sourcePath: string | undefined = file.path
+          if (sourcePath) {
+            await copyFile(sourcePath, destPath)
+          } else {
+            // No backing file on disk: the clipboard holds raw bytes (the normal
+            // case for a screenshot). Write them ourselves rather than giving up,
+            // which is what made "pegar imágenes" look unimplemented.
+            await writeFile(destPath, new Uint8Array(await file.arrayBuffer()))
+          }
+
+          await vault.refreshTree(vault.vaultPath)
           const editor = editorRef.current
           if (editor) {
-            const pos = editor.getPosition()
+            const selection = editor.getSelection()
             const insertion = `![${fileName.replace(/\.[^.]+$/, "")}](assets/${fileName})`
             editor.executeEdits("paste", [{
-              range: { startLineNumber: pos?.lineNumber ?? 1, startColumn: pos?.column ?? 1, endLineNumber: pos?.lineNumber ?? 1, endColumn: pos?.column ?? 1 },
+              range: selection ?? { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
               text: insertion,
             }])
           }
@@ -2994,7 +3507,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     window.addEventListener("paste", handlePaste)
     return () => window.removeEventListener("paste", handlePaste)
-  }, [vault, t])
+  }, [vault, t, uniqueAssetName])
 
   // ── Resizers ──────────────────────────────────────────────────────────────
   const handleSidebarResize = useCallback((dx: number) => {
@@ -3104,7 +3617,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // be wasted work.
   const paletteCommands: PaletteCommand[] = useMemo(() => buildPaletteCommands({
     t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
-    setTableEditorOpen, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
+    setTableEditorOpen, handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
     setFocusMode, typewriterMode, syncScroll, wordWrap, minimapEnabled, spellcheck,
     updateSettings, handleCopyHtml, handleCopyLatex, handleVaultBackup, openCmdkRef,
     selectVault: vault.selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros,
@@ -3112,7 +3625,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
   }), [
     t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
-    handleInsertToc, handleInsertExcalidraw, typewriterMode, syncScroll, wordWrap,
+    handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, typewriterMode, syncScroll, wordWrap,
     minimapEnabled, spellcheck, updateSettings, handleCopyHtml, handleCopyLatex,
     handleVaultBackup, vault.selectVault, handleOpenDailyNote, handleOpenMacros,
     handleOpenBib, handleAddCommentAtCursor, handleToggleCommentAtCursor, goBack, goForward,
@@ -3139,9 +3652,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     t, hasFile, hasVault, deps, exportActions, selectVault: vault.selectVault, setTemplateOpen,
     handleSave, handleSaveAs, handleFind, openPanel, setPaletteOpen, setFocusMode,
     handleOpenMacros, handleOpenBib, setSettingsOpen, setHelpOpen, recentEntries,
+    runEditorAction, handleNormalizeTable, handleRegenerateFolderFiles,
   }), [
     t, hasFile, hasVault, deps, exportActions, vault.selectVault, handleSave, handleSaveAs,
     handleFind, openPanel, handleOpenMacros, handleOpenBib, recentEntries,
+    runEditorAction, handleNormalizeTable, handleRegenerateFolderFiles,
   ])
 
   const currentContent = vault.openFile?.content ?? WELCOME
@@ -3212,7 +3727,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         <Toolbar
           editorRef={editorRef}
           sidebarMode={sidebarMode}
-          setSidebarMode={openPanel}
+          setSidebarMode={togglePanel}
+          focusClock={focusClock}
+          focusOpen={focusPopoverOpen}
+          onToggleFocus={toggleFocusPopover}
         />
       </div>
 
@@ -3239,8 +3757,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 isLoading={vault.isLoading}
                 onSelectVault={handleSelectVault}
                 onOpenFile={handleOpenFileNode}
-                onCreateFile={vault.createFile}
-                onCreateFolder={vault.createFolder}
+                onCreateFile={handleTreeCreateFile}
+                onCreateFolder={handleTreeCreateFolder}
+                onNewFromTemplate={handleNewFromTemplateIn}
+                onEditFolderRules={(dir) => void handleEditFolderRules(dir)}
+                onSaveAsTemplate={handleSaveAsTemplate}
                 onDeleteFile={vault.deleteFile}
                 onRenameFile={handleRenameFile}
                 onMoveFile={vault.moveFile}
@@ -3433,22 +3954,6 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 />
               </Suspense>
             )}
-            {sidebarMode === "focusTimer" && (
-              <Suspense fallback={null}>
-                <FocusTimerPanel
-                  content={vault.openFile?.content ?? ""}
-                  config={pomodoroConfig}
-                  focusTimer={focusTimer}
-                  wordGoal={settings.wordGoal}
-                  onConfigChange={(patch) => updateSettings({
-                    ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
-                    ...(patch.breakMin !== undefined && { pomodoroBreakMin: patch.breakMin }),
-                    ...(patch.longBreakMin !== undefined && { pomodoroLongBreakMin: patch.longBreakMin }),
-                    ...(patch.cyclesBeforeLongBreak !== undefined && { pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak }),
-                  })}
-                />
-              </Suspense>
-            )}
             {sidebarMode === "help" && (
               <Suspense fallback={null}>
                 <HelpPanel />
@@ -3638,6 +4143,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         texEngineState={texEngineState}
         cloudSync={settings.cloudSyncDetectEnabled ? cloudInfo : null}
         cloudConflictCount={cloudConflicts.length}
+        readingWpm={settings.readingWpm}
+        fillingGaps={fillingGaps}
         onCloudSyncClick={() => openPanel("cloudSync")}
         onGoToLine={(line) => {
           const editor = editorRef.current
@@ -3710,6 +4217,35 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           open={templateOpen}
           onClose={() => setTemplateOpen(false)}
           onCreate={handleCreateFromTemplate}
+        />
+
+        {/* Focus view, detached from the top bar. Deliberately NOT a sidebar
+            panel: starting or resetting a timer is a glance-and-click action,
+            and it should not cost the file tree its place on screen. */}
+        {focusPopoverOpen && (
+          <div className="focus-popover" ref={focusPopoverRef} role="dialog" aria-label={t.sidebar.focusTimer}>
+            <Suspense fallback={null}>
+              <FocusTimerPanel
+                content={vault.openFile?.content ?? ""}
+                config={pomodoroConfig}
+                focusTimer={focusTimer}
+                wordGoal={settings.wordGoal}
+                onConfigChange={(patch) => updateSettings({
+                  ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
+                  ...(patch.breakMin !== undefined && { pomodoroBreakMin: patch.breakMin }),
+                  ...(patch.longBreakMin !== undefined && { pomodoroLongBreakMin: patch.longBreakMin }),
+                  ...(patch.cyclesBeforeLongBreak !== undefined && { pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak }),
+                })}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        <FolderRulesModal
+          dirPath={folderRulesEditor?.dirPath ?? null}
+          rules={folderRulesEditor?.rules ?? null}
+          onClose={() => setFolderRulesEditor(null)}
+          onSave={handleSaveFolderRules}
         />
 
         <CitationManager

@@ -455,3 +455,37 @@ describe("lintFileSummary", () => {
     expect(summary.warnings).toBe(0)
   })
 })
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+
+describe("lintTables", () => {
+  const tableMarkers = (text: string) =>
+    lint(text).filter((m) => m.message.includes("columna"))
+
+  it("flags a row with fewer columns than the header", () => {
+    const markers = tableMarkers("| a | b | c |\n|---|---|---|\n| 1 | 2 |\n")
+    expect(markers).toHaveLength(1)
+    expect(markers[0].severity).toBe(Severity.Warning)
+    expect(markers[0].startLineNumber).toBe(3)
+  })
+
+  it("flags a row with more columns than the header", () => {
+    const markers = tableMarkers("| a | b |\n|---|---|\n| 1 | 2 | 3 |\n")
+    expect(markers).toHaveLength(1)
+    expect(markers[0].startLineNumber).toBe(3)
+  })
+
+  it("stays quiet on a well-formed table, empty cells included", () => {
+    expect(tableMarkers("| a | b |\n|---|---|\n| 1 |   |\n|   | 2 |\n")).toHaveLength(0)
+  })
+
+  it("ignores a ragged table inside a fenced code block", () => {
+    expect(tableMarkers("```\n| a | b |\n|---|---|\n| 1 |\n```\n")).toHaveLength(0)
+  })
+
+  it("handles two separate tables independently", () => {
+    const markers = tableMarkers("| a | b |\n|---|---|\n| 1 | 2 |\n\n| x | y | z |\n|---|---|---|\n| 1 |\n")
+    expect(markers).toHaveLength(1)
+    expect(markers[0].startLineNumber).toBe(7)
+  })
+})

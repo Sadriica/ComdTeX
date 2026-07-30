@@ -23,6 +23,11 @@ export interface PaletteCommandsCtx {
   openPanel: (m: SidebarMode) => void
   palInsert: (snippet: string) => void
   setTableEditorOpen: (open: boolean) => void
+  handleNormalizeTable: () => void
+  handleRegenerateFolderFiles: () => void
+  handleSplitIntoSections: () => void
+  handleFillGaps: (scope?: "cursor" | "all") => void
+  toggleFocusPopover: () => void
   handleInsertToc: () => void
   handleInsertExcalidraw: () => void
   setCitationManagerOpen: (open: boolean) => void
@@ -56,7 +61,7 @@ export interface PaletteCommandsCtx {
 export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] {
   const {
     t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
-    setTableEditorOpen, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
+    setTableEditorOpen, handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
     setFocusMode, typewriterMode, syncScroll, wordWrap, minimapEnabled, spellcheck,
     updateSettings, handleCopyHtml, handleCopyLatex, handleVaultBackup, openCmdkRef,
     selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros, handleOpenBib,
@@ -110,6 +115,12 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
 
     // ── Insertar ─────────────────────────────────────────────────────────────
     { id: "ins:table",  label: t.palette.tableEditor,  category: "Insertar", action: () => setTableEditorOpen(true) },
+    { id: "fmt:normalizeTable", label: t.palette.normalizeTable, category: "Edición", keywords: ["tabla", "table", "columnas", "columns", "align"], action: handleNormalizeTable },
+    { id: "ai:fillGap",  label: t.aiGaps.fillAtCursor, category: "Edición", keywords: ["hueco", "gap", "ia", "ai", "completar"], action: () => handleFillGaps("cursor") },
+    { id: "ai:fillGaps", label: t.aiGaps.fillAll,      category: "Edición", keywords: ["huecos", "gaps", "ia", "ai", "completar", "todos"], action: () => handleFillGaps("all") },
+    { id: "ins:gap",     label: t.aiGaps.insertGap,    category: "Insertar", keywords: ["hueco", "gap", "placeholder"], action: () => palInsert("{{? ${1:pista}}}") },
+    { id: "doc:split", label: t.splitSections.command, category: "Edición", keywords: ["dividir", "split", "secciones", "sections", "transclusión"], action: handleSplitIntoSections },
+    { id: "vault:regenerate", label: t.folderRules.regenerate, category: "Vault", keywords: ["tareas", "tasks", "calendario", "calendar", "índice", "index", "carpeta", "folder"], action: handleRegenerateFolderFiles },
     { id: "toc",        label: t.palette.insertToc,    shortcut: "Ctrl+Shift+O", category: "Insertar", action: handleInsertToc },
     { id: "ins:code",   label: t.palette.insertCodeBlock,  category: "Insertar", action: () => palInsert("```${1:lang}\n${2:código}\n```") },
     { id: "ins:quote",  label: t.toolbar.quote,        category: "Insertar", action: () => palInsert("> ${1:cita}") },
@@ -209,7 +220,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     { id: "findVault",     label: t.palette.openPanel(t.sidebar.search),  shortcut: "Ctrl+Shift+F", category: "Vista", action: () => openPanel("search") },
     { id: "searchReplacePanel", label: t.palette.openPanel(t.sidebar.searchReplace), category: "Vista", action: () => openPanel("searchReplace") },
     { id: "viewPdf",       label: t.palette.openPanel(t.sidebar.pdfPreview), category: "Vista", action: () => openPanel("pdfPreview") },
-    { id: "focusTimer",    label: t.palette.openPanel(t.sidebar.focusTimer), category: "Vista", action: () => openPanel("focusTimer") },
+    { id: "focusTimer",    label: t.palette.openPanel(t.sidebar.focusTimer), category: "Vista", action: toggleFocusPopover },
     { id: "panel:cloud",   label: t.palette.openPanel(t.sidebar.cloudSync), category: "Vista", action: () => openPanel("cloudSync") },
     { id: "panel:help",    label: t.palette.openPanel(t.sidebar.help),    category: "Vista", action: () => openPanel("help") },
     { id: "focus",         label: t.palette.focusMode,       shortcut: "F11",  category: "Vista", action: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }) },

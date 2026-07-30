@@ -27,14 +27,24 @@ export interface BuildMenusCtx {
   handleOpenBib: () => void
   setSettingsOpen: (open: boolean) => void
   setHelpOpen: (open: boolean) => void
+  /** Runs one of the editor's built-in edit commands (see `EditorActionId`). */
+  runEditorAction: (id: EditorActionId) => void
+  handleNormalizeTable: () => void
+  handleRegenerateFolderFiles: () => void
   recentEntries: MenuEntry[]
 }
+
+/** The edit operations surfaced in the Edición menu. */
+export type EditorActionId =
+  | "undo" | "redo" | "cut" | "copy" | "paste" | "selectAll"
+  | "duplicateLine" | "moveLineUp" | "moveLineDown" | "toggleComment"
 
 export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
   const {
     t, hasFile, hasVault, deps, exportActions, selectVault, setTemplateOpen,
     handleSave, handleSaveAs, handleFind, openPanel, setPaletteOpen, setFocusMode,
     handleOpenMacros, handleOpenBib, setSettingsOpen, setHelpOpen, recentEntries,
+    runEditorAction, handleNormalizeTable, handleRegenerateFolderFiles,
   } = ctx
 
   return [
@@ -67,6 +77,24 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
     {
       label: t.menus.edit,
       entries: [
+        // These are all pre-existing editor capabilities; they were only ever
+        // reachable by shortcut, which made them invisible to anyone who did not
+        // already know them.
+        { label: t.menus.undo,            shortcut: "Ctrl+Z",       disabled: !hasFile, action: () => runEditorAction("undo") },
+        { label: t.menus.redo,            shortcut: "Ctrl+Shift+Z", disabled: !hasFile, action: () => runEditorAction("redo") },
+        { separator: true },
+        { label: t.menus.cut,             shortcut: "Ctrl+X",       disabled: !hasFile, action: () => runEditorAction("cut") },
+        { label: t.menus.copy,            shortcut: "Ctrl+C",       disabled: !hasFile, action: () => runEditorAction("copy") },
+        { label: t.menus.paste,           shortcut: "Ctrl+V",       disabled: !hasFile, action: () => runEditorAction("paste") },
+        { label: t.menus.selectAll,       shortcut: "Ctrl+A",       disabled: !hasFile, action: () => runEditorAction("selectAll") },
+        { separator: true },
+        { label: t.menus.duplicateLine,   shortcut: "Ctrl+Shift+D", disabled: !hasFile, action: () => runEditorAction("duplicateLine") },
+        { label: t.menus.moveLineUp,      shortcut: "Alt+↑",        disabled: !hasFile, action: () => runEditorAction("moveLineUp") },
+        { label: t.menus.moveLineDown,    shortcut: "Alt+↓",        disabled: !hasFile, action: () => runEditorAction("moveLineDown") },
+        { label: t.menus.toggleComment,   shortcut: "Ctrl+/",       disabled: !hasFile, action: () => runEditorAction("toggleComment") },
+        { separator: true },
+        { label: t.palette.normalizeTable,                          disabled: !hasFile, action: handleNormalizeTable },
+        { separator: true },
         { label: t.menus.findInFile,      shortcut: "Ctrl+F",       disabled: !hasFile, action: handleFind },
         { label: t.menus.searchVault,     shortcut: "Ctrl+Shift+F",                     action: () => openPanel("search") },
         { separator: true },
@@ -87,6 +115,8 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
     {
       label: t.menus.vault,
       entries: [
+        { label: t.folderRules.regenerate, disabled: !hasVault, action: handleRegenerateFolderFiles },
+        { separator: true },
         { label: t.menus.editMacros,  disabled: !hasVault, action: handleOpenMacros },
         { label: t.menus.editBib,     disabled: !hasVault, action: handleOpenBib },
         { separator: true },

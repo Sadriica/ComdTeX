@@ -329,6 +329,46 @@ export function loadCustomTemplates(): Template[] {
   }
 }
 
+/**
+ * Turn an existing document into a reusable template by replacing the parts that
+ * are specific to *that* note with template variables.
+ *
+ * Deliberately conservative — it only rewrites things that are unambiguously
+ * per-note metadata (the frontmatter `title`/`date`, the H1 when it matches the
+ * title, and ISO dates in the frontmatter block). Body prose is left alone: a
+ * date mentioned inside a paragraph is content, not a field, and rewriting it
+ * would corrupt the template silently.
+ */
+export function parameterizeDocument(content: string, filename?: string): string {
+  const stem = filename?.replace(/\.[^.]+$/, "") ?? ""
+  const fmEnd = /^---\r?\n[\s\S]*?\r?\n---/.exec(content)
+  let title: string | null = null
+
+  let out = content
+  if (fmEnd) {
+    let block = fmEnd[0]
+    const titleMatch = /^title:[ \t]*(.+)$/m.exec(block)
+    if (titleMatch) {
+      title = titleMatch[1].trim().replace(/^["']|["']$/g, "")
+      block = block.replace(/^title:[ \t]*.+$/m, "title: {{title}}")
+    }
+    // Any ISO date inside the frontmatter is a field value, safe to template.
+    block = block.replace(/\b\d{4}-\d{2}-\d{2}\b/g, "{{date}}")
+    out = block + content.slice(fmEnd[0].length)
+  }
+
+  // The H1 only becomes {{title}} when it restates the note's identity —
+  // otherwise it is a real heading that belongs in the template as-is.
+  const h1 = /^#[ \t]+(.+)$/m.exec(out)
+  if (h1) {
+    const heading = h1[1].trim()
+    if ((title && heading === title) || (stem && heading === stem)) {
+      out = out.replace(/^#[ \t]+.+$/m, "# {{title}}")
+    }
+  }
+  return out
+}
+
 export function saveCustomTemplate(template: Omit<Template, "id" | "custom">): Template[] {
   const templates = loadCustomTemplates()
   const next: Template = {

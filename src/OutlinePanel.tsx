@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { computeSectionWordCounts } from "./sectionWordCount"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -30,6 +31,15 @@ interface OutlinePanelProps {
 export default function OutlinePanel({ content, editorRef, activeLine, onReorder }: OutlinePanelProps) {
   const t = useT()
   const headings = useMemo(() => parseHeadings(content), [content])
+  const [query, setQuery] = useState("")
+  // Keep each heading's ORIGINAL index: it is the reorder key, so filtering with
+  // renumbered indices would move the wrong section.
+  const visible = useMemo(
+    () => headings
+      .map((h, i) => ({ h, i }))
+      .filter(({ h }) => matchesQuery(h.text, query)),
+    [headings, query],
+  )
   const sectionCounts = useMemo(() => computeSectionWordCounts(content), [content])
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
 
@@ -67,11 +77,18 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
   }
 
   const totalWords = [...sectionCounts.values()].reduce((a, b) => a + b, 0)
-  const canReorder = !!onReorder
+  // Dragging a filtered list would reorder against rows the user cannot see.
+  const canReorder = !!onReorder && !query.trim()
 
   return (
     <div className="outline-panel">
-      {headings.map((h, i) => {
+      <PanelSearch
+        value={query}
+        onChange={setQuery}
+        placeholder={t.outline.filterPlaceholder}
+        resultCount={{ shown: visible.length, total: headings.length }}
+      />
+      {visible.map(({ h, i }) => {
         const count = sectionCounts.get(h.line)
         const isDragging = dragIdx === i
         const isDropTarget = dropIdx === i && dragIdx !== i && dragIdx !== null

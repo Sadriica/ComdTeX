@@ -12,6 +12,11 @@ import {
   formatClock,
   startSession,
   sessionStats,
+  resumeSession,
+  pauseSession,
+  countPomodoro,
+  touchFile,
+  recordPeak,
 } from "./pomodoro"
 
 const CONFIG: PomodoroConfig = {
@@ -210,5 +215,96 @@ describe("writing-session stats", () => {
     const stats = sessionStats(sess, t0 + 60_000, 80)
     expect(stats.wordsWritten).toBe(-20)
     expect(stats.wpm).toBe(-20)
+  })
+})
+
+// ── Extended session stats ────────────────────────────────────────────────────
+
+describe("session active vs paused time", () => {
+  const T0 = 1_700_000_000_000
+
+  it("counts no active time until the timer is resumed", () => {
+    const s = startSession(T0, 0)
+    const stats = sessionStats(s, T0 + 60_000, 0)
+    expect(stats.elapsedSec).toBe(60)
+    expect(stats.activeSec).toBe(0)
+    expect(stats.pausedSec).toBe(60)
+  })
+
+  it("accumulates active time across resume/pause cycles", () => {
+    let s = startSession(T0, 0)
+    s = resumeSession(s, T0)
+    s = pauseSession(s, T0 + 30_000)
+    s = resumeSession(s, T0 + 60_000)
+    s = pauseSession(s, T0 + 80_000)
+    expect(sessionStats(s, T0 + 100_000, 0).activeSec).toBe(50)
+    expect(sessionStats(s, T0 + 100_000, 0).pausedSec).toBe(50)
+  })
+
+  it("advances active time live while running", () => {
+    let s = startSession(T0, 0)
+    s = resumeSession(s, T0)
+    expect(sessionStats(s, T0 + 10_000, 0).activeSec).toBe(10)
+    expect(sessionStats(s, T0 + 20_000, 0).activeSec).toBe(20)
+  })
+
+  it("ignores a redundant resume or pause", () => {
+    let s = startSession(T0, 0)
+    s = resumeSession(s, T0)
+    s = resumeSession(s, T0 + 10_000)
+    expect(sessionStats(s, T0 + 20_000, 0).activeSec).toBe(20)
+    s = pauseSession(s, T0 + 20_000)
+    s = pauseSession(s, T0 + 40_000)
+    expect(sessionStats(s, T0 + 60_000, 0).activeSec).toBe(20)
+  })
+
+  it("rates words against active time, not wall-clock time", () => {
+    let s = startSession(T0, 0)
+    s = resumeSession(s, T0)
+    s = pauseSession(s, T0 + 60_000)
+    // 120 words in 60 active seconds, but 120 wall-clock seconds.
+    const stats = sessionStats(s, T0 + 120_000, 120)
+    expect(stats.activeWpm).toBe(120)
+    expect(stats.wpm).toBe(60)
+  })
+})
+
+describe("session pomodoro and file counters", () => {
+  const T0 = 1_700_000_000_000
+
+  it("counts completed pomodoros and words per pomodoro", () => {
+    let s = startSession(T0, 100)
+    s = countPomodoro(s)
+    s = countPomodoro(s)
+    const stats = sessionStats(s, T0 + 1000, 400)
+    expect(stats.pomodorosCompleted).toBe(2)
+    expect(stats.wordsPerPomodoro).toBe(150)
+  })
+
+  it("reports zero words per pomodoro before the first one completes", () => {
+    const s = startSession(T0, 0)
+    expect(sessionStats(s, T0 + 1000, 50).wordsPerPomodoro).toBe(0)
+  })
+
+  it("counts each touched file once", () => {
+    let s = startSession(T0, 0)
+    s = touchFile(s, "/v/a.md")
+    s = touchFile(s, "/v/b.md")
+    s = touchFile(s, "/v/a.md")
+    expect(sessionStats(s, T0 + 1000, 0).filesTouched).toBe(2)
+  })
+
+  it("ignores an empty path", () => {
+    const s = touchFile(startSession(T0, 0), "")
+    expect(sessionStats(s, T0 + 1000, 0).filesTouched).toBe(0)
+  })
+
+  it("keeps the peak word count after a large delete", () => {
+    let s = startSession(T0, 0)
+    s = recordPeak(s, 500)
+    s = recordPeak(s, 300)
+    const stats = sessionStats(s, T0 + 1000, 300)
+    expect(stats.peakWordsWritten).toBe(500)
+    expect(stats.wordsWritten).toBe(300)
   })
 })

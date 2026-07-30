@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useT } from "./i18n"
+import { matchesQuery } from "./PanelSearch"
 
 interface MathSymbol {
   display: string
@@ -238,9 +239,9 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
 
   const filtered = query
     ? SYMBOLS.filter(s =>
-        s.name.toLowerCase().includes(query) ||
-        s.latex.toLowerCase().includes(query) ||
-        s.keywords.some(k => k.toLowerCase().includes(query))
+        matchesQuery(s.name, query) ||
+        matchesQuery(s.latex, query) ||
+        s.keywords.some(k => matchesQuery(k, query))
       )
     : activeCategory === "all"
       ? SYMBOLS

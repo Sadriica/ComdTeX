@@ -1,6 +1,7 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface Equation {
@@ -33,6 +34,14 @@ interface EquationsPanelProps {
 export default function EquationsPanel({ content, editorRef }: EquationsPanelProps) {
   const t = useT()
   const equations = useMemo(() => parseEquations(content), [content])
+  const [query, setQuery] = useState("")
+  // Match on the number, the label and the rendered preview — a long document's
+  // equation list is otherwise only navigable by scrolling.
+  const visible = useMemo(
+    () => equations.filter((eq) =>
+      matchesQuery(`(${eq.number}) ${eq.label ?? ""} ${eq.preview}`, query)),
+    [equations, query],
+  )
 
   if (equations.length === 0) {
     return (
@@ -54,7 +63,12 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
   return (
     <div className="eq-list-panel">
       <div className="panel-header">{t.equations.count(equations.length)}</div>
-      {equations.map((eq) => (
+      <PanelSearch
+        value={query}
+        onChange={setQuery}
+        resultCount={{ shown: visible.length, total: equations.length }}
+      />
+      {visible.map((eq) => (
         <button
           key={eq.number}
           className="eq-list-item"

@@ -1,6 +1,7 @@
-import { useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import PanelSearch, { matchesQuery } from "./PanelSearch"
 import type { OpenFile } from "./types"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -57,6 +58,20 @@ export default function EnvironmentsPanel({
 }: EnvironmentsPanelProps) {
   const t = useT()
   const items = useMemo(() => parseEnvironments(openTabs), [openTabs])
+  const typeLabels = t.environments.types as Record<string, string>
+  // Declared before the filter memo below, which runs during render and would
+  // otherwise hit the temporal dead zone.
+  const typeLabel = useCallback(
+    (type: string): string => typeLabels[type] ?? type,
+    [typeLabels],
+  )
+  const [query, setQuery] = useState("")
+  // Matches the translated label too, so searching "teorema" finds :::theorem.
+  const visible = useMemo(
+    () => items.filter((item) =>
+      matchesQuery(`${typeLabel(item.type)} ${item.type} ${item.title ?? ""} ${item.fileName}`, query)),
+    [items, query, typeLabel],
+  )
 
   if (items.length === 0) {
     return (
@@ -85,14 +100,15 @@ export default function EnvironmentsPanel({
     }
   }
 
-  const typeLabel = (type: string): string => {
-    return (t.environments.types as Record<string, string>)[type] ?? type
-  }
-
   return (
     <div className="env-list-panel">
       <div className="panel-header">{t.environments.count(items.length)}</div>
-      {items.map((item, idx) => (
+      <PanelSearch
+        value={query}
+        onChange={setQuery}
+        resultCount={{ shown: visible.length, total: items.length }}
+      />
+      {visible.map((item, idx) => (
         <div
           key={idx}
           className="env-list-item"

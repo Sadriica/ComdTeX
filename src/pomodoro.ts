@@ -126,20 +126,89 @@ export interface WritingSession {
   startedAt: number
   /** Word count captured when the session began. */
   baselineWords: number
+  /** Whole seconds the timer spent running (accumulated on each pause). */
+  activeSec: number
+  /** Epoch ms of the last resume, or null while paused. */
+  runningSince: number | null
+  /** Work phases completed during this session. */
+  pomodorosCompleted: number
+  /** Vault-relative or absolute paths edited during the session. */
+  filesTouched: string[]
+  /** Peak net word count reached, so a big delete does not erase the record. */
+  peakWordsWritten: number
 }
 
 export interface SessionStats {
   /** Net words written since the session began (can be negative on deletes). */
   wordsWritten: number
-  /** Whole seconds elapsed since the session began. */
+  /** Whole seconds elapsed since the session began (wall clock). */
   elapsedSec: number
   /** Words per minute over the elapsed time (0 until at least one second). */
   wpm: number
+  /** Seconds the timer was actually running — excludes paused time. */
+  activeSec: number
+  /** Seconds elapsed while paused. */
+  pausedSec: number
+  /** Words per minute counting only active time; the honest writing rate. */
+  activeWpm: number
+  pomodorosCompleted: number
+  /** Average net words per completed pomodoro (0 before the first one). */
+  wordsPerPomodoro: number
+  filesTouched: number
+  /** The highest net word count the session reached. */
+  peakWordsWritten: number
 }
 
 /** Begin a writing session at `now` with the current document word count. */
 export function startSession(now: number, currentWords: number): WritingSession {
-  return { startedAt: now, baselineWords: currentWords }
+  return {
+    startedAt: now,
+    baselineWords: currentWords,
+    activeSec: 0,
+    runningSince: null,
+    pomodorosCompleted: 0,
+    filesTouched: [],
+    peakWordsWritten: 0,
+  }
+}
+
+/** Mark the timer as running from `now`. Idempotent while already running. */
+export function resumeSession(session: WritingSession, now: number): WritingSession {
+  if (session.runningSince !== null) return session
+  return { ...session, runningSince: now }
+}
+
+/** Bank the time run so far and stop counting active seconds. */
+export function pauseSession(session: WritingSession, now: number): WritingSession {
+  if (session.runningSince === null) return session
+  return {
+    ...session,
+    activeSec: session.activeSec + Math.max(0, Math.floor((now - session.runningSince) / 1000)),
+    runningSince: null,
+  }
+}
+
+/** Record that a work phase finished during this session. */
+export function countPomodoro(session: WritingSession): WritingSession {
+  return { ...session, pomodorosCompleted: session.pomodorosCompleted + 1 }
+}
+
+/** Record that `path` was edited. Repeat calls for the same file are no-ops. */
+export function touchFile(session: WritingSession, path: string): WritingSession {
+  if (!path || session.filesTouched.includes(path)) return session
+  return { ...session, filesTouched: [...session.filesTouched, path] }
+}
+
+/**
+ * Update the high-water mark of words written.
+ *
+ * Tracked separately from the live count so that deleting a paragraph near the
+ * end of a session does not retroactively make the whole session look
+ * unproductive — both numbers are shown.
+ */
+export function recordPeak(session: WritingSession, currentWords: number): WritingSession {
+  const written = currentWords - session.baselineWords
+  return written > session.peakWordsWritten ? { ...session, peakWordsWritten: written } : session
 }
 
 /**
@@ -151,5 +220,26 @@ export function sessionStats(session: WritingSession, now: number, currentWords:
   const wordsWritten = currentWords - session.baselineWords
   const elapsedSec = Math.max(0, Math.floor((now - session.startedAt) / 1000))
   const wpm = elapsedSec >= 1 ? Math.round((wordsWritten / elapsedSec) * 60) : 0
-  return { wordsWritten, elapsedSec, wpm }
+
+  // Include the in-flight run so the number advances live rather than only
+  // jumping when the user pauses.
+  const inFlight = session.runningSince !== null
+    ? Math.max(0, Math.floor((now - session.runningSince) / 1000))
+    : 0
+  const activeSec = session.activeSec + inFlight
+
+  return {
+    wordsWritten,
+    elapsedSec,
+    wpm,
+    activeSec,
+    pausedSec: Math.max(0, elapsedSec - activeSec),
+    activeWpm: activeSec >= 1 ? Math.round((wordsWritten / activeSec) * 60) : 0,
+    pomodorosCompleted: session.pomodorosCompleted,
+    wordsPerPomodoro: session.pomodorosCompleted > 0
+      ? Math.round(wordsWritten / session.pomodorosCompleted)
+      : 0,
+    filesTouched: session.filesTouched.length,
+    peakWordsWritten: Math.max(session.peakWordsWritten, wordsWritten),
+  }
 }

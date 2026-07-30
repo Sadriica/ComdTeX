@@ -12,6 +12,11 @@ import {
   pause,
   reset,
   startSession,
+  resumeSession,
+  pauseSession,
+  countPomodoro,
+  touchFile,
+  recordPeak,
 } from "./pomodoro"
 
 /**
@@ -47,7 +52,7 @@ export interface FocusTimer {
  * The interval is armed ONLY while the timer is running or a session is open, so
  * an idle timer costs nothing (no per-second re-render of AppContent).
  */
-export function useFocusTimer(config: PomodoroConfig, content: string): FocusTimer {
+export function useFocusTimer(config: PomodoroConfig, content: string, activePath?: string | null): FocusTimer {
   const t = useT()
   const [timer, setTimer] = useState<PomodoroState>(() => createState(config))
   const [session, setSession] = useState<WritingSession | null>(null)
@@ -70,6 +75,8 @@ export function useFocusTimer(config: PomodoroConfig, content: string): FocusTim
   // Initialised to 0 and stamped with Date.now() inside the effect when the
   // interval arms — never read before that, so the placeholder is never used.
   const lastTickRef = useRef(0)
+  const activePathRef = useRef(activePath ?? null)
+  useEffect(() => { activePathRef.current = activePath ?? null }, [activePath])
 
   const phaseLabel = useCallback((phase: Phase): string =>
     phase === "work" ? tRef.current.focusTimer.phaseWork
@@ -92,8 +99,18 @@ export function useFocusTimer(config: PomodoroConfig, content: string): FocusTim
         if (phaseCompleted) {
           // The phase that just finished is the one we were *in* before the tick.
           showToast(tRef.current.focusTimer.phaseDone(phaseLabel(prev.phase)), "info")
+          // Only a finished WORK phase is a pomodoro; breaks are not counted.
+          if (prev.phase === "work") setSession((s) => (s ? countPomodoro(s) : s))
         }
         return state
+      })
+      // Refresh the derived session counters on the same 1 Hz beat, so they cost
+      // nothing while the timer is idle.
+      setSession((s) => {
+        if (!s) return s
+        const withPeak = recordPeak(s, wordCount(contentRef.current))
+        const path = activePathRef.current
+        return path ? touchFile(withPeak, path) : withPeak
       })
     }, 1000)
     return () => clearInterval(id)
@@ -107,11 +124,17 @@ export function useFocusTimer(config: PomodoroConfig, content: string): FocusTim
 
   const startTimer = useCallback(() => {
     setTimer((prev) => start(prev))
-    // Begin (or keep) a writing session anchored to the current word count.
-    setSession((prev) => prev ?? startSession(Date.now(), wordCount(contentRef.current)))
+    const ts = Date.now()
+    // Begin (or keep) a writing session anchored to the current word count, and
+    // start counting ACTIVE seconds — paused time is reported separately.
+    setSession((prev) => resumeSession(prev ?? startSession(ts, wordCount(contentRef.current)), ts))
   }, [])
 
-  const pauseTimer = useCallback(() => setTimer((prev) => pause(prev)), [])
+  const pauseTimer = useCallback(() => {
+    setTimer((prev) => pause(prev))
+    const ts = Date.now()
+    setSession((prev) => (prev ? pauseSession(prev, ts) : prev))
+  }, [])
 
   const resetTimer = useCallback(() => {
     setTimer(reset(configRef.current))

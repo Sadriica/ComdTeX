@@ -3,6 +3,7 @@ import type { VimAdapterInstance } from "monaco-vim"
 import katex from "katex"
 import { lintFile, type LintContext } from "./contentLinter"
 import { parseKeepMarks } from "./keepMarks"
+import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
 
 export interface Completion {
@@ -568,7 +569,21 @@ export function setupMonaco(monaco: typeof monacoApi) {
   })
 
   // Auto-close $ pairs and surrounding selection in $...$
+  //
+  // NOTE: setLanguageConfiguration REPLACES markdown's built-in configuration
+  // rather than merging into it. An earlier version of this call passed only the
+  // pair options, which silently dropped markdown's `onEnterRules` — that is why
+  // lists, task items and quotes stopped continuing on Enter. Everything the
+  // default config provided has to be restated here.
+  //
+  // List/quote/table continuation is NOT reinstated as `onEnterRules`: those can
+  // only append a constant string, so they cannot increment an ordered list,
+  // count a table's columns, or clear an abandoned marker. `setupEditorCommands`
+  // handles Enter explicitly via `resolveEnterOverride` instead — one mechanism,
+  // so the two can never both fire on the same keystroke.
   monaco.languages.setLanguageConfiguration("markdown", {
+    comments: { blockComment: ["<!--", "-->"] },
+    brackets: [["{", "}"], ["[", "]"], ["(", ")"]],
     surroundingPairs: [
       { open: "$", close: "$" },
       { open: "[", close: "]" },
@@ -585,25 +600,24 @@ export function setupMonaco(monaco: typeof monacoApi) {
       { open: "{", close: "}" },
       { open: "`", close: "`" },
     ],
+    folding: {
+      markers: { start: /^\s*<!--\s*#region\b/, end: /^\s*<!--\s*#endregion\b/ },
+    },
   })
 
   // Folding provider for ::: blocks
+  // Folding for ::: blocks AND heading sections. Heading folding is what makes a
+  // single long per-subject file navigable; the range logic is pure and tested
+  // in markdownEditing.test.ts.
   monaco.languages.registerFoldingRangeProvider("markdown", {
     provideFoldingRanges(model) {
-      const ranges: monacoApi.languages.FoldingRange[] = []
-      const lines = model.getLinesContent()
-      const stack: number[] = []
-      lines.forEach((line, i) => {
-        if (/^:::[\w]/.test(line.trim())) {
-          stack.push(i + 1) // 1-indexed
-        } else if (line.trim() === ":::") {
-          const start = stack.pop()
-          if (start !== undefined) {
-            ranges.push({ start, end: i + 1, kind: monaco.languages.FoldingRangeKind.Region })
-          }
-        }
-      })
-      return ranges
+      return computeFoldRanges(model.getLinesContent()).map((range) => ({
+        start: range.start,
+        end: range.end,
+        // Region for both: Comment/Imports would put these in the wrong bucket
+        // for "fold all comments"-style commands.
+        kind: monaco.languages.FoldingRangeKind.Region,
+      }))
     },
   })
 
@@ -1005,6 +1019,8 @@ export function setupMathHover(
 export function setupEditorCommands(
   editor: monacoApi.editor.IStandaloneCodeEditor,
   monaco: typeof monacoApi,
+  /** Read per keystroke so toggling the setting takes effect without a remount. */
+  isListContinuationEnabled: () => boolean = () => true,
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const snippetCtrl = () => editor.getContribution<any>("snippetController2")
@@ -1045,6 +1061,60 @@ export function setupEditorCommands(
       overwriteBefore: resolution.overwriteBefore,
       overwriteAfter: 0,
     })
+  })
+
+  // ── Enter: continue lists / task items / quotes / table rows ───────────────
+  // Monaco's markdown `onEnterRules` cannot increment an ordered list, count a
+  // table's columns, or clear an abandoned marker, so Enter is handled here.
+  // Everything below is a single `executeEdits`, which keeps it in the native
+  // undo stack — one Ctrl+Z undoes the continuation, exactly like typing it.
+  editor.onKeyDown((e) => {
+    if (e.keyCode !== monaco.KeyCode.Enter) return
+    if (!isListContinuationEnabled()) return
+    // Shift/Ctrl/Alt+Enter are other people's shortcuts; never shadow them.
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return
+    if (editor.getOption(monaco.editor.EditorOption.readOnly)) return
+
+    // Enter belongs to the widget while a suggestion or snippet is active.
+    if (snippetCtrl()?.isInSnippet?.()) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const suggest = editor.getContribution<any>("editor.contrib.suggestController")
+    if (suggest?.model?.state) return
+
+    const model = editor.getModel()
+    const selection = editor.getSelection()
+    if (!model || !selection || !selection.isEmpty()) return
+
+    const { lineNumber, column } = selection.getPosition()
+    const lineText = model.getLineContent(lineNumber)
+    // Mid-line Enter must split normally — continuing a marker there would
+    // duplicate text the user meant to push onto the next line.
+    if (column !== lineText.length + 1) return
+
+    const override = resolveEnterOverride(lineText, model.getOptions().tabSize)
+    if (!override) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    const fullLine = {
+      startLineNumber: lineNumber,
+      startColumn: 1,
+      endLineNumber: lineNumber,
+      endColumn: lineText.length + 1,
+    }
+    if (override.kind === "replaceLine") {
+      editor.executeEdits("markdownEnter", [{ range: fullLine, text: override.text }], [
+        new monaco.Selection(lineNumber, override.text.length + 1, lineNumber, override.text.length + 1),
+      ])
+    } else {
+      const eol = model.getEOL()
+      const at = { ...fullLine, startColumn: lineText.length + 1 }
+      editor.executeEdits("markdownEnter", [{ range: at, text: eol + override.text }], [
+        new monaco.Selection(lineNumber + 1, override.text.length + 1, lineNumber + 1, override.text.length + 1),
+      ])
+      editor.revealPositionInCenterIfOutsideViewport({ lineNumber: lineNumber + 1, column: override.text.length + 1 })
+    }
   })
 
   // quickSuggestions is off globally (App.tsx editor options) so the widget
