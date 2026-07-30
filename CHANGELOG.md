@@ -3,6 +3,38 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.16.0] - 2026-07-30
+
+> Jumps from 1.11.2: the work was planned and built as five increments
+> (1.12 editor stability → 1.16 AI gaps) and ships as one release.
+
+### Fixed
+- **Lists, task items and quotes continue again when you press Enter.** `setLanguageConfiguration("markdown", …)` *replaces* Monaco's built-in configuration instead of merging into it, so passing only the auto-closing-pair options had been silently discarding markdown's `onEnterRules`. Enter is now handled explicitly (`markdownEditing.ts` + `monacoSetup.ts`), which also does what the declarative rules never could: ordered lists renumber (`1.` → `2.`), nested items keep their indentation without an extra Enter, task items continue as `- [ ]` even from a checked one, and an abandoned marker outdents one level (or clears at the top level) rather than spawning another empty bullet.
+- **Pipe tables continue on Enter** with a fresh row of the same width, and an empty row exits the table.
+- **Blocks no longer unfold on their own.** Collapsed regions, scroll position and the caret are now persisted per file as a Monaco view state (`editorViewState.ts`) and restored synchronously on mount. Previously they were lost on every tab remount and on every `setValue()` from the external-content sync — worst of all for `:::excalidraw`, whose scene is a single base64 line that word-wraps into dozens of screen lines. Excalidraw blocks are also auto-collapsed the first time a file is opened.
+- **Fast Ctrl+Tab lands where you left off.** The old cursor save was debounced by 500 ms, so switching faster than that never recorded the position; the snapshot is now taken synchronously as the tab changes. The 100 ms restore timer is gone too — it was visible as a jump and could race the first keystrokes after a switch.
+- **Text no longer pastes, deletes or reorders itself while you type.** The external-content sync effect used `editor.setValue()`, which resets the undo stack, folding, decorations and the selection. It now (a) refuses to touch the buffer while the editor has focus and the user's edits are still queued for disk — that content is *newer* than anything it would push in — and (b) applies the smallest edit that reconciles the two (`textDiff.ts`) through the model's edit stack.
+- **Pasting a screenshot works.** Image paste only ever handled clipboard entries backed by a file on disk (`file.path`); a plain screenshot carries raw bytes and hit the "no path" error every time. Those bytes are now written directly, under a timestamped name, and an existing asset is never overwritten (`name-2.png`, …).
+- **The "changed on disk" prompt was English-only.** Its text and buttons are now translated, and it reports how many lines actually differ, so the reload-or-keep decision is informed rather than blind.
+- **A file created during the session was saved unguarded.** `createFile` (and the auto-created vault README) never recorded a disk mtime, so the external-change guard had no baseline for those tabs and never ran for the rest of the session. Both now stat after writing, like the file-open paths already did. This matters most where a sync client rewrites files in place and leaves no conflict copy behind to notice — Google Drive's desktop client being the usual case.
+
+### Added
+- **Per-folder rules** (`.comdtex-folder.json`, stored inside the folder it governs): a default template, a filename pattern (`{{date:YYYY-MM-DD}}-{{title}}`), default frontmatter, and declared generated files. Subfolders inherit field by field, nearest folder winning. Edited from the folder's context menu.
+- **Generated folder files** — `tasks`, `calendar` and `index` views built from the notes around them, refreshed by "Regenerar archivos de carpeta". A target with hand-written content is never overwritten: only an empty file or one carrying the `comdtex:generated` marker is rewritten. The task collector is the same parser the Todo panel uses, so the panel and the file cannot disagree.
+- **Full folder context menu**: new file / new folder / new from template inside that folder, rename, and folder rules. Folders answer to F2 and Delete like files do.
+- **New files land in the selected folder**, not always at the vault root — `createFile` was hard-coded to the root. The create prompt names its destination.
+- **"Guardar como plantilla"** on a file: parameterises the frontmatter title/date and a matching H1 into `{{title}}`/`{{date}}`, leaving body prose untouched (a date inside a paragraph is content, not a field).
+- **Warning for ragged tables.** A row whose column count differs from the header is flagged in the editor — GFM silently drops the extra cells or renders the missing ones empty, so the preview quietly disagreed with the source.
+- **"Normalizar tabla" command** (palette and Edición menu): pads every row to the header's width and re-aligns the pipes, preserving alignment colons, in a single undo step.
+- **Full Edición menu.** Undo, Redo, Cut, Copy, Paste, Select all, Duplicate line, Move line up/down and Toggle comment are now visible menu entries instead of shortcut-only features.
+- **Toolbar buttons toggle.** Pressing the button of the panel already on screen puts it away. Programmatic opens (a search hit, a comment glyph) still always show the panel.
+- **Search inside panels.** The Help panel gains a filter that hides non-matching rows and expands what survives; the Outline, Equations and Environments panels gain one too. Matching folds accents — "indice" finds "índice" — but keeps ñ distinct from n, since in Spanish it is its own letter.
+- **Pomodoro clock in the top bar** while a session is running, so the countdown stays visible with the Enfoque panel closed. Session stats now also cover active vs paused time, words per minute against *active* time, completed pomodoros, words per pomodoro, files worked on, and the peak word count (so a late delete does not erase the record).
+- **Heading-based folding.** Sections fold from their heading to just before the next heading of the same or higher level, which is what makes one long per-subject file workable. Headings inside fenced code are ignored.
+- **"Dividir documento en secciones"** turns a long note into one file per `##`, replacing each section with a `![[transclusion]]` so the rendered output is unchanged. Refuses to run if any target filename already exists.
+- **AI gap filling.** Leave `{{?}}` or `{{? a hint}}` while writing and fill it later with "Completar hueco con IA" (cursor) or "Completar todos los huecos" (document). Gaps are flagged in the editor as info markers, ignored inside fenced code, and every fill is applied through `executeEdits` — a normal undo step, never a direct disk write. Deliberately not ghost-text autocompletion: nothing is generated until asked, and Tab stays free for shorthand expansion.
+- **New settings**: reading speed for the status-bar estimate (was hard-coded at 200 wpm), auto-folding of Excalidraw blocks, and a switch for list continuation on Enter.
+
 ## [1.11.2] - 2026-07-22
 
 ### Fixed
