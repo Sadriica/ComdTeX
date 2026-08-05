@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.19.0] - 2026-08-05
+
+### Added
+- **Guided collaboration.** A "Write with someone else" section at the top of the Git panel speaks plain language over the git the panel already knew: connect the vault to a shared private repository (guided, with a paste-the-address box), then live with one sentence and two buttons: "Bring changes" / "Send changes" / "Save and send" (empty message becomes an honest dated one). A rejected send explains that the coauthor got there first instead of printing git errors. Conflicts list each file with "Keep mine" / "Use theirs" buttons (or edit the markers by hand) and a "Finish the merge" step. State logic is pure and tested (`collabGuide.ts`); user guide in `docs/collaboration.md`.
+
 ## [1.18.0] - 2026-08-05
 
 ### Added

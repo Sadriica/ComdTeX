@@ -546,6 +546,32 @@ export interface T {
     loadCommits: string
     // init state
     initGitRepo: string; recheckRepo: string
+    // Guided collaboration (plain language over git)
+    collabTitle: string
+    collabNoRemoteIntro: string
+    collabCreateRepo: string
+    collabPasteUrl: string
+    collabConnect: string
+    collabConnected: string
+    collabConnectError: (err: string) => string
+    collabSyncedMsg: string
+    collabAheadMsg: (n: number) => string
+    collabBehindMsg: (n: number) => string
+    collabDirtyMsg: string
+    collabSaveMsgPlaceholder: string
+    collabSaveAndSend: string
+    collabBring: string
+    collabSend: string
+    collabSent: string
+    collabBrought: string
+    collabPushRejected: string
+    collabConflictIntro: string
+    collabKeepMine: string
+    collabKeepTheirs: string
+    collabResolved: (path: string) => string
+    collabFinishMerge: string
+    collabMergeDone: string
+    collabError: (err: string) => string
     // errors
     discardConfirm: (name: string) => string
     commitError: (msg: string) => string

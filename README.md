@@ -318,6 +318,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Todo panel (collects `- [ ]` task items across open files)
 - Vault stats panel (file count, word count, link health, equations, citations)
 - Git panel (branch, staged/unstaged changes, commit, push)
+- Guided collaboration in plain language: share a vault with a coauthor, bring/send changes, and resolve "keep mine / use theirs" conflicts without knowing Git — see [docs/collaboration.md](docs/collaboration.md)
 - Navigation history (Alt+Left / Alt+Right)
 - Breadcrumb bar
 - Focus timer panel: Pomodoro (work/break/long-break cycles) plus live writing-session stats (word delta, words-per-minute, daily-goal progress)
