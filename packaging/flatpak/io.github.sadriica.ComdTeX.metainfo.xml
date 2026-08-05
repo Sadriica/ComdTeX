@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.sadriica.ComdTeX</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>ComdTeX</name>
+  <summary>Markdown + LaTeX editor for mathematics and science</summary>
+  <developer id="site.witara">
+    <name>Witara</name>
+  </developer>
+  <description>
+    <p>
+      ComdTeX is a desktop editor for academic writing in Markdown + LaTeX,
+      aimed at mathematicians and scientists. Your files are plain text in a
+      folder you own: no database, no hidden format, no cloud. Free forever.
+    </p>
+    <p>Highlights:</p>
+    <ul>
+      <li>Shorthands that expand to LaTeX on Tab: frac(1, n+1), sum(i=0, n), nestable</li>
+      <li>Numbered theorem environments, equations, figures and cross-references</li>
+      <li>PDF compilation with a bundled WASM LaTeX engine, no TeX install required</li>
+      <li>BibTeX citations with DOI/arXiv fetch and Zotero import</li>
+      <li>Interoperable with Obsidian vaults and Overleaf-ready .tex export</li>
+      <li>Bilingual interface, English and Spanish, with full parity</li>
+      <li>AI strictly optional and off by default, bring your own provider</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.sadriica.ComdTeX.desktop</launchable>
+  <url type="homepage">https://comdtex.witara.site</url>
+  <url type="bugtracker">https://github.com/Sadriica/ComdTeX/issues</url>
+  <url type="vcs-browser">https://github.com/Sadriica/ComdTeX</url>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.16.0" date="2026-07-30" />
+  </releases>
+  <categories>
+    <category>Office</category>
+    <category>Education</category>
+    <category>Science</category>
+  </categories>
+  <keywords>
+    <keyword>latex</keyword>
+    <keyword>markdown</keyword>
+    <keyword>math</keyword>
+    <keyword>editor</keyword>
+    <keyword>academic</keyword>
+  </keywords>
+</component>

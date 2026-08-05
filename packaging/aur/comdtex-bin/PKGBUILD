@@ -2,7 +2,7 @@
 # Repackages the official .deb release. Regenerate checksums for a new
 # version with ../update.sh <version> (it pulls the published .sha256).
 pkgname=comdtex-bin
-pkgver=1.11.0
+pkgver=1.16.0
 pkgrel=1
 pkgdesc="Desktop IDE for academic writing in Markdown + LaTeX (binary release)"
 arch=('x86_64')
@@ -19,7 +19,7 @@ optdepends=(
 provides=('comdtex')
 conflicts=('comdtex')
 source=("${url}/releases/download/v${pkgver}/comdtex_${pkgver}_amd64.deb")
-sha256sums=('c8d551556e5bb35628db297e617e925134f1d564a91a957f688727b49a661d97')
+sha256sums=('a56c414210c350af37be1d2dceaf5e64abc91ce7219a2cb68297896fa549777a')
 
 package() {
   # The .deb payload mirrors the final filesystem layout.
