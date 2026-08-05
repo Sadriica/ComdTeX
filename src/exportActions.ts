@@ -292,7 +292,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   })
   if (!outPath) return
 
-  // ── Step 1 — try the bundled WASM engine if enabled ─────────────────────
+  // ── Step 1: try the bundled WASM engine if enabled ─────────────────────
   // WASM diagnostics are HELD here, not shown yet: a local engine may still
   // succeed (Step 2), and popping an error modal over a successful export
   // reads as failure. The modal only appears if every engine failed.
@@ -319,7 +319,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     }
   }
 
-  // ── Step 2 — fall back to local LaTeX toolchain ─────────────────────────
+  // ── Step 2: fall back to local LaTeX toolchain ─────────────────────────
   const dir = pathDirname(currentFile.path) || "."
   const base = currentFile.name.replace(/\.[^.]+$/, "")
   const tmpTex = `${dir}/${base}.comdtex-compile.tex`
@@ -351,7 +351,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         lastError = err instanceof Error ? err.message : String(err)
       }
     }
-    // Every engine failed — NOW surface the held WASM diagnostics (they are
+    // Every engine failed: NOW surface the held WASM diagnostics (they are
     // usually the most readable), falling back to the local engines' stderr.
     if (ctx.onLatexError && wasmDiags.length > 0) {
       ctx.onLatexError(wasmDiags)
@@ -439,7 +439,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
       pandocArgs.push("--include-in-header", tempHdrPath)
     }
 
-    // Engine preference: tectonic first — it fetches missing packages on
+    // Engine preference: tectonic first; it fetches missing packages on
     // demand, so it survives the partial TeX installs that break xelatex/
     // pdflatex with "xcolor.sty not found"-style errors. Then XeLaTeX (full
     // Unicode), then pdflatex. The FIRST failure's stderr is kept for the
@@ -454,7 +454,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
         if (attempt.code === 0) { result = attempt; break }
         if (!firstFailure) firstFailure = attempt
       } catch {
-        // pandoc itself unavailable/denied — try the next engine anyway
+        // pandoc itself unavailable/denied: try the next engine anyway
       }
     }
     if (!result) result = firstFailure ?? { code: -1, stderr: "pandoc failed", stdout: "" }
@@ -555,7 +555,7 @@ export interface ImportActionsContext {
 
 // Map a source extension to an explicit pandoc input format. When a format is
 // not listed pandoc infers it from the extension, which works for docx/odt/epub
-// etc. — we only pin the ambiguous ones.
+// etc.; we only pin the ambiguous ones.
 const PANDOC_INPUT_FORMATS: Record<string, string> = {
   tex: "latex",
   htm: "html",

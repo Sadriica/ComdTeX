@@ -1,26 +1,26 @@
-// ComdTeX — AI assistant provider abstraction (BYO key, MVP).
+// ComdTeX: AI assistant provider abstraction (BYO key, MVP).
 //
 // Design goals:
 // - 100% offline when AI is disabled: this module performs NO network work at
 //   import time. Nothing here runs until `sendMessage` is called.
 // - One `Provider` abstraction with two concrete kinds:
-//     * HttpProvider — talks to an HTTP LLM API (Anthropic, OpenAI, Gemini, or
+//     * HttpProvider: talks to an HTTP LLM API (Anthropic, OpenAI, Gemini, or
 //       any OpenAI-compatible endpoint such as DeepSeek / Qwen / OpenRouter /
 //       Ollama / LM Studio with a user-configurable base URL).
-//     * CliProvider  — one-shot bridge to a local agent CLI (Claude Code,
+//     * CliProvider  : one-shot bridge to a local agent CLI (Claude Code,
 //       opencode, …) via the Tauri shell plugin.
 // - A single `sendMessage(messages, opts)` entry point dispatches to whichever
 //   provider the user configured in Settings.
 //
 // SECURITY NOTE: the API key is read from `settings.aiApiKey`, which the MVP
 // stores in localStorage. Storing the key in the OS keychain (e.g. via a Tauri
-// plugin) is a planned follow-up — see TODO below.
+// plugin) is a planned follow-up; see TODO below.
 // TODO (phase 2): move API key storage to the OS keychain instead of localStorage.
 
 import type { Settings } from "../useSettings"
 // Built-in ComdTeX system prompt. Imported as a raw string (Vite `?raw`) and
 // prepended to every request so any provider knows ComdTeX's syntax deeply and
-// produces correct ComdTeX-flavored Markdown. Bundled at build time — no I/O.
+// produces correct ComdTeX-flavored Markdown. Bundled at build time; no I/O.
 import comdtexContext from "./comdtex-context.md?raw"
 
 export interface ChatMessage {
@@ -41,7 +41,7 @@ export type ProviderId = "anthropic" | "openai" | "gemini" | "openai-compatible"
 
 export interface ProviderPreset {
   id: ProviderId
-  /** Human label (provider name); not localized — these are brand names. */
+  /** Human label (provider name); not localized: these are brand names. */
   label: string
   /** Whether the user must supply a custom base URL (openai-compatible). */
   needsBaseUrl: boolean
@@ -106,7 +106,7 @@ function assertSafeBaseUrl(raw: string): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SSE helpers — parse a `fetch` ReadableStream of `data: …` lines.
+// SSE helpers: parse a `fetch` ReadableStream of `data: …` lines.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function* iterSse(
@@ -141,7 +141,7 @@ async function* iterSse(
         const line = buffer.slice(0, nl).replace(/\r$/, "")
         buffer = buffer.slice(nl + 1)
         if (line === "") {
-          // Event boundary — emit the accumulated data payload (if any).
+          // Event boundary: emit the accumulated data payload (if any).
           const payload = flush()
           if (payload !== null) yield payload
         } else if (line.startsWith("data:")) {
@@ -150,7 +150,7 @@ async function* iterSse(
         // Other SSE fields (event:, id:, retry:, comments) are ignored.
       }
     }
-    // Stream ended without a trailing blank line — flush any pending payload.
+    // Stream ended without a trailing blank line; flush any pending payload.
     const tail = flush()
     if (tail !== null) yield tail
   } finally {
@@ -206,7 +206,7 @@ class HttpProvider {
     }
   }
 
-  // OpenAI /chat/completions — also reused for every openai-compatible host.
+  // OpenAI /chat/completions: also reused for every openai-compatible host.
   private async sendOpenAI(messages: ChatMessage[], opts: SendOptions): Promise<string> {
     const base = resolveBaseUrl(this.cfg)
     const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -338,7 +338,7 @@ async function errText(res: Response): Promise<string> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CLI provider — one-shot bridge to a local agent CLI.
+// CLI provider: one-shot bridge to a local agent CLI.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CliProvider {
@@ -435,7 +435,7 @@ export function isAiReady(settings: Settings): boolean {
  * connection; for the CLI it spins up the agent process and primes its
  * auth/config caches. Deliberately sends a trivial 1-word prompt WITHOUT the
  * (large) ComdTeX system context, and caps output to ~1 token, so it stays
- * near-free. Errors are swallowed — a failed warm-up must never surface.
+ * near-free. Errors are swallowed: a failed warm-up must never surface.
  */
 export async function warmUp(settings: Settings, signal?: AbortSignal): Promise<void> {
   if (!isAiReady(settings)) return
@@ -452,15 +452,15 @@ export async function warmUp(settings: Settings, signal?: AbortSignal): Promise<
       apiKey: settings.aiApiKey,
       model: settings.aiModel,
     }).send(ping, { signal, maxTokens: 1 })
-  } catch { /* warm-up is best-effort — ignore all failures */ }
+  } catch { /* warm-up is best-effort: ignore all failures */ }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Inline edit (Ctrl/Cmd+K) — focused single-turn helper.
+// Inline edit (Ctrl/Cmd+K): focused single-turn helper.
 //
 // Used by the floating CmdKEdit widget. The model must return ONLY the
 // replacement text (paste-ready ComdTeX Markdown), with no preamble, no
-// explanation and no Markdown code-fences — the result is applied verbatim via
+// explanation and no Markdown code-fences; the result is applied verbatim via
 // `editor.executeEdits`, so any chatter would land in the document.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -469,7 +469,7 @@ const INLINE_EDIT_SYSTEM =
   "Apply the user's instruction and return ONLY the resulting text, ready to " +
   "paste directly into the document. Output ComdTeX-flavored Markdown with math " +
   "in LaTeX ($...$ or $$...$$). Do NOT wrap your answer in a code fence. Do NOT " +
-  "add any preamble, explanation, commentary or trailing notes — output the " +
+  "add any preamble, explanation, commentary or trailing notes; output the " +
   "replacement text and nothing else."
 
 /**

@@ -86,7 +86,7 @@ describe("table anchors", () => {
 describe.each([
   ["no blank line", NO_BLANK],
   ["blank line", BLANK],
-])("renderMarkdown — %s form", (_name, source) => {
+])("renderMarkdown, %s form", (_name, source) => {
   const html = renderMarkdown(`${source}\n\nVer @tbl:data`)
 
   it("does not leak the raw label into the output", () => {
@@ -110,7 +110,7 @@ describe.each([
 // A document modelled on a real user note (`~/Uni/s10/EvF/calendario.md`):
 // Spanish prose, two labeled tables written the no-blank-line way, and `@tbl:`
 // references to both.
-describe("renderMarkdown — realistic document", () => {
+describe("renderMarkdown, realistic document", () => {
   const doc = `# Evaluación Financiera
 
 Conceptos básicos: el presupuesto son supuestos fundamentados en la

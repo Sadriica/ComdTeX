@@ -37,7 +37,7 @@ function tableAnchorId(labelOrNumber: string): string {
  * labels. Keys include the `tbl:` prefix.
  *
  * Fenced code is stripped first so a pipe table written inside a code sample is
- * not counted — `wrapTables` only ever sees rendered `<table>` elements, so the
+ * not counted; `wrapTables` only ever sees rendered `<table>` elements, so the
  * two passes must agree or `@tbl:` refs resolve to the wrong number.
  */
 export function prescanTables(text: string): Map<string, number> {

@@ -58,7 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.11.2] - 2026-07-22
 
 ### Fixed
-- **Special blocks no longer leak raw `:::` markup into pandoc exports.** "Export as PDF" (and every pandoc-based format) now degrades `pseudocode`/`truth`/`graph`/`plot`/`commdiag`/`flowchart`/`code` blocks to captioned code fences (`**Truth Table — name**` + the readable body); `:::code lang` keeps its language for highlighting; Excalidraw bodies (JSON scene dumps) are replaced by a "drawing omitted" note.
+- **Special blocks no longer leak raw `:::` markup into pandoc exports.** "Export as PDF" (and every pandoc-based format) now degrades `pseudocode`/`truth`/`graph`/`plot`/`commdiag`/`flowchart`/`code` blocks to captioned code fences (`**Truth Table: name**` + the readable body); `:::code lang` keeps its language for highlighting; Excalidraw bodies (JSON scene dumps) are replaced by a "drawing omitted" note.
 - **PDF save dialogs default to the active file's folder inside the vault** instead of the process working directory / last-used folder.
 - **Opening the finished file is best-effort.** A PDF viewer/opener failure after a successful export no longer surfaces as "Error pandoc: undefined" next to the success toast, in any export path.
 - **"Export as PDF" (pandoc) now tries `tectonic` before `xelatex`/`pdflatex`.** With a partial TeX install (e.g. Arch `texlive-basic` + `texlive-latex` without `texlive-latexrecommended`), pandoc's xelatex/pdflatex engines die with `File 'xcolor.sty' not found`: the same message the WASM engine produces when its package server is down, which made the two failures easy to conflate. Tectonic fetches missing packages on demand, so the pandoc export now survives incomplete TeX installations.

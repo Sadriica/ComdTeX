@@ -7,7 +7,7 @@ import { sanitizeRenderedHtmlToFragment } from "./sanitizeRenderedHtml"
  * The preview used to be committed via `dangerouslySetInnerHTML`, which replaces
  * the ENTIRE preview subtree on every (debounced) keystroke. For a document with
  * many inline diagram SVGs (mermaid / excalidraw / graphviz / plots) that means
- * re-parsing the whole HTML string and re-laying-out every diagram on each edit —
+ * re-parsing the whole HTML string and re-laying-out every diagram on each edit:
  * the dominant cause of typing lag in diagram-heavy files like comdtex.md.
  *
  * This morphs the live container to match `content` by comparing TOP-LEVEL
@@ -17,8 +17,8 @@ import { sanitizeRenderedHtmlToFragment } from "./sanitizeRenderedHtml"
  * diagram on the page.
  *
  * Positional matching means inserting/removing a block shifts everything after it
- * (those get replaced that one time); the common case — typing WITHIN an existing
- * block — touches only that block. `isEqualNode` is a read-only structural
+ * (those get replaced that one time); the common case (typing WITHIN an existing
+ * block) touches only that block. `isEqualNode` is a read-only structural
  * comparison: no HTML re-parse and no layout for the blocks it leaves in place.
  */
 export function morphPreviewContent(container: HTMLElement, content: DocumentFragment): void {
@@ -35,7 +35,7 @@ export function morphPreviewContent(container: HTMLElement, content: DocumentFra
     } else if (!sameBlock(oldNode, newNode)) {
       container.replaceChild(newNode, oldNode) // changed block
     }
-    // else: structurally identical (or only its source-line shifted) — leave the
+    // else: structurally identical (or only its source-line shifted); leave the
     // live node (and its already-rendered SVGs) in place.
   }
   // Remove any leftover blocks the new HTML no longer has.
@@ -47,10 +47,10 @@ export function morphPreviewContent(container: HTMLElement, content: DocumentFra
 /**
  * Should the live `oldNode` be KEPT to satisfy `newNode`? True when they are
  * structurally identical, OR when their only difference is the `data-source-line`
- * bookkeeping attribute — which shifts on EVERY block below an inserted/removed
+ * bookkeeping attribute, which shifts on EVERY block below an inserted/removed
  * line even though the block's content is unchanged. Treating that shift as
  * "equal" (and updating the attribute in place) means editing one line no longer
- * re-creates — and re-renders — every block beneath it, and never tears down an
+ * re-creates, and re-renders, every block beneath it, and never tears down an
  * already-rendered diagram SVG just because lines moved above it.
  */
 function sameBlock(oldNode: Node, newNode: Node): boolean {
@@ -62,11 +62,11 @@ function sameBlock(oldNode: Node, newNode: Node): boolean {
   const newLine = newEl.getAttribute("data-source-line")
   if (oldLine === newLine) return false // differ by something other than the line
   // Tentatively align the line attribute and re-test: if now equal, the line was
-  // the ONLY difference — keep the live node with its attribute updated.
+  // the ONLY difference: keep the live node with its attribute updated.
   if (newLine === null) oldEl.removeAttribute("data-source-line")
   else oldEl.setAttribute("data-source-line", newLine)
   if (oldEl.isEqualNode(newEl)) return true
-  // Genuinely different content — restore the original line and let it be replaced.
+  // Genuinely different content: restore the original line and let it be replaced.
   if (oldLine === null) oldEl.removeAttribute("data-source-line")
   else oldEl.setAttribute("data-source-line", oldLine)
   return false
@@ -75,14 +75,14 @@ function sameBlock(oldNode: Node, newNode: Node): boolean {
 /**
  * The ONLY sanctioned path for raw `renderMarkdown()` output to reach the DOM.
  *
- * Parses `rawHtml` exactly ONCE — `sanitizeRenderedHtmlToFragment` returns a
+ * Parses `rawHtml` exactly ONCE: `sanitizeRenderedHtmlToFragment` returns a
  * DOMPurify-sanitized `DocumentFragment` (`RETURN_DOM_FRAGMENT`) instead of a
- * re-serialized string — then annotates that same fragment in place with
+ * re-serialized string, then annotates that same fragment in place with
  * `data-source-line` bookkeeping (`annotateSourceLinesIn`, using `sourceText`,
  * the exact source that produced `rawHtml`), then hands it to
  * `morphPreviewContent`. The raw string returned by `renderMarkdown` must
  * NEVER be injected into the DOM by any other means (no
- * `dangerouslySetInnerHTML`, no `el.innerHTML = ...`) — always go through
+ * `dangerouslySetInnerHTML`, no `el.innerHTML = ...`); always go through
  * this function so sanitization and annotation can never be skipped.
  */
 export function commitPreview(container: HTMLElement, rawHtml: string, sourceText: string): void {

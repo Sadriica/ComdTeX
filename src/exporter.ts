@@ -88,7 +88,7 @@ const ENV_REF_NAMES: Record<string, string> = {
  * A `\ref{def:x}` here would be a DANGLING reference: the target environment
  * lives in another vault document and is not part of this single-file export,
  * so LaTeX would silently typeset "??". We cannot resolve the target's NUMBER
- * either — that is a property of the other file, and this export path is
+ * either: that is a property of the other file, and this export path is
  * synchronous with no vault resolver threaded through it.
  *
  * So the ref degrades to an honest plain-text mention naming the source
@@ -103,7 +103,7 @@ function crossRefToTex(docPath: string, prefix: string, id: string): string {
 
 function textRefsToTex(text: string): string {
   const out: string[] = []
-  // Cross-file alternatives first — otherwise the local pattern matches the
+  // Cross-file alternatives first, otherwise the local pattern matches the
   // INNER `@def:x` of `@doc@def:x` and emits a dangling `\ref{def:x}` while
   // leaving `@doc` as escaped prose.
   const re = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
@@ -476,7 +476,7 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     // shorthands backed by an internal `quoting` environment, so literal
     // arrow text like \texttt{->>} emits a stray \end{quoting} and kills the
     // compile. es-noshorthands disables the remaining active-char surprises
-    // ("n, "u, …) — exported docs use real Unicode, never babel shorthands.
+    // ("n, "u, …): exported docs use real Unicode, never babel shorthands.
     "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
     buildTheoremPreamble(),
@@ -533,7 +533,7 @@ function pickRevealTheme(raw: unknown): RevealTheme {
 }
 
 export function exportReveal(rawMarkdown: string, title: string): string {
-  // Keep marks are editor-only — collapse them to plain text so no `^^`
+  // Keep marks are editor-only: collapse them to plain text so no `^^`
   // ever reaches a slide. See keepMarks.ts.
   const markdown = stripKeepMarks(rawMarkdown)
   // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
@@ -585,7 +585,7 @@ ${slideHtml}
 }
 
 export function exportToTex(rawInput: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
-  // Keep marks are editor-only — collapse them to plain text before the LaTeX
+  // Keep marks are editor-only: collapse them to plain text before the LaTeX
   // conversion. `stripKeepMarks` is math-aware, so a doubled caret inside a
   // superscript (`$x^{2^^3}$`) is left alone.
   const raw = stripKeepMarks(rawInput)

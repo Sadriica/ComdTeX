@@ -115,7 +115,7 @@ export default function CitationManager({
   }
 
   // ── Add by DOI / arXiv ────────────────────────────────────────────────────
-  // On-demand network fetch ONLY — runs when the user clicks this button. No
+  // On-demand network fetch ONLY: runs when the user clicks this button. No
   // automatic/background requests; ComdTeX stays offline until invoked here.
   const handleFetchDoi = async () => {
     const query = doi.trim()
@@ -142,7 +142,7 @@ export default function CitationManager({
   }
 
   // ── Import from Zotero (local HTTP API) ───────────────────────────────────
-  // On-demand ONLY — requires Zotero (ideally with the Better BibTeX plugin)
+  // On-demand ONLY: requires Zotero (ideally with the Better BibTeX plugin)
   // running locally. No network calls happen until the user searches/imports;
   // ComdTeX stays offline otherwise. Reuses the SAME parse-validate +
   // dedupe-by-key + onPersist path as "Add by DOI" so behavior is consistent.

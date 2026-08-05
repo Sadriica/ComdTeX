@@ -22,7 +22,7 @@ export interface Conversation {
  * unmounting (the user switching to another sidebar panel and back).
  *
  * Conversations are kept in `localStorage` so the **history survives an app
- * restart** — the user can reopen past threads. The draft `input` is mirrored to
+ * restart** (the user can reopen past threads). The draft `input` is mirrored to
  * `sessionStorage` (per-session working text, not worth keeping across restarts);
  * the context toggles are in-memory.
  */
@@ -103,7 +103,7 @@ function loadStore(): Store {
         return { conversations, activeId }
       }
     }
-  } catch { /* corrupt storage — start fresh */ }
+  } catch { /* corrupt storage: start fresh */ }
   const c = freshConversation()
   return { conversations: [c], activeId: c.id }
 }
@@ -188,7 +188,7 @@ export function useAiSession(): AiSession {
   const newConversation = useCallback(() => {
     setStore((s) => {
       const activeEmpty = s.conversations.find((c) => c.id === s.activeId)?.messages.length === 0
-      if (activeEmpty) return s // already on an empty conversation — nothing to do
+      if (activeEmpty) return s // already on an empty conversation, nothing to do
       const c = freshConversation()
       return { conversations: [c, ...s.conversations].slice(0, MAX_CONVERSATIONS), activeId: c.id }
     })
@@ -240,7 +240,7 @@ export function useAiSession(): AiSession {
 // ── Context isolation ────────────────────────────────────────────────────────
 // The AI session is provided via context (the provider owns the state and only
 // renders `{children}`), so a streamed token re-renders ONLY the context
-// consumers (AiPanel) — NOT the whole `AppContent` tree. Keeping the state
+// consumers (AiPanel), NOT the whole `AppContent` tree. Keeping the state
 // directly in AppContent made every token re-render that large component, which
 // felt sluggish during generation.
 const AiSessionContext = createContext<AiSession | null>(null)

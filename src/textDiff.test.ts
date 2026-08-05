@@ -13,7 +13,7 @@ describe("minimalEdit", () => {
   })
 
   it("narrows to just the changed span", () => {
-    // The shared suffix is "o duerme" — the trailing "o" of gato/perro counts,
+    // The shared suffix is "o duerme": the trailing "o" of gato/perro counts,
     // so the edit is "gat" -> "perr", not "gato" -> "perro".
     const edit = minimalEdit("el gato duerme", "el perro duerme")
     expect(edit).toEqual({ start: 3, end: 6, text: "perr" })

@@ -11,14 +11,14 @@ import {
   sectionSlug,
 } from "./markdownEditing"
 
-describe("resolveEnterOverride — bullet lists", () => {
+describe("resolveEnterOverride, bullet lists", () => {
   it("continues a bullet with the same marker and indentation", () => {
     expect(resolveEnterOverride("- uno")).toEqual({ kind: "insertLine", text: "- " })
     expect(resolveEnterOverride("* uno")).toEqual({ kind: "insertLine", text: "* " })
     expect(resolveEnterOverride("+ uno")).toEqual({ kind: "insertLine", text: "+ " })
   })
 
-  it("preserves nesting — no extra Enter needed to stay at the same level", () => {
+  it("preserves nesting: no extra Enter needed to stay at the same level", () => {
     expect(resolveEnterOverride("  - anidado")).toEqual({ kind: "insertLine", text: "  - " })
     expect(resolveEnterOverride("\t\t- profundo")).toEqual({ kind: "insertLine", text: "\t\t- " })
   })
@@ -33,7 +33,7 @@ describe("resolveEnterOverride — bullet lists", () => {
   })
 })
 
-describe("resolveEnterOverride — ordered lists", () => {
+describe("resolveEnterOverride, ordered lists", () => {
   it("increments the number", () => {
     expect(resolveEnterOverride("1. uno")).toEqual({ kind: "insertLine", text: "2. " })
     expect(resolveEnterOverride("9) nueve")).toEqual({ kind: "insertLine", text: "10) " })
@@ -45,7 +45,7 @@ describe("resolveEnterOverride — ordered lists", () => {
   })
 })
 
-describe("resolveEnterOverride — task items", () => {
+describe("resolveEnterOverride, task items", () => {
   it("continues with an unchecked box regardless of the current state", () => {
     expect(resolveEnterOverride("- [ ] tarea")).toEqual({ kind: "insertLine", text: "- [ ] " })
     expect(resolveEnterOverride("- [x] hecha")).toEqual({ kind: "insertLine", text: "- [ ] " })
@@ -61,7 +61,7 @@ describe("resolveEnterOverride — task items", () => {
   })
 })
 
-describe("resolveEnterOverride — blockquotes", () => {
+describe("resolveEnterOverride, blockquotes", () => {
   it("continues a quote, including nested levels", () => {
     expect(resolveEnterOverride("> cita")).toEqual({ kind: "insertLine", text: "> " })
     expect(resolveEnterOverride("> > anidada")).toEqual({ kind: "insertLine", text: "> > " })
@@ -72,7 +72,7 @@ describe("resolveEnterOverride — blockquotes", () => {
   })
 })
 
-describe("resolveEnterOverride — tables", () => {
+describe("resolveEnterOverride, tables", () => {
   it("adds a row with the same column count", () => {
     expect(resolveEnterOverride("| a | b |")).toEqual({ kind: "insertLine", text: "|   |   |" })
     expect(resolveEnterOverride("| a | b | c |")).toEqual({ kind: "insertLine", text: "|   |   |   |" })
@@ -86,12 +86,12 @@ describe("resolveEnterOverride — tables", () => {
     expect(resolveEnterOverride("|   |   |")).toEqual({ kind: "replaceLine", text: "" })
   })
 
-  it("keeps a row with SOME empty cells — that is valid markdown", () => {
+  it("keeps a row with SOME empty cells (that is valid markdown)", () => {
     expect(resolveEnterOverride("| a |  |")).toEqual({ kind: "insertLine", text: "|   |   |" })
   })
 })
 
-describe("resolveEnterOverride — leaves ordinary text alone", () => {
+describe("resolveEnterOverride, leaves ordinary text alone", () => {
   it.each([
     "texto normal",
     "",
@@ -274,7 +274,7 @@ describe("splitIntoSections", () => {
     expect(sections[1].text).toContain("Integrales.")
   })
 
-  it("loses no content — preamble plus sections reconstruct the document", () => {
+  it("loses no content: preamble plus sections reconstruct the document", () => {
     const { preamble, sections } = splitIntoSections(doc, 2)
     expect([preamble, ...sections.map((s) => s.text)].join("\n")).toBe(doc)
   })

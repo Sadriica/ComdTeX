@@ -8,7 +8,7 @@ export interface TocEntry {
 }
 
 /**
- * Canonical DOM id for a heading — the single source of truth shared by the
+ * Canonical DOM id for a heading: the single source of truth shared by the
  * renderer (which stamps the id), `@sec:` references and the auto-TOC, so an
  * anchor can never disagree with the id it points at.
  *

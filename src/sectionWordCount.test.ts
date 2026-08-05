@@ -51,7 +51,7 @@ describe("computeSectionWordCounts", () => {
     const content = "---\ntitle: My Doc\ntags: [a, b]\n---\n# Heading\nbody text here"
     const map = computeSectionWordCounts(content)
     expect(map.size).toBe(1)
-    expect(map.get(5)).toBe(3) // "body text here" — heading is now on line 5
+    expect(map.get(5)).toBe(3) // "body text here"; heading is now on line 5
   })
 
   it("excludes $$...$$ display math from word counts", () => {

@@ -22,7 +22,7 @@ describe("parseLatexStderr", () => {
       message: "Undefined control sequence",
       line: 10,
       context: "\\foo",
-      suggestion: "Unknown command \\foo — check spelling or define it in macros.md",
+      suggestion: "Unknown command \\foo: check spelling or define it in macros.md",
     })
   })
 
@@ -71,7 +71,7 @@ describe("parseLatexStderr", () => {
     expect(diags[0].severity).toBe("error")
     expect(diags[0].message).toBe("I can't find file `myimage.png'.")
     expect(diags[0].suggestion).toBe(
-      "Missing package file 'myimage.png'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command."
+      "Missing package file 'myimage.png'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command."
     )
   })
 
@@ -88,7 +88,7 @@ describe("parseLatexStderr", () => {
     expect(diags[0]).toEqual({
       severity: "error",
       message: "File `foo.sty' not found.",
-      suggestion: "Missing package file 'foo.sty'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
+      suggestion: "Missing package file 'foo.sty'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
     })
   })
 
@@ -125,7 +125,7 @@ describe("parseLatexStderr", () => {
 
   it("falls back to the first line even for a clean-looking compile log (no error/warning patterns matched)", () => {
     // Surprising real behavior: the fallback only checks whether *any* diagnostic
-    // was parsed, not whether the log actually contains an error — so a clean
+    // was parsed, not whether the log actually contains an error, so a clean
     // compile log with no matched patterns still produces a synthetic "error".
     const stderr = [
       "This is pdfTeX, Version 3.14159265-2.6-1.40.21",
@@ -215,7 +215,7 @@ describe("formatDiagnosticsText", () => {
         message: "Undefined control sequence",
         line: 10,
         context: "\\foo",
-        suggestion: "Unknown command \\foo — check spelling or define it in macros.md",
+        suggestion: "Unknown command \\foo: check spelling or define it in macros.md",
       },
       {
         severity: "warning",
@@ -225,7 +225,7 @@ describe("formatDiagnosticsText", () => {
     expect(text).toBe(
       "Error (line 10): Undefined control sequence\n" +
         "  Context: \\foo\n" +
-        "  → Unknown command \\foo — check spelling or define it in macros.md\n\n" +
+        "  → Unknown command \\foo: check spelling or define it in macros.md\n\n" +
         "Warning: Line too wide (12.3pt overflow)"
     )
   })

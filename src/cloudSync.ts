@@ -1,5 +1,5 @@
 /**
- * Cloud Sync — "Bring Your Own Cloud" (Option A).
+ * Cloud Sync: "Bring Your Own Cloud" (Option A).
  *
  * ComdTeX does not talk to provider APIs. The user's native cloud client
  * (Dropbox / Google Drive / OneDrive) syncs the vault folder transparently;
@@ -90,7 +90,7 @@ export interface ConflictMatch {
 
 /**
  * Pure pattern check: does this filename look like a cloud-sync conflict copy?
- * For OneDrive only returns a positive match — caller must still verify a
+ * For OneDrive only returns a positive match; caller must still verify a
  * sibling exists, since `paper-Draft.md` would also match.
  *
  * `providerHint` (optional) restricts matching to a single provider's pattern.
@@ -135,13 +135,13 @@ function dirOf(node: FileNode): string {
  * Walk a FileNode tree and return all conflict files. For OneDrive matches we
  * require a sibling without the device suffix to exist (sharply reduces FPs).
  *
- * `providerHint` narrows the scan to a single provider — when the vault is in
+ * `providerHint` narrows the scan to a single provider; when the vault is in
  * a Drive folder we skip the work entirely, when it's Dropbox we don't pay
  * for OneDrive's broad heuristic, and so on. Falls back to "scan everything"
  * when no hint is given.
  */
 export function findConflicts(tree: FileNode[], providerHint?: CloudProvider): ConflictEntry[] {
-  // Google Drive doesn't generate conflict files locally — skip the walk.
+  // Google Drive doesn't generate conflict files locally: skip the walk.
   if (providerHint === "googledrive") return []
 
   // Cheap pre-pass: only build the directory index if at least one filename
@@ -189,7 +189,7 @@ export function findConflicts(tree: FileNode[], providerHint?: CloudProvider): C
     if (!m.isConflict || !m.provider || !m.baseName) continue
     const d = dirOf(f)
     const sibling = byDir.get(d)?.get(m.baseName) ?? null
-    // OneDrive: skip if no sibling — too noisy without one.
+    // OneDrive: skip if no sibling; too noisy without one.
     if (m.provider === "onedrive" && !sibling) continue
     out.push({
       conflictPath: f.path,
@@ -265,7 +265,7 @@ async function findOneDrive(home: string): Promise<CloudSyncInfo[]> {
   for (const m of await findCloudStorageMatches(home, "OneDrive")) {
     out.push({ provider: "onedrive", rootPath: m.path, account: m.name })
   }
-  // Windows: %OneDrive% / %OneDriveCommercial% / %OneDriveConsumer% — JS can't
+  // Windows: %OneDrive% / %OneDriveCommercial% / %OneDriveConsumer%: JS can't
   // read env, so we probe common paths under the home directory.
   for (const candidate of [`${home}/OneDrive`, `${home}/OneDrive - Personal`]) {
     if (await safeExists(candidate)) out.push({ provider: "onedrive", rootPath: candidate })

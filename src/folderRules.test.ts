@@ -113,7 +113,7 @@ describe("resolveRulesForDir", () => {
     expect(rules?.filenamePattern).toBe("{{date}}-{{title}}")
   })
 
-  it("does NOT inherit generated files — they name a concrete file", () => {
+  it("does NOT inherit generated files (they name a concrete file)", () => {
     const withGen = new Map<string, FolderRules>([
       ["/v", { version: 1, generated: [{ file: "_i.md", type: "index", scope: "folder" }] }],
     ])

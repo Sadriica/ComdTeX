@@ -24,7 +24,7 @@ function math(tex: string, display = false) {
 /**
  * The `Row`s inside `children` that match `query`.
  *
- * When filtering, only rows survive — the surrounding prose, labels and examples
+ * When filtering, only rows survive: the surrounding prose, labels and examples
  * are dropped. That is the right trade for a search result: the user asked for
  * the entries that mention a term, not for the chapters around them.
  */
@@ -55,7 +55,7 @@ function Section({
 }) {
   const query = useContext(HelpQueryContext)
   const filtering = query.trim().length > 0
-  // A section whose TITLE matches keeps all of its content — the user is asking
+  // A section whose TITLE matches keeps all of its content: the user is asking
   // for the whole topic, not for individual rows inside it.
   const titleMatches = filtering && matchesQuery(title, query)
   const body = useMemo(
@@ -68,7 +68,7 @@ function Section({
   // empty header the user has to click to discover is empty.
   if (filtering && !titleMatches && (body as ReactNode[]).length === 0) return null
 
-  // While filtering, every surviving section is expanded — results the user has
+  // While filtering, every surviving section is expanded: results the user has
   // to go hunting for behind a chevron are not results.
   const isOpen = filtering || open
   return (
@@ -140,7 +140,7 @@ export default function HelpPanel() {
           <br />
           {hp.envCapabilities}
         </p>
-        <div className="hp-label">{hp.normal.split("—")[0].trim()}</div>
+        <div className="hp-label">{hp.normal.split(":")[0].trim()}</div>
         <Row code=":::sm remark"       desc={hp.compact} />
         <Row code={`:::theorem[${hp.exampleTitle}]`} desc={hp.normal} />
         <Row code=":::lg definition"   desc={hp.large} />

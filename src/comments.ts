@@ -75,7 +75,7 @@ export function toAbsolutePath(filePath: string, vaultPath: string): string {
 
 /**
  * Lightweight ID generator. We intentionally avoid pulling in a UUID library
- * — single-user vaults make collisions practically impossible.
+ * Collisions are not a concern: single-user vaults make them practically impossible.
  */
 export function generateCommentId(): string {
   const time = Date.now().toString(36)
@@ -100,7 +100,7 @@ function parseCommentsFile(raw: string): Comment[] {
   if (!parsed || typeof parsed !== "object") return []
   const file = parsed as Partial<CommentsFile>
   if (!Array.isArray(file.comments)) return []
-  // Filter to well-formed entries only — tolerate missing optional fields.
+  // Filter to well-formed entries only; tolerate missing optional fields.
   const out: Comment[] = []
   for (const raw of file.comments) {
     if (!raw || typeof raw !== "object") continue
@@ -183,7 +183,7 @@ export async function resolveComment(vaultPath: string, id: string): Promise<voi
 /**
  * Returns true when the comment's snippet still matches the source line at
  * the recorded position. Used to surface "out-of-sync" markers in the UI
- * — we deliberately do NOT auto-rewrite the line number; the user re-anchors
+ * We deliberately do NOT auto-rewrite the line number; the user re-anchors
  * manually by editing the comment.
  */
 export function isCommentInSync(comment: Comment, fileContent: string): boolean {

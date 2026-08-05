@@ -63,7 +63,7 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
     const yaml = frontmatterYaml.trim()
     if (yaml) {
       // Round-trip through the real parser so what is stored is exactly what the
-      // app will later read back — no bespoke YAML handling in this component.
+      // app will later read back: no bespoke YAML handling in this component.
       frontmatter = extractFrontmatter(`---\n${yaml}\n---\n`)?.data
     }
     onSave(dirPath, {
@@ -85,7 +85,7 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
       if (i !== index) return rule
       const next = { ...rule, ...patch }
       // Changing the type while the filename is still the previous default is
-      // almost certainly not intentional — follow it along.
+      // almost certainly not intentional; follow it along.
       if (patch.type && rule.file === DEFAULT_FILENAMES[rule.type]) {
         next.file = DEFAULT_FILENAMES[patch.type]
       }

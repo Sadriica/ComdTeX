@@ -25,7 +25,7 @@ describe("parameterizeDocument", () => {
     expect(out).not.toContain("# {{title}}")
   })
 
-  it("does NOT rewrite dates in the body — those are content, not fields", () => {
+  it("does NOT rewrite dates in the body (those are content, not fields)", () => {
     const body = "El 2026-03-04 se demostró el teorema.\n"
     const out = parameterizeDocument(`---\ndate: 2026-03-04\n---\n\n${body}`, "n.md")
     expect(out).toContain("date: {{date}}")

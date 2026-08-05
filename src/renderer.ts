@@ -79,7 +79,7 @@ function escHtml(s: string): string {
 
 // KaTeX render cache. `katex.renderToString` is one of the most expensive
 // per-call operations in the whole pipeline, and the live preview re-runs the
-// ENTIRE document render on every edit — without this, every equation was
+// ENTIRE document render on every edit; without this, every equation was
 // re-rendered from scratch on each keystroke, the dominant cost in a math-heavy
 // document. Cached by (displayMode, source); editing one equation now only
 // re-renders that one. (Mirrors the Mermaid/Excalidraw SVG caches.)
@@ -151,7 +151,7 @@ function preRenderDisplayMath(
   // Also blank fenced code blocks (length-preserving, so byte offsets into the
   // ORIGINAL text stay valid) BEFORE scanning. Without this, `$$...$$` inside a
   // ``` fence is counted here and KaTeX-rendered, while prescanEquations (which
-  // strips fences) excludes it — so the visible (N) desyncs from what every
+  // strips fences) excludes it, so the visible (N) desyncs from what every
   // `@eq:` reference resolves to, and math renders inside what should be a
   // literal code listing. Mirror equations.ts stripCodeFences' fence pattern.
   const codeSpans: Array<{ start: number; end: number; text: string }> = []
@@ -166,7 +166,7 @@ function preRenderDisplayMath(
 
   // Walk the masked text, building a result where matched math is replaced
   // with placeholders and surrounding (masked) text is replaced with the
-  // ORIGINAL text from the same byte range — restoring inline code spans.
+  // ORIGINAL text from the same byte range, restoring inline code spans.
   const out: string[] = []
   let cursor = 0
   NUMBERED_MATH_RE.lastIndex = 0
@@ -185,7 +185,7 @@ function preRenderDisplayMath(
     cursor = m.index + m[0].length
   }
   if (cursor < text.length) out.push(text.slice(cursor))
-  // Re-overlay was implicit — slices were taken from the ORIGINAL `text`, so
+  // Re-overlay was implicit: slices were taken from the ORIGINAL `text`, so
   // backticked content is preserved automatically.
   void codeSpans
   return { text: out.join(""), slots }
@@ -195,7 +195,7 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
   let text = preprocess(raw)
 
   // Pass the editor's raw text down so env source-lines can be resolved against
-  // the original document — preprocessCallouts and preRenderDisplayMath collapse
+  // the original document: preprocessCallouts and preRenderDisplayMath collapse
   // multi-line constructs to placeholders, which would otherwise misalign lines.
   const sourceForLines = rootSource ?? raw
   const { text: withEnvs, slots: envSlots } = extractEnvironments(
@@ -302,7 +302,7 @@ function normalizeSourceKey(s: string): string {
 function elementTextKey(el: Element): string {
   // Code blocks are many source lines joined, so their full textContent can
   // never match a single source line in the map. Key them by their FIRST
-  // non-empty content line instead — that is the line the block starts on.
+  // non-empty content line instead: that is the line the block starts on.
   // The line is run through `normalizeSourceKey` so it is shaped exactly like
   // the map keys (which are built from trimmed source lines).
   if (el.tagName.toLowerCase() === "pre") {
@@ -322,7 +322,7 @@ function elementTextKey(el: Element): string {
 /**
  * Build a map from `key → line[]` for lines in `raw` that can plausibly be
  * the source of a rendered block. `key` is the first ~40 chars of the line's
- * non-markup text. Multiple source lines can share a key — we keep them all
+ * non-markup text. Multiple source lines can share a key; we keep them all
  * and consume them in order during annotation so repeated content (e.g. a
  * list of "TODO") still maps each `<li>` to its own source line.
  */
@@ -337,7 +337,7 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
     // Toggle fenced code blocks. Content inside a fence is deliberately NOT
     // indexed (code text must not shadow prose keys), but we do record the
     // fence's first non-empty content line so the rendered `<pre>` can be
-    // annotated — `elementTextKey` keys a `<pre>` by exactly that line.
+    // annotated: `elementTextKey` keys a `<pre>` by exactly that line.
     if (/^```/.test(trimmed)) {
       if (!inFence) {
         for (let j = i + 1; j < lines.length && !/^```/.test(lines[j].trim()); j++) {
@@ -398,7 +398,7 @@ export function annotateSourceLines(html: string, raw: string): string {
 
 /**
  * Same as `annotateSourceLines`, but operates IN PLACE on an already-parsed
- * DOM subtree (element or fragment) — no HTML parse, no re-serialize. This is
+ * DOM subtree (element or fragment); no HTML parse, no re-serialize. This is
  * the hot-path variant: the preview pipeline calls it on the DocumentFragment
  * DOMPurify already produced, so the (potentially multi-MB, KaTeX-heavy)
  * document HTML is parsed exactly once per render instead of three times.
@@ -413,7 +413,7 @@ export function annotateSourceLinesIn(root: ParentNode, raw: string): void {
     if (el.hasAttribute("data-source-line")) continue
     // `renderMarkdown` returns `frontmatterHtml + html + bibHtml`, but the
     // line map built above (`buildParagraphLineMap`) only reflects `raw`,
-    // i.e. the BODY source — the same scope the old string-based annotation
+    // i.e. the BODY source, the same scope the old string-based annotation
     // pass used. Elements from the frontmatter header (`renderFrontmatterHeader`
     // in frontmatter.ts, e.g. `<h1 class="fm-title">`) or the bibliography
     // (`renderBibliography` in bibtex.ts, wrapped in `.bibliography`) can match
@@ -447,7 +447,7 @@ const TOC_PLACEHOLDER = "\x02TOC\x03"
  *
  * Both the ids and the TOC links are derived from the SAME rendered headings
  * (slug of each heading's own visible text, de-numbered, with collisions
- * suffixed) — so they can never desync. Headings that live inside code blocks
+ * suffixed), so they can never desync. Headings that live inside code blocks
  * are not `<h*>` elements and so are correctly excluded; Setext headings,
  * blockquote headings, etc. are all handled because we read the real DOM output
  * rather than re-scanning the markdown source.
@@ -479,7 +479,7 @@ function attachSectionIds(html: string): string {
 /**
  * Give every h1–h3 a stable `id` and collect them for the TOC. Headings that
  * already carry an explicit id (from `attachSectionIds`) keep it, and the TOC
- * links to that same id — the two can never desync.
+ * links to that same id; the two can never desync.
  */
 function assignHeadingIds(html: string): { html: string; items: HeadingItem[] } {
   const used = new Set<string>()
@@ -566,7 +566,7 @@ export function renderMarkdown(
      * Add `data-source-line` attributes for preview↔editor sync (default true).
      * Costs a full DOMParser parse + innerHTML re-serialize of the rendered
      * document. The preview pipeline passes `false` and instead annotates the
-     * sanitized DocumentFragment in place (`annotateSourceLinesIn`) — one parse
+     * sanitized DocumentFragment in place (`annotateSourceLinesIn`), one parse
      * total. Callers that never use the annotations (AI panel, hover cards,
      * copy-as-HTML) also pass `false` to skip the cost outright.
      */
@@ -611,7 +611,7 @@ export function renderMarkdown(
   // `@eq:`, `@fig:`, `[@cite]` or `[[wikilink]]` written *inside a code sample*
   // (common when documenting the syntax itself) is left verbatim instead of
   // being turned into a live link. Restored right after, before markdown-it
-  // re-processes the code normally — line structure is preserved.
+  // re-processes the code normally: line structure is preserved.
   const { masked: maskedProcessed, restore: restoreCode } = maskCodeRegions(processed)
   let withRefs = wikiNames ? processWikilinks(maskedProcessed, wikiNames) : maskedProcessed
   withRefs = resolveSectionRefs(withRefs, numbered.sections)
@@ -655,7 +655,7 @@ export function renderMarkdown(
   }
   const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
 
-  // Assign heading ids for navigation (always — `@sec:` anchors must resolve in
+  // Assign heading ids for navigation (always; `@sec:` anchors must resolve in
   // documents with no TOC), then expand the `[[toc]]` placeholder against them.
   html = attachSectionIds(html)
   const headings = assignHeadingIds(html)

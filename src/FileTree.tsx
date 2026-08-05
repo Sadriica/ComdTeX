@@ -26,7 +26,7 @@ interface FileTreeProps {
   onSaveAsTemplate?: (node: FileNode) => void
   /** Absolute paths that should display the cloud-sync conflict marker. */
   conflictPaths?: Set<string>
-  /** Click handler for the conflict marker — typically opens the conflicts panel. */
+  /** Click handler for the conflict marker: typically opens the conflicts panel. */
   onConflictClick?: (path: string) => void
 }
 
@@ -258,7 +258,7 @@ function FileTree({
   /**
    * Where a create started from the header toolbar should go: the selected
    * folder, or the folder containing the selected file. Undefined (vault root)
-   * when nothing is selected — creating at the root stays the default, it is
+   * when nothing is selected; creating at the root stays the default, it is
    * just no longer the ONLY option.
    */
   const selectedDir = useMemo((): string | undefined => {
@@ -327,7 +327,7 @@ function FileTree({
       e.preventDefault()
       onOpenFile(focused)
     } else if (e.key === "F2" && focused) {
-      // Folders rename too — `renameFile` is a plain FS rename either way.
+      // Folders rename too: `renameFile` is a plain FS rename either way.
       e.preventDefault()
       setNewName(focused.name)
       setRenamingCtx(focused)
@@ -393,7 +393,7 @@ function FileTree({
 
       {creating && (
         <div className="tree-new-input">
-          {/* Say where it will land — silently creating at the root when the
+          {/* Say where it will land (silently creating at the root when the
               user had a folder selected was the original complaint. */}
           <span className="tree-new-target">
             {t.fileTree.creatingIn(
@@ -521,6 +521,6 @@ function FileTree({
 
 // Memoized: AppContent re-renders on every keystroke, but the file tree only
 // depends on the vault (stable across keystrokes). Without this, a large vault's
-// tree re-rendered on each character typed — the dominant "big vault = slow
+// tree re-rendered on each character typed: the dominant "big vault = slow
 // typing" cost. All callback/array props from App are stable (useCallback/useMemo).
 export default memo(FileTree)

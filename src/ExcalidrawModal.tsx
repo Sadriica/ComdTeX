@@ -62,7 +62,7 @@ export interface ExcalidrawModalProps {
 
 /** Cheap edit signature: Excalidraw bumps each element's `version` on any real
  *  modification (move, resize, delete → isDeleted+bump), while selection-only
- *  changes leave versions untouched — so this never false-positives on clicks. */
+ *  changes leave versions untouched, so this never false-positives on clicks. */
 function sceneSignature(elements: readonly unknown[]): string {
   return elements
     .map((el) => {
@@ -78,7 +78,7 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
   const [api, setApi] = useState<ExcalidrawAPI | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   // Baseline captured on the FIRST onChange (after Excalidraw restores/normalizes
-  // the loaded scene) — comparing against the raw initialData would flag the
+  // the loaded scene): comparing against the raw initialData would flag the
   // normalization itself as an edit.
   const baselineRef = useRef<string | null>(null)
 
@@ -87,7 +87,7 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
   const initialData = useMemo(() => decodeScene(sceneB64), [sceneB64])
 
   // The modal is conditionally mounted by the parent, so the component fully
-  // remounts on each open — `api` always starts fresh, no manual reset needed.
+  // remounts on each open: `api` always starts fresh, no manual reset needed.
 
   const handleSave = useCallback(() => {
     if (!api) { onClose(); return }
@@ -113,7 +113,7 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
   if (!open) return null
 
   return (
-    // data-gesture-optout: the canvas zooms/pans itself — app-level touchpad
+    // data-gesture-optout: the canvas zooms/pans itself; app-level touchpad
     // gestures (Ctrl+wheel/pinch → app font zoom) must not double-fire here.
     <div className="excalidraw-modal-overlay" data-gesture-optout="" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}>
       <div className="excalidraw-modal" ref={ref} role="dialog" aria-modal="true" aria-label={t.excalidraw.modalTitle}>

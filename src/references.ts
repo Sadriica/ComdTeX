@@ -1,7 +1,7 @@
 import { extractTocEntries, headingAnchorId } from "./toc"
 
 export interface SectionReference {
-  /** The heading's DOM id — what a `@sec:` link must point at. */
+  /** The heading's DOM id: what a `@sec:` link must point at. */
   id: string
   number: string
   title: string
@@ -60,7 +60,7 @@ export function numberHeadings(content: string): { content: string; sections: Ma
 export function resolveSectionRefs(content: string, sections: Map<string, SectionReference>): string {
   // Same shape as the `@tbl:` / `@fig:` ref patterns: dots are allowed *inside*
   // a label (`sec:1.2`) but a trailing one is sentence punctuation, not part of
-  // the label — `[\w:.-]+` would swallow the period in "ver @sec:intro."
+  // the label; `[\w:.-]+` would swallow the period in "ver @sec:intro."
   return content.replace(/@sec:([\w:-]+(?:\.\w+)*)/g, (_full, id: string) => {
     const section = sections.get(id)
     // Unknown label: show a broken-reference marker rather than leaking the raw

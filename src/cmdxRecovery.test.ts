@@ -3,10 +3,10 @@ import { describe, it, expect } from "vitest"
 import { toEditorContent } from "./cmdxFormat"
 
 // Regression: an older buggy build flattened special blocks to a DOUBLE-prefixed
-// callout — `:::flowchart[X]` → `:::note[Flowchart: X]` → `> [!note] Note: Flowchart: X`.
+// callout: `:::flowchart[X]` → `:::note[Flowchart: X]` → `> [!note] Note: Flowchart: X`.
 // The recovery used to require the title to start directly with the special name
 // ("Flowchart:"), so the extra "Note: " kept these stuck as plain notes on open.
-describe("cmdxFormat — recover double-prefixed special blocks", () => {
+describe("cmdxFormat, recover double-prefixed special blocks", () => {
   const block = (label: string) => [
     `> [!note] Note: ${label}: Búsqueda binaria`,
     "> ALGORITHM BinarySearch(A, target)",

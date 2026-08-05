@@ -107,7 +107,7 @@ html, body, #root {
 }
 .titlebar-btn:hover { background: var(--surface2, #2a2a2a); color: var(--fg, #ccc); opacity: 1; }
 .titlebar-close:hover { background: #c0392b; color: #fff; opacity: 1; }
-/* The gear is a monochrome glyph (⚙︎, text variation selector) — same family
+/* The gear is a monochrome glyph (⚙︎, text variation selector), same family
    as the min/max/close controls; sized to match their optical weight. */
 .titlebar-settings-btn { font-size: 14px; }
 
@@ -941,7 +941,7 @@ html, body, #root {
 .math-env-body p:last-child { margin-bottom: 0; }
 .math-env-body p:first-child { margin-top: 0; }
 
-/* Headings inside environments — scaled to fit the context */
+/* Headings inside environments: scaled to fit the context */
 .math-env-body h1 {
   font-size: 1.05em;
   font-weight: 700;
@@ -1029,7 +1029,7 @@ html, body, #root {
 .math-env-note        { border-color: #444; }
 .math-env-note .math-env-label { color: #777; }
 
-/* Callout-style environments (tip/warning/danger/...) — themed left border + label */
+/* Callout-style environments (tip/warning/danger/...): themed left border + label */
 .math-env-tip, .math-env-hint            { border-color: #4a8; background: rgba(72,168,128,0.08); }
 .math-env-tip .math-env-label, .math-env-hint .math-env-label { color: #6c9; }
 
@@ -1288,7 +1288,7 @@ html, body, #root {
   color: #ff6b6b;
   font-size: 10px;
   margin-left: 4px;
-  /* Static dot — the previous infinite `pulse` animation forced the GPU
+  /* Static dot: the previous infinite `pulse` animation forced the GPU
      compositor to repaint continuously even when the app was idle (~5%
      sustained CPU on the WebKit compositor thread). The red dot alone
      is enough signal that there's unsaved work. */
@@ -1740,7 +1740,7 @@ html, body, #root {
 .setting-row select:hover, .setting-row select:focus,
 .folder-rules-field select:hover, .folder-rules-field select:focus,
 .folder-rules-generated-row select:hover, .folder-rules-generated-row select:focus { border-color: #569cd6; }
-/* `<option>` items use OS dropdown colors — force readable contrast */
+/* `<option>` items use OS dropdown colors: force readable contrast */
 .setting-row select option,
 .folder-rules-field select option,
 .folder-rules-generated-row select option { background: #1e1e1e; color: #f0f0f0; }
@@ -2015,7 +2015,7 @@ html, body, #root {
    --fg, --muted, --border). An earlier version invented --bg-input/--text/
    --text-muted, which resolve to nothing, so `background` fell back to the
    native widget and the selects rendered white. Select styling itself is
-   shared with `.setting-row select` above — see the appearance:none note. */
+   shared with `.setting-row select` above; see the appearance:none note. */
 .folder-rules-body { display: flex; flex-direction: column; gap: 14px; }
 .folder-rules-intro {
   margin: 0;
@@ -3234,7 +3234,7 @@ html, body, #root {
 .git-collab-conflict { display: flex; align-items: center; gap: 6px; }
 .git-collab-conflict .git-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* UNUSED — kept for reference */
+/* UNUSED: kept for reference */
 .git-bar {
   display: flex;
   align-items: center;
@@ -4399,7 +4399,7 @@ html, body, #root {
 .search-replace-inputs { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
 .search-replace-inputs input { background: #2a2a2a; border: 1px solid #444; color: #ccc; padding: 4px 8px; border-radius: 3px; font-size: 12px; }
 .search-replace-options { display: flex; gap: 6px; padding: 0 8px 8px; font-size: 11px; }
-/* Minimalist monochrome toggle chips (Aa / |ab| / .∗). Flat, theme-driven —
+/* Minimalist monochrome toggle chips (Aa / |ab| / .∗). Flat, theme-driven:
    color comes from --icon, the active state lifts to --fg + --accent border. */
 .search-replace-toggle {
   display: inline-flex;
@@ -4692,7 +4692,7 @@ html:has(.app[data-theme="light"]) #root { background: #ffffff; color: #1f1f1f; 
 .app[data-theme="light"] .editor-pane { border-right-color: #e0e0e0; }
 .app[data-theme="light"] .preview-pane { background: #ffffff; }
 
-/* Preview content (default — when previewTheme is "same") */
+/* Preview content (default: when previewTheme is "same") */
 .app[data-theme="light"] .preview-pane:not(.preview-light):not(.preview-dark),
 .app[data-theme="light"] .preview-pane:not(.preview-light):not(.preview-dark) .preview-content {
   background: #ffffff; color: #1f1f1f;
@@ -5520,7 +5520,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .app[data-theme="hc"] .hp-greek-item { background: #000; border: 1px solid #ffffff; color: #ffffff; }
 .app[data-theme="hc"] .hp-kbd { background: #000; border: 1px solid #ffffff; border-bottom-width: 2px; color: #ffff00; }
 
-/* Git panel — high contrast */
+/* Git panel: high contrast */
 .app[data-theme="hc"] .git-header { background: #000; border-bottom: 1px solid #ffffff; }
 .app[data-theme="hc"] .git-branch { color: #ffffff; }
 .app[data-theme="hc"] .git-refresh-btn { color: #ffffff; }
@@ -5914,7 +5914,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .comment-glyph.drifted::before { content: "⚠"; color: #f0c040; }
 
 /* ── Keep marks (editor-only decoration) ──
-   A keep mark is invisible in the preview and in every export — the editor is
+   A keep mark is invisible in the preview and in every export: the editor is
    the ONLY surface that shows it. Deliberately subtle: a faint dotted underline
    plus a small gutter glyph, so marked prose still reads as prose. */
 .keep-mark-inline {
@@ -6061,7 +6061,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .comments-edit-save:hover { background: rgba(86,156,214,0.25); }
 .comments-edit-cancel:hover { border-color: #666; color: #fff; }
 
-/* ── Comments — light theme ── */
+/* ── Comments: light theme ── */
 .app[data-theme="light"] .comments-header { border-bottom-color: #e0e0e0; }
 .app[data-theme="light"] .comments-summary { color: #4a4a4a; }
 .app[data-theme="light"] .comments-add-btn {
@@ -6092,7 +6092,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .app[data-theme="light"] .comments-edit-cancel { border-color: #d0d0d0; color: #4a4a4a; }
 .app[data-theme="light"] .comments-edit-cancel:hover { border-color: #8a8a8a; color: #1f1f1f; }
 
-/* ── Comments — high-contrast theme ── */
+/* ── Comments: high-contrast theme ── */
 .app[data-theme="hc"] .comment-glyph.drifted::before { color: #ffff00; }
 .app[data-theme="hc"] .comments-header { border-bottom-color: #ffffff; }
 .app[data-theme="hc"] .comments-summary { color: #ffffff; }
@@ -6301,7 +6301,7 @@ html:has(.app[data-theme="hc"]) #root { background: #000000; color: #ffffff; }
 .app[data-theme="hc"] .ai-action-item { background: #000; border-color: #fff; color: #fff; }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   Ctrl/Cmd+K inline AI edit — floating prompt + proposal widget.
+   Ctrl/Cmd+K inline AI edit: floating prompt + proposal widget.
    Theme-safe: only theme variables (dark / light / hc) with sober fallbacks.
    Uses position:fixed (coords computed from the editor's pixel API in JS).
    ─────────────────────────────────────────────────────────────────────────── */

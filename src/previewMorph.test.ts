@@ -9,7 +9,7 @@ function container(html: string): HTMLElement {
 }
 
 // `morphPreviewContent` now takes a pre-parsed DocumentFragment (the shape
-// `commitPreview`/DOMPurify hands it) instead of a raw HTML string — build
+// `commitPreview`/DOMPurify hands it) instead of a raw HTML string; build
 // one the same way a `<template>` parse would.
 function fragment(html: string): DocumentFragment {
   const tpl = document.createElement("template")
@@ -23,7 +23,7 @@ describe("morphPreviewContent", () => {
     const svgBlock = el.children[1]
     // Re-render where only the first paragraph changed.
     morphPreviewContent(el, fragment(`<p data-source-line="1">EDITED</p><div class="diagram"><svg></svg></div>`))
-    // The diagram block is the SAME node instance — never torn down or re-parsed.
+    // The diagram block is the SAME node instance: never torn down or re-parsed.
     expect(el.children[1]).toBe(svgBlock)
     expect(el.children[0].textContent).toBe("EDITED")
   })

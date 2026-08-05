@@ -1,7 +1,7 @@
 /**
  * Single source of truth for every `localStorage` (and `sessionStorage`) key
  * ComdTeX uses. Values here are exact string literals already persisted on
- * disk in users' browsers/webviews — DO NOT change any value, only the
+ * disk in users' browsers/webviews; DO NOT change any value, only the
  * semantic name on the left. Changing a value orphans existing user data
  * (the app would silently stop finding it under the old key).
  *
@@ -15,7 +15,7 @@
  *
  * Note: `comdtex_secret_<name>` (a *dynamic*, prefixed namespace used by
  * `secretStore.ts` as a keychain fallback) is intentionally NOT modeled as a
- * fixed constant here — see `SECRET_FALLBACK_PREFIX` below for collision
+ * fixed constant here; see `SECRET_FALLBACK_PREFIX` below for collision
  * documentation only. `secretStore.ts` itself is out of scope for this
  * refactor and keeps its own internal `FALLBACK_PREFIX` constant.
  */
@@ -49,14 +49,14 @@ export const STORAGE_KEYS = {
    *  LEGACY: superseded by EDITOR_VIEW_STATES, which also carries scroll and
    *  folding. Still READ once per file as a migration fallback; no longer written. */
   CURSOR_POSITIONS: "comdtex_cursor_positions",
-  /** JSON map of Monaco `ICodeEditorViewState` per file path — cursor, scroll and
+  /** JSON map of Monaco `ICodeEditorViewState` per file path: cursor, scroll and
    *  collapsed regions. Owner: editorViewState.ts */
   EDITOR_VIEW_STATES: "comdtex_editor_view_states",
   /** JSON array of optional-dependency names the user dismissed the warning banner for. Owner: App.tsx */
   DEPS_DISMISSED: "comdtex_deps_dismissed",
   /** "1" once the user dismisses the "move vault into cloud folder" suggestion banner.
    *  Written/removed from BOTH App.tsx (dismiss) and SettingsModal.tsx (reset-hints
-   *  action) — dual call sites are intentional (out of scope to consolidate ownership),
+   *  action); dual call sites are intentional (out of scope to consolidate ownership),
    *  but both now reference this single constant to remove value-drift risk. */
   CLOUD_BANNER_DISMISSED: "comdtex_cloud_banner_dismissed",
   /** JSON `{width,height,x,y,maximized}` snapshot of the last window geometry. Owner: App.tsx */
@@ -65,7 +65,7 @@ export const STORAGE_KEYS = {
   ONBOARDING_SEEN: "comdtex_onboarding_seen",
 
   // ── useSettings.ts ───────────────────────────────────────────────────────
-  /** JSON blob of all persisted app settings (never includes `aiApiKey` — see secretStore.ts). Owner: useSettings.ts */
+  /** JSON blob of all persisted app settings (never includes `aiApiKey`; see secretStore.ts). Owner: useSettings.ts */
   SETTINGS: "comdtex_settings",
 
   // ── useAiSession.ts ──────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ export const STORAGE_KEYS = {
   /** Id of the active AI conversation. Owner: useAiSession.ts.
    *  See TABS_ACTIVE above for the historical name collision this resolves. */
   AI_ACTIVE_CONVERSATION: "comdtex_ai_active",
-  /** Draft AI chat input text. Stored in `sessionStorage` (not `localStorage`) —
+  /** Draft AI chat input text. Stored in `sessionStorage` (not `localStorage`),
    *  per-session only, intentionally not kept across app restarts. Owner: useAiSession.ts */
   AI_INPUT_DRAFT: "comdtex_ai_input",
 

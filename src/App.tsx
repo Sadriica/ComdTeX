@@ -124,7 +124,7 @@ const MAX_RECENT = 10
 /** Block types collapsed automatically the first time a file is opened. */
 const AUTO_FOLD_BLOCKS = ["excalidraw"] as const
 
-/** `20260728-094512` — a filename-safe local timestamp for generated assets. */
+/** `20260728-094512`: a filename-safe local timestamp for generated assets. */
 function timestampSlug(): string {
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, "0")
@@ -204,7 +204,7 @@ function currentTauriWindow() {
   catch { return null }
 }
 
-const BIB_TEMPLATE = `% references.bib — BibTeX references for ComdTeX
+const BIB_TEMPLATE = `% references.bib: BibTeX references for ComdTeX
 % Cite with [@key] in your markdown, e.g. [@knuth84]
 
 @book{knuth84,
@@ -224,7 +224,7 @@ Abre tu vault con **Abrir carpeta** en la barra lateral, o desde \`Archivo → A
 
 ## Entornos matemáticos
 
-Sintaxis: \`:::tipo[Título opcional]\` — contenido en Markdown + math — \`:::\`
+Sintaxis: \`:::tipo[Título opcional]\` (contenido en Markdown + math) \`:::\`
 
 Los tipos **numerados** son: \`theorem\`, \`lemma\`, \`corollary\`, \`proposition\`, \`definition\`, \`example\`, \`exercise\`.
 Los tipos **sin número** son: \`proof\`, \`remark\`, \`note\`.
@@ -286,7 +286,7 @@ El Teorema Fundamental del Cálculo (@eq:tfc) y la identidad de Basel (@eq:basel
 
 ---
 
-## Shorthands matemáticos — escribe y pulsa Tab
+## Shorthands matemáticos: escribe y pulsa Tab
 
 Los shorthands funcionan **dentro y fuera** de \`$...$\`. Fuera se envuelven automáticamente.
 
@@ -375,7 +375,7 @@ const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
 const UpdateChecker = lazy(() => import("./UpdateChecker"))
 const PdfPreviewPanel = lazy(() => import("./PdfPreviewPanel"))
 
-// Singleton mermaid loader — `import("mermaid")` is a ~600KB chunk; cache the
+// Singleton mermaid loader: `import("mermaid")` is a ~600KB chunk; cache the
 // resolved module + the (idempotent) `initialize()` call so the per-keystroke
 // re-render path doesn't re-do the work.
 type MermaidModule = { render: (id: string, src: string) => Promise<{ svg: string }> }
@@ -425,19 +425,19 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   // Last content the editor model is known to hold (the user's last keystroke
   // value, or the last value we pushed). Lets the external-sync effect skip the
-  // common case — the user's own typing — with an O(1) reference compare instead
+  // common case (the user's own typing) with an O(1) reference compare instead
   // of the controlled-`value` round-trip (`getValue()` of the whole document on
   // every keystroke), which scaled badly with file size.
   const lastEditorContentRef = useRef<string>("")
   const mainRef = useRef<HTMLDivElement>(null)
-  // Linter context refs — updated without re-creating the editor callback
+  // Linter context refs: updated without re-creating the editor callback
   const lintWikiNamesRef = useRef<Set<string>>(new Set())
   const lintBibKeysRef = useRef<Set<string>>(new Set())
-  // Spell-check linter refs — read live by the linter's getContext callback.
+  // Spell-check linter refs: read live by the linter's getContext callback.
   const lintSpellEnabledRef = useRef(false)
   const lintSpellLangRef = useRef<SpellLang>("es")
   const lintSpellMessageRef = useRef<(w: string) => string>((w) => w)
-  // Macros ref for math hover — stays current without rebuilding the hover
+  // Macros ref for math hover: stays current without rebuilding the hover
   const macrosRef = useRef<Record<string, string>>({})
   const linterDisposableRef = useRef<{ dispose(): void; relint?(): void } | null>(null)
   const mathHoverDisposableRef = useRef<{ dispose(): void } | null>(null)
@@ -471,7 +471,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // main pane's adaptive delay.
   const renderCostRef = useRef(0)
   // Adaptive preview delay: 4× the last full refresh cost (render + commit),
-  // clamped to [150ms, 1500ms] — a refresh may take at most ~1/5 of the
+  // clamped to [150ms, 1500ms]; a refresh may take at most ~1/5 of the
   // main-thread budget while typing. Reads refs only, so it's stable.
   const previewDelayMs = () =>
     Math.min(1500, Math.max(150, Math.round((renderCostRef.current + previewCostRef.current) * 4)))
@@ -484,7 +484,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
   // Tracks whether `loadMacros` has resolved at least once for the current
-  // vault. The preview render uses KaTeX with `throwOnError: false` — when an
+  // vault. The preview render uses KaTeX with `throwOnError: false`; when an
   // equation references a user macro that isn't loaded yet, KaTeX falls back
   // to a red `\macro` source rendering and the user sees what looks like raw
   // LaTeX at the top of the document until macros finish loading and a
@@ -542,7 +542,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined)
   // Pomodoro / writing-session state, lifted out of FocusTimerPanel so the timer
-  // keeps running (and notifies on phase change) when the panel is closed — e.g.
+  // keeps running (and notifies on phase change) when the panel is closed, e.g.
   // while iterating between the Pomodoro panel and the AI assistant.
   const pomodoroConfig = useMemo(() => ({
     workMin: settings.pomodoroWorkMin,
@@ -553,7 +553,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const focusTimer = useFocusTimer(pomodoroConfig, vault.openFile?.content ?? "", vault.activeTabPath)
   /**
    * Compact timer readout for the top bar, so the countdown stays visible while
-   * the Enfoque panel is closed. Null until a session exists — the bar looks
+   * the Enfoque panel is closed. Null until a session exists: the bar looks
    * exactly as before for anyone not using the timer.
    */
   const focusClock = useMemo(() => {
@@ -569,7 +569,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [focusTimer.session, focusTimer.timer.remainingSec, focusTimer.timer.phase, focusTimer.timer.running, t])
   // Search & Replace inputs/results, lifted so they survive the panel unmounting.
   const searchReplaceState = useSearchReplaceState()
-  // Ctrl/Cmd+K inline AI edit — null when the floating widget is closed.
+  // Ctrl/Cmd+K inline AI edit: null when the floating widget is closed.
   const [cmdkAnchor, setCmdkAnchor] = useState<CmdKAnchor | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
@@ -604,7 +604,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
   /**
    * Toolbar behaviour: pressing the button of the panel already on screen puts
-   * it away again. Used by the toolbar's own buttons — programmatic opens (a
+   * it away again. Used by the toolbar's own buttons; programmatic opens (a
    * search result, a comment glyph) keep using `openPanel`, which must always
    * show the panel rather than toggle it off under the user.
    */
@@ -615,7 +615,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       return alreadyShowing
     })
   }, [])
-  // Stable callbacks for FileTree so its React.memo holds — otherwise the inline
+  // Stable callbacks for FileTree so its React.memo holds: otherwise the inline
   // arrows would change identity every render and the (potentially huge) file
   // tree would re-render on every keystroke (the "big vault = slow typing" cause).
   // Depend on the stable method, not the `vault` object (a fresh literal each render).
@@ -684,7 +684,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const suppressPreviewScrollOnce = useRef(false)
   const splitPreviewRef = useRef<HTMLDivElement>(null)
 
-  // ── Wikilink file names (memoized — stable reference for effects) ─────────
+  // ── Wikilink file names (memoized, stable reference for effects) ─────────
   const wikiNames = useMemo(() => getFileNameSet(vault.tree), [vault.tree])
   const bibKeys = useMemo(() => new Set(bibMap.keys()), [bibMap])
   const vaultFileNodes = useMemo(() => flatFiles(vault.tree), [vault.tree])
@@ -753,7 +753,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   //
   // Reads through `vaultFilesRef` for the same reason `transclusionResolver`
   // does: STABLE identity. `vaultFiles` content comes from `vaultTextCache`,
-  // whose effect keys on the SET of vault file paths — not on keystrokes — so
+  // whose effect keys on the SET of vault file paths (not on keystrokes), so
   // for any document other than the active tab this returns the identical
   // string reference on every render. That is what lets the label cache in
   // environments.ts short-circuit on a pointer compare instead of re-prescanning.
@@ -764,7 +764,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return found?.content ?? null
   }, [])
 
-  // Export/import/compile handlers — extracted to useExportActions.ts.
+  // Export/import/compile handlers: extracted to useExportActions.ts.
   const exportActions = useExportActions({
     editorRef,
     vault,
@@ -794,7 +794,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
   // Keyed on the DEBOUNCED `previewContent` (not the live editor content) so it
-  // doesn't re-split the whole document on every keystroke — only the breadcrumb
+  // doesn't re-split the whole document on every keystroke; only the breadcrumb
   // reads this, a ~150ms staleness is invisible.
   const currentHeading = useMemo(() => {
     const lines = previewContent.split("\n")
@@ -863,7 +863,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [vaultFiles])
 
   // Build a vault-wide text cache (used by transclusion + wikilink resolution).
-  // Depends only on the SET OF FILES (paths joined) — not on every keystroke.
+  // Depends only on the SET OF FILES (paths joined), not on every keystroke.
   // Without this guard, every character in the active tab refires the
   // `Promise.all(readTextFile(...))` walk over the entire vault → tens of MBs
   // re-read per keystroke for users with large vaults. Live tab content is
@@ -981,7 +981,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       // Add active class
       target?.classList.add("active-heading")
 
-      // Scroll only if syncScroll is enabled — and not when the cursor move
+      // Scroll only if syncScroll is enabled, and not when the cursor move
       // came from a preview click (otherwise the preview yanks back up to the
       // heading the user is already looking at). The flag was already cleared
       // at the top of the effect; we use the captured `wasSuppressed` value.
@@ -1013,7 +1013,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // Keep the linter's spell refs current and force a re-lint when the
   // spell-check setting toggles, the language changes, or the message
-  // formatter (i18n) changes. When the setting is OFF nothing loads — the
+  // formatter (i18n) changes. When the setting is OFF nothing loads: the
   // linter simply skips the rule, so squiggles vanish on the next pass.
   useEffect(() => {
     lintSpellEnabledRef.current = settings.spellcheck
@@ -1088,7 +1088,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // confirmation (a tab can still be dirty if its save failed). Returns true
   // when the app should proceed to close, false to abort.
   const confirmClose = useCallback(async (): Promise<boolean> => {
-    // Flush pending autosaves before deciding — this both persists in-flight
+    // Flush pending autosaves before deciding: this both persists in-flight
     // edits and clears the dirty flag on tabs that save successfully.
     try { await vault.flushPending() } catch { /* best-effort */ }
     const dirtyTabs = openTabsRef.current.filter((t) => t.isDirty)
@@ -1100,7 +1100,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         { title: "ComdTeX", kind: "warning" }
       )
     } catch {
-      // Dialog unavailable — allow the close (matches prior behavior).
+      // Dialog unavailable: allow the close (matches prior behavior).
       return true
     }
   }, [t, vault])
@@ -1144,7 +1144,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     let unlisten: (() => void) | undefined
     let cancelled = false
     win.onFocusChanged(({ payload: focused }) => {
-      // Only refresh the file tree on refocus — NOT loadVault(). loadVault runs
+      // Only refresh the file tree on refocus: NOT loadVault(). loadVault runs
       // restoreTabs(), which rebuilds every tab from disk/draft and would
       // clobber unsaved in-memory edits (drafts flush at 300ms, autosave at
       // 800ms, so recent keystrokes aren't persisted yet). On Wayland/Sway
@@ -1247,7 +1247,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Focus mode + Ctrl+P + Ctrl+Shift+P + ? ───────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Ctrl/Cmd+Shift+F — open vault search. The Monaco command only fires when
+      // Ctrl/Cmd+Shift+F: open vault search. The Monaco command only fires when
       // the editor is focused, but the palette/menu present this as a global
       // shortcut, so handle it here (regardless of focus) too. Both paths call
       // openPanel("search").
@@ -1314,7 +1314,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 defaultPath: vault.openFile?.name,
               })
               if (!path) return
-              // Faithful save (masked, extension-aware) — not a lossy export.
+              // Faithful save (masked, extension-aware): not a lossy export.
               await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
               await vault.loadVault()
             })()
@@ -1476,7 +1476,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [mermaidVersion, setMermaidVersion] = useState(0)
 
   // `costSink`, when passed, receives the elapsed ms of THIS call's
-  // renderMarkdown + sanitize pipeline — written in a `finally` so it's
+  // renderMarkdown + sanitize pipeline: written in a `finally` so it's
   // recorded even when rendering throws (renderErrorHtml is then what the
   // user sees, and its own refresh should still get a fresh, non-stale
   // delay). Only the main preview pane passes a sink (`renderCostRef`); the
@@ -1488,15 +1488,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // `macros = {}`, so any equation that relies on a user-defined macro
     // renders as red `\macro` source text (KaTeX's `throwOnError: false`
     // fallback). The async `loadMacros` then completes and triggers a second
-    // render that fixes things — exactly the "top renders raw, scroll/edit
+    // render that fixes things: exactly the "top renders raw, scroll/edit
     // makes it correct" symptom users were reporting.
     if (!macrosReady) return ""
     const t0 = performance.now()
     try {
-      // RAW pipeline output — NOT sanitized and NOT line-annotated here. The
+      // RAW pipeline output: NOT sanitized and NOT line-annotated here. The
       // commit effects hand this string to commitPreview() (previewMorph.ts),
       // which sanitizes to a DocumentFragment, annotates it in place, and
-      // morphs — so the (KaTeX-heavy, potentially multi-MB) document HTML is
+      // morphs, so the (KaTeX-heavy, potentially multi-MB) document HTML is
       // parsed ONCE per refresh instead of three times with two re-serializes.
       // This string must never reach the DOM by any other path.
       return renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, envRefResolver, { annotate: false })
@@ -1532,7 +1532,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const el = previewContentRef.current
     if (!el) return
     // Measure the WHOLE commit (sanitize parse + annotate + morph + the layout
-    // that follows, via rAF) — it feeds the ADAPTIVE preview debounce below so
+    // that follows, via rAF); it feeds the ADAPTIVE preview debounce below so
     // heavy docs re-render less often while light docs stay snappy.
     const t0 = performance.now()
     commitPreview(el, previewHtml, deferredPreviewContent)
@@ -1564,11 +1564,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [splitPreviewHtml, deferredSplitContent])
 
   // While the preview pane is hidden, `previewHtml` short-circuits to "" (see
-  // the memo above) — a refresh is just a cheap string state update, not a
+  // the memo above): a refresh is just a cheap string state update, not a
   // real render/commit. Freezing the cost refs at their last (possibly heavy)
   // measured value would pin the adaptive preview delay near its ceiling for
   // consumers that keep reading `previewContent` while hidden (OutlinePanel,
-  // breadcrumb heading, spellcheck lang, StatusBar counts) — a 10x staleness
+  // breadcrumb heading, spellcheck lang, StatusBar counts): a 10x staleness
   // regression vs. the intended 150ms floor. Reset to 0 on hide; the refs
   // re-learn real costs once the preview is shown again.
   useEffect(() => {
@@ -1634,11 +1634,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           if (cancelled) return
           const safe = sanitizeRenderedHtml(svg)
           div.innerHTML = safe
-          // Populate the cache so future re-renders embed the SVG inline — but
+          // Populate the cache so future re-renders embed the SVG inline, but
           // ONLY for ComdTeX-generated blocks that carry the b64 source attr
           // (whose key matches what environments.ts reads). For a raw ```mermaid
           // fence there's no such attr, so caching under el.textContent would
-          // never be hit and would just re-render every pass — skip it.
+          // never be hit and would just re-render every pass; skip it.
           if (sourceAttr) {
             setFlowchartSvg(diagram, safe)
             storedAny = true
@@ -1657,7 +1657,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       // If we stored at least one fresh SVG, bump the version so the next
       // render of `previewHtml` (already debounced) reads the cache and
-      // embeds the SVG directly into the markup — eliminating the flash of
+      // embeds the SVG directly into the markup, eliminating the flash of
       // source code that used to appear on every keystroke.
       if (storedAny) setMermaidVersion((v) => v + 1)
     }
@@ -1670,7 +1670,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return () => { cancelled = true }
   }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid])
   // mermaidVersion participates only as a trigger for renderPreviewHtml deps
-  // (read below), not as a dep of this effect — it would cause a re-render loop.
+  // (read below), not as a dep of this effect; it would cause a re-render loop.
   void mermaidVersion
 
   // ── Excalidraw static SVG rendering ───────────────────────────────────────
@@ -1729,7 +1729,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Save the outgoing tab's view state ───────────────────────────────────
   // This runs during RENDER on purpose. The Editor is keyed by the active tab
-  // path, so React disposes the old editor while committing this render — an
+  // path, so React disposes the old editor while committing this render; an
   // effect would fire too late and `editorRef.current` would already be the new
   // instance (or gone). Snapshotting here, synchronously, is also what fixes a
   // fast Ctrl+Tab landing on the wrong line: the old debounced save never ran.
@@ -1749,14 +1749,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
     // Cancel a pending preview debounce from the PREVIOUS file. Otherwise,
     // typing in file A and switching to file B within the debounce window lets
-    // A's queued setPreviewContent fire after this effect set B's content — the
+    // A's queued setPreviewContent fire after this effect set B's content; the
     // preview would render A while the editor shows B until the next keystroke.
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current)
       previewDebounceRef.current = undefined
     }
     // The cursor/scroll/fold restore now happens synchronously in the editor's
-    // onMount (see `restoreEditorPlacement`) — no timer, so it can neither race
+    // onMount (see `restoreEditorPlacement`): no timer, so it can neither race
     // the user's first keystrokes nor visibly jump after the file appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.openFile?.path])
@@ -1781,12 +1781,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   /**
    * Put a freshly mounted editor back where the user left it: caret, scroll and
-   * collapsed regions. Called from onMount, synchronously — the old 100 ms timer
+   * collapsed regions. Called from onMount, synchronously: the old 100 ms timer
    * both jumped visibly and raced the first keystrokes after a tab switch.
    */
   const restoreEditorPlacement = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
     // An explicit jump (search hit, outline click, backlink) outranks the
-    // remembered position — the user asked to go somewhere specific.
+    // remembered position: the user asked to go somewhere specific.
     if (pendingJumpRef.current !== null) {
       const line = pendingJumpRef.current
       pendingJumpRef.current = null
@@ -1829,7 +1829,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const f = vault.openFile
-      // PDF tabs are read-only — Ctrl+S would otherwise call saveFile with the
+      // PDF tabs are read-only: Ctrl+S would otherwise call saveFile with the
       // empty placeholder content and destroy the underlying PDF.
       if (f && f.mode !== "pdf") vault.saveFile(f.path, editor.getValue())
     })
@@ -1843,7 +1843,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             defaultPath: vault.openFile?.name,
           })
           if (!path) return
-          // Faithful save (masked, extension-aware) — not a lossy export.
+          // Faithful save (masked, extension-aware): not a lossy export.
           await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
           await vault.loadVault()
         })()
@@ -1857,7 +1857,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
       () => openPanel("search")
     )
-    // Ctrl/Cmd+B / Ctrl/Cmd+I — bold / italic. The command palette advertises
+    // Ctrl/Cmd+B / Ctrl/Cmd+I: bold / italic. The command palette advertises
     // these shortcuts but Monaco has no default binding for them; wire them to
     // the same selection-aware insert the palette uses so they wrap the current
     // selection (matching the palette's snippets exactly).
@@ -1895,7 +1895,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       }
       // Debounced view-state snapshot, so closing the app (or crashing) keeps
       // the place without waiting for a tab switch. The switch itself saves
-      // synchronously during render — this timer is only the "still here" case,
+      // synchronously during render: this timer is only the "still here" case,
       // and aborting on a path change keeps file A's state off file B's key.
       if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
       const scheduledPath = activeFilePathRef.current
@@ -1939,7 +1939,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       openPanel("comments")
     })
 
-    // Keep-mark decorations — the ONLY place a `^^…^^` mark is visible.
+    // Keep-mark decorations: the ONLY place a `^^…^^` mark is visible.
     keepMarkDecorationsRef.current?.dispose()
     keepMarkDecorationsRef.current = setupKeepMarkDecorations(editor, monaco, () => {
       openPanel("keep")
@@ -1976,7 +1976,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     editor.focus()
 
-    // Put the caret, the scroll and the collapsed regions back — synchronously,
+    // Put the caret, the scroll and the collapsed regions back: synchronously,
     // while the editor is fresh and before the user can type into it.
     restoreEditorPlacement(editor)
 
@@ -2010,9 +2010,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // uncontrolled (`defaultValue` + `key` per tab), so the user's own keystrokes
   // never round-trip through React's `value` (which made the library serialize
   // the whole document via `getValue()` on every keystroke). This effect only
-  // does work when `openFile.content` differs from what the editor already has —
-  // i.e. a conflict reload, vault-wide replace, todo/wikilink/backlink edit, or
-  // a tab switch — all rare relative to typing.
+  // does work when `openFile.content` differs from what the editor already has
+  // (i.e. a conflict reload, vault-wide replace, todo/wikilink/backlink edit, or
+  // a tab switch), all rare relative to typing.
   useEffect(() => {
     const ed = editorRef.current
     const file = vault.openFile
@@ -2037,9 +2037,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (!edit) return
       const range = monacoRange(model, edit.start, edit.end)
       ed.executeEdits("externalSync", [{ range, text: edit.text }])
-    } catch { /* editor disposed mid-swap — the key remount re-seeds it */ }
+    } catch { /* editor disposed mid-swap: the key remount re-seeds it */ }
     // Intentionally key on the content/mode PRIMITIVES, not the `vault.openFile`
-    // object (whose identity changes every keystroke — depending on it would run
+    // object (whose identity changes every keystroke; depending on it would run
     // this effect per keystroke, defeating the purpose).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.openFile?.content, vault.openFile?.mode])
@@ -2153,7 +2153,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!pos) return
     const line = pos.lineNumber
     const lineText = file.content.split("\n")[line - 1] ?? ""
-    // Use a native prompt — keeps the implementation tiny and matches other
+    // Use a native prompt: keeps the implementation tiny and matches other
     // quick text-input flows (e.g. file rename) elsewhere in the app.
     const body = window.prompt(t.comments.promptForBody, "")
     if (body === null) return
@@ -2251,13 +2251,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       }, 50)
       return
     }
-    // File not open — open via the vault.
+    // File not open: open via the vault.
     const node = findVaultNodeByPath(absolutePath)
     if (node) {
       pendingJumpRef.current = line
       vault.openFileNode(node)
     } else {
-      // Out-of-vault — just show the line in the current editor when paths match.
+      // Out-of-vault: just show the line in the current editor when paths match.
       if (vault.openFile?.path === absolutePath) {
         editor?.revealLineInCenter(line)
         editor?.setPosition({ lineNumber: line, column: 1 })
@@ -2409,7 +2409,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const handleOpenRecent = useCallback((path: string) => {
     const node = findVaultNodeByPath(path)
     if (node) { handleOpenFileNode(node); return }
-    // File not in current tree — show a helpful message
+    // File not in current tree: show a helpful message
     showToast(t.app.fileNotInVault(displayBasename(path)), "error")
   }, [findVaultNodeByPath, handleOpenFileNode, t])
 
@@ -2583,7 +2583,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Show a floating preview card with the first ~10 non-empty lines of the
   // target note when the user hovers (~300ms) over a rendered [[wikilink]].
   // The handler reads everything through refs so the effect's dep list stays
-  // small — without this guard the listeners detach + reattach on every
+  // small: without this guard the listeners detach + reattach on every
   // keystroke (vaultFiles → macros → bibMap → transclusionResolver all churn
   // when the active tab content changes).
   const wikiHoverDataRef = useRef({
@@ -2714,7 +2714,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── File actions ──────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     const f = vaultRef.current.openFile; const editor = editorRef.current
-    // PDF tabs render via PdfPreviewPanel, not the Monaco editor — calling
+    // PDF tabs render via PdfPreviewPanel, not the Monaco editor: calling
     // editor.getValue() on a PDF tab returns the text-tab placeholder content
     // ("") and writing that back overwrites the user's PDF. Block save.
     if (f && f.mode !== "pdf" && editor) vaultRef.current.saveFile(f.path, editor.getValue())
@@ -2729,7 +2729,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })
     if (!path) return
     // Save As must persist the document faithfully (round-trippable), so write
-    // the masked CMDX via toDiskContent — extension-aware (.md / .tex) — never a
+    // the masked CMDX via toDiskContent (extension-aware, .md / .tex), never a
     // lossy Obsidian transform. (Obsidian/GFM export is handled by Export Markdown.)
     await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
     await vaultRef.current.loadVault()
@@ -3016,8 +3016,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   /**
    * Pad the table under the cursor so every row has the header's column count,
-   * and re-align the pipes. Rows with missing cells still render — GFM just
-   * fills them in silently — so this is a tidy-up, not a repair of broken output.
+   * and re-align the pipes. Rows with missing cells still render (GFM just
+   * fills them in silently), so this is a tidy-up, not a repair of broken output.
    */
   const handleNormalizeTable = useCallback(() => {
     const editor = editorRef.current
@@ -3107,7 +3107,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * Create a file honouring the destination folder's rules: filename pattern,
    * default template and default frontmatter.
    *
-   * `explicitContent` short-circuits the template lookup — the template picker
+   * `explicitContent` short-circuits the template lookup: the template picker
    * already resolved which template to use, and the folder's default must not
    * override the user's explicit choice.
    */
@@ -3206,7 +3206,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    *
    * With no argument it fills the gap under the cursor; `"all"` sweeps the whole
    * document. Every replacement goes through `executeEdits`, so the result is a
-   * normal undo step and never touches the disk directly — the project's
+   * normal undo step and never touches the disk directly; the project's
    * standing rule for AI edits.
    */
   const handleFillGaps = useCallback(async (scope: "cursor" | "all" = "cursor") => {
@@ -3297,7 +3297,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * Rewrite the generated files declared by the folder under the cursor.
    *
    * A target that already holds hand-written content is skipped with a toast
-   * rather than overwritten — regeneration must never destroy prose.
+   * rather than overwritten: regeneration must never destroy prose.
    */
   const handleRegenerateFolderFiles = useCallback(async (dirPath?: string) => {
     const vaultPath = vaultRef.current.vaultPath
@@ -3463,7 +3463,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
       if (!IMAGE_EXTS.has(ext)) continue
 
-      // @ts-expect-error — Tauri/Chromium expose real path on File
+      // @ts-expect-error Tauri/Chromium expose real path on File
       const sourcePath: string | undefined = file.path
       if (!sourcePath) {
         showToast(t.app.noFilePath, "error")
@@ -3521,12 +3521,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         try {
           const assetsDir = await pathJoin(vault.vaultPath, "assets")
           await mkdir(assetsDir, { recursive: true })
-          // Never clobber an existing asset — two screenshots both called
+          // Never clobber an existing asset: two screenshots both called
           // "image.png" would otherwise silently overwrite each other.
           const fileName = await uniqueAssetName(assetsDir, sanitizeFileName(rawName))
           const destPath = await pathJoin(assetsDir, fileName)
 
-          // @ts-expect-error — Tauri expone file.path en los File del portapapeles
+          // @ts-expect-error Tauri expone file.path en los File del portapapeles
           const sourcePath: string | undefined = file.path
           if (sourcePath) {
             await copyFile(sourcePath, destPath)
@@ -4123,7 +4123,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               />
             </Suspense>
           )}
-          {/* Ctrl/Cmd+K inline AI edit — floating prompt anchored at the selection. */}
+          {/* Ctrl/Cmd+K inline AI edit: floating prompt anchored at the selection. */}
           {cmdkAnchor && editorRef.current && (
             <Suspense fallback={null}>
               <CmdKEdit
@@ -4162,7 +4162,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           </div>
         )}
 
-        {/* ── Split view — reference panel ── */}
+        {/* ── Split view: reference panel ── */}
         {splitTab && (() => {
           return (
             <>

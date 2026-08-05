@@ -9,7 +9,7 @@
  * all three, so it replaces the old cursor-only `comdtex_cursor_positions` map.
  *
  * Writes go to an in-memory map SYNCHRONOUSLY (a tab switch must not race a
- * debounce — that was the old bug); the localStorage mirror is what survives a
+ * debounce, that was the old bug); the localStorage mirror is what survives a
  * restart and is written on the same call, since switches are rare.
  */
 import type * as monacoApi from "monaco-editor"
@@ -17,7 +17,7 @@ import { STORAGE_KEYS } from "./storageKeys"
 
 type ViewState = monacoApi.editor.ICodeEditorViewState
 
-/** Keep the persisted map bounded — view states are small but not free. */
+/** Keep the persisted map bounded: view states are small but not free. */
 const MAX_ENTRIES = 200
 
 /** Legacy cursor-only entry from `comdtex_cursor_positions`. */
@@ -52,7 +52,7 @@ function persist(): void {
     const kept = entries.slice(Math.max(0, entries.length - MAX_ENTRIES))
     localStorage.setItem(STORAGE_KEYS.EDITOR_VIEW_STATES, JSON.stringify(Object.fromEntries(kept)))
   } catch {
-    // Quota exceeded / storage disabled — the in-memory map still works for
+    // Quota exceeded / storage disabled: the in-memory map still works for
     // this session, which is the case that matters for tab switching.
   }
 }
@@ -109,7 +109,7 @@ export function renameViewState(oldPath: string, newPath: string): void {
   persist()
 }
 
-/** Test seam — drops the in-memory cache so the next call re-reads storage. */
+/** Test seam: drops the in-memory cache so the next call re-reads storage. */
 export function resetViewStateCache(): void {
   memory.clear()
   loaded = false

@@ -31,7 +31,7 @@ describe("resolveTabCompletion", () => {
   it("only matches block snippets after a ::: prefix", () => {
     // `t` alone is ambiguous math shorthand territory (table, tan, tilde…);
     // behind ::: those must not qualify, so `:::t` stays unresolved (multiple
-    // block types start with t is false — theorem/truth → still ambiguous),
+    // block types start with t is false (theorem/truth → still ambiguous),
     // while `:::tr` uniquely resolves to the truth-table block.
     const ambiguous = resolveTabCompletion(":::t", "t")
     expect(ambiguous === null || ambiguous.completion.snippet.startsWith(":::")).toBe(true)
@@ -103,7 +103,7 @@ describe("resolveSpecialBlockTabCompletion", () => {
   })
 
   it("resolves exact matches even when a longer label shares the prefix", () => {
-    // IF is a prefix of IFELSE — exact match must win.
+    // IF is a prefix of IFELSE: exact match must win.
     const result = resolveSpecialBlockTabCompletion(pseudo, "if")
     expect(result?.completion.label).toBe("IF")
   })

@@ -9,10 +9,10 @@
  * This module caches, per file path, the already-converted editor content
  * plus its derived frontmatter/tags, keyed by the file's last-seen mtime.
  * A file is only re-read + re-parsed when its mtime changes (or it hasn't
- * been seen yet) — an unchanged file is served straight from memory.
+ * been seen yet): an unchanged file is served straight from memory.
  *
  * The index deliberately does NOT touch the filesystem itself (no Tauri
- * `stat`/`readTextFile` imports here) — the caller supplies the mtime and a
+ * `stat`/`readTextFile` imports here); the caller supplies the mtime and a
  * `readContent()` thunk. That keeps this module pure/testable and leaves the
  * door open for a future inverted/token index to slot in behind the same
  * `syncFile`/`search` API without touching call sites.
@@ -48,7 +48,7 @@ export interface ParsedSearchQuery {
 /**
  * Split a raw query into its `tag:`/`path:`/`ext:`/`fm:key=value` filter
  * terms and the remaining free-text query. Mirrors the filter parsing that
- * used to live inline in `useVault.search()` — kept byte-for-byte identical
+ * used to live inline in `useVault.search()`; kept byte-for-byte identical
  * so existing query syntax (and tests) keep working.
  */
 export function parseSearchQuery(query: string): ParsedSearchQuery {
@@ -94,7 +94,7 @@ export function buildSearchRegex(
  * A file eligible for search, plus how to fetch its mtime/content if
  * uncached or stale. Both are lazy (`() => Promise<...>`) so that `search()`
  * can honour the result cap / cancellation WITHOUT paying for a `stat()`
- * call on files it never gets to — mirroring the original tree-walk's
+ * call on files it never gets to; mirroring the original tree-walk's
  * early-exit behaviour once the cap is hit.
  */
 export interface SearchCandidate {
@@ -138,7 +138,7 @@ export class VaultSearchIndex {
   /**
    * Directly install an entry from already-converted editor content (e.g.
    * right after a write, where the caller already has the new text and
-   * mtime in hand) — skips the disk round-trip a plain `invalidate()` +
+   * mtime in hand); skips the disk round-trip a plain `invalidate()` +
    * next-search `syncFile()` would otherwise force.
    */
   setFromEditorContent(path: string, mtimeMs: number, editorContent: string): SearchIndexEntry {
@@ -181,7 +181,7 @@ export class VaultSearchIndex {
    * files the caller wants considered, in tree order), applying `filters`
    * and `searchRe`, syncing each candidate against the cache as it goes.
    * Stops as soon as `cap` results are collected or `isCancelled()` returns
-   * true — mirrors the early-exit behaviour of the original recursive tree
+   * true; mirrors the early-exit behaviour of the original recursive tree
    * walk in `useVault.search()`, so an aborted/superseded query doesn't pay
    * for reading files past the point where it stopped mattering.
    */

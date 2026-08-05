@@ -134,7 +134,7 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
             value={String(data.papersize ?? "")}
             onChange={(e) => updateField("papersize", e.target.value)}
           >
-            <option value="">— A4 {t.frontmatterPanel.paperA4.includes("A4") ? "(default)" : ""}</option>
+            <option value="">A4 {t.frontmatterPanel.paperA4.includes("A4") ? "(default)" : ""}</option>
             <option value="a4">{t.frontmatterPanel.paperA4}</option>
             <option value="letter">{t.frontmatterPanel.paperLetter}</option>
             <option value="a5">{t.frontmatterPanel.paperA5}</option>

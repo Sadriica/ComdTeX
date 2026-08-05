@@ -2,14 +2,14 @@
  * Atomic text-file writes.
  *
  * `writeTextFile` from `@tauri-apps/plugin-fs` truncates-then-writes the
- * target path directly — a crash or power loss mid-write can leave the
+ * target path directly: a crash or power loss mid-write can leave the
  * user's real file empty or half-written. This module instead writes to a
  * throwaway temp file in the SAME directory, then atomically renames it
  * onto the target path. `rename` (a filesystem move) either fully succeeds
- * or fully fails — there is no in-between truncated state visible at the
+ * or fully fails; there is no in-between truncated state visible at the
  * target path.
  *
- * The temp file's basename must NOT begin with a "." — Tauri's fs scope
+ * The temp file's basename must NOT begin with a ".": Tauri's fs scope
  * matches paths with glob's `require_literal_leading_dot`, which defaults to
  * `true` on Unix (see tauri-plugin-fs `commands.rs`: `.unwrap_or(cfg!(unix))`).
  * Under that option the `<vault>/**` pattern that `allow_vault_dir` installs
@@ -21,7 +21,7 @@
 import { writeTextFile, rename, remove } from "@tauri-apps/plugin-fs"
 import { pathDirname, pathBasename, pathJoin } from "./pathUtils"
 
-/** Short random suffix for the temp filename — collision-safe enough for a single-user desktop app. */
+/** Short random suffix for the temp filename: collision-safe enough for a single-user desktop app. */
 export function randomSuffix(): string {
   const bytes = new Uint8Array(6)
   crypto.getRandomValues(bytes)

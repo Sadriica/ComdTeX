@@ -190,7 +190,7 @@ function BranchDropdown({ vaultPath, currentBranch, onClose, onRefresh }: {
             {b === currentBranch ? "✓ " : "  "}{b}
           </button>
         ))}
-        {branches.length === 0 && <div className="git-branch-empty">—</div>}
+        {branches.length === 0 && <div className="git-branch-empty">N/A</div>}
       </div>
       <div className="git-branch-new">
         <input className="git-branch-input" placeholder={g.newBranchPlaceholder}
@@ -337,7 +337,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
           {editing
             ? <input className="git-branch-input" value={name} onChange={e => setName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && save()} />
-            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{name || <em style={{color:"#555"}}>—</em>}</span>
+            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{name || <em style={{color:"#555"}}>N/A</em>}</span>
           }
         </div>
         <div className="git-config-row">
@@ -345,7 +345,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
           {editing
             ? <input className="git-branch-input" value={email} onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && save()} />
-            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{email || <em style={{color:"#555"}}>—</em>}</span>
+            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{email || <em style={{color:"#555"}}>N/A</em>}</span>
           }
         </div>
         {editing && (
@@ -823,7 +823,7 @@ export default function GitBar({ vaultPath }: GitBarProps) {
   }
 
   const total = status ? status.staged.length + status.unstaged.length + status.untracked.length : 0
-  const branchLabel = loading ? "…" : gitMissing ? "git?" : notRepo ? "no repo" : (status?.branch || "—")
+  const branchLabel = loading ? "…" : gitMissing ? "git?" : notRepo ? "no repo" : (status?.branch || "N/A")
 
   return (
     <div className="menu-item git-menu-item" ref={wrapRef}>

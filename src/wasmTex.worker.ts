@@ -1,8 +1,8 @@
 // SwiftLaTeX-style engine worker.
 //
 // The worker boots a WASM LaTeX engine inside its own thread. The engine
-// runtime (the JS glue + WASM binary) is fetched at runtime — it is NOT
-// imported statically — so that builds without the runtime still produce a
+// runtime (the JS glue + WASM binary) is fetched at runtime; it is NOT
+// imported statically, so that builds without the runtime still produce a
 // valid bundle and gracefully report "unavailable" at runtime.
 //
 // SwiftLaTeX exposes a `PdfTeXEngine` class (via the global scope) once its
@@ -12,7 +12,7 @@
 // or does not register the constructor, we keep the worker alive and answer all
 // compile requests with `status: "unavailable"`.
 //
-// Message protocol — see `wasmTex.ts` for the canonical shapes.
+// Message protocol: see `wasmTex.ts` for the canonical shapes.
 
 /// <reference lib="webworker" />
 
@@ -107,7 +107,7 @@ async function init(engineUrl: string | null): Promise<void> {
     post({ type: "ready" })
   } catch (err) {
     unavailableReason = err instanceof Error ? err.message : String(err)
-    // We still notify "ready" so the caller can proceed — compiles will
+    // We still notify "ready" so the caller can proceed; compiles will
     // resolve with status: "unavailable".
     post({ type: "ready" })
   }
@@ -137,7 +137,7 @@ async function decodeSyncTex(bytes: Uint8Array): Promise<string> {
 
 // Best-effort recovery of the SyncTeX companion produced by a compile. Returns
 // null when the engine produced none (the bundled pdftex WASM build has SyncTeX
-// disabled, so this is null in practice today — by design, no faking).
+// disabled, so this is null in practice today (by design, no faking).
 async function extractSyncTex(
   eng: SwiftLatexEngine,
   result: { synctex?: Uint8Array },
@@ -147,7 +147,7 @@ async function extractSyncTex(
   if (result.synctex && result.synctex.byteLength > 0) {
     return await decodeSyncTex(result.synctex)
   }
-  // 2) Engine exposes a memfs read — try the conventional output names.
+  // 2) Engine exposes a memfs read: try the conventional output names.
   if (typeof eng.readMemFSFile === "function") {
     const base = mainFile.replace(/\.tex$/i, "")
     for (const name of [`${base}.synctex.gz`, `${base}.synctex`]) {
@@ -155,7 +155,7 @@ async function extractSyncTex(
         const bytes = eng.readMemFSFile(name)
         if (bytes && bytes.byteLength > 0) return await decodeSyncTex(bytes)
       } catch {
-        // file not present — try the next candidate
+        // file not present: try the next candidate
       }
     }
   }

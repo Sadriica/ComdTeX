@@ -226,7 +226,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
       renderedRef.current.add(pageNum)
     } catch (err) {
       // RenderingCancelledException is expected when scrolling fast or
-      // resizing — don't surface those.
+      // resizing: don't surface those.
       const msg = err instanceof Error ? err.name : ""
       if (msg !== "RenderingCancelledException") {
         // eslint-disable-next-line no-console
@@ -339,7 +339,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
     setFitWidth((f) => !f)
   }, [])
 
-  // Handle a click on a page canvas — derive PDF coordinates and the nearest
+  // Handle a click on a page canvas: derive PDF coordinates and the nearest
   // text (heading-style synctex shim).
   const handlePageClick = useCallback(async (pageNum: number, e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onClickSource) return

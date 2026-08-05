@@ -219,8 +219,8 @@ const CATEGORY_ORDER = [
 ]
 
 const CATEGORY_LABELS: Record<string, string> = {
-  "greek-lower": "Greek — lowercase",
-  "greek-upper": "Greek — uppercase",
+  "greek-lower": "Greek (lowercase)",
+  "greek-upper": "Greek (uppercase)",
   "operators":   "Operators",
   "relations":   "Relations",
   "arrows":      "Arrows",
@@ -299,7 +299,7 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
                     <button
                       key={`${cat}-${i}`}
                       className="symbol-btn"
-                      title={`${sym.name} — ${sym.latex}`}
+                      title={`${sym.name}: ${sym.latex}`}
                       aria-label={`${sym.name} (${sym.latex})`}
                       onClick={() => onInsert(sym.latex)}
                     >
@@ -315,7 +315,7 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
                 <button
                   key={i}
                   className="symbol-btn"
-                  title={`${sym.name} — ${sym.latex}`}
+                  title={`${sym.name}: ${sym.latex}`}
                   aria-label={`${sym.name} (${sym.latex})`}
                   onClick={() => onInsert(sym.latex)}
                 >

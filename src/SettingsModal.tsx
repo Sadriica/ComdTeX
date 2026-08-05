@@ -329,7 +329,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.settings.useWasmTex}
-                    <span className="setting-help"> — {t.settings.useWasmTexDesc}</span>
+                    <span className="setting-help">: {t.settings.useWasmTexDesc}</span>
                   </span>
                   <input
                     type="checkbox"
@@ -341,7 +341,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <label className="setting-row">
                     <span>
                       {t.settings.texliveUrl}
-                      <span className="setting-help"> — {t.settings.texliveUrlDesc}</span>
+                      <span className="setting-help">: {t.settings.texliveUrlDesc}</span>
                     </span>
                     <input
                       type="text"
@@ -354,7 +354,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.settings.autoRebuildPdf}
-                    <span className="setting-help"> — {t.settings.autoRebuildPdfDesc}</span>
+                    <span className="setting-help">: {t.settings.autoRebuildPdfDesc}</span>
                   </span>
                   <input
                     type="checkbox"
@@ -372,7 +372,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.cloudSync.settings.bannerEnabled}
-                    <span className="setting-help"> — {t.cloudSync.settings.bannerEnabledDesc}</span>
+                    <span className="setting-help">: {t.cloudSync.settings.bannerEnabledDesc}</span>
                   </span>
                   <input
                     type="checkbox"
@@ -384,7 +384,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.cloudSync.settings.detectEnabled}
-                    <span className="setting-help"> — {t.cloudSync.settings.detectEnabledDesc}</span>
+                    <span className="setting-help">: {t.cloudSync.settings.detectEnabledDesc}</span>
                   </span>
                   <input
                     type="checkbox"
@@ -404,7 +404,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.cloudSync.settings.resetDismissed}
-                    <span className="setting-help"> — {t.cloudSync.settings.resetDismissedDesc}</span>
+                    <span className="setting-help">: {t.cloudSync.settings.resetDismissedDesc}</span>
                   </span>
                   <button className="setting-btn" onClick={handleResetCloudHints}>
                     {t.cloudSync.settings.resetDismissed}

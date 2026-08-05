@@ -59,7 +59,7 @@ export function nextPhase(state: PomodoroState, config: PomodoroConfig): Phase {
 /**
  * Advance the timer to the phase that follows the current one. Returns the new
  * state. `completedWork` only increments when a *work* phase ends. The new
- * phase starts paused — callers decide whether to auto-start it.
+ * phase starts paused; callers decide whether to auto-start it.
  */
 export function advancePhase(state: PomodoroState, config: PomodoroConfig): PomodoroState {
   const phase = nextPhase(state, config)
@@ -94,7 +94,7 @@ export function tick(state: PomodoroState, elapsedSec: number, config: PomodoroC
   if (remaining > 0) {
     return { state: { ...state, remainingSec: remaining }, phaseCompleted: false }
   }
-  // Phase finished — move to the next one (paused).
+  // Phase finished: move to the next one (paused).
   return { state: advancePhase(state, config), phaseCompleted: true }
 }
 
@@ -145,7 +145,7 @@ export interface SessionStats {
   elapsedSec: number
   /** Words per minute over the elapsed time (0 until at least one second). */
   wpm: number
-  /** Seconds the timer was actually running — excludes paused time. */
+  /** Seconds the timer was actually running; excludes paused time. */
   activeSec: number
   /** Seconds elapsed while paused. */
   pausedSec: number
@@ -204,7 +204,7 @@ export function touchFile(session: WritingSession, path: string): WritingSession
  *
  * Tracked separately from the live count so that deleting a paragraph near the
  * end of a session does not retroactively make the whole session look
- * unproductive — both numbers are shown.
+ * unproductive; both numbers are shown.
  */
 export function recordPeak(session: WritingSession, currentWords: number): WritingSession {
   const written = currentWords - session.baselineWords

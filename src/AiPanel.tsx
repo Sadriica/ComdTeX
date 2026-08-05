@@ -1,4 +1,4 @@
-// ComdTeX — AI assistant sidebar panel (MVP).
+// ComdTeX: AI assistant sidebar panel (MVP).
 //
 // Hard rules honoured here:
 // - Fully offline by default: when `settings.aiEnabled` is false this panel
@@ -48,7 +48,7 @@ function aiErrorMessage(e: unknown, t: ReturnType<typeof useT>): string {
   return t.ai.errGeneric(e instanceof Error ? e.message : String(e))
 }
 
-// Warm-up fires at most once per provider configuration per app session — the
+// Warm-up fires at most once per provider configuration per app session: the
 // connection / CLI process only needs priming once; re-warming on every panel
 // open would waste tokens or spawn redundant processes. Reset when the config
 // signature changes (different provider / model / base URL / CLI command).
@@ -71,7 +71,7 @@ export default function AiPanel({
   const t = useT()
   // Chat state comes from context (owned by AiSessionProvider above AppContent),
   // so it persists across this panel unmounting AND a streamed token re-renders
-  // only this panel — not the whole AppContent tree.
+  // only this panel, not the whole AppContent tree.
   const session = useAiSessionContext()
   const {
     messages, setMessages, setMessagesFor, input, setInput, includeFile, setIncludeFile, includeSelection, setIncludeSelection,
@@ -215,7 +215,7 @@ export default function AiPanel({
     setMessages([])
   }, [setMessages])
 
-  // ── Editor edit helpers — both go through Monaco's undo stack. ──────────────
+  // ── Editor edit helpers: both go through Monaco's undo stack. ──────────────
   const insertAtCursor = useCallback((text: string) => {
     if (!editor) { showToast(t.ai.noEditor, "error"); return }
     editor.focus()
@@ -246,7 +246,7 @@ export default function AiPanel({
     const sel = editor?.getSelection()
     const useSelection = !!(sel && !sel.isEmpty())
     // Reflect the choice in the chips, but pass the intended context EXPLICITLY
-    // into run() — setState is async, so run() would otherwise read stale flags.
+    // into run(): setState is async, so run() would otherwise read stale flags.
     if (useSelection) setIncludeSelection(true)
     else setIncludeFile(true)
     void run(instruction, useSelection

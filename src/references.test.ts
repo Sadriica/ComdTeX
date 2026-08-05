@@ -76,7 +76,7 @@ describe("section anchors end-to-end", () => {
 
 // Mirrors the shape of a real user note: Spanish prose, `{#sec:...}` headings,
 // labeled tables, `@sec:`/`@tbl:` references and no `[[toc]]` anywhere.
-describe("renderMarkdown — mixed cross-references, no TOC", () => {
+describe("renderMarkdown, mixed cross-references, no TOC", () => {
   const doc = `# El ciclo de decisiones {#sec:decisiones}
 
 Cuando estemos planteando los proyectos se tienen que tomar algunas

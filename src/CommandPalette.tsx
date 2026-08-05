@@ -11,7 +11,7 @@ export interface PaletteCommand {
   label: string
   /** Optional shortcut hint shown as a right-aligned chip. */
   shortcut?: string
-  /** Legacy field — still rendered as a dim description when present. */
+  /** Legacy field: still rendered as a dim description when present. */
   description?: string
   /** Extra hidden terms used only for search. */
   keywords?: string[]
@@ -33,7 +33,7 @@ interface PaletteItem {
   action: () => void
 }
 
-// Monochrome folder icon (inline SVG with currentColor — emoji folder glyphs
+// Monochrome folder icon (inline SVG with currentColor; emoji folder glyphs
 // render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
 const FolderIcon = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
@@ -41,7 +41,7 @@ const FolderIcon = (
   </svg>
 )
 
-// Monochrome AI sparkle (inline SVG with currentColor — the ✦/✨-style glyphs
+// Monochrome AI sparkle (inline SVG with currentColor; the ✦/✨-style glyphs
 // render coloured in WebKitGTK, the same bug as the folder/gear icons).
 const SparkleIcon = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>

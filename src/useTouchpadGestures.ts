@@ -123,7 +123,7 @@ export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled =
 
   // Ctrl/Cmd + wheel → zoom (universally reliable).
   const handleWheel = useCallback((e: WheelEvent) => {
-    // No preventDefault in the opt-out case — the surface underneath (e.g.
+    // No preventDefault in the opt-out case: the surface underneath (e.g.
     // Excalidraw) consumes the event with its own zoom handling.
     if (!enabled || inGestureOptOut(e.target)) return
 

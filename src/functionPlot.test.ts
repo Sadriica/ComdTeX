@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { parseExpr, parsePlotBlock, renderPlotHTML } from "./functionPlot"
 
-describe("parseExpr — evaluator", () => {
+describe("parseExpr, evaluator", () => {
   it("evaluates polynomials", () => {
     expect(parseExpr("x^2")(3)).toBe(9)
     expect(parseExpr("2*x+1")(5)).toBe(11)

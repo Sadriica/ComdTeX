@@ -12,7 +12,7 @@
 // This module parses the **uncompressed** `.synctex` text format (a tiny,
 // human-readable, line-oriented format). When a TeX engine produces a gzip'd
 // `.synctex.gz`, callers are expected to gunzip it first and hand us the text
-// — keeping this module dependency-free and trivially unit-testable.
+// This keeps the module dependency-free and trivially unit-testable.
 //
 // We deliberately implement only the subset needed for line<->position lookup:
 // the preamble (unit + magnification + offsets), the input-file table, and the
@@ -63,7 +63,7 @@ const SP_PER_PT = 65536
  * Parse the textual SyncTeX format into an indexable structure.
  *
  * Tolerant by design: unknown record types are skipped, and a malformed line
- * never throws — the worst case is an empty `boxes` array, which lets callers
+ * never throws; the worst case is an empty `boxes` array, which lets callers
  * fall back to their heading-based shim.
  */
 export function parseSyncTex(text: string): SyncTexData {
@@ -160,7 +160,7 @@ export function parseSyncTex(text: string): SyncTexData {
   return data
 }
 
-// "tag,line:x,y:w,h,d" or "tag,line:x,y" — leading column ("tag,line,col:")
+// "tag,line:x,y:w,h,d" or "tag,line:x,y"; leading column ("tag,line,col:")
 // variants are also accepted (the column is dropped).
 function parseBoxRecord(body: string, page: number): SyncBox | null {
   const segs = body.split(":")

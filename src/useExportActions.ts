@@ -1,6 +1,6 @@
 // Extracted from App.tsx: the export/import/compile handlers. These are thin
 // wrappers over exportActions.ts, moved verbatim (no behavior change) to keep
-// App.tsx smaller. See CLAUDE.md — App.tsx is a documented refactor target.
+// App.tsx smaller. See CLAUDE.md: App.tsx is a documented refactor target.
 import { useCallback, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"
@@ -65,7 +65,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
 
   // vault (and openFile) get a new identity on every keystroke; handlers only
   // run on explicit user actions, so they read the CURRENT vault through this
-  // ref and stay identity-stable — keeping the returned object (and the host's
+  // ref and stay identity-stable; keeping the returned object (and the host's
   // menus/palette memos) stable across keystrokes.
   const vaultRef = useRef(vault)
   vaultRef.current = vault
@@ -366,7 +366,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // Derive the temp path by APPENDING, not by swapping a `.docx` suffix: the
     // GTK save dialog on Linux doesn't reliably auto-append the filter
     // extension, so a `.replace(/\.docx$/…)` would be a no-op and tmpPath would
-    // equal outPath — pandoc would then read+write the same path and `remove`
+    // equal outPath: pandoc would then read+write the same path and `remove`
     // would delete the user's chosen file, destroying it.
     const tmpPath = `${outPath}.comdtex-tmp.md`
     try {
@@ -392,7 +392,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     }
     const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
     if (!outPath) return
-    // Append rather than swap the `.pdf` suffix — see handleExportDocx: an
+    // Append rather than swap the `.pdf` suffix: see handleExportDocx: an
     // extension-less outPath would otherwise make tmpPath === outPath and the
     // final `remove` would destroy the user's chosen file.
     const tmpPath = `${outPath}.comdtex-tmp.md`
@@ -442,7 +442,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const content = editor.getValue()
     let html: string
     try {
-      // annotate:false — data-source-line attrs are internal preview↔editor
+      // annotate:false: data-source-line attrs are internal preview↔editor
       // sync bookkeeping; skipping the annotation avoids shipping them as
       // noise in the exported standalone HTML AND skips the full-document
       // DOMParser+reserialize pass it would cost.

@@ -13,7 +13,7 @@
  * Keep marks:
  *   `^^…^^` keep marks are editor-only and are stripped to their plain text
  *   before extraction, so a mark never leaks into a card. The two syntaxes are
- *   deliberately disjoint — `{{ }}` is cloze, `^^…^^` is a keep mark — so a
+ *   deliberately disjoint (`{{ }}` is cloze, `^^…^^` is a keep mark), so a
  *   marked fragment inside a definition does NOT silently become a cloze.
  */
 

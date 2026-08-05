@@ -201,7 +201,7 @@ describe("environment labels", () => {
 })
 
 describe("cross-file environment references", () => {
-  // A target document whose THIRD definition carries the label we reference —
+  // A target document whose THIRD definition carries the label we reference,
   // so the test fails if resolution invents a number instead of prescanning.
   const calendario = [
     ":::definition[Uno]{#def:uno}\na\n:::",
@@ -252,7 +252,7 @@ describe("cross-file environment references", () => {
     expect(html).toContain("Definición 3")
 
     // Same document, no resolver at all: still must not degrade into a local
-    // lookup — it degrades into a BROKEN CROSS ref.
+    // lookup: it degrades into a BROKEN CROSS ref.
     const noResolver = resolveEnvironmentRefs("@gp/calendario@def:valor", noLocals)
     expect(noResolver).toBe('<span class="env-ref-broken">Definición (?)</span>')
   })
@@ -322,7 +322,7 @@ describe("cross-file environment references", () => {
     expect(resolveEnvironmentRefs("@doc@def:a", noLocals, mutableResolver)).toContain("Definición 1")
     expect(envRefCacheStats().prescans).toBe(1)
 
-    // Insert a definition BEFORE the labelled one — its number must change.
+    // Insert a definition BEFORE the labelled one: its number must change.
     mutable.doc = ":::definition{#def:zero}\nz\n:::\n\n:::definition{#def:a}\nx\n:::"
     expect(resolveEnvironmentRefs("@doc@def:a", noLocals, mutableResolver)).toContain("Definición 2")
     expect(envRefCacheStats().prescans).toBe(2)

@@ -39,7 +39,7 @@ function computeStats(tree: FileNode[], openTabs: OpenFile[], wikiNames: Set<str
       .replace(/\$[^$\n]+?\$/g, "")
     words += stripped.trim() ? stripped.trim().split(/\s+/).length : 0
 
-    // Wikilinks — track per-line so we can jump to the broken link
+    // Wikilinks: track per-line so we can jump to the broken link
     const wikiRe = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
     const lines = text.split("\n")
     lines.forEach((lineText, idx) => {

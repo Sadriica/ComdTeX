@@ -7,7 +7,7 @@
  * folder does not re-read the config each time.
  *
  * `.comdtex-folder.json` starts with a dot, so `buildTree` already hides it from
- * the file tree and from vault search — it cannot be discovered by walking the
+ * the file tree and from vault search: it cannot be discovered by walking the
  * tree, which is why lookups probe the ancestor chain directly.
  */
 import { useCallback, useRef } from "react"
@@ -31,7 +31,7 @@ interface CacheEntry {
 export interface FolderRulesApi {
   /** Rules in effect for `dirPath`, merged down the ancestor chain. */
   resolve: (dirPath: string) => Promise<FolderRules | null>
-  /** Only the rules `dirPath` itself declares — what the editor modal shows. */
+  /** Only the rules `dirPath` itself declares: what the editor modal shows. */
   readOwn: (dirPath: string) => Promise<FolderRules | null>
   /** Write `dirPath`'s own rules. Passing null removes nothing; it writes an empty config. */
   write: (dirPath: string, rules: FolderRules) => Promise<void>

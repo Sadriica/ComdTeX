@@ -160,7 +160,7 @@ function expandShorthandsInRegion(text: string, wrap: boolean): string {
       continue
     }
 
-    // Recurse into arguments (no wrap — they are inside a math context)
+    // Recurse into arguments (no wrap: they are inside a math context)
     const args = splitArgs(balanced.content).map((a) => expandShorthandsInRegion(a, false))
 
     const latex = HANDLERS[name](args)

@@ -147,7 +147,7 @@ describe("work → break → work cycling and long break", () => {
     expect(s.phase).toBe("break")
     s = start(s); completePhase()
 
-    // Cycle 4 — fourth completed work phase yields a LONG break.
+    // Cycle 4: fourth completed work phase yields a LONG break.
     s = start(s)
     completePhase()
     expect(s.completedWork).toBe(4)

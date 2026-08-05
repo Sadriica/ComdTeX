@@ -1,6 +1,6 @@
 // Extracted from App.tsx: the classic MenuBar entries factory. Declarative
-// data built from handlers + translations — moved verbatim (no behavior
-// change) to keep App.tsx smaller. See CLAUDE.md — App.tsx is a documented
+// data built from handlers + translations: moved verbatim (no behavior
+// change) to keep App.tsx smaller. See CLAUDE.md: App.tsx is a documented
 // refactor target.
 import type { MenuDef, MenuEntry } from "./MenuBar"
 import type { SidebarMode } from "./App"

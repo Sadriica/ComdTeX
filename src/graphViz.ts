@@ -40,7 +40,7 @@ export function parseGraph(content: string): ParsedGraph {
   for (const line of lines) {
     const m = line.match(edgeRe)
     if (!m) {
-      // Could be a standalone node declaration — treat it as a node with no edges
+      // Could be a standalone node declaration; treat it as a node with no edges
       const nodeName = line.trim()
       if (nodeName && !nodeSet.has(nodeName)) {
         nodeSet.add(nodeName)

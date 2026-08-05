@@ -1,4 +1,4 @@
-// outlineReorder.ts — pure logic for drag-to-reorder of document sections.
+// outlineReorder.ts: pure logic for drag-to-reorder of document sections.
 //
 // A "section block" is a heading line plus everything beneath it up to (but
 // not including) the next heading whose level is the SAME or HIGHER (i.e. a

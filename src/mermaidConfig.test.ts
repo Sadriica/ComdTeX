@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { MERMAID_CONFIG } from "./mermaidConfig"
 
-// These are cheap guards on the config contract. They are NOT the real proof —
+// These are cheap guards on the config contract. They are NOT the real proof:
 // that lives in e2e/mermaid-labels.spec.ts, which renders actual Mermaid output
 // through the actual sanitizer in a real browser and asserts the label text
 // survives. Keep both: this catches an accidental edit, that catches a

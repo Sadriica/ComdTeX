@@ -2,8 +2,8 @@
  * Figure numbering and cross-references for ComdTeX.
  *
  * Syntax:
- *   ![Caption text](image.png){#fig:label}     — labeled figure
- *   ![Caption text](image.png)                  — unlabeled figure (still numbered)
+ *   ![Caption text](image.png){#fig:label}     : labeled figure
+ *   ![Caption text](image.png)                  : unlabeled figure (still numbered)
  *
  * Reference:
  *   @fig:label  →  "Figura N" link
@@ -32,7 +32,7 @@ export function prescanFigures(text: string): Map<string, number> {
   let counter = 0
 
   // Strip fenced + inline code first so an `![...](...)` written inside a code
-  // sample isn't counted — `wrapFigures` only counts rendered <img> tags, which
+  // sample isn't counted: `wrapFigures` only counts rendered <img> tags, which
   // never come from code blocks, so the two passes must agree or `@fig:` refs
   // resolve to the wrong number.
   const stripped = blankInlineCode(stripCodeFences(text))

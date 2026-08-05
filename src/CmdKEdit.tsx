@@ -1,4 +1,4 @@
-// ComdTeX — Ctrl/Cmd+K inline AI edit (phase 2, the flagship interaction).
+// ComdTeX: Ctrl/Cmd+K inline AI edit (phase 2, the flagship interaction).
 //
 // A small floating prompt anchored at the cursor/selection. The user types an
 // instruction; the AI returns an edited version of the SELECTED text (or text
@@ -9,9 +9,9 @@
 // Hard rules honoured here:
 // - Offline by default: nothing runs unless the user opens the widget AND
 //   `settings.aiEnabled` is true (the caller gates the keybinding too).
-// - The edit is applied THROUGH the editor (executeEdits) — never to disk.
+// - The edit is applied THROUGH the editor (executeEdits); never to disk.
 //
-// TODO (phase 2b): deferred — external-file-watch sync (apply external CLI
+// TODO (phase 2b): deferred: external-file-watch sync (apply external CLI
 // edits as Monaco diffs so they remain undo-safe) and OS-keychain key storage.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"

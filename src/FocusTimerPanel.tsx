@@ -34,7 +34,7 @@ const DurRow = ({ label, value, onChange }: { label: string; value: number; onCh
 )
 
 interface FocusTimerPanelProps {
-  /** Active document text — drives the live writing-session word delta. */
+  /** Active document text: drives the live writing-session word delta. */
   content: string
   /** Pomodoro durations (minutes) from Settings. */
   config: PomodoroConfig
@@ -97,7 +97,7 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
         {stats ? (
           <>
             <Row label={t.focusTimer.wordsThisSession} value={stats.wordsWritten} accent />
-            {/* Peak only earns a row once it differs — otherwise it is noise. */}
+            {/* Peak only earns a row once it differs; otherwise it is noise. */}
             {stats.peakWordsWritten > stats.wordsWritten && (
               <Row label={t.focusTimer.peakWords} value={stats.peakWordsWritten} />
             )}

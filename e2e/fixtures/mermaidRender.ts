@@ -2,8 +2,8 @@
 //
 // Mermaid can only be rendered in a real browser: with native SVG labels it
 // measures text via `getComputedTextLength()`, which jsdom does not implement.
-// So the label regression is proven here — real Mermaid, the real app config,
-// and the real sanitizer, in real Chromium — rather than in a unit test that
+// So the label regression is proven here: real Mermaid, the real app config,
+// and the real sanitizer, in real Chromium, rather than in a unit test that
 // would have to stub the measurement away.
 import mermaid from "mermaid"
 import { sanitizeRenderedHtml } from "../../src/sanitizeRenderedHtml"
@@ -80,7 +80,7 @@ async function main() {
   const cases: Array<[string, string]> = [
     ["decisionCycle", pseudocodeToFlowchart(DECISION_CYCLE)],
     ["binarySearch", pseudocodeToFlowchart(BINARY_SEARCH)],
-    // A raw ```mermaid fence can hold any diagram type — htmlLabels is a root
+    // A raw ```mermaid fence can hold any diagram type; htmlLabels is a root
     // config in Mermaid 11, so one flag must cover them all.
     ["sequence", "sequenceDiagram\n  Alice->>Bob: Decisión útil\n  Bob-->>Alice: Sí"],
     ["classDiagram", "classDiagram\n  class Proyecto {\n    +evaluar() Decisión\n  }"],

@@ -294,7 +294,7 @@ describe("useVault CMDX integration", () => {
 
   // Regression: a file created in-session had no `cachedMtime`, so the
   // external-change guard had no disk baseline. A version of that guard fell
-  // back to comparing the file against `openTab.content` — the LIVE buffer —
+  // back to comparing the file against `openTab.content` (the LIVE buffer),
   // which differs from disk the moment anything is typed, so the "changed
   // externally" prompt fired on the first autosave of every new file and the
   // save was refused. Note `message` is absent from the dialog mock, so if the

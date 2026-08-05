@@ -3,14 +3,14 @@ use tauri_plugin_fs::FsExt;
 
 /// Dot-prefixed files the app itself reads/writes inside a vault. These need an
 /// explicit literal-name grant because the `<vault>/**` glob cannot match a
-/// leading dot on Unix — see `allow_vault_dir`. Keep in sync with
+/// leading dot on Unix; see `allow_vault_dir`. Keep in sync with
 /// `COMMENTS_FILENAME` in `src/comments.ts`.
 const DOT_FILES_IN_VAULT: &[&str] = &[".comdtex-comments.json"];
 
 /// Extends the runtime fs-plugin scope and asset-protocol scope to allow
 /// access to the user's vault folder, which lives at an arbitrary,
 /// user-chosen path on disk and therefore cannot be granted statically in
-/// `capabilities/default.json` (see the "Tauri v2 — important notes" /
+/// `capabilities/default.json` (see the "Tauri v2: important notes" /
 /// scope-hardening section in CLAUDE.md).
 ///
 /// The frontend MUST call this (via `src/vaultScope.ts`'s `allowVaultDir`)
@@ -39,7 +39,7 @@ fn allow_vault_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
     // with glob's `require_literal_leading_dot`, which defaults to true on Unix
     // (tauri-plugin-fs `commands.rs`: `.unwrap_or(cfg!(unix))`). `**` therefore
     // does NOT match a component with a leading dot, so every dot-prefixed file
-    // the app owns must be granted by literal name — a "." is not a glob
+    // the app owns must be granted by literal name: a "." is not a glob
     // metacharacter, so `Pattern::escape` leaves it intact and it matches.
     // Setting `requireLiteralLeadingDot: false` in tauri.conf.json would NOT
     // help here: the plugin builds this runtime scope from `FsScope::default()`
@@ -59,7 +59,7 @@ fn allow_vault_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
 
 /// OS-keychain-backed secret storage, used to keep the AI provider API key
 /// (and any other future secrets) out of localStorage/plaintext JSON. See
-/// the "AI assistant — BYO provider" section in CLAUDE.md: the key used to
+/// the "AI assistant: BYO provider" section in CLAUDE.md: the key used to
 /// live in `settings.aiApiKey` inside `localStorage`; it is now written
 /// through here to the platform keychain (Secret Service on Linux, Keychain
 /// on macOS, Credential Manager on Windows) via the `keyring` crate.

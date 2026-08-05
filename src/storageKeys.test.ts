@@ -9,7 +9,7 @@ describe("storageKeys", () => {
       const clashing = seen.get(value)
       expect(
         clashing,
-        `Key value "${value}" is used by both "${clashing}" and "${name}" — ` +
+        `Key value "${value}" is used by both "${clashing}" and "${name}", ` +
           `this collision is exactly what storageKeys.ts exists to prevent.`,
       ).toBeUndefined()
       seen.set(value, name)

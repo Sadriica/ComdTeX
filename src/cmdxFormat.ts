@@ -228,7 +228,7 @@ function matrixToLatex(name: string, values: string[]): string {
   const rows = Array.from({ length: r }, (_, i) =>
     Array.from({ length: c }, (_, j) => values[i * c + j] ?? "0").join(" & ")
   ).join(" \\\\ ")
-  // mat() and bmat() both target \begin{bmatrix} — consistent with preprocessor.ts
+  // mat() and bmat() both target \begin{bmatrix}; consistent with preprocessor.ts
   // where mat() also expands to bmatrix. pmat() targets \begin{pmatrix}.
   const env = name === "pmat" ? "pmatrix" : "bmatrix"
   return `\\begin{${env}}${rows}\\end{${env}}`
@@ -279,7 +279,7 @@ const CMDX_ENV_END_RE = /^:::\s*$/
 /**
  * ComdTeX-only block types that have NO Obsidian-callout or LaTeX equivalent
  * (truth tables, graphs, function plots, flowcharts, pseudocode, commutative
- * diagrams, code). They must survive a save→reopen round-trip VERBATIM —
+ * diagrams, code). They must survive a save→reopen round-trip VERBATIM;
  * mapping them to a `note` callout (the old behaviour) silently and
  * irreversibly destroyed the block on every autosave.
  */
@@ -291,7 +291,7 @@ const SPECIAL_ENVS = new Set([
 // which `environments.ts` (CODE_ENV_RE) renders as a real code listing. The
 // generic CMDX_ENV_START_RE rejects that trailing token (it ends in `\s*$`
 // after the name), so masking would miss it and the body would be
-// shorthand-expanded — silently corrupting the code on disk. Recognize the
+// shorthand-expanded, silently corrupting the code on disk. Recognize the
 // language form explicitly so these blocks are masked like any other special
 // block. `parseCmdxEnvStart` already handles bare `:::code` and the rest.
 const CODE_ENV_START_RE = /^:::code(?:[ \t]+\S+)?[ \t]*$/
@@ -341,7 +341,7 @@ function maskSpecialBlocks(text: string): { masked: string; restore: (s: string)
       // When a special block was nested inside a normal environment that became
       // an Obsidian callout, its one-line placeholder gets a leading `> ` (or
       // `> > `) callout prefix. Re-apply that prefix to EVERY line of the
-      // restored multi-line block — otherwise only the first line stays in the
+      // restored multi-line block; otherwise only the first line stays in the
       // callout body and the rest (incl. the block's closing `:::`) fall out,
       // garbling the structure on reopen.
       .replace(
@@ -662,7 +662,7 @@ function obsidianCalloutToCmdx(type: string, rawTitle: string, body = ""): { env
     // The redundant leading "Note: " is itself a corruption signature: a genuine
     // note is never titled `Note: <SpecialType>`. When present, trust it even for
     // the ambiguous types (graph/plot/code) whose body heuristic would otherwise
-    // gate recovery — so e.g. a `:::code` with plain-text body still heals.
+    // gate recovery: so e.g. a `:::code` with plain-text body still heals.
     const hadNotePrefix = recoverTitle !== rawTitle
     for (const [prefix, env] of Object.entries(SPECIAL_TITLE_TO_ENV)) {
       const matchesPrefix = recoverTitle === prefix || recoverTitle.startsWith(`${prefix}:`)
