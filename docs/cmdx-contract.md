@@ -49,8 +49,8 @@ Markdown storage is Obsidian-compatible:
 
 ### Special blocks are stored verbatim
 
-ComdTeX-only special blocks — `pseudocode`, `flowchart`, `truth`, `graph`, `plot`,
-`commdiag`, `code`, `excalidraw` — are **not** converted to callouts. `maskSpecialBlocks()`
+ComdTeX-only special blocks (`pseudocode`, `flowchart`, `truth`, `graph`, `plot`,
+`commdiag`, `code`, `excalidraw`) are **not** converted to callouts. `maskSpecialBlocks()`
 (`src/cmdxFormat.ts`) swaps them for placeholders before the storage conversions
 run and restores them afterward, so they survive the `.md`/`.tex` round-trip
 byte-for-byte. Older builds flattened these to `> [!note]` callouts, silently
@@ -81,7 +81,7 @@ Current warning categories:
 - `unsupported-latex-environment`
 - `latex-preamble-preserved`
 - `custom-latex-macro-preserved`
-- `size-prefix-dropped` — `:::sm` / `:::lg` size modifiers have no equivalent
+- `size-prefix-dropped`: `:::sm` / `:::lg` size modifiers have no equivalent
   in Obsidian callout syntax. When saving as `.md`, size information is lost.
   The environment is converted normally; only the visual size hint disappears.
   This is a known limitation of the Obsidian storage format. Use `.tex` storage

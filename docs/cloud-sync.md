@@ -1,6 +1,6 @@
-# Cloud Sync — Bring Your Own Cloud
+# Cloud Sync: Bring Your Own Cloud
 
-ComdTeX does not run its own sync server. Instead, it lets you reuse the cloud-storage client you already have installed — **Dropbox**, **Google Drive**, or **OneDrive** — to keep your vault in sync across devices.
+ComdTeX does not run its own sync server. Instead, it lets you reuse the cloud-storage client you already have installed (**Dropbox**, **Google Drive**, or **OneDrive**) to keep your vault in sync across devices.
 
 The model is simple: the vault is just a folder, and the cloud client syncs that folder. ComdTeX adds the polish: it detects the situation, shows a sync indicator, and helps you resolve the conflict files those clients sometimes create.
 
@@ -40,7 +40,7 @@ If everything is wired up correctly, the bottom **status bar** will show:
 
 ### 4. (Optional) Enable autosave
 
-Cloud sync triggers on every disk write. ComdTeX's autosave (Settings → *Autoguardado*, default 800 ms) means every keystroke pause flushes to disk and your cloud client picks it up — effectively continuous sync.
+Cloud sync triggers on every disk write. ComdTeX's autosave (Settings → *Autoguardado*, default 800 ms) means every keystroke pause flushes to disk and your cloud client picks it up, effectively continuous sync.
 
 ---
 
@@ -69,7 +69,7 @@ Open the **Sync** panel (status-bar badge or the **Sync** button in the top menu
 | **Usar la copia / Use the copy** | Replaces the original with the conflict copy (renames it over the original). |
 | **Mostrar en carpeta / Reveal in folder** | Opens the file's directory in your OS file manager. |
 
-Conflict resolution is **last-write-wins by your choice** — there is no automatic merge. For complex differences, "Open both" + manual edit is the safest path.
+Conflict resolution is **last-write-wins by your choice**: there is no automatic merge. For complex differences, "Open both" + manual edit is the safest path.
 
 ---
 
@@ -79,7 +79,7 @@ Settings → **Sync** has two toggles:
 
 | Setting | Effect |
 |---|---|
-| **Detect cloud providers** (`cloudSyncDetectEnabled`, default on) | Turns the whole feature on/off — when off, no provider scan runs, the StatusBar badge and FileTree markers disappear, and no conflict detection happens. |
+| **Detect cloud providers** (`cloudSyncDetectEnabled`, default on) | Turns the whole feature on/off: when off, no provider scan runs, the StatusBar badge and FileTree markers disappear, and no conflict detection happens. |
 | **Show "move into cloud" banner** (`cloudSyncBannerEnabled`, default on) | Controls only the suggestion banner shown when a provider is installed but the vault sits outside it. The conflicts panel and badge are unaffected. |
 
 The banner also remembers a one-time dismissal in `localStorage` under `comdtex_cloud_banner_dismissed` (no per-provider granularity).
@@ -98,7 +98,7 @@ The banner also remembers a one-time dismissal in `localStorage` under `comdtex_
 
 ### OneDrive
 
-- OneDrive's conflict file format is `name-DEVICE.ext`. ComdTeX uses a heuristic that requires both files to exist side-by-side, which keeps false positives low but is not 100% bulletproof — if you have a file genuinely named `paper-Draft.md` next to `paper.md`, it will be flagged.
+- OneDrive's conflict file format is `name-DEVICE.ext`. ComdTeX uses a heuristic that requires both files to exist side-by-side, which keeps false positives low but is not 100% bulletproof: if you have a file genuinely named `paper-Draft.md` next to `paper.md`, it will be flagged.
 - OneDrive on Linux is not officially supported by Microsoft; third-party clients like `onedrive` (abraunegg) work but live outside `~/Library/CloudStorage`, so detection may miss them.
 
 ---
@@ -116,7 +116,7 @@ The banner also remembers a one-time dismissal in `localStorage` under `comdtex_
 ## Troubleshooting
 
 **"I don't see the sync badge."**
-The vault is not inside a folder ComdTeX recognizes as a cloud root. Check the path in **File → Open Vault** — it should start with `~/Dropbox/`, `~/Library/CloudStorage/GoogleDrive-…`, `~/Library/CloudStorage/OneDrive…`, `~/OneDrive`, or `~/Google Drive`. On Windows, Drive for Desktop mounts as a drive letter; confirm your vault is on that drive.
+The vault is not inside a folder ComdTeX recognizes as a cloud root. Check the path in **File → Open Vault**: it should start with `~/Dropbox/`, `~/Library/CloudStorage/GoogleDrive-…`, `~/Library/CloudStorage/OneDrive…`, `~/OneDrive`, or `~/Google Drive`. On Windows, Drive for Desktop mounts as a drive letter; confirm your vault is on that drive.
 
 **"The badge shows but my changes aren't syncing."**
 That's a problem with the cloud client itself, not ComdTeX. Open the provider's tray/menu-bar icon and check whether sync is paused, blocked by a conflict, or out of storage.

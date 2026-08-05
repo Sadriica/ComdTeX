@@ -1,6 +1,6 @@
 # Installing optional dependencies
 
-Most of ComdTeX works without anything else installed — the bundled WASM LaTeX engine handles PDF compilation since v1.3.0. The dependencies below are only needed for specific export and backup flows.
+Most of ComdTeX works without anything else installed. The bundled WASM LaTeX engine handles PDF compilation since v1.3.0. The dependencies below are only needed for specific export and backup flows.
 
 | Tool | Required for |
 |------|-------------|
@@ -94,7 +94,7 @@ sudo dnf install zip
 
 ### macOS
 
-`zip` ships with macOS by default — you should not need to install anything. If `zip --version` fails in your terminal, reinstall the developer tools:
+`zip` ships with macOS by default, so you should not need to install anything. If `zip --version` fails in your terminal, reinstall the developer tools:
 
 ```bash
 xcode-select --install
@@ -141,13 +141,13 @@ Install [Git for Windows](https://git-scm.com/download/win).
 
 ComdTeX runs detection through the Tauri shell plugin, which only allows commands that are in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If you upgraded from an older build and the warning persists:
 
-1. Restart ComdTeX after the install — the shell plugin caches `PATH` at startup.
+1. Restart ComdTeX after the install: the shell plugin caches `PATH` at startup.
 2. Verify the tool is in your `PATH` from the same shell that launched ComdTeX:
    ```bash
    which pandoc && pandoc --version
    ```
 3. On macOS, GUI apps inherit a different `PATH` than your terminal. Launch ComdTeX from the terminal (`open -a ComdTeX`) once after the install.
-4. On Windows, log out and back in after installing — Explorer-launched apps cache the user `PATH` at logon.
+4. On Windows, log out and back in after installing: Explorer-launched apps cache the user `PATH` at logon.
 
 ### "I don't want to see this banner"
 

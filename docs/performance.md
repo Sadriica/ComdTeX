@@ -1,4 +1,4 @@
-# ComdTeX — Performance Audit & Optimization Guide
+# ComdTeX: Performance Audit & Optimization Guide
 
 > Last updated: 2026-07-15. Produced by a full-code performance investigation
 > (live CPU captures on a real vault + per-pass benchmarks + an 8-angle
@@ -31,11 +31,11 @@ on this hardware), the entire cost is **per-refresh work while typing**.
 | KaTeX, warm cache | small (cache works; cold adds ~170 ms once) |
 | `sanitizeRenderedHtml` (DOMPurify string round-trip) | 208 ms (jsdom; native is faster but same shape) |
 | **Full-document HTML parses per preview refresh (old pipeline)** | **3 parses + 2 serializes** |
-| `lintContent` (the 600 ms-debounced linter) | 7.3 ms — not a problem |
+| `lintContent` (the 600 ms-debounced linter) | 7.3 ms (not a problem) |
 
 The dominant cost is **not** the markdown/TeX string pipeline. It is parsing
-and re-serializing the rendered HTML — which for KaTeX-heavy documents is
-multi-MB (each equation explodes into hundreds of `<span>`s) — multiple times
+and re-serializing the rendered HTML, which for KaTeX-heavy documents is
+multi-MB (each equation explodes into hundreds of `<span>`s), multiple times
 per refresh, on the same thread that handles keystrokes:
 
 1. `annotateSourceLines` (inside `renderMarkdown`): `DOMParser` full parse + `innerHTML` re-serialize
@@ -80,33 +80,33 @@ working tree at the time of writing; keep this list in sync as they are fixed.
 
 | # | Where | Finding | Status |
 |---|---|---|---|
-| 1 | `App.tsx` commit effects | **Stale `data-source-line`** — effects dep only on `[previewHtml]`; with annotations no longer baked into the string, a line-shifting edit that produces byte-identical HTML (blank line inserted, list-marker change) skips re-annotation → click-to-jump/scroll-sync land on wrong lines. Fix: add the source-text dep. | FIXED — effects dep on `[previewHtml, deferredPreviewContent]` / `[splitPreviewHtml, deferredSplitContent]`, eslint-disable removed |
-| 2 | `App.tsx` menus/palette memos, `useExportActions` | **Memoization chain defeated** — `useVault` returns a fresh object per render and `vault.openFile` changes identity per keystroke; `handleSave` deps `[vault]`, export handlers dep `[vault…]` → `exportActions` → `menus`/`paletteCommands` → `MenuBar.memo` all churn per keystroke anyway. Root enabler: `updateContent` deps `[openTabs]` (`useVault.ts`) instead of the existing `openTabsRef` pattern. | FIXED — `updateContent` reads via `openTabsRef` (deps `[saveFile, autoSaveMs]`); `vaultRef` pattern in both `useExportActions` (15 handlers) and `App.tsx` (12 handlers, e.g. `handleSave` `[vault]`→`[]`); persist-tabs effect skips unchanged writes |
-| 3 | `App.tsx` commit effects | **Annotation scope widened** — `annotateSourceLinesIn` walks frontmatter header (`.fm-title`) and bibliography HTML (old code annotated body only), so a frontmatter title equal to a body heading consumes the duplicate-key index and shifts jumps. Fix: skip `.fm-title`/bibliography subtrees. | FIXED — `el.closest(".frontmatter-header, .bibliography")` skip guard + regression test in `previewAnchors.test.ts` |
-| 4 | `App.tsx` | **Cost refs freeze while preview hidden** — old unguarded measuring effect reset `previewCostRef` on hide; merged effect early-returns on `!el`, so the adaptive delay stays pinned (≤1500 ms) for still-visible `previewContent` consumers (OutlinePanel, breadcrumb heading, spellcheck lang, StatusBar counts): 10× staleness regression vs the old 150 ms floor. | FIXED — effect on `settings.previewVisible === false` resets both refs to 0 (150 ms floor while hidden) |
-| 5 | `App.tsx` | `renderCostRef` shared by main + split panes (same callback) and written during render phase → split-pane cost poisons the main pane's debounce. Fix: per-pane cost sinks. | FIXED — `renderPreviewHtml(content, costSink?)`; only the main memo passes `renderCostRef` |
-| 6 | `App.tsx` | `renderCostRef` not written on the error path (`renderErrorHtml`) → error-message refreshes lag at the stale heavy delay while the user types the fix. One-liner: measure in `finally`. | FIXED — timing moved to `finally` |
-| 7 | `useExportActions.ts` | `handleExportHtml` is the only production caller left on `annotate: true` — ships `data-source-line` attrs in exported HTML and pays the parse. Then consider flipping the default. | FIXED — passes `{ annotate: false }`. Default-flip still pending (see finding 9) |
-| 8 | `App.tsx`/`previewMorph.ts` | The sanitize→annotate→morph sequence is copy-pasted in two effects; the "raw `previewHtml` never reaches the DOM" invariant is comment-enforced. Fix: single `commitPreview(el, rawHtml, sourceText, onCost?)` in `previewMorph.ts`; drop `morphPreviewContent`'s now-unused string branch so the type system blocks unsanitized injection. | FIXED — `commitPreview()` exported from `previewMorph.ts` (both effects use it); `morphPreviewContent` accepts `DocumentFragment` only |
+| 1 | `App.tsx` commit effects | **Stale `data-source-line`**: effects dep only on `[previewHtml]`; with annotations no longer baked into the string, a line-shifting edit that produces byte-identical HTML (blank line inserted, list-marker change) skips re-annotation → click-to-jump/scroll-sync land on wrong lines. Fix: add the source-text dep. | FIXED: effects dep on `[previewHtml, deferredPreviewContent]` / `[splitPreviewHtml, deferredSplitContent]`, eslint-disable removed |
+| 2 | `App.tsx` menus/palette memos, `useExportActions` | **Memoization chain defeated**: `useVault` returns a fresh object per render and `vault.openFile` changes identity per keystroke; `handleSave` deps `[vault]`, export handlers dep `[vault…]` → `exportActions` → `menus`/`paletteCommands` → `MenuBar.memo` all churn per keystroke anyway. Root enabler: `updateContent` deps `[openTabs]` (`useVault.ts`) instead of the existing `openTabsRef` pattern. | FIXED: `updateContent` reads via `openTabsRef` (deps `[saveFile, autoSaveMs]`); `vaultRef` pattern in both `useExportActions` (15 handlers) and `App.tsx` (12 handlers, e.g. `handleSave` `[vault]`→`[]`); persist-tabs effect skips unchanged writes |
+| 3 | `App.tsx` commit effects | **Annotation scope widened**: `annotateSourceLinesIn` walks frontmatter header (`.fm-title`) and bibliography HTML (old code annotated body only), so a frontmatter title equal to a body heading consumes the duplicate-key index and shifts jumps. Fix: skip `.fm-title`/bibliography subtrees. | FIXED: `el.closest(".frontmatter-header, .bibliography")` skip guard + regression test in `previewAnchors.test.ts` |
+| 4 | `App.tsx` | **Cost refs freeze while preview hidden**: old unguarded measuring effect reset `previewCostRef` on hide; merged effect early-returns on `!el`, so the adaptive delay stays pinned (≤1500 ms) for still-visible `previewContent` consumers (OutlinePanel, breadcrumb heading, spellcheck lang, StatusBar counts): 10× staleness regression vs the old 150 ms floor. | FIXED: effect on `settings.previewVisible === false` resets both refs to 0 (150 ms floor while hidden) |
+| 5 | `App.tsx` | `renderCostRef` shared by main + split panes (same callback) and written during render phase → split-pane cost poisons the main pane's debounce. Fix: per-pane cost sinks. | FIXED: `renderPreviewHtml(content, costSink?)`; only the main memo passes `renderCostRef` |
+| 6 | `App.tsx` | `renderCostRef` not written on the error path (`renderErrorHtml`) → error-message refreshes lag at the stale heavy delay while the user types the fix. One-liner: measure in `finally`. | FIXED: timing moved to `finally` |
+| 7 | `useExportActions.ts` | `handleExportHtml` is the only production caller left on `annotate: true`; it ships `data-source-line` attrs in exported HTML and pays the parse. Then consider flipping the default. | FIXED: passes `{ annotate: false }`. Default-flip still pending (see finding 9) |
+| 8 | `App.tsx`/`previewMorph.ts` | The sanitize→annotate→morph sequence is copy-pasted in two effects; the "raw `previewHtml` never reaches the DOM" invariant is comment-enforced. Fix: single `commitPreview(el, rawHtml, sourceText, onCost?)` in `previewMorph.ts`; drop `morphPreviewContent`'s now-unused string branch so the type system blocks unsanitized injection. | FIXED: `commitPreview()` exported from `previewMorph.ts` (both effects use it); `morphPreviewContent` accepts `DocumentFragment` only |
 | 9 | `renderer.ts` | `opts` as 8th positional param forces `undefined,` padding at call sites (5 copies now). Prefer an options object / renderer-owned preview entry point; with zero production callers wanting `annotate: true`, consider flipping the default. | OPEN (deliberate: low-risk cleanup, batch with the next renderer touch) |
 | 10 | `CLAUDE.md` | Developer note "sanitizeRenderedHtml() must wrap every renderMarkdown() call" no longer describes the fragment path. | FIXED (note updated 2026-07-15; names `commitPreview` as the sanctioned preview path) |
 
 Refuted during verification (do not re-report): "annotating after sanitize
-loses annotations for DOMPurify-altered blocks" — structurally impossible:
+loses annotations for DOMPurify-altered blocks" is structurally impossible:
 a stripped tag inside the 40-char key window meant the raw-side key contained
 the tag markup, so the OLD pipeline failed those blocks identically.
 
 ## 4. Optimization roadmap (verified opportunities, ranked by impact)
 
-### 4.1 Stabilize `vault` identity churn — unlocks everything else
+### 4.1 Stabilize `vault` identity churn: unlocks everything else
 Every keystroke currently re-renders all of `AppContent` and defeats every
 downstream memo (finding 2). Concrete steps, in order:
-1. ✅ DONE — `useVault.updateContent`: read tabs via `openTabsRef.current` (pattern
+1. ✅ DONE: `useVault.updateContent`: read tabs via `openTabsRef.current` (pattern
    already used at two other sites in the file) so the callback stops
    depending on `[openTabs]`.
 2. Superseded by the `vaultRef` pattern (3): memoizing the return object
    doesn't help because per-keystroke state lives inside it.
-3. ✅ DONE — App-side handlers (12) and export handlers (15) read the current
+3. ✅ DONE: App-side handlers (12) and export handlers (15) read the current
    vault through a `vaultRef` and no longer dep on `vault`/`vault.openFile`;
    `menus`/`paletteCommands`/`exportActions` memos now hold across keystrokes.
 4. Longer term: move document text out of `useState` (ref + subscription /
@@ -129,7 +129,7 @@ document with `split("\n")`.
 ### 4.3 KaTeX cache: FIFO-evict instead of clear-all
 `katexCache.clear()` at `KATEX_CACHE_MAX` wipes entries inserted earlier in
 the *same render*; sessions crossing the cap degrade to pre-cache behavior on
-exactly the heaviest documents. Map preserves insertion order — evict with
+exactly the heaviest documents. Map preserves insertion order: evict with
 `katexCache.delete(katexCache.keys().next().value)`.
 
 ### 4.4 Draft flush I/O (`useVault.ts`)
@@ -150,7 +150,7 @@ a two-line `lastRaw`/`lastMap` module cache dedupes identical-content commits.
 After the above, the remaining per-refresh main-thread block is the string
 pipeline + markdown-it (~30–350 ms by doc size). It is `string → string` and
 worker-friendly, with two caveats: the resolvers (transclusion, env-refs) are
-sync callbacks — pre-resolve the needed docs into a plain map before posting;
+sync callbacks: pre-resolve the needed docs into a plain map before posting;
 and annotation/sanitize/morph must stay on the main thread (DOM). This is the
 "never blocks typing at any document size" endgame. Compare effort against
 4.1–4.5 first; they may be enough.
@@ -160,7 +160,7 @@ and annotation/sanitize/morph must stay on the main thread (DOM). This is the
 - `WEBKIT_DISABLE_DMABUF_RENDERER=1` is worth keeping on Intel Arc + Wayland;
   idle CPU is 0% with it. Consider a wrapper script if the release binary is
   used daily (auto-updates replace the binary, not the wrapper).
-- `ps`/`watch ps` show **lifetime-average** CPU, not instantaneous — always
+- `ps`/`watch ps` show **lifetime-average** CPU, not instantaneous; always
   measure with `top -b -d 0.5 -p <pid>` (the WebKitWebProcess child, not the
   comdtex parent).
 

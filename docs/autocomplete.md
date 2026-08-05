@@ -6,7 +6,7 @@ ComdTeX has two complementary "type less" systems: **editor autocompletion**
 
 ## Editor autocompletion
 
-Suggestions do not pop up while you write prose — the widget only appears on
+Suggestions do not pop up while you write prose. The widget only appears on
 trigger characters, on demand (`Ctrl+Space`), or inside special blocks (see
 below). The primary mechanism is **Tab expansion**: type a known name, press
 `Tab`, and it expands into a snippet with placeholders (`Tab` again jumps
@@ -16,9 +16,9 @@ between them).
 
 | You type | You get |
 |---|---|
-| `:::` | The full list of block types (theorem, lemma, truth, graph, plot, commdiag, pseudocode, flowchart…). Keep typing to filter: `:::tr` + `Tab` → truth table. Only block snippets match after `:::` — math shorthands like `table(...)` never expand there. |
+| `:::` | The full list of block types (theorem, lemma, truth, graph, plot, commdiag, pseudocode, flowchart…). Keep typing to filter: `:::tr` + `Tab` → truth table. Only block snippets match after `:::`: math shorthands like `table(...)` never expand there. |
 | `\` | LaTeX commands with their glyph (`\alpha` → α, `\mathbb{R}` → ℝ…) |
-| `[[` | Wikilink target — vault file names |
+| `[[` | Wikilink target: vault file names |
 | `[@` | BibTeX citation keys from `references.bib` |
 | `@eq:` `@fig:` `@tbl:` `@sec:` `@thm:` `@def:` … | Structural labels defined across the document/vault |
 | `[^` | Footnote labels |
@@ -33,7 +33,7 @@ Any shorthand from the [Help panel](../README.md) expands with `Tab`:
 
 When the cursor is **inside** a `:::pseudocode`, `:::flowchart`, `:::truth`,
 `:::graph`, `:::plot` or `:::commdiag` block, autocompletion switches to that
-block's own grammar — and suggestions appear as you type (the quick-suggest
+block's own grammar, and suggestions appear as you type (the quick-suggest
 widget is enabled only while you are inside such a block):
 
 | Block | Suggestions |
@@ -42,12 +42,12 @@ widget is enabled only while you are inside such a block):
 | `truth` | `AND` → `∧`, `OR` → `∨`, `NOT` → `¬`, `IMPLIES` → `→`, `IFF` → `↔` |
 | `graph` | `edge` (`A -- B`), `arrow` (`A -> B`), `weighted` (`A -- B : 5`) |
 | `plot` | `f` (`f(x) = …`), `range` (`range: [-5, 5]`), and the function names (`sin`, `cos`, `sqrt`, `exp`…) |
-| `commdiag` | `arrow` (`A -> B [f]`), `iso` (`<->`), `epi` (`->>`), `mono` (`>->`), `double` (`==>`), and `square` — a full commutative square in one go |
+| `commdiag` | `arrow` (`A -> B [f]`), `iso` (`<->`), `epi` (`->>`), `mono` (`>->`), `double` (`==>`), and `square` (a full commutative square in one go) |
 
 Two guarantees inside these blocks:
 
 - **Global shorthands are suppressed.** `sin` + `Tab` inside a `:::plot` stays
-  plain `sin(x)` (what the plotter parses) — it never becomes `\sin`.
+  plain `sin(x)` (what the plotter parses); it never becomes `\sin`.
 - **Typing `:::` there is the closing fence**, so no block-type suggestions
   pop up in your way.
 
@@ -58,20 +58,20 @@ working inside them.
 ## Command Palette (`Ctrl+P`)
 
 One fuzzy search box over **files, recent files, and ~150 commands**. Type any
-part of a command's name, its syntax, or a keyword in Spanish or English —
+part of a command's name, its syntax, or a keyword in Spanish or English:
 `flowchart`, `:::theorem`, `cita`, `footnote`, `[[`, `frontmatter` all land on
 the right entry. Categories:
 
-- **Edición** — save, find, formatting (bold/italic/highlight colors),
+- **Edición**: save, find, formatting (bold/italic/highlight colors),
   headings, lists.
-- **Insertar** — table editor, TOC, code block, math, **wikilink,
+- **Insertar**: table editor, TOC, code block, math, **wikilink,
   transclusion, footnote, BibTeX citation, numbered figure, YAML frontmatter,
   environment reference, callouts** (`[!NOTE]`/`[!WARNING]`/`[!TIP]`/
   `[!IMPORTANT]`), Excalidraw drawing, and the full snippet catalog under
   *Snippets / autocompletado*.
-- **Matemáticas** — symbols, every math operation (fractions to matrices),
+- **Matemáticas**: symbols, every math operation (fractions to matrices),
   all environments (theorem … exercise, remark, note).
-- **Vista / Exportar / IA / Vault / Navegación** — every panel, every export,
+- **Vista / Exportar / IA / Vault / Navegación**: every panel, every export,
   settings, daily note, git-friendly vault actions.
 
 Parent entries (▸) drill into submenus; `Esc` goes back a level.
@@ -87,6 +87,6 @@ Parent entries (▸) drill into submenus; `Esc` goes back a level.
 | In-app syntax reference | `src/HelpPanel.tsx` |
 
 Adding a shorthand touches all of: `preprocessor.ts`, `monacoSetup.ts`,
-`Toolbar.tsx`, `HelpPanel.tsx`, and both i18n catalogs — see `CLAUDE.md`.
+`Toolbar.tsx`, `HelpPanel.tsx`, and both i18n catalogs; see `CLAUDE.md`.
 When a special block's grammar changes, update its catalog in
 `SPECIAL_BLOCK_COMPLETIONS` too.

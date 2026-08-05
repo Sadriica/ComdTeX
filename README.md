@@ -5,7 +5,7 @@
 
 Desktop editor for `Markdown + LaTeX` aimed at mathematics and science, built with `Tauri + React + TypeScript`.
 
-A [Witara](https://witara.site) product: local-first, your files stay yours, AI strictly optional and off by default.
+A [Witara](https://witara.site) product: local-first, your files stay yours, AI strictly optional and off by default. Free forever.
 
 ---
 
@@ -31,7 +31,7 @@ A [Witara](https://witara.site) product: local-first, your files stay yours, AI 
 
 ### 1. Open a Vault
 
-A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files directly — no database, no hidden format.
+A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files directly: no database, no hidden format.
 
 On first launch, click **Open Vault** and select any folder. Four special files in the vault root are recognized automatically:
 
@@ -42,7 +42,7 @@ On first launch, click **Open Vault** and select any folder. Four special files 
 | `snippets.md` | User-defined text snippets available in the editor |
 | `custom.css` | Custom CSS applied to the preview pane |
 
-None of these files are required — ComdTeX works without them.
+None of these files are required; ComdTeX works without them.
 
 ComdTeX also writes a `.comdtex-comments.json` in the vault root to persist per-line comments out-of-band, so your `.md` and `.tex` files stay clean.
 
@@ -144,7 +144,7 @@ Let $c = \sup S$. A standard $\varepsilon$-$\delta$ argument shows $f(c) = 0$.
 
 **Unnumbered:** `proof`, `remark`, `note`
 
-**Size prefixes:** `sm` (compact), `lg` (large) — e.g. `:::sm remark`
+**Size prefixes:** `sm` (compact), `lg` (large), e.g. `:::sm remark`
 
 Environments can be labeled and cross-referenced:
 
@@ -205,7 +205,7 @@ ComdTeX uses an internal format (CMDX) while you edit. The conversion is automat
 | `\frac{a}{b}` (LaTeX) | `frac(a, b)` |
 | `\begin{bmatrix}…\end{bmatrix}` (LaTeX) | `mat(…)` |
 
-When you save, the file is written back in its original format. `.md` files stay Obsidian-compatible; `.tex` files stay valid LaTeX. Open a vault in Obsidian and ComdTeX simultaneously — changes round-trip cleanly.
+When you save, the file is written back in its original format. `.md` files stay Obsidian-compatible; `.tex` files stay valid LaTeX. Open a vault in Obsidian and ComdTeX simultaneously; changes round-trip cleanly.
 
 ### 8. Validate, Export, and Compile
 
@@ -260,32 +260,32 @@ All cited entries are collected into a bibliography at the bottom of the preview
 ## Features
 
 ### Math & Writing
-- Shorthand system — expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
+- Shorthand system: expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
 - Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
 - Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
-- Structural labels for headings, equations, figures, tables, and theorem-like environments — plus `@...` cross-references
+- Structural labels for headings, equations, figures, tables, and theorem-like environments, plus `@...` cross-references
 - BibTeX citations via `references.bib` and `[@key]` syntax
 - Custom LaTeX macros via `\newcommand` in `macros.md` (applied vault-wide)
 - User-defined text snippets via `snippets.md`
 - YAML frontmatter (title, author, date, abstract, tags)
 - Callout blocks (`> [!NOTE]`, `> [!WARNING]`, `> [!TIP]`, etc.)
-- Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor) — each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
+- Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor), each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
 - Text formatting: `==highlight==`, coloured highlights (`<mark class="hl-green">…</mark>` and friends), `<u>underline</u>`
-- Live auto table of contents — drop a `[[toc]]` line and it expands into a navigable, always-current heading list
+- Live auto table of contents: drop a `[[toc]]` line and it expands into a navigable, always-current heading list
 - Mermaid diagrams
 - Footnotes
 - HTML embed with sanitizer (YouTube iframes allowed; `<script>` and `<form>` blocked)
 
 ### Editor
 - Monaco Editor with syntax highlighting
-- Rich autocompletion: `:::` block types, `\` LaTeX commands, `[[` wikilinks, `[@` citations, `@eq:`/`@sec:`/… labels, Tab-expanding shorthands, and context-aware keyword suggestions inside special blocks (pseudocode, truth tables, plots…) — see [docs/autocomplete.md](docs/autocomplete.md)
+- Rich autocompletion: `:::` block types, `\` LaTeX commands, `[[` wikilinks, `[@` citations, `@eq:`/`@sec:`/… labels, Tab-expanding shorthands, and context-aware keyword suggestions inside special blocks (pseudocode, truth tables, plots…); see [docs/autocomplete.md](docs/autocomplete.md)
 - Vim mode (toggle in Settings)
 - Structure-aware Enter: lists, numbered lists (renumbering), `- [ ]` task items, `>` quotes and pipe-table rows continue on their own; an abandoned marker outdents or clears instead of piling up empty bullets
-- Section folding by heading, with cursor / scroll / fold state remembered per file across tab switches — see [docs/long-documents.md](docs/long-documents.md)
-- Offline spellcheck (Hunspell dictionaries via `nspell`, Spanish + English) — gated by a Settings toggle; no network required
+- Section folding by heading, with cursor / scroll / fold state remembered per file across tab switches; see [docs/long-documents.md](docs/long-documents.md)
+- Offline spellcheck (Hunspell dictionaries via `nspell`, Spanish + English), gated by a Settings toggle; no network required
 - Real-time content linter: broken wikilinks, missing citations, malformed equations, shorthand errors shown as Monaco markers
-- Per-line comments — annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
+- Per-line comments: annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
 - Clickable checkboxes in preview
 - Visual table editor (Ctrl+P → "Table editor")
@@ -295,22 +295,22 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ### Preview
 - Live PDF preview pane (pdf.js, virtualized for fast scrolling on large documents)
-- Wikilink hover preview — peek at the contents of `[[note]]` without leaving the file
+- Wikilink hover preview: peek at the contents of `[[note]]` without leaving the file
 - Transclusion: embed an entire note with `![[note]]`, a single section with `![[note#heading]]`, or a tagged block via block IDs (`^id` / `![[note#^id]]`)
 - Custom preview CSS via `custom.css`
-- First-render correctness — macros are loaded before the initial render (no flash of unrendered math)
+- First-render correctness: macros are loaded before the initial render (no flash of unrendered math)
 
 ### Navigation & Panels
-- Command palette (Ctrl+P): a categorized, selection-aware universal launcher — eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
+- Command palette (Ctrl+P): a categorized, selection-aware universal launcher: eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
 - Quick switcher (Ctrl+;): fast file switching
 - Daily notes (Ctrl+Shift+D): create or jump to today's dated note
-- Outline panel (document headings) — drag headings to reorder sections in the source
+- Outline panel (document headings): drag headings to reorder sections in the source
 - Backlinks panel (incoming `[[wikilinks]]`)
 - Wikilinks with `[[note-name]]` autocomplete
 - Tag panel (browse files by frontmatter tag)
 - Labels panel (structural labels, broken references, duplicate labels, unused labels)
 - Diagnostics panel (diagnostics, export compatibility, project plan, academic structure, math backlinks)
-- Graph panel — improved visual wikilink map with clustering and filtering
+- Graph panel: improved visual wikilink map with clustering and filtering
 - Environments panel (all theorem/lemma/etc. blocks across vault)
 - Equations panel (all numbered equations in current file)
 - Frontmatter panel (GUI editor for YAML fields)
@@ -320,9 +320,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Git panel (branch, staged/unstaged changes, commit, push)
 - Navigation history (Alt+Left / Alt+Right)
 - Breadcrumb bar
-- Focus timer panel — Pomodoro (work/break/long-break cycles) plus live writing-session stats (word delta, words-per-minute, daily-goal progress)
-- AI assistant panel — optional, bring-your-own provider (see [AI assistant](#ai-assistant) below)
-- Unified top menu bar — a classic dropdown bar (File/Edit/View/Vault) plus a sectioned **Files / Texts / Math / Views** menu with direct **Focus / AI / Sync / Help** buttons. Opening a panel un-collapses the sidebar; the old sidebar tab strip is gone
+- Focus timer panel: Pomodoro (work/break/long-break cycles) plus live writing-session stats (word delta, words-per-minute, daily-goal progress)
+- AI assistant panel: optional, bring-your-own provider (see [AI assistant](#ai-assistant) below)
+- Unified top menu bar: a classic dropdown bar (File/Edit/View/Vault) plus a sectioned **Files / Texts / Math / Views** menu with direct **Focus / AI / Sync / Help** buttons. Opening a panel un-collapses the sidebar; the old sidebar tab strip is gone
 
 ### Vault & Files
 - Vault = a regular folder on disk; open any folder
@@ -332,10 +332,10 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Vault backup (exports as `.zip`)
 
 ### Export
-- **AI gap filling** — leave `{{?}}` or `{{? a hint}}` while writing and fill it later, on demand. Explicit markers rather than ghost-text autocompletion; every fill lands in the undo stack. See [docs/ai-gaps.md](docs/ai-gaps.md).
-- **PDF via built-in WASM LaTeX engine (SwiftLaTeX)** — bundled at v1.3.0; compiles real LaTeX to PDF in-process, no `pandoc` / `xelatex` install required. Status bar shows `TeX: WASM | local`. See [docs/wasm-tex.md](docs/wasm-tex.md).
+- **AI gap filling**: leave `{{?}}` or `{{? a hint}}` while writing and fill it later, on demand. Explicit markers rather than ghost-text autocompletion; every fill lands in the undo stack. See [docs/ai-gaps.md](docs/ai-gaps.md).
+- **PDF via built-in WASM LaTeX engine (SwiftLaTeX)**: bundled at v1.3.0; compiles real LaTeX to PDF in-process, no `pandoc` / `xelatex` install required. Status bar shows `TeX: WASM | local`. See [docs/wasm-tex.md](docs/wasm-tex.md).
 - Local LaTeX PDF fallback: if the WASM engine fails, ComdTeX automatically tries `tectonic`, then `xelatex`, then `pdflatex`
-- LaTeX (`.tex`) with preamble, environments, and macros — Overleaf-compatible
+- LaTeX (`.tex`) with preamble, environments, and macros (Overleaf-compatible)
 - Project export: compose a multi-file project from a main document with `![[transclusions]]`
 - Reveal.js presentation
 - DOCX and Beamer via pandoc
@@ -346,24 +346,24 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
 
 ### App
-- Themes: light, dark, and high-contrast — driven by CSS variables (`data-theme`), switchable at runtime in Settings
+- Themes: light, dark, and high-contrast, driven by CSS variables (`data-theme`), switchable at runtime in Settings
 - Settings modal with left-tabbed sections: General, Editor, Preview, Daily notes, PDF compilation, Sync, AI assistant
 - First-launch onboarding tour with polished empty states throughout the UI
-- English and Spanish UI with full parity — switch at runtime via Settings → **Language** (no restart needed)
+- English and Spanish UI with full parity: switch at runtime via Settings → **Language** (no restart needed)
 - Auto-updater with in-app banner and one-click install
-- Dependency warnings when pandoc, zip, git, or typst are missing — dismissible per-dep, persisted in localStorage
+- Dependency warnings when pandoc, zip, git, or typst are missing, dismissible per-dep, persisted in localStorage
 
 ### AI assistant
-- Optional and **off by default** — bring your own provider and API key; ComdTeX ships none and makes no requests until you enable it
+- Optional and **off by default**: bring your own provider and API key; ComdTeX ships none and makes no requests until you enable it
 - Providers: Anthropic, OpenAI, Google Gemini, any OpenAI-compatible endpoint (including local **Ollama** / LM Studio / OpenRouter / DeepSeek), or a local agent **CLI** (e.g. `claude` / `opencode`)
-- Two entry points: the **panel** (`Ctrl+Shift+A`, or the **AI** menu-bar button) and **inline edit** (`Ctrl+K`) — describe a change and it is applied to the selection or at the cursor
+- Two entry points: the **panel** (`Ctrl+Shift+A`, or the **AI** menu-bar button) and **inline edit** (`Ctrl+K`); describe a change and it is applied to the selection or at the cursor
 - Edits are applied through the editor, so every AI change is fully **undo-able** (Ctrl+Z) and never silently rewrites your files
 - Base URLs are validated to `https://` or loopback (`http://localhost`) as an SSRF guard
 - Configured in Settings → **AI assistant**
 
 ### Citations
 - DOI / arXiv → BibTeX: paste a DOI or arXiv ID in the Citation Manager and ComdTeX fetches the entry from CrossRef / DataCite
-- Zotero import: pull entries directly from a running Zotero with the Better BibTeX plugin (local JSON-RPC API at `http://localhost:23119`) — no export step required
+- Zotero import: pull entries directly from a running Zotero with the Better BibTeX plugin (local JSON-RPC API at `http://localhost:23119`); no export step required
 
 ---
 
@@ -405,9 +405,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ## Installation
 
-### Linux — one-line installer (recommended)
+### Linux: one-line installer (recommended)
 
-Downloads the latest AppImage, verifies its checksum, and integrates it with your desktop — launcher entry (rofi / wofi / GNOME / KDE), icon, and a `comdtex` command. Everything under `~/.local`, no sudo. On Arch-based distros it additionally extracts the AppImage and removes its bundled `libwayland-*` (older than the system's Mesa/Wayland stack — they crash WebKit's EGL init and leave a blank white window), so the app runs against the system libraries:
+Downloads the latest AppImage, verifies its checksum, and integrates it with your desktop: launcher entry (rofi / wofi / GNOME / KDE), icon, and a `comdtex` command. Everything under `~/.local`, no sudo. On Arch-based distros it additionally extracts the AppImage and removes its bundled `libwayland-*` (older than the system's Mesa/Wayland stack; they crash WebKit's EGL init and leave a blank white window), so the app runs against the system libraries:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sadriica/ComdTeX/main/scripts/install.sh | bash
@@ -415,7 +415,7 @@ curl -fsSL https://raw.githubusercontent.com/Sadriica/ComdTeX/main/scripts/insta
 
 Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settings untouched).
 
-### Linux — Arch (AUR-style package)
+### Linux: Arch (AUR-style package)
 
 `packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration, updates via your AUR helper once published):
 
@@ -423,14 +423,14 @@ Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settin
 cd packaging/aur/comdtex-bin && makepkg -si
 ```
 
-### Linux — build from source
+### Linux: build from source
 
 ```bash
 git clone https://github.com/Sadriica/ComdTeX && cd ComdTeX
 ./scripts/build-from-source.sh --install   # checks deps (per-distro hints), builds, integrates
 ```
 
-### Linux — AppImage (universal)
+### Linux: AppImage (universal)
 
 Download the `.AppImage` from the [latest release](https://github.com/sadriica/comdtex/releases/latest), make it executable, and run it:
 
@@ -439,11 +439,11 @@ chmod +x ComdTeX_*.AppImage
 ./ComdTeX_*.AppImage
 ```
 
-The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros — no system install required.
+The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros; no system install required.
 
-> **Blank white window on Arch/Manjaro?** The AppImage's bundled `libwayland-client/cursor/server` can be older than your Mesa/Wayland stack, aborting WebKit's EGL init (`EGL_BAD_PARAMETER`). Use the one-line installer above — it extracts the AppImage, removes those libraries, and also drops the baked-in `WEBKIT_DISABLE_DMABUF_RENDERER=1` (with system libs in place it only forces slow software rendering). Manual equivalent: `./ComdTeX_*.AppImage --appimage-extract`, delete `squashfs-root/usr/lib/libwayland-*.so*`, remove the `WEBKIT_DISABLE_DMABUF_RENDERER` line from `squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh`, run `squashfs-root/AppRun`.
+> **Blank white window on Arch/Manjaro?** The AppImage's bundled `libwayland-client/cursor/server` can be older than your Mesa/Wayland stack, aborting WebKit's EGL init (`EGL_BAD_PARAMETER`). Use the one-line installer above: it extracts the AppImage, removes those libraries, and also drops the baked-in `WEBKIT_DISABLE_DMABUF_RENDERER=1` (with system libs in place it only forces slow software rendering). Manual equivalent: `./ComdTeX_*.AppImage --appimage-extract`, delete `squashfs-root/usr/lib/libwayland-*.so*`, remove the `WEBKIT_DISABLE_DMABUF_RENDERER` line from `squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh`, run `squashfs-root/AppRun`.
 
-### Linux — Debian/Ubuntu (.deb)
+### Linux: Debian/Ubuntu (.deb)
 
 Download the `.deb` from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and install it:
 
@@ -458,9 +458,9 @@ If the app does not launch after installation:
 sudo apt install libwebkit2gtk-4.1-0
 ```
 
-### Linux — Arch / Manjaro / Fedora / other rolling distros
+### Linux: Arch / Manjaro / Fedora / other rolling distros
 
-Use the one-line installer or the PKGBUILD above. The installer applies the extra Arch patch (removing the AppImage's bundled `libwayland-*`) that the raw AppImage still needs on rolling distros — see the note in the AppImage section.
+Use the one-line installer or the PKGBUILD above. The installer applies the extra Arch patch (removing the AppImage's bundled `libwayland-*`) that the raw AppImage still needs on rolling distros; see the note in the AppImage section.
 
 ### Windows
 
@@ -468,7 +468,7 @@ Download the `.exe` (NSIS installer) from the [latest release](https://github.co
 
 ### Optional dependencies
 
-Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM LaTeX engine — no external tools required.
+Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM LaTeX engine: no external tools required.
 
 | Tool | Purpose | Install |
 |---|---|---|
@@ -484,7 +484,7 @@ If any tool is missing, ComdTeX shows an amber warning banner on startup. The ba
 
 ## Auto-Update
 
-ComdTeX checks for updates automatically on startup. If a newer version is available, an in-app banner appears — no need to visit GitHub. Clicking **Install** downloads the update and relaunches the app. All artifacts are signed with [minisign](https://jedisct1.github.io/minisign/); the updater verifies the signature before applying any update.
+ComdTeX checks for updates automatically on startup. If a newer version is available, an in-app banner appears. No need to visit GitHub. Clicking **Install** downloads the update and relaunches the app. All artifacts are signed with [minisign](https://jedisct1.github.io/minisign/); the updater verifies the signature before applying any update.
 
 ---
 
@@ -496,8 +496,8 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | AI assistant is bring-your-own | Off by default; you supply your own provider and API key. ComdTeX ships no keys and makes no AI requests until enabled. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
 | No mobile support | Desktop only (Linux, Windows). |
-| Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`) — see [docs/folder-rules.md](docs/folder-rules.md). |
-| Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel — see [docs/cloud-sync.md](docs/cloud-sync.md). |
+| Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`); see [docs/folder-rules.md](docs/folder-rules.md). |
+| Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel; see [docs/cloud-sync.md](docs/cloud-sync.md). |
 | Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js assets from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
 | SyncTeX forward/inverse sync is not available yet | The `.synctex` parser exists, but the bundled WASM LaTeX engine ships without synctex output, so no engine currently emits the data it needs. |
 
@@ -508,7 +508,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 ### Requirements
 
 - **Node.js** 20 or later (CI builds on Node 22; Vite 8 requires Node 20+)
-- **Rust** (stable) and `cargo` — install via [rustup](https://rustup.rs/)
+- **Rust** (stable) and `cargo`: install via [rustup](https://rustup.rs/)
 - System libraries for your distro:
 
 | Distro | Command |
@@ -518,7 +518,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | Fedora | `sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel librsvg2-devel openssl-devel` |
 | Gentoo/other | Install equivalents of `webkit2gtk:4.1`, `libayatana-appindicator`, `librsvg`, `openssl` |
 
-### Build from source — step by step
+### Build from source: step by step
 
 Full path from a clean machine to a packaged desktop app.
 
@@ -537,7 +537,7 @@ cd ComdTeX
 npm ci          # lockfile-exact (recommended); or `npm install`
 ```
 
-**4. (Optional) Run in development** — hot-reloads the frontend:
+**4. (Optional) Run in development** (hot-reloads the frontend):
 
 ```bash
 npm run tauri dev
@@ -554,7 +554,7 @@ npm run tauri build
 > NO_STRIP=true npm run tauri build
 > ```
 
-`npm run tauri build` runs `npm run build` (eslint + tsc + vite) internally, then compiles the Rust binary and packages the bundles. Running `npm run build` on its own only produces the frontend `dist/` — not a desktop app.
+`npm run tauri build` runs `npm run build` (eslint + tsc + vite) internally, then compiles the Rust binary and packages the bundles. Running `npm run build` on its own only produces the frontend `dist/`, not a desktop app.
 
 ### Other commands
 
@@ -591,7 +591,7 @@ The bundled `linuxdeploy` ships an old `strip` that cannot handle modern `.relr.
 NO_STRIP=true npm run tauri build -- --bundles appimage
 ```
 
-This is only relevant when building locally on Arch — release artifacts downloaded from GitHub already work everywhere.
+This is only relevant when building locally on Arch; release artifacts downloaded from GitHub already work everywhere.
 
 ---
 
@@ -632,15 +632,15 @@ The bundled `linuxdeploy` ships an old `strip`. Set `NO_STRIP=true` before runni
 
 **Cause:** an outdated `@excalidraw/excalidraw` is installed (the separate `index.css` export only exists in **0.18+**; 0.17.x embedded styles in the JS). This happens on a stale clone or when `node_modules` drifted from `package-lock.json`.
 
-**Fix:** sync dependencies to the lockfile — `npm ci` (clean, lockfile-exact) or `npm install`. Do **not** delete the CSS import; the pinned version (`^0.18.1`) ships it.
+**Fix:** sync dependencies to the lockfile: `npm ci` (clean, lockfile-exact) or `npm install`. Do **not** delete the CSS import; the pinned version (`^0.18.1`) ships it.
 
 ### pandoc / zip / git not detected
 
 **Symptom:** Amber banner on startup, or "Scoped command X not found" in the dev console.
 
-ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup) — the in-app **Install** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
+ComdTeX runs detection through the Tauri shell plugin, which only allows commands explicitly listed in the capability scope. The scope includes `pandoc`, `zip`, `git`, `typst`, `tectonic`, `xelatex`, `pdflatex`. If the tool is on your `PATH` but the banner still shows, restart ComdTeX (the shell plugin caches `PATH` at startup); the in-app **Install** button opens a per-tool install guide at [docs/installing-deps.md](docs/installing-deps.md).
 
-PDF compilation no longer needs any of these — the WASM engine is bundled. Pandoc is required for DOCX / Beamer / Typst / document import / Markdown→PDF (non-LaTeX path); typst is additionally needed for Typst→PDF; zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
+PDF compilation no longer needs any of these: the WASM engine is bundled. Pandoc is required for DOCX / Beamer / Typst / document import / Markdown→PDF (non-LaTeX path); typst is additionally needed for Typst→PDF; zip is required for vault backup and `.cmdx` archive export; git is only used by the in-app Git panel.
 
 ### .deb package: app does not launch
 
@@ -673,23 +673,23 @@ Verify the dev build launches and the editor opens a vault before submitting a P
 
 ### Adding a shorthand
 
-Requires updating **all five** of the following — omitting any causes inconsistency between the editor and renderer:
+Requires updating **all five** of the following; omitting any causes inconsistency between the editor and renderer:
 
-1. `src/preprocessor.ts` — add a handler to `HANDLERS`
-2. `src/monacoSetup.ts` — add a completion entry to `COMPLETIONS`
-3. `src/Toolbar.tsx` — add an entry to the appropriate section in `getSections(t)` (the unified menu bar)
-4. `src/HelpPanel.tsx` — add a `<Row>` entry in the corresponding section
-5. `src/i18n.ts` — add the label to `T.toolbar` and `T.helpPanel` in **both** `en` and `es`
+1. `src/preprocessor.ts`: add a handler to `HANDLERS`
+2. `src/monacoSetup.ts`: add a completion entry to `COMPLETIONS`
+3. `src/Toolbar.tsx`: add an entry to the appropriate section in `getSections(t)` (the unified menu bar)
+4. `src/HelpPanel.tsx`: add a `<Row>` entry in the corresponding section
+5. `src/i18n.ts`: add the label to `T.toolbar` and `T.helpPanel` in **both** `en` and `es`
 
 ### Adding UI strings
 
 1. Add the key and type to the `T` interface in `src/i18n.ts`
 2. Provide the translation in both the `en` and `es` objects
-3. Access via `useT()` in the component — never hardcode English text
+3. Access via `useT()` in the component; never hardcode English text
 
 ### Project structure
 
-#### `src/` — Frontend
+#### `src/` (Frontend)
 
 | File | Role |
 |---|---|
@@ -734,7 +734,7 @@ Requires updating **all five** of the following — omitting any causes inconsis
 | `toastService.ts` | Singleton toast module |
 | `types.ts` | Shared TypeScript types (`FileNode`, `OpenFile`, `SearchResult`) |
 
-#### `src-tauri/` — Rust / Tauri backend
+#### `src-tauri/` (Rust / Tauri backend)
 
 | File | Role |
 |---|---|
