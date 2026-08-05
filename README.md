@@ -5,6 +5,8 @@
 
 Desktop editor for `Markdown + LaTeX` aimed at mathematics and science, built with `Tauri + React + TypeScript`.
 
+A [Witara](https://witara.site) product: local-first, your files stay yours, AI strictly optional and off by default.
+
 ---
 
 ## Table of Contents
