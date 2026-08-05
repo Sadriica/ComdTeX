@@ -270,6 +270,7 @@ export interface T {
     exportProjectTex: string
     compileLatexPdf: string
     compileWasmPdf: string
+    showInPdf: string
     viewLabels: string
     viewQuality: string
     openDailyNote: string
@@ -1079,6 +1080,9 @@ export interface T {
     page: string
     jumpedToHeading: (heading: string) => string
     headingNotFound: (heading: string) => string
+    jumpedToLine: (line: number) => string
+    syncUnavailable: string
+    syncNoMatch: string
   }
 
   cloudSync: {

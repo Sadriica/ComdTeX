@@ -33,6 +33,9 @@ import {
 } from "./spellcheck"
 import { useVault } from "./useVault"
 import { useExportActions } from "./useExportActions"
+import type { SyncTexBundle } from "./exportActions"
+import { parseSyncTex, forwardSync } from "./synctex"
+import { nearestTexLine } from "./texLineMap"
 import { useSettings } from "./useSettings"
 import type { Settings } from "./useSettings"
 import { AiSessionProvider } from "./useAiSession"
@@ -579,6 +582,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [excalidrawVersion, setExcalidrawVersion] = useState(0)
   const [latexDiagnostics, setLatexDiagnostics] = useState<LatexDiagnostic[] | null>(null)
   const [pdfPath, setPdfPath] = useState<string | null>(null)
+  // SyncTeX from the last successful LOCAL compile (tex text + line map back
+  // to the editor); null while the PDF came from the WASM engine.
+  const [syncTex, setSyncTex] = useState<SyncTexBundle | null>(null)
+  const [pdfFocusPage, setPdfFocusPage] = useState<{ page: number; seq: number } | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const commentDecorationsRef = useRef<CommentDecorationsHandle | null>(null)
   const keepMarkDecorationsRef = useRef<KeepMarkDecorationsHandle | null>(null)
@@ -774,6 +781,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setLatexDiagnostics,
     setPdfPath,
     setTexEngineState,
+    setSyncTex,
   })
   const { rebuildPdfInPlace } = exportActions
 
@@ -2275,15 +2283,29 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   const searchVault = useCallback(() => openPanel("search"), [openPanel])
 
-  // ── PDF preview: click-to-source (heading-based shim) ─────────────────────
-  // Real synctex needs xelatex's .synctex.gz output and a parser; the
-  // simplified version below finds the heading text nearest to the click and
-  // jumps the editor to that line. Good enough for the 80% case (clicking
-  // section headings in the rendered PDF).
-  const handlePdfClickSource = useCallback((page: number, _x: number, _y: number, nearestText: string) => {
+  // ── PDF preview: click-to-source ──────────────────────────────────────────
+  // Two tiers. When the PDF came from a LOCAL engine, the panel resolves the
+  // click through real SyncTeX and hands us the generated-tex line; the
+  // texToSrc map (texLineMap.ts) turns that into an editor line. When the PDF
+  // came from the WASM engine (which emits no SyncTeX), we fall back to the
+  // heading shim below: match the nearest text snippet against headings.
+  const handlePdfClickSource = useCallback((page: number, _x: number, _y: number, nearestText: string, sync?: { file: string; line: number }) => {
     void page; void _x; void _y
     const editor = editorRef.current
-    if (!editor || !nearestText) return
+    if (!editor) return
+    if (sync && syncTex) {
+      const srcLine = syncTex.texToSrc[sync.line] ?? 0
+      if (srcLine > 0) {
+        const model = editor.getModel()
+        const clamped = model ? Math.min(srcLine, model.getLineCount()) : srcLine
+        editor.revealLineInCenter(clamped)
+        editor.setPosition({ lineNumber: clamped, column: 1 })
+        editor.focus()
+        showToast(t.pdfPreview.jumpedToLine(clamped), "success", 2000)
+        return
+      }
+    }
+    if (!nearestText) return
     const model = editor.getModel()
     if (!model) return
     // Walk the document for a heading that matches the nearest text snippet.
@@ -2318,7 +2340,33 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     } else {
       showToast(t.pdfPreview.headingNotFound(nearestText), "info", 2000)
     }
-  }, [t])
+  }, [t, syncTex])
+
+  // ── Forward sync: editor line -> PDF page (local compiles only) ───────────
+  const handleShowInPdf = useCallback(() => {
+    if (!syncTex) {
+      showToast(t.pdfPreview.syncUnavailable, "info", 3500)
+      return
+    }
+    const editor = editorRef.current
+    const position = editor?.getPosition()
+    if (!editor || !position) return
+    const texLine = nearestTexLine(syncTex.texToSrc, position.lineNumber)
+    if (texLine == null) {
+      showToast(t.pdfPreview.syncNoMatch, "info", 2500)
+      return
+    }
+    const data = parseSyncTex(syncTex.synctex)
+    // The compiled job is a single generated .tex; the main input is tag 1 in
+    // every engine's output, and forwardSync falls back across tags anyway.
+    const box = forwardSync(data, 1, texLine)
+    if (!box) {
+      showToast(t.pdfPreview.syncNoMatch, "info", 2500)
+      return
+    }
+    if (sidebarMode !== "pdfPreview") openPanel("pdfPreview")
+    setPdfFocusPage((prev) => ({ page: box.page, seq: (prev?.seq ?? 0) + 1 }))
+  }, [syncTex, t, sidebarMode, openPanel])
 
   const goToDefinition = useCallback(() => {
     const editor = editorRef.current
@@ -3623,12 +3671,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     selectVault: vault.selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros,
     handleOpenBib, setSettingsOpen, checkForUpdate, setUpdateInfo, handleAddCommentAtCursor,
     handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
+    handleShowInPdf,
   }), [
     t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
     handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, typewriterMode, syncScroll, wordWrap,
     minimapEnabled, spellcheck, updateSettings, handleCopyHtml, handleCopyLatex,
     handleVaultBackup, vault.selectVault, handleOpenDailyNote, handleOpenMacros,
     handleOpenBib, handleAddCommentAtCursor, handleToggleCommentAtCursor, goBack, goForward,
+    handleShowInPdf,
   ])
 
   // ── Menu ──────────────────────────────────────────────────────────────────
@@ -3972,6 +4022,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 <PdfPreviewPanel
                   pdfPath={pdfPath}
                   onClickSource={handlePdfClickSource}
+                  synctex={syncTex?.synctex ?? null}
+                  focusPage={pdfFocusPage}
                   invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
                 />
               </Suspense>

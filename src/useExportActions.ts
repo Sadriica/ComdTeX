@@ -21,6 +21,8 @@ import {
   importDocument as importDocumentAction,
   exportTypst as exportTypstAction,
   exportTypstPdf as exportTypstPdfAction,
+  collectSyncTex,
+  type SyncTexBundle,
 } from "./exportActions"
 import type { ProjectFile } from "./projectExport"
 import { toPandocMarkdownInput } from "./exportConversion"
@@ -50,12 +52,14 @@ export interface ExportActionsCtx {
   setLatexDiagnostics: (diags: LatexDiagnostic[] | null) => void
   setPdfPath: (path: string | null | ((prev: string | null) => string | null)) => void
   setTexEngineState: (state: "idle" | "initializing" | "compiling") => void
+  setSyncTex?: (bundle: SyncTexBundle | null) => void
 }
 
 export function useExportActions(ctx: ExportActionsCtx) {
   const {
     editorRef, vault, t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl,
     macros, wikiNames, bibMap, pdfPath, setLatexDiagnostics, setPdfPath, setTexEngineState,
+    setSyncTex,
   } = ctx
 
   // vault (and openFile) get a new identity on every keystroke; handlers only
@@ -177,8 +181,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
       texliveUrl,
       onPdfSaved: setPdfPath,
       onWasmStatus: (state) => setTexEngineState(state),
+      onSyncTex: setSyncTex,
     })
-  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
+  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState, setSyncTex])
 
   // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
   // We recompile to the existing pdfPath, no dialog. Skips silently on error.
@@ -193,27 +198,30 @@ export function useExportActions(ctx: ExportActionsCtx) {
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
-    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
+    const editorContent = editor.getValue()
+    const content = resolveTransclusions(editorContent, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
     const dir = pathDirname(currentFile.path) || "."
     const base = currentFile.name.replace(/\.[^.]+$/, "")
-    const tmpTex = `${dir}/${base}.comdtex-rebuild.tex`
-    const tmpPdf = `${dir}/${base}.comdtex-rebuild.pdf`
+    const jobname = `${base}.comdtex-rebuild`
+    const tmpTex = `${dir}/${jobname}.tex`
+    const tmpPdf = `${dir}/${jobname}.pdf`
     try {
       await writeTextFile(tmpTex, tex)
       const attempts: Array<[string, string[]]> = [
-        ["tectonic", [tmpTex, "--outdir", dir]],
-        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
-        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
+        ["tectonic", ["--synctex", tmpTex, "--outdir", dir]],
+        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
+        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
       ]
       for (const [cmdName, args] of attempts) {
         try {
           const result = await Command.create(cmdName, args, { cwd: dir }).execute()
           if (result.code === 0 && await exists(tmpPdf)) {
             await copyFile(tmpPdf, pdfPath)
+            setSyncTex?.(await collectSyncTex(dir, jobname, editorContent, tex))
             // Force PdfPreviewPanel to reload by re-setting the same path with a
             // cache-busting suffix is awkward (Tauri convertFileSrc); instead we
             // toggle the path through null then back so the effect re-runs.
@@ -227,10 +235,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     } finally {
       await remove(tmpTex).catch(() => {})
       await remove(tmpPdf).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.aux`).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.log`).catch(() => {})
+      await remove(`${dir}/${jobname}.aux`).catch(() => {})
+      await remove(`${dir}/${jobname}.log`).catch(() => {})
+      await remove(`${dir}/${jobname}.synctex.gz`).catch(() => {})
+      await remove(`${dir}/${jobname}.synctex`).catch(() => {})
     }
-  }, [pdfPath, transclusionResolver, editorRef, setPdfPath])
+  }, [pdfPath, transclusionResolver, editorRef, setPdfPath, setSyncTex])
 
   const handleExportPdf = useCallback(async () => {
     await exportPdfAction({

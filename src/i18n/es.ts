@@ -342,6 +342,7 @@ export const es: T = {
     exportProjectTex: "Exportar proyecto como .tex",
     compileLatexPdf: "Compilar PDF con LaTeX local",
     compileWasmPdf: "Compilar PDF (motor WASM)",
+    showInPdf: "Mostrar línea actual en el PDF",
     viewLabels: "Ver labels",
     viewQuality: "Diagnóstico de documento",
     openDailyNote: "Abrir nota diaria de hoy",
@@ -1188,6 +1189,9 @@ export const es: T = {
     page: "Página",
     jumpedToHeading: (heading) => `Saltado a «${heading}»`,
     headingNotFound: (heading) => `No se encontró «${heading}» en la fuente`,
+    jumpedToLine: (line) => `Saltado a la línea ${line}`,
+    syncUnavailable: "SyncTeX necesita una compilación local (tectonic/xelatex/pdflatex); el motor WASM no lo emite",
+    syncNoMatch: "No hay posición en el PDF para esta línea",
   },
 
   latexErrors: {

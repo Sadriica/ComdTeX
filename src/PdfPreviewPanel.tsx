@@ -62,6 +62,11 @@ export interface PdfPreviewPanelProps {
    * normally undefined and the shim remains active.
    */
   synctex?: string | null
+  /**
+   * Forward-sync request: scroll to `page`. `seq` makes repeated requests for
+   * the same page re-fire (state identity would otherwise swallow them).
+   */
+  focusPage?: { page: number; seq: number } | null
   /** Invert colours for dark themes. */
   invert?: boolean
 }
@@ -80,7 +85,7 @@ const ZOOM_STEP = 0.2
  * PDF preview pane. Renders the document page-by-page on canvases, virtualised
  * via IntersectionObserver so memory stays bounded for large PDFs.
  */
-export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, invert = false }: PdfPreviewPanelProps) {
+export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focusPage, invert = false }: PdfPreviewPanelProps) {
   const t = useT()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
@@ -299,6 +304,14 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, inver
     const el = container.querySelector<HTMLDivElement>(`.pdf-page[data-page="${pageNum}"]`)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
+
+  // Forward sync: honor an external scroll request once per seq.
+  useEffect(() => {
+    if (!focusPage || pages.length === 0) return
+    const page = Math.min(Math.max(1, focusPage.page), pages.length)
+    setCurrentPage(page)
+    scrollToPage(page)
+  }, [focusPage, pages.length, scrollToPage])
 
   const goPrev = useCallback(() => {
     const next = Math.max(1, currentPage - 1)

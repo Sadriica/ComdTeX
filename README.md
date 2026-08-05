@@ -500,7 +500,7 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`); see [docs/folder-rules.md](docs/folder-rules.md). |
 | Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel; see [docs/cloud-sync.md](docs/cloud-sync.md). |
 | Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js assets from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
-| SyncTeX forward/inverse sync is not available yet | The `.synctex` parser exists, but the bundled WASM LaTeX engine ships without synctex output, so no engine currently emits the data it needs. |
+| SyncTeX needs a local engine | Click-to-source and "Show current line in PDF" use real SyncTeX when the PDF was compiled by tectonic/xelatex/pdflatex. The bundled WASM engine ships without synctex output, so WASM-compiled PDFs fall back to heading-based matching. |
 
 ---
 

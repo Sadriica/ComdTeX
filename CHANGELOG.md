@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.18.0] - 2026-08-05
+
+### Added
+- **SyncTeX click-to-source.** When the PDF preview shows a locally compiled document (tectonic, xelatex or pdflatex, now invoked with `-synctex=1`), clicking the PDF jumps the editor to the exact source line, and the new "Show current line in PDF" palette command scrolls the preview to the page that line produced. The bridge is a monotonic text alignment (`texLineMap.ts`) between the edited Markdown/CMDX and the generated LaTeX, since SyncTeX speaks in generated-tex lines; accuracy is exact for prose and paragraph-level for math-only lines. PDFs from the bundled WASM engine keep the previous heading-based fallback (the engine emits no SyncTeX), and the UI says so instead of guessing.
+
 ## [1.17.0] - 2026-08-05
 
 ### Added
