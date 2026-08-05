@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.17.0] - 2026-08-05
+
+### Added
+- **Journal templates.** A new Journals section in the template picker: IEEE (IEEEtran), ACM (acmart), Elsevier (elsarticle) and APA 7 (apa7). Each template sets `comdtex.texclass` in its frontmatter, and **Export as .tex** now honors that key: the exported document uses the real journal class with the right title block (IEEEauthorblock, acmart authors, an elsarticle frontmatter environment, apa7 authorsnames) and a theorem setup that respects what each class already defines (acmart predefines the theorem family, so only the missing environments are added). Without the key the export is unchanged.
+
 ## [1.16.0] - 2026-07-30
 
 > Jumps from 1.11.2: the work was planned and built as five increments

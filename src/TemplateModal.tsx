@@ -91,23 +91,31 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
             </div>
           ) : (
           <>
-          <div className="template-grid">
-            {allTemplates.map((tpl) => {
-              const tplT = t.templates[tpl.id]
-              return (
-                <button
-                  key={tpl.id}
-                  className={`template-card${selectedId === tpl.id ? " selected" : ""}`}
-                  onClick={() => setSelectedId(tpl.id)}
-                >
-                  <span className="template-icon">{tpl.icon}</span>
-                  <span className="template-name">{tplT?.name ?? tpl.name}</span>
-                  <span className="template-desc">{tplT?.description ?? tpl.description}</span>
-                  {tpl.custom && <span className="template-custom-badge">{t.templateModal.customBadge}</span>}
-                </button>
-              )
-            })}
-          </div>
+          {[
+            { label: t.templateModal.sectionBasics, items: allTemplates.filter((tpl) => tpl.category !== "journal") },
+            { label: t.templateModal.sectionJournals, items: allTemplates.filter((tpl) => tpl.category === "journal") },
+          ].filter((section) => section.items.length > 0).map((section) => (
+            <div key={section.label}>
+              <div className="template-section-label">{section.label}</div>
+              <div className="template-grid">
+                {section.items.map((tpl) => {
+                  const tplT = t.templates[tpl.id]
+                  return (
+                    <button
+                      key={tpl.id}
+                      className={`template-card${selectedId === tpl.id ? " selected" : ""}`}
+                      onClick={() => setSelectedId(tpl.id)}
+                    >
+                      <span className="template-icon">{tpl.icon}</span>
+                      <span className="template-name">{tplT?.name ?? tpl.name}</span>
+                      <span className="template-desc">{tplT?.description ?? tpl.description}</span>
+                      {tpl.custom && <span className="template-custom-badge">{t.templateModal.customBadge}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
           <div className="template-filename-row">
             <label className="template-filename-label">{t.templateModal.filenameLabel}</label>
             <input

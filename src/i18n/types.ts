@@ -223,6 +223,8 @@ export interface T {
     customBadge: string
     variablesHint: string
     closeAriaLabel: string
+    sectionBasics: string
+    sectionJournals: string
   }
 
   titleBar: {

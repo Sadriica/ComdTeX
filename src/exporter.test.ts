@@ -100,3 +100,52 @@ describe("cross-file environment refs → LaTeX", () => {
     expect(tex).not.toContain("\\ref{zzz:valor}")
   })
 })
+
+describe("journal classes via comdtex.texclass", () => {
+  const doc = (cls: string) =>
+    `---\ntitle: Paper\nauthor: Ada\ncomdtex.texclass: ${cls}\n---\n# Intro\n\n:::theorem{#thm:main}\nx\n:::\n`
+
+  it("exports IEEEtran with its conference class and author block", () => {
+    const tex = exportToTex(doc("ieeetran"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[conference]{IEEEtran}")
+    expect(tex).toContain("\\IEEEauthorblockN{Ada}")
+    expect(tex).toContain("\\maketitle")
+    expect(tex).toContain("\\newtheorem{theorem}")
+    expect(tex).not.toContain("{babel}")
+  })
+
+  it("exports acmart without redefining the theorem envs the class ships", () => {
+    const tex = exportToTex(doc("acmart"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[sigconf]{acmart}")
+    // acmart predefines theorem/lemma/etc: redefining them is a LaTeX error.
+    expect(tex).not.toContain("\\newtheorem{theorem}")
+    expect(tex).toContain("\\newtheorem*{exercise}")
+    // acmart loads hyperref itself; a second \usepackage{hyperref} errors.
+    expect(tex).not.toContain("\\usepackage{hyperref}")
+  })
+
+  it("exports elsarticle with a frontmatter block instead of maketitle", () => {
+    const tex = exportToTex(doc("elsarticle"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[preprint,12pt]{elsarticle}")
+    expect(tex).toContain("\\begin{frontmatter}")
+    expect(tex).toContain("\\end{frontmatter}")
+    expect(tex).not.toContain("\\maketitle")
+  })
+
+  it("exports apa7 with authorsnames", () => {
+    const tex = exportToTex(doc("apa7"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[man]{apa7}")
+    expect(tex).toContain("\\authorsnames{Ada}")
+  })
+
+  it("keeps the classic article export byte-compatible when the key is absent", () => {
+    const tex = exportToTex("---\ntitle: T\n---\n# Body", "", "T")
+    expect(tex).toContain("\\documentclass[12pt,a4paper]{article}")
+    expect(tex).toContain("\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}")
+  })
+
+  it("ignores an unknown class value and falls back to article", () => {
+    const tex = exportToTex(doc("nonsense"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[12pt,a4paper]{article}")
+  })
+})

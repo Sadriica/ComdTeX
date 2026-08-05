@@ -1946,6 +1946,15 @@ html, body, #root {
 /* ── Template Modal ── */
 .template-body { gap: 16px; }
 
+.template-section-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 10px 0 6px;
+}
+.template-section-label:first-child { margin-top: 0; }
+
 .template-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -278,6 +278,8 @@ export const es: T = {
     customBadge: "personal",
     variablesHint: "Variables",
     closeAriaLabel: "Cerrar",
+    sectionBasics: "Básicas",
+    sectionJournals: "Journals",
   },
 
   titleBar: {
@@ -1207,6 +1209,10 @@ export const es: T = {
     theorems:   { name: "Hoja de teoremas",     description: "Colección de teoremas, lemas y corolarios" },
     research:   { name: "Nota de investigación",description: "Plantilla con ecuación principal y bibliografía" },
     letter:     { name: "Carta",                description: "Carta formal con destinatario y firma" },
+    "journal-ieee":     { name: "Paper IEEE",      description: "Conferencia IEEE (IEEEtran); exporta con la clase real" },
+    "journal-acm":      { name: "Paper ACM",       description: "Conferencia ACM (acmart sigconf); exporta con la clase real" },
+    "journal-elsevier": { name: "Paper Elsevier",  description: "Revista Elsevier (elsarticle); exporta con la clase real" },
+    "journal-apa":      { name: "Manuscrito APA",  description: "Manuscrito estilo APA 7 (apa7); exporta con la clase real" },
   },
 
   documentLab: {
