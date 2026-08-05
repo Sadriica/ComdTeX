@@ -238,6 +238,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     { id: "compileLatexPdf", label: t.palette.compileLatexPdf, category: "Exportar", action: () => exportActions.handleCompileLatexPdf({ forceWasm: false }) },
     { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,  category: "Exportar", action: () => exportActions.handleCompileLatexPdf({ forceWasm: true }) },
     { id: "showInPdf",       label: t.palette.showInPdf,       category: "Exportar", action: handleShowInPdf },
+    { id: "compileTypstFilePdf", label: t.palette.compileTypstFilePdf, category: "Exportar", action: exportActions.handleCompileTypstFilePdf },
     { id: "exportPdf",  label: t.palette.exportPdf,         category: "Exportar", action: exportActions.handleExportPdf },
     { id: "exportHtml", label: t.palette.exportHtml,        category: "Exportar", action: exportActions.handleExportHtml },
     { id: "exportDocx", label: t.palette.exportDocx,        category: "Exportar", action: exportActions.handleExportDocx },

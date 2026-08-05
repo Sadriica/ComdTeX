@@ -282,6 +282,7 @@ export interface T {
     importDoc: string
     exportTypst: string
     exportTypstPdf: string
+    compileTypstFilePdf: string
     insertExcalidraw: string
     insertWikilink: string; insertTransclusion: string; insertFootnote: string
     insertCallout: string; insertCitation: string; insertFigure: string
@@ -639,6 +640,7 @@ export interface T {
     typstPdfSuccess: string
     typstPdfError: (err: string) => string
     pandocMissingTypst: string
+    typstBinaryMissing: string
     /** Spell-check marker message for an unknown word. */
     spellError: (word: string) => string
   }

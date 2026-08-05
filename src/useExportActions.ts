@@ -21,6 +21,7 @@ import {
   importDocument as importDocumentAction,
   exportTypst as exportTypstAction,
   exportTypstPdf as exportTypstPdfAction,
+  compileTypstFilePdf as compileTypstFilePdfAction,
   collectSyncTex,
   type SyncTexBundle,
 } from "./exportActions"
@@ -199,6 +200,28 @@ export function useExportActions(ctx: ExportActionsCtx) {
       } catch { /* ok */ }
     }
     const editorContent = editor.getValue()
+    // Typst tabs rebuild through the typst binary, not the LaTeX pipeline.
+    if (currentFile.path.toLowerCase().endsWith(".typ")) {
+      const dir = pathDirname(currentFile.path) || "."
+      const stem = currentFile.name.replace(/\.[^.]+$/, "")
+      const tmpTyp = `${dir}/${stem}.comdtex-typst-rebuild.typ`
+      const tmpPdf = `${dir}/${stem}.comdtex-typst-rebuild.pdf`
+      try {
+        await writeTextFile(tmpTyp, editorContent)
+        const r = await Command.create("typst", ["compile", "--root", dir, tmpTyp, tmpPdf]).execute()
+        if (r.code === 0 && await exists(tmpPdf)) {
+          await copyFile(tmpPdf, pdfPath)
+          const restore = pdfPath
+          setPdfPath(null)
+          setTimeout(() => setPdfPath(restore), 0)
+        }
+      } catch { /* silent, like the LaTeX rebuild */ }
+      finally {
+        await remove(tmpTyp).catch(() => {})
+        await remove(tmpPdf).catch(() => {})
+      }
+      return
+    }
     const content = resolveTransclusions(editorContent, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
@@ -287,6 +310,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
 
   const typstMessages = useMemo(() => ({
     pandocMissing: t.app.pandocMissingTypst,
+    typstMissing: t.app.typstBinaryMissing,
     generating: t.app.typstGenerating,
     typstSuccess: t.app.typstSuccess,
     typstError: t.app.typstError,
@@ -315,6 +339,20 @@ export function useExportActions(ctx: ExportActionsCtx) {
       toast: showToast,
     })
   }, [deps, t, typstMessages, editorRef])
+
+  // Native compile of an open .typ file: the Typst source is the document,
+  // no pandoc conversion involved. Feeds the PDF preview like the LaTeX path.
+  const handleCompileTypstFilePdf = useCallback(async () => {
+    await compileTypstFilePdfAction({
+      activeFile: vaultRef.current.openFile,
+      deps,
+      dialogTitle: t.app.dialogExportPdf,
+      messages: typstMessages,
+      readEditorContent: () => editorRef.current?.getValue() ?? null,
+      toast: showToast,
+      onPdfSaved: setPdfPath,
+    })
+  }, [deps, t, typstMessages, editorRef, setPdfPath])
 
   const handleExportDocx = useCallback(async () => {
     const file = vaultRef.current.openFile
@@ -477,6 +515,7 @@ ${html}
     handleExportAnki,
     handleImportDocument,
     handleExportTypst,
+    handleCompileTypstFilePdf,
     handleExportTypstPdf,
     handleExportDocx,
     handleExportBeamer,
@@ -486,7 +525,7 @@ ${html}
   }), [
     handleExportMd, handleExportTex, handleExportProjectTex, handleCompileLatexPdf,
     rebuildPdfInPlace, handleExportPdf, handleExportAnki, handleImportDocument,
-    handleExportTypst, handleExportTypstPdf, handleExportDocx, handleExportBeamer,
+    handleExportTypst, handleExportTypstPdf, handleCompileTypstFilePdf, handleExportDocx, handleExportBeamer,
     handleExportReveal, handleExportHtml, handleExportObsidian,
   ])
 }

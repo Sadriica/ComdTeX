@@ -345,6 +345,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, … → Markdown, with embedded images extracted)
 - Copy as HTML or LaTeX
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
+- Typst as a first-class citizen: `.typ` files live in the vault with their own syntax highlighting and compile natively with the local `typst` binary straight into the PDF preview (auto-recompiling on save). Typst export from Markdown via pandoc remains available
 - Journal templates: IEEE (IEEEtran), ACM (acmart), Elsevier (elsarticle) and APA 7 (apa7). Each carries `comdtex.texclass` in its frontmatter, so **Export as .tex** targets the real journal class with the right title block and theorem setup; the result compiles on Overleaf without hand edits
 
 ### App

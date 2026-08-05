@@ -44,8 +44,12 @@ function saveRecentVault(path: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
 }
 
-function editorModeForPath(path: string): "md" | "tex" | "pdf" {
-  if (path.toLowerCase().endsWith(".pdf")) return "pdf"
+function editorModeForPath(path: string): "md" | "tex" | "pdf" | "typ" {
+  const lower = path.toLowerCase()
+  if (lower.endsWith(".pdf")) return "pdf"
+  // Typst sources are edited raw (no CMDX conversion) with their own
+  // Monaco language and their own compile path (typst binary).
+  if (lower.endsWith(".typ")) return "typ"
   return storageFormatForPath(path) === "tex" ? "tex" : "md"
 }
 
@@ -353,7 +357,7 @@ const IGNORED_TREE_DIRS = new Set([
 
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
-  return ext === "md" || ext === "tex" || ext === "bib"
+  return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ"
 }
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
@@ -379,7 +383,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "pdf")
+      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "pdf")
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }
@@ -1189,7 +1193,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     if (!vaultPath) return
     const v = validate(name.replace(/\.[^.]+$/, ""))
     if (!v.valid) { showToast(v.error!, "error"); return }
-    const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") ? name : `${name}.md`
+    const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") || name.endsWith(".typ") ? name : `${name}.md`
     const targetDir = resolveParentDir(parentDir)
     const filePath = await pathJoin(targetDir, fileName)
     try {

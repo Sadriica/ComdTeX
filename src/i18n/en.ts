@@ -354,6 +354,7 @@ export const en: T = {
     importDoc: "Import document (Pandoc)…",
     exportTypst: "Export to Typst (.typ)",
     exportTypstPdf: "Export to PDF (Typst)",
+    compileTypstFilePdf: "Compile PDF (Typst file)",
     insertExcalidraw: "Insert Excalidraw drawing",
     insertWikilink: "Insert wikilink [[note]]",
     insertTransclusion: "Insert transclusion ![[note]]",
@@ -755,6 +756,7 @@ export const en: T = {
     typstPdfSuccess: "PDF exported with Typst",
     typstPdfError: (err) => `Typst PDF export failed: ${err}`,
     pandocMissingTypst: "Pandoc is not installed. Visit pandoc.org to install it.",
+    typstBinaryMissing: "The typst binary is not installed. Visit typst.app to install it.",
     spellError: (word) => `Possible spelling error: ${word}`,
   },
 

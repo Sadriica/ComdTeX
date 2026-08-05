@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.20.0] - 2026-08-05
+
+### Added
+- **Typst, first class (phase A).** `.typ` files are now vault citizens: they appear in the tree, open with their own Monaco language (headings, `#functions`, labels/references, math, raw blocks), and edit raw (no CMDX conversion touches them). "Compilar PDF (archivo Typst)" compiles the open file natively with the local `typst` binary (no pandoc in the path; unsaved changes compile too) and feeds the same PDF preview panel; with auto-rebuild on, saving recompiles in place, which at Typst speed behaves like a live preview. The Markdown preview pane steps aside for `.typ` tabs: their preview is the compiled PDF. Phase B (native Markdown-to-Typst export preserving environments and shorthands) and phase C (a WASM Typst engine for zero-install parity) come next.
+
 ## [1.19.0] - 2026-08-05
 
 ### Added

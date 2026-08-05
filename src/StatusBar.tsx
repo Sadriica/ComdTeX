@@ -3,7 +3,7 @@ import { useT } from "./i18n"
 import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 
 interface StatusBarProps {
-  mode: "md" | "tex" | "pdf" | null
+  mode: "md" | "tex" | "pdf" | "typ" | null
   line: number
   col: number
   content: string
@@ -59,7 +59,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
     <div className="status-bar">
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
-        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : t.statusBar.modeMarkdown}</span>}
+        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : mode === "typ" ? "Typst" : t.statusBar.modeMarkdown}</span>}
         {showTexEngine && (
           <span
             className="status-item status-tex-engine"

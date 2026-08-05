@@ -623,6 +623,7 @@ export async function importDocument(ctx: ImportActionsContext) {
 
 export interface TypstMessages {
   pandocMissing: string
+  typstMissing: string
   generating: string
   typstSuccess: string
   typstError: (err: string) => string
@@ -637,6 +638,44 @@ export interface TypstExportContext {
   messages: TypstMessages
   readEditorContent: () => string | null
   toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void
+  onPdfSaved?: (outPath: string) => void
+}
+
+/**
+ * Compile the OPEN .typ file itself with the local typst binary (no pandoc
+ * involved): Typst sources are first-class in the vault, and this is their
+ * native compile path. The editor buffer is written to a sibling temp file so
+ * unsaved changes compile too; relative imports and images still resolve
+ * because the temp lives in the same directory.
+ */
+export async function compileTypstFilePdf(ctx: TypstExportContext) {
+  const file = ctx.activeFile
+  const content = ctx.readEditorContent()
+  if (content === null || !file || !file.path.toLowerCase().endsWith(".typ")) return
+  if (ctx.deps && !ctx.deps.typst) {
+    ctx.toast(ctx.messages.typstMissing, "error", 6000)
+    return
+  }
+  const outPath = await save({
+    title: ctx.dialogTitle,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    defaultPath: `${pathDirname(file.path) || "."}/${file.name.replace(/\.[^.]+$/, ".pdf")}`,
+  })
+  if (!outPath) return
+  const dir = pathDirname(file.path) || "."
+  const tmpTyp = await pathJoin(dir, `${file.name.replace(/\.[^.]+$/, "")}.comdtex-typst.tmp.typ`)
+  try {
+    ctx.toast(ctx.messages.generating, "info")
+    await writeTextFile(tmpTyp, content)
+    const typst = await Command.create("typst", ["compile", "--root", dir, tmpTyp, outPath]).execute()
+    if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
+    ctx.toast(ctx.messages.typstPdfSuccess, "success")
+    ctx.onPdfSaved?.(outPath)
+  } catch (e) {
+    ctx.toast(ctx.messages.typstPdfError((e as Error).message), "error", 8000)
+  } finally {
+    await remove(tmpTyp).catch(() => {})
+  }
 }
 
 /**

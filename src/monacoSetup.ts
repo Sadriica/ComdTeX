@@ -5,6 +5,7 @@ import { lintFile, type LintContext } from "./contentLinter"
 import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
+import { registerTypstLanguage } from "./typstLanguage"
 
 export interface Completion {
   label: string
@@ -319,6 +320,7 @@ let crossRefHoverDisposable: monacoApi.IDisposable | null = null
 let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 
 export function setupMonaco(monaco: typeof monacoApi) {
+  registerTypstLanguage(monaco)
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
     triggerCharacters: ["[", "@", "\\", "^", ":"],

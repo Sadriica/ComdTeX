@@ -4113,7 +4113,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
               <MonacoEditor
                 key={vault.activeTabPath ?? "welcome"}
-                defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : "markdown"}
+                defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : vault.openFile?.mode === "typ" ? "typst" : "markdown"}
                 defaultValue={currentContent}
                 onChange={handleChange}
                 beforeMount={handleBeforeMount}
@@ -4141,10 +4141,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           />
         </div>
 
-        {settings.previewVisible && vault.openFile?.mode !== "pdf" && <Resizer onDrag={handleEditorResize} />}
+        {settings.previewVisible && vault.openFile?.mode !== "pdf" && vault.openFile?.mode !== "typ" && <Resizer onDrag={handleEditorResize} />}
 
-        {/* ── Preview (suppressed for PDF tabs — the PDF viewer takes the full pane) ── */}
-        {settings.previewVisible && vault.openFile?.mode !== "pdf" && (
+        {/* ── Preview (suppressed for PDF tabs, where the PDF viewer takes the
+             full pane, and for Typst sources, whose preview is the compiled PDF) ── */}
+        {settings.previewVisible && vault.openFile?.mode !== "pdf" && vault.openFile?.mode !== "typ" && (
           <div
             className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
             id="preview-pane"
