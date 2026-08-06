@@ -1,4 +1,5 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { getSecret, setSecret } from "./secretStore"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
 import { useFocusTrap } from "./useFocusTrap"
@@ -27,6 +28,14 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   // from `initialSection` so this component remounts (and re-runs this lazy
   // initializer) whenever it should jump to a different section.
   const [section, setSection] = useState<SectionId>(() => (initialSection as SectionId) ?? "general")
+  // The ADS token is a credential: it lives in the OS keychain via
+  // secretStore, never in the settings JSON alongside preferences.
+  const [adsToken, setAdsToken] = useState("")
+  useEffect(() => {
+    let alive = true
+    getSecret("ads_token").then((v) => { if (alive && v) setAdsToken(v) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
   useFocusTrap(modalRef, open, onClose)
   if (!open) return null
 
@@ -83,6 +92,17 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <option value="en">English</option>
                   </select>
                 </label>
+
+                <label className="setting-row">
+                  <span>{t.settings.adsToken}</span>
+                  <input
+                    type="password"
+                    value={adsToken}
+                    placeholder={t.settings.adsTokenPlaceholder}
+                    onChange={(e) => { setAdsToken(e.target.value); void setSecret("ads_token", e.target.value.trim()) }}
+                  />
+                </label>
+                <p className="setting-hint">{t.settings.adsTokenNote}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.theme}</span>

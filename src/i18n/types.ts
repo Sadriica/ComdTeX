@@ -111,6 +111,7 @@ export interface T {
     autoFoldExcalidraw: string; autoFoldExcalidrawDesc: string
     readingWpm: string; readingWpmDesc: string
     closeAriaLabel: string
+    adsToken: string; adsTokenPlaceholder: string; adsTokenNote: string
     sectionEditor: string; sectionPreview: string; sectionGeneral: string
     sectionDailyNotes: string
     dailyNotesEnabled: string
@@ -877,6 +878,7 @@ export interface T {
   }
 
   citationManager: {
+    adsTokenMissing: string
     title: string
     close: string
     noEntries: string
