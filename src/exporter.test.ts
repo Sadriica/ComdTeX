@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { exportToTex, exportReveal } from "./exporter"
+import { exportToTex, exportReveal, detectFeaturePackages } from "./exporter"
 
 describe("exportToTex", () => {
   it("loads babel with es-noquoting so literal ->> / >-> text survives", () => {
@@ -193,5 +193,106 @@ describe("citations reach LaTeX", () => {
   it("leaves a bracketed non-citation alone", () => {
     const tex = exportToTex("An array [a, b] and an email a@b.com.", "", "T")
     expect(tex).not.toContain("\\cite")
+  })
+})
+
+describe("footnotes reach LaTeX", () => {
+  it("turns [^id] + its definition into a real \\footnote", () => {
+    const tex = exportToTex("Texto[^1].\n\n[^1]: La nota.", "", "T")
+    expect(tex).toContain("\\footnote{La nota.}")
+    // The marker and the orphan definition line must not survive as text.
+    expect(tex).not.toContain("[^1]")
+  })
+
+  it("escapes nested markup inside the footnote body", () => {
+    const tex = exportToTex("Texto[^1].\n\n[^1]: 50% de **algo**.", "", "T")
+    expect(tex).toContain("\\footnote{50\\% de \\textbf{algo}.}")
+  })
+
+  it("does not load any extra package for footnotes (core LaTeX \\footnote)", () => {
+    const tex = exportToTex("Texto[^1].\n\n[^1]: La nota.", "", "T")
+    expect(tex).not.toContain("\\usepackage{tcolorbox}")
+    expect(tex).not.toContain("\\usepackage{soul}")
+  })
+})
+
+describe("callouts reach LaTeX", () => {
+  it("turns > [!warning] into a titled tcolorbox, not a generic quote", () => {
+    const tex = exportToTex("> [!warning] Ojo\n> Cuidado.", "", "T")
+    expect(tex).toContain("\\begin{tcolorbox}[colback=orange!10,colframe=orange!60!black,title=Ojo]")
+    expect(tex).toContain("Cuidado.")
+    expect(tex).toContain("\\end{tcolorbox}")
+    // The old behavior: a bare \begin{quote} with the marker printed literally.
+    expect(tex).not.toContain("[!warning]")
+    expect(tex).not.toContain("\\begin{quote}")
+  })
+
+  it("defaults the title to the capitalized type when none is given", () => {
+    const tex = exportToTex("> [!note]\n> Contenido.", "", "T")
+    expect(tex).toContain("title=Note")
+  })
+
+  it("loads tcolorbox only when a callout is actually used", () => {
+    const withCallout = exportToTex("> [!note] Aviso\n> Texto.", "", "T")
+    expect(withCallout).toContain("\\usepackage{tcolorbox}")
+
+    const withoutCallout = exportToTex("Un párrafo normal.", "", "T")
+    expect(withoutCallout).not.toContain("\\usepackage{tcolorbox}")
+  })
+
+  it("still converts nested markup inside a callout body", () => {
+    const tex = exportToTex("> [!tip] Consejo\n> Usa **negrita**.", "", "T")
+    expect(tex).toContain("\\textbf{negrita}")
+  })
+})
+
+describe("highlights and underline reach LaTeX", () => {
+  it("turns ==text== into \\hl{} instead of printing == literally", () => {
+    const tex = exportToTex("Esto es ==importante==.", "", "T")
+    expect(tex).toContain("\\hl{importante}")
+    expect(tex).not.toContain("==importante==")
+  })
+
+  it("loads soul only when ==highlight== is actually used", () => {
+    const withMark = exportToTex("Esto es ==importante==.", "", "T")
+    expect(withMark).toContain("\\usepackage{soul}")
+
+    const withoutMark = exportToTex("Texto normal.", "", "T")
+    expect(withoutMark).not.toContain("\\usepackage{soul}")
+  })
+
+  it("turns coloured <mark> spans into \\colorbox", () => {
+    const tex = exportToTex('Dato <mark class="hl-green">clave</mark> aquí.', "", "T")
+    expect(tex).toContain("\\colorbox{green!30}{clave}")
+  })
+
+  it("loads xcolor only when a coloured highlight or code block is used", () => {
+    const withMark = exportToTex('<mark class="hl-blue">x</mark>', "", "T")
+    expect(withMark).toContain("\\usepackage{xcolor}")
+
+    const withoutFeature = exportToTex("Texto normal.", "", "T")
+    expect(withoutFeature).not.toContain("\\usepackage{xcolor}")
+  })
+
+  it("turns <u>text</u> into \\underline{}", () => {
+    const tex = exportToTex("Esto es <u>subrayado</u>.", "", "T")
+    expect(tex).toContain("\\underline{subrayado}")
+    expect(tex).not.toContain("<u>")
+  })
+})
+
+describe("detectFeaturePackages", () => {
+  it("reports every flag false for a plain body", () => {
+    expect(detectFeaturePackages("Plain LaTeX body.")).toEqual({
+      callouts: false,
+      soulHighlight: false,
+      colorHighlight: false,
+    })
+  })
+
+  it("reports each flag true only when its own macro is present", () => {
+    expect(detectFeaturePackages("\\begin{tcolorbox}[title=x]\nBody\n\\end{tcolorbox}").callouts).toBe(true)
+    expect(detectFeaturePackages("\\hl{x}").soulHighlight).toBe(true)
+    expect(detectFeaturePackages("\\colorbox{green!30}{x}").colorHighlight).toBe(true)
   })
 })

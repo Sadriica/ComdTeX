@@ -646,6 +646,8 @@ export interface T {
     typstBinaryMissing: string
     /** Spell-check marker message for an unknown word. */
     spellError: (word: string) => string
+    /** Shown after a .tex export copies referenced images and/or references.bib beside it. */
+    texAssetsCopied: (n: number) => string
   }
 
   welcome: {

@@ -3,6 +3,13 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.27.0] - 2026-08-06
+
+### Fixed
+- **The exported .tex now carries what it needs to compile.** The generated file referenced `\includegraphics{figure.png}` and `\bibliography{references}`, but the export copied neither the images nor `references.bib`, so anyone exporting to submit to a journal or upload to Overleaf received a broken bundle and had to gather the files by hand. Exporting as .tex now copies every referenced local image next to it (rewriting the reference to the bare filename so relative paths cannot break) and `references.bib` when the document cites anything, and says how many files it placed alongside. Remote URLs and data URIs are left alone.
+- **Footnotes, callouts and highlights survive the LaTeX export.** They rendered correctly in the preview and were lost or printed literally in the PDF, because the exporter built its own bare markdown-it instance without the plugins and callout preprocessing the preview has. Now `[^1]` becomes a real `\footnote{}` with its nested markup escaped, `> [!warning] Title` becomes a titled box coloured by callout type, `==text==` becomes `\hl{}`, a coloured `<mark>` becomes a `\colorbox`, and `<u>` becomes `\underline{}`. The packages they need (tcolorbox, soul, xcolor) load only when the document actually uses the feature.
+- **Every file the user owns is written atomically.** Eight paths wrote directly instead of through the crash-safe helper the repository documents as mandatory, including both paths that save `references.bib` (a crash mid-write could truncate an entire bibliography), the creation of any new file from a template, the vault README, `macros.md` and the daily note. All of them now write to a temporary file and rename it into place, and a guard test fails if a future handler reaches for the direct call again.
+
 ## [1.26.0] - 2026-08-06
 
 ### Added

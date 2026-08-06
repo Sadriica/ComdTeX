@@ -7,7 +7,8 @@ import { toDiskContent } from "./cmdxFormat"
 import { parseLatexStderr } from "./latexErrors"
 import type { LatexDiagnostic } from "./latexErrors"
 import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversion"
-import { exportReveal, exportToTex } from "./exporter"
+import { escTex, exportReveal, exportToTex } from "./exporter"
+import { collectLocalImagePaths } from "./exportBundle"
 import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
@@ -51,6 +52,8 @@ export interface ExportMessages {
   wasmTexCompiling?: string
   wasmTexFallback?: string
   wasmTexUnavailable?: string
+  /** Shown after a .tex export copies referenced images and/or references.bib beside it. */
+  texAssetsCopied?: (n: number) => string
 }
 
 export interface AnkiExportMessages {
@@ -168,6 +171,58 @@ function frontmatterOptions(data: Record<string, unknown> | undefined) {
   }
 }
 
+/**
+ * Copy every local image the resolved content references, plus
+ * references.bib when the generated tex cites anything (detected the same
+ * way exporter.ts decides to emit `\bibliography{references}`: by scanning
+ * for the command in the output, since the citation-tracking state is
+ * internal to that pass), next to the exported .tex. References inside the
+ * tex are rewritten to the copied file's basename so a subfolder asset (or
+ * one Overleaf/a journal wouldn't resolve at that relative path) cannot
+ * break the compile. Never throws: a missing or unreadable asset is skipped
+ * silently, the export itself must never abort over a missing figure.
+ */
+export async function bundleTexAssets(
+  resolvedContent: string,
+  tex: string,
+  outDir: string,
+  vaultPath: string | null,
+): Promise<{ tex: string; copied: number }> {
+  let finalTex = tex
+  let copied = 0
+  if (!vaultPath) return { tex: finalTex, copied }
+
+  for (const assetPath of collectLocalImagePaths(resolvedContent)) {
+    try {
+      const srcPath = assetPath.startsWith("/") ? assetPath : await pathJoin(vaultPath, assetPath)
+      if (!(await exists(srcPath))) continue
+      const base = pathBasename(assetPath)
+      await copyFile(srcPath, `${outDir}/${base}`)
+      // escTex mirrors exactly how exporter.ts embedded the src, so this is
+      // the string that is actually in `tex`, not the raw vault-relative path.
+      if (base !== assetPath) finalTex = finalTex.split(escTex(assetPath)).join(escTex(base))
+      copied++
+    } catch {
+      // Best effort: skip, never abort the export over one bad asset.
+    }
+  }
+
+  if (tex.includes("\\bibliography{")) {
+    try {
+      const bibSrc = await pathJoin(vaultPath, "references.bib")
+      if (await exists(bibSrc)) {
+        await copyFile(bibSrc, `${outDir}/references.bib`)
+        copied++
+      }
+    } catch {
+      // references.bib missing/unreadable: citations just won't resolve,
+      // same failure mode the export already had before this fix.
+    }
+  }
+
+  return { tex: finalTex, copied }
+}
+
 async function buildLatex(
   content: string,
   titleGuess: string,
@@ -241,7 +296,17 @@ export async function exportLatex(ctx: ExportActionsContext) {
     }
   }
   const tex = await buildLatex(content, titleGuess, ctx.vaultPath, ctx.resolveTransclusion)
-  await writeTextFile(outPathEarly, tex)
+
+  // The .tex references images and possibly references.bib by relative path;
+  // bundle both next to the output so the file compiles anywhere else (a
+  // journal submission, Overleaf) instead of only on this machine.
+  const resolvedContent = resolveDocumentContent(content, ctx.resolveTransclusion)
+  const outDir = pathDirname(outPathEarly) || "."
+  const { tex: bundledTex, copied } = await bundleTexAssets(resolvedContent, tex, outDir, ctx.vaultPath)
+  await writeTextFile(outPathEarly, bundledTex)
+  if (copied > 0 && ctx.messages.texAssetsCopied) {
+    ctx.toast(ctx.messages.texAssetsCopied(copied), "success")
+  }
 }
 
 export async function exportProjectLatex(ctx: ExportActionsContext) {
@@ -262,7 +327,15 @@ export async function exportProjectLatex(ctx: ExportActionsContext) {
     defaultPath: `${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
   })
   if (!path) return
-  await writeTextFile(path, tex)
+
+  // `content` is already resolved (composeProjectMarkdown + resolveDocumentContent
+  // above), so it can go straight into the asset scan.
+  const outDir = pathDirname(path) || "."
+  const { tex: bundledTex, copied } = await bundleTexAssets(content, tex, outDir, ctx.vaultPath)
+  await writeTextFile(path, bundledTex)
+  if (copied > 0 && ctx.messages.texAssetsCopied) {
+    ctx.toast(ctx.messages.texAssetsCopied(copied), "success")
+  }
 }
 
 async function tryCompileWithWasm(

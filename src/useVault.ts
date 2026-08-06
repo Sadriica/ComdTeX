@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react"
-import { readDir, readTextFile, writeTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
+import { readDir, readTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
@@ -670,14 +670,14 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // pairs `\` immediately with a `` ` ``.
       if (/\\`/.test(content)) {
         content = content.replace(/\\`/g, "`")
-        try { await writeTextFile(readmePath, content) }
+        try { await writeTextFileAtomic(readmePath, content) }
         catch { /* migration is best-effort; preview will still be correct */ }
       }
     } catch {
       // Doesn't exist: create it
       content = README_CONTENT
       try {
-        await writeTextFile(readmePath, content)
+        await writeTextFileAtomic(readmePath, content)
       } catch (e) {
         showToast(t.vault.errorCreatingReadme(e instanceof Error ? e.message : String(e)), "error")
         return
@@ -1197,7 +1197,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const targetDir = resolveParentDir(parentDir)
     const filePath = await pathJoin(targetDir, fileName)
     try {
-      await writeTextFile(filePath, toDiskContent(filePath, content))
+      await writeTextFileAtomic(filePath, toDiskContent(filePath, content))
       await refreshTree(vaultPath)
       // Brand-new path: make sure no stale cache entry lingers (shouldn't
       // normally exist, but a rename/delete race could leave one behind).
