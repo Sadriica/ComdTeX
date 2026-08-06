@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react"
 import type { FileNode, SearchResult } from "./types"
-import { readTextFile } from "@tauri-apps/plugin-fs"
 import { flatFiles } from "./wikilinks"
-import { toEditorContent } from "./cmdxFormat"
 import { useT } from "./i18n"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -10,53 +8,38 @@ interface BacklinksPanelProps {
   currentFile: { name: string; path: string } | null
   onOpenFile: (node: FileNode, line?: number) => void
   tree: FileNode[]
+  /** The vault's own search, which reads through the mtime-cached index. */
+  onSearch: (query: string) => Promise<SearchResult[]>
 }
 
-export default function BacklinksPanel({ currentFile, onOpenFile, tree }: BacklinksPanelProps) {
+export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch }: BacklinksPanelProps) {
   const t = useT()
   const [backlinks, setBacklinks] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Who links here is a search for `[[name]]`, so it goes through the vault's
+  // index: every file this panel needs was already read for search, and an
+  // unchanged file is never read again. Reading the whole vault from disk on
+  // every file switch (what this did before) duplicated that work and scaled
+  // with the vault, not with the answer.
   useEffect(() => {
     if (!currentFile) { setBacklinks([]); return }
-
     const baseName = currentFile.name.replace(/\.[^.]+$/, "")
-    const pattern = `[[${baseName}]]`
-    const patternLower = pattern.toLowerCase()
-
-    setLoading(true)
-    const files = flatFiles(tree).filter((f) => f.path !== currentFile.path)
     let cancelled = false
-
-    Promise.all(
-      files.map(async (f) => {
-        try {
-          const content = toEditorContent(f.path, await readTextFile(f.path))
-          const results: SearchResult[] = []
-          content.split("\n").forEach((line, i) => {
-            if (line.toLowerCase().includes(patternLower)) {
-              results.push({ filePath: f.path, fileName: f.name, line: i + 1, content: line.trim() })
-            }
-          })
-          return results
-        } catch (err) {
-          console.warn(`Backlinks: skipped unreadable file ${f.path}`, err)
-          return []
-        }
+    setLoading(true)
+    onSearch(`[[${baseName}]]`)
+      .then((results) => {
+        if (cancelled) return
+        setBacklinks(results.filter((r) => r.filePath !== currentFile.path))
+        setLoading(false)
       })
-    ).then((all) => {
-      if (cancelled) return
-      setBacklinks(all.flat())
-      setLoading(false)
-    }).catch((err) => {
-      if (cancelled) return
-      console.error("Backlinks scan failed", err)
-      setLoading(false)
-    })
-
+      .catch((err) => {
+        if (cancelled) return
+        console.error("Backlinks scan failed", err)
+        setLoading(false)
+      })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFile?.path, tree])
+  }, [currentFile, onSearch])
 
   if (!currentFile) {
     return <div className="tree-empty">{t.backlinks.noFile}</div>

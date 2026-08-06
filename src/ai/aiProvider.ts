@@ -23,6 +23,30 @@ import type { Settings } from "../useSettings"
 // produces correct ComdTeX-flavored Markdown. Bundled at build time; no I/O.
 import comdtexContext from "./comdtex-context.md?raw"
 
+// Requests leave through Rust (tauri-plugin-http), not through the webview.
+// The webview's CSP `connect-src` is a fixed list nobody can edit at runtime,
+// so "bring your own provider" was only true for the five hosts that happened
+// to be on it: a lab endpoint, OpenRouter, DeepSeek or LM Studio failed with
+// nothing useful to show for it. The safety barrier did not move, it changed
+// place: `assertSafeBaseUrl` still refuses anything that is not https:// or
+// loopback, and the capability in `src-tauri/capabilities/default.json` bounds
+// what the plugin may reach at all. Falls back to the platform `fetch` outside
+// Tauri (tests, a plain browser), where the plugin does not exist.
+type FetchLike = typeof globalThis.fetch
+let httpFetch: FetchLike | null = null
+
+async function netFetch(input: string, init?: RequestInit): Promise<Response> {
+  if (!httpFetch) {
+    try {
+      const mod = await import("@tauri-apps/plugin-http")
+      httpFetch = mod.fetch as FetchLike
+    } catch {
+      httpFetch = globalThis.fetch.bind(globalThis)
+    }
+  }
+  return httpFetch(input, init)
+}
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant"
   content: string
@@ -180,10 +204,8 @@ function resolveBaseUrl(cfg: HttpConfig): string {
       // SECURITY: only allow https:// or loopback http:// so the Bearer API key
       // can never be sent to an arbitrary attacker-controlled origin.
       assertSafeBaseUrl(u)
-      // NOTE: The known provider hosts (Anthropic / OpenAI / Gemini / localhost:11434)
-      // are allow-listed in the CSP `connect-src` (src-tauri/tauri.conf.json).
-      // A custom openai-compatible host (e.g. https://api.deepseek.com) must have
-      // its own origin added to that connect-src list, or the fetch will be blocked.
+      // Any host reachable over https (or loopback) works: requests go out
+      // through Rust, so the webview CSP no longer decides who you may use.
       return u
     }
     default: throw new AiError("not-http-provider")
@@ -211,7 +233,7 @@ class HttpProvider {
     const base = resolveBaseUrl(this.cfg)
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (this.cfg.apiKey) headers["Authorization"] = `Bearer ${this.cfg.apiKey}`
-    const res = await fetch(`${base}/chat/completions`, {
+    const res = await netFetch(`${base}/chat/completions`, {
       method: "POST",
       headers,
       signal: opts.signal,
@@ -248,7 +270,7 @@ class HttpProvider {
     const base = resolveBaseUrl(this.cfg)
     const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n")
     const convo = messages.filter((m) => m.role !== "system")
-    const res = await fetch(`${base}/v1/messages`, {
+    const res = await netFetch(`${base}/v1/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -297,7 +319,7 @@ class HttpProvider {
     const url =
       `${base}/v1beta/models/${encodeURIComponent(this.cfg.model)}:streamGenerateContent` +
       `?alt=sse&key=${encodeURIComponent(this.cfg.apiKey)}`
-    const res = await fetch(url, {
+    const res = await netFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: opts.signal,
@@ -418,6 +440,66 @@ export async function sendMessage(
     apiKey: settings.aiApiKey,
     model: settings.aiModel,
   }).send(withSystem, opts)
+}
+
+/**
+ * What a connection test can tell the user. The point is that a failed test
+ * says WHICH thing is wrong, because the four causes need four different
+ * fixes and they are indistinguishable from "it does not work".
+ */
+export type AiCheckCode =
+  | "ok"
+  | "incomplete"    // a required field is empty
+  | "bad-url"       // not https:// or loopback
+  | "unauthorized"  // the key is missing, wrong or expired
+  | "no-model"      // the endpoint answered, that model is not there
+  | "unreachable"   // no answer at all: host, port, DNS, or offline
+  | "failed"        // it answered with something else
+
+export interface AiCheck {
+  code: AiCheckCode
+  /** The provider's own words, when it gave any. Never a made-up message. */
+  detail?: string
+}
+
+/**
+ * Send the smallest possible real request and report what came back. A form
+ * that saves without ever proving it works is a form the user cannot trust:
+ * a wrong model name and an expired key look identical until something is
+ * actually sent.
+ */
+export async function checkConnection(settings: Settings): Promise<AiCheck> {
+  if (!isAiReady({ ...settings, aiEnabled: true })) return { code: "incomplete" }
+  try {
+    const reply = await sendMessage(settings, [{ role: "user", content: "ping" }], { maxTokens: 1 })
+    return { code: "ok", detail: reply.trim().slice(0, 80) || undefined }
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err)
+    const code = classifyAiFailure(raw)
+    return code === "incomplete" ? { code } : { code, detail: raw }
+  }
+}
+
+/**
+ * Turn whatever a provider said into the one thing the user has to fix.
+ * Providers word their failures differently and none of them is our text,
+ * so this reads the shapes they all share: an HTTP status, a mention of the
+ * key, a mention of the model, or a connection that never happened.
+ */
+export function classifyAiFailure(raw: string): AiCheckCode {
+  const low = raw.toLowerCase()
+  if (low.includes("must be https")) return "bad-url"
+  if (low.includes("missing-api-key")) return "incomplete"
+  if (/\b(401|403)\b|unauthorized|forbidden|invalid[_ -]?api[_ -]?key|authentication/.test(low)) {
+    return "unauthorized"
+  }
+  if (/\b404\b|model.*(not found|does not exist|unavailable)|unknown model/.test(low)) {
+    return "no-model"
+  }
+  if (/failed to fetch|network error|econnrefused|enotfound|timed? ?out|dns|unreachable|refused/.test(low)) {
+    return "unreachable"
+  }
+  return "failed"
 }
 
 /** True when the AI is enabled AND has the config its provider needs to send. */

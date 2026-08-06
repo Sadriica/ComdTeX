@@ -398,9 +398,27 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
 
 interface Draft { path: string; content: string; savedAt: number }
 
+// The draft list is held in memory and localStorage is the mirror, not the
+// source of truth. Reading it back meant JSON-parsing up to 20 whole documents
+// on every flush (≤1 per 300 ms while typing) just to update one of them.
+let draftsCache: Draft[] | null = null
+
 function getDrafts(): Draft[] {
-  try { return JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "[]") }
-  catch { return [] }
+  if (draftsCache) return draftsCache
+  try { draftsCache = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "[]") as Draft[] }
+  catch { draftsCache = [] }
+  return draftsCache
+}
+
+/** Persist the list and keep the memory copy authoritative. */
+function putDrafts(drafts: Draft[]): void {
+  draftsCache = drafts
+  try { localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts)) } catch {}
+}
+
+/** Test seam: forget the memory copy so a test can seed localStorage. */
+export function resetDraftsCache(): void {
+  draftsCache = null
 }
 
 const DRAFT_MAX_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -469,7 +487,7 @@ function flushDrafts() {
     drafts.unshift({ path, content, savedAt: now })
   }
   draftQueue.clear()
-  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts.slice(0, 20)))
+  putDrafts(drafts.slice(0, 20))
 }
 
 function saveDraft(path: string, content: string) {
@@ -481,8 +499,7 @@ function clearDraft(path: string) {
   // Cancel any queued (not-yet-written) draft so a pending flush can't re-create
   // a stale draft for a file that was just saved/closed.
   draftQueue.delete(path)
-  const drafts = getDrafts().filter((d) => d.path !== path)
-  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
+  putDrafts(getDrafts().filter((d) => d.path !== path))
 }
 
 /**

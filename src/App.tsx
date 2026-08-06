@@ -44,6 +44,7 @@ import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName, findByVaultRelPath, matchesVaultRelPath } from "./wikilinks"
 import { findVaultFile, type ResolvableFile } from "./vaultResolve"
+import { syncPosture } from "./syncPosture"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import type { FileNode } from "./types"
 import { writeTextFileAtomic } from "./atomicWrite"
@@ -863,6 +864,34 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       setCloudInfo(owner)
       setCloudSuggestion(owner ? null : (folders[0] ?? null))
     }).catch(() => { if (!cancelled) { setCloudInfo(null); setCloudSuggestion(null) } })
+    return () => { cancelled = true }
+  }, [vault.vaultPath])
+
+  // Whether the vault keeps history at all, and whether that history exists
+  // anywhere but this machine. Read once per vault (two cheap git calls, no
+  // watcher): the Sync settings need it to say something true instead of
+  // listing two mechanisms as if they were equals.
+  const [gitFacts, setGitFacts] = useState<{ isRepo: boolean; hasRemote: boolean }>({
+    isRepo: false,
+    hasRemote: false,
+  })
+  useEffect(() => {
+    let cancelled = false
+    const path = vault.vaultPath
+    if (!path) { setGitFacts({ isRepo: false, hasRemote: false }); return }
+    void (async () => {
+      try {
+        const repo = await Command.create("git", ["-C", path, "rev-parse", "--git-dir"]).execute()
+        if (cancelled) return
+        if (repo.code !== 0) { setGitFacts({ isRepo: false, hasRemote: false }); return }
+        const remote = await Command.create("git", ["-C", path, "remote"]).execute()
+        if (cancelled) return
+        setGitFacts({ isRepo: true, hasRemote: remote.stdout.trim().length > 0 })
+      } catch {
+        // git is not installed: not a repository as far as the app can tell.
+        if (!cancelled) setGitFacts({ isRepo: false, hasRemote: false })
+      }
+    })()
     return () => { cancelled = true }
   }, [vault.vaultPath])
 
@@ -3760,7 +3789,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // Stable element so MenuBar's memo isn't defeated by a fresh child
   // element identity on every keystroke re-render.
-  const gitBarEl = useMemo(() => <GitBar vaultPath={vault.vaultPath} />, [vault.vaultPath])
+  // Lets the Sync settings hand the user over to the Git panel instead of
+  // telling them where to click.
+  const [gitOpenSignal, setGitOpenSignal] = useState(0)
+  const gitBarEl = useMemo(
+    () => <GitBar vaultPath={vault.vaultPath} openSignal={gitOpenSignal} />,
+    [vault.vaultPath, gitOpenSignal],
+  )
 
   const themeAttr =
     settings.theme === "vs" ? "light" : settings.theme === "hc-black" ? "hc" : "dark"
@@ -3792,6 +3827,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             settings={settings}
             initialSection={settingsSection}
             cloudProvider={cloudInfo?.provider ?? null}
+            syncPosture={syncPosture({ ...gitFacts, inCloud: cloudInfo !== null })}
+            onOpenGit={() => {
+              setSettingsOpen(false)
+              setSettingsSection(undefined)
+              setGitOpenSignal((n) => n + 1)
+            }}
             onClose={() => { setSettingsOpen(false); setSettingsSection(undefined) }}
             onChange={updateSettings}
           />
@@ -3904,6 +3945,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               <BacklinksPanel
                 currentFile={vault.openFile}
                 tree={vault.tree}
+                onSearch={vault.search}
                 onOpenFile={(node, line) => {
                   if (line !== undefined) pendingJumpRef.current = line
                   handleOpenFileNode(node)

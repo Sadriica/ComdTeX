@@ -122,7 +122,13 @@ function renderKatex(expr: string, display: boolean, macros: KatexMacros): strin
     result = `<span class="math-error">${safe}</span>`
   }
 
-  if (katexCache.size >= KATEX_CACHE_MAX) katexCache.clear()
+  // Evict oldest-first instead of clearing: a Map preserves insertion order,
+  // and clearing threw away entries inserted earlier in the SAME render, so
+  // crossing the cap degraded exactly the heaviest documents to no cache.
+  if (katexCache.size >= KATEX_CACHE_MAX) {
+    const oldest = katexCache.keys().next()
+    if (!oldest.done) katexCache.delete(oldest.value)
+  }
   katexCache.set(key, result)
   return result
 }

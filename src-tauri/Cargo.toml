@@ -1,6 +1,6 @@
 [package]
 name = "comdtex"
-version = "1.27.1"
+version = "1.28.0"
 description = "Desktop Markdown + LaTeX editor for mathematics and science"
 authors = ["ComdTeX contributors"]
 edition = "2021"
@@ -27,4 +27,8 @@ tauri-plugin-dialog = "2.6.0"
 tauri-plugin-shell = "2.3.5"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# AI requests go through Rust so a user-supplied endpoint is not subject to
+# the webview CSP; the allowed hosts live in the capability, not in a
+# hard-coded list the user cannot change.
+tauri-plugin-http = "2"
 keyring = { version = "3", features = ["sync-secret-service", "vendored"] }

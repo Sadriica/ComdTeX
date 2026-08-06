@@ -4217,9 +4217,25 @@ html, body, #root {
   box-sizing: border-box;
 }
 .setting-textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+/* A heading inside a settings section, for when a section tells a story in
+   two parts (what your situation is, then the switches for it). */
+.setting-section-title {
+  padding: 10px 4px 4px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75;
+}
+
 .setting-hint {
   padding: 0 4px 8px; color: #777; font-size: 11px; line-height: 1.4;
 }
+
+/* Result of a connection test: green when it answered, amber when it did not.
+   The amber carries the provider's own words, so it can be long; let it wrap. */
+.setting-ok, .setting-warn {
+  font-size: 11px; line-height: 1.4; display: block;
+  overflow-wrap: anywhere;
+}
+.setting-ok { color: var(--ok, #4ec9b0); }
+.setting-warn { color: var(--warn, #d7ba7d); }
 
 /* HelpModal search */
 .help-search-row {
