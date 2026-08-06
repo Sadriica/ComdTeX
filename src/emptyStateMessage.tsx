@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from "react"
 
 /**
  * Render a short empty-state message with backtick-wrapped segments
- * shown as inline <code>. Pure text otherwise — no Markdown beyond `code`.
+ * shown as inline <code>. Pure text otherwise; no Markdown beyond `code`.
  */
 export function renderEmptyMessage(message: string): ReactNode {
   const parts = message.split(/(`[^`]+`)/g)

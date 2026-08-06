@@ -42,7 +42,7 @@ function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] 
 }
 
 // Cache rendered display-math HTML by source. Without it, `update()` re-ran
-// KaTeX for every visible block on every keystroke / cursor move — the dominant
+// KaTeX for every visible block on every keystroke / cursor move: the dominant
 // per-keystroke cost in a math-heavy document. Invalidated by macros reference
 // (macros only change when macros.md is saved).
 const mathHtmlCache = new Map<string, string | null>()
@@ -74,7 +74,7 @@ interface ActiveZone {
 
 /**
  * Sets up live display math preview view zones in a Monaco editor.
- * Call from handleEditorMount — mirrors setupMathHover pattern.
+ * Call from handleEditorMount; mirrors setupMathHover pattern.
  * Returns an IDisposable that cleans up all zones and listeners.
  */
 export function setupDisplayMathPreview(
@@ -168,7 +168,7 @@ export function setupDisplayMathPreview(
         zones = newZones
       }
     } else {
-      // Same block positions — re-render content using fresh scan to avoid stale line data
+      // Same block positions: re-render content using fresh scan to avoid stale line data
       for (let i = 0; i < zones.length; i++) {
         const fresh = toShow[i]
         if (!fresh) continue

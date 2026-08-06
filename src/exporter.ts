@@ -88,7 +88,7 @@ const ENV_REF_NAMES: Record<string, string> = {
  * A `\ref{def:x}` here would be a DANGLING reference: the target environment
  * lives in another vault document and is not part of this single-file export,
  * so LaTeX would silently typeset "??". We cannot resolve the target's NUMBER
- * either — that is a property of the other file, and this export path is
+ * either: that is a property of the other file, and this export path is
  * synchronous with no vault resolver threaded through it.
  *
  * So the ref degrades to an honest plain-text mention naming the source
@@ -103,7 +103,7 @@ function crossRefToTex(docPath: string, prefix: string, id: string): string {
 
 function textRefsToTex(text: string): string {
   const out: string[] = []
-  // Cross-file alternatives first — otherwise the local pattern matches the
+  // Cross-file alternatives first, otherwise the local pattern matches the
   // INNER `@def:x` of `@doc@def:x` and emits a dangling `\ref{def:x}` while
   // leaving `@doc` as escaped prose.
   const re = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
@@ -363,6 +363,108 @@ function mdToTex(raw: string): string {
   return tokensToTex(tokens, slots)
 }
 
+// ── Journal document classes ──────────────────────────────────────────────────
+//
+// A document may pick its export class via frontmatter: `comdtex.texclass:
+// ieeetran | acmart | elsarticle | apa7`. Each class carries its own
+// documentclass line, title-block grammar and theorem policy, so the exported
+// .tex compiles against the real journal class on Overleaf/TeX Live without
+// hand edits. Without the key, the export is byte-identical to the classic
+// article preamble below.
+
+export type TexClassId = "ieeetran" | "acmart" | "elsarticle" | "apa7"
+
+interface TexClass {
+  documentclass: string
+  // acmart loads amsthm and predefines theorem/lemma/etc; redefining them is
+  // a hard LaTeX error, so such classes only get the envs they lack.
+  theoremPolicy: "full" | "supplement-only"
+  titleBlock: (title: string, author: string) => string
+  maketitle: boolean
+}
+
+const THEOREM_SUPPLEMENT = [
+  "\\newtheorem*{exercise}{Ejercicio}",
+  "\\newtheorem*{remark}{Observación}",
+  "\\newtheorem*{note}{Nota}",
+].join("\n")
+
+export const TEX_CLASSES: Record<TexClassId, TexClass> = {
+  ieeetran: {
+    documentclass: "\\documentclass[conference]{IEEEtran}",
+    theoremPolicy: "full",
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{\\IEEEauthorblockN{${escTex(author) || "Author"}}}\n`,
+    maketitle: true,
+  },
+  acmart: {
+    documentclass: "\\documentclass[sigconf]{acmart}",
+    theoremPolicy: "supplement-only",
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n`,
+    maketitle: true,
+  },
+  elsarticle: {
+    documentclass: "\\documentclass[preprint,12pt]{elsarticle}",
+    theoremPolicy: "full",
+    // elsarticle takes its title and authors inside a frontmatter
+    // environment in the document body and has no \maketitle.
+    titleBlock: () => "",
+    maketitle: false,
+  },
+  apa7: {
+    documentclass: "\\documentclass[man]{apa7}",
+    theoremPolicy: "full",
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\authorsnames{${escTex(author) || "Author"}}\n\\authorsaffiliations{{~}}\n`,
+    maketitle: true,
+  },
+}
+
+export function pickTexClass(raw: unknown): TexClassId | null {
+  if (typeof raw !== "string") return null
+  const candidate = raw.trim().toLowerCase()
+  return candidate in TEX_CLASSES ? (candidate as TexClassId) : null
+}
+
+function buildJournalPreamble(
+  classId: TexClassId,
+  macros: LatexMacro[],
+  hasCode: boolean,
+  hasLinks: boolean,
+): string {
+  const cls = TEX_CLASSES[classId]
+  const lines = [
+    cls.documentclass,
+    // Journal submissions are overwhelmingly in English; babel-spanish is
+    // deliberately not loaded here (the classic article export keeps it).
+    "\\usepackage[T1]{fontenc}",
+    "\\usepackage{amsmath, amssymb, amsfonts}",
+    cls.theoremPolicy === "full"
+      ? buildTheoremPreamble()
+      : THEOREM_SUPPLEMENT,
+    "\\usepackage{graphicx}",
+    "\\usepackage{float}",
+  ]
+  if (hasCode) {
+    lines.push("\\usepackage{listings}")
+    lines.push("\\usepackage{xcolor}")
+  }
+  // acmart and apa7 already load hyperref; loading it twice errors.
+  if (hasLinks && classId !== "acmart" && classId !== "apa7") {
+    lines.push("\\usepackage{hyperref}")
+  }
+  const macroLines = macros.map(({ command, arity, definition }) =>
+    arity > 0
+      ? `\\newcommand{${command}}[${arity}]{${definition}}`
+      : `\\newcommand{${command}}{${definition}}`,
+  )
+  if (macroLines.length > 0) {
+    lines.push("", "% Macros de usuario", ...macroLines)
+  }
+  return lines.join("\n")
+}
+
 // ── Document template ─────────────────────────────────────────────────────────
 
 function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean): string {
@@ -374,7 +476,7 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     // shorthands backed by an internal `quoting` environment, so literal
     // arrow text like \texttt{->>} emits a stray \end{quoting} and kills the
     // compile. es-noshorthands disables the remaining active-char surprises
-    // ("n, "u, …) — exported docs use real Unicode, never babel shorthands.
+    // ("n, "u, …): exported docs use real Unicode, never babel shorthands.
     "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
     buildTheoremPreamble(),
@@ -431,7 +533,7 @@ function pickRevealTheme(raw: unknown): RevealTheme {
 }
 
 export function exportReveal(rawMarkdown: string, title: string): string {
-  // Keep marks are editor-only — collapse them to plain text so no `^^`
+  // Keep marks are editor-only: collapse them to plain text so no `^^`
   // ever reaches a slide. See keepMarks.ts.
   const markdown = stripKeepMarks(rawMarkdown)
   // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
@@ -483,7 +585,7 @@ ${slideHtml}
 }
 
 export function exportToTex(rawInput: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
-  // Keep marks are editor-only — collapse them to plain text before the LaTeX
+  // Keep marks are editor-only: collapse them to plain text before the LaTeX
   // conversion. `stripKeepMarks` is math-aware, so a doubled caret inside a
   // superscript (`$x^{2^^3}$`) is left alone.
   const raw = stripKeepMarks(rawInput)
@@ -505,10 +607,27 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
     })
   }
 
-  const preamble = buildPreamble(userMacros, hasCode, hasLinks)
+  const classId = pickTexClass(parsed?.data?.["comdtex.texclass"])
+  const cls = classId ? TEX_CLASSES[classId] : null
 
-  const docTitle = title ? `\\title{${escTex(title)}}\n\\author{${escTex(author)}}\n\\date{\\today}\n` : ""
-  const maketitle = title ? "\\maketitle\n\n" : ""
+  const preamble = classId
+    ? buildJournalPreamble(classId, userMacros, hasCode, hasLinks)
+    : buildPreamble(userMacros, hasCode, hasLinks)
+
+  const docTitle = cls
+    ? title
+      ? cls.titleBlock(title, author)
+      : ""
+    : title
+      ? `\\title{${escTex(title)}}\n\\author{${escTex(author)}}\n\\date{\\today}\n`
+      : ""
+  const maketitle = title && (cls ? cls.maketitle : true) ? "\\maketitle\n\n" : ""
+  // elsarticle declares title and authors inside a frontmatter environment
+  // in the body instead of a preamble title block.
+  const elsFrontmatter =
+    classId === "elsarticle" && title
+      ? `\\begin{frontmatter}\n\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\end{frontmatter}\n\n`
+      : ""
 
   // Custom headers/footers using fancyhdr
   const hasCustomHF = frontmatter && (frontmatter.headerLeft || frontmatter.headerCenter || frontmatter.headerRight || frontmatter.footerLeft || frontmatter.footerCenter || frontmatter.footerRight)
@@ -527,7 +646,7 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
     "",
     docTitle,
     "\\begin{document}",
-    maketitle,
+    elsFrontmatter + maketitle,
     body,
     "\\end{document}",
   ].filter((l) => l !== undefined).join("\n")

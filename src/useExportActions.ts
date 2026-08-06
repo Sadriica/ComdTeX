@@ -1,6 +1,6 @@
 // Extracted from App.tsx: the export/import/compile handlers. These are thin
 // wrappers over exportActions.ts, moved verbatim (no behavior change) to keep
-// App.tsx smaller. See CLAUDE.md — App.tsx is a documented refactor target.
+// App.tsx smaller. See CLAUDE.md: App.tsx is a documented refactor target.
 import { useCallback, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"
@@ -21,6 +21,9 @@ import {
   importDocument as importDocumentAction,
   exportTypst as exportTypstAction,
   exportTypstPdf as exportTypstPdfAction,
+  compileTypstFilePdf as compileTypstFilePdfAction,
+  collectSyncTex,
+  type SyncTexBundle,
 } from "./exportActions"
 import type { ProjectFile } from "./projectExport"
 import { toPandocMarkdownInput } from "./exportConversion"
@@ -50,17 +53,19 @@ export interface ExportActionsCtx {
   setLatexDiagnostics: (diags: LatexDiagnostic[] | null) => void
   setPdfPath: (path: string | null | ((prev: string | null) => string | null)) => void
   setTexEngineState: (state: "idle" | "initializing" | "compiling") => void
+  setSyncTex?: (bundle: SyncTexBundle | null) => void
 }
 
 export function useExportActions(ctx: ExportActionsCtx) {
   const {
     editorRef, vault, t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl,
     macros, wikiNames, bibMap, pdfPath, setLatexDiagnostics, setPdfPath, setTexEngineState,
+    setSyncTex,
   } = ctx
 
   // vault (and openFile) get a new identity on every keystroke; handlers only
   // run on explicit user actions, so they read the CURRENT vault through this
-  // ref and stay identity-stable — keeping the returned object (and the host's
+  // ref and stay identity-stable; keeping the returned object (and the host's
   // menus/palette memos) stable across keystrokes.
   const vaultRef = useRef(vault)
   vaultRef.current = vault
@@ -177,8 +182,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
       texliveUrl,
       onPdfSaved: setPdfPath,
       onWasmStatus: (state) => setTexEngineState(state),
+      onSyncTex: setSyncTex,
     })
-  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState])
+  }, [t, deps, vaultFiles, transclusionResolver, useWasmTex, texliveUrl, editorRef, setLatexDiagnostics, setPdfPath, setTexEngineState, setSyncTex])
 
   // ── Auto-rebuild PDF on save (when PDF preview is open + setting on) ─────
   // We recompile to the existing pdfPath, no dialog. Skips silently on error.
@@ -193,27 +199,52 @@ export function useExportActions(ctx: ExportActionsCtx) {
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
-    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
+    const editorContent = editor.getValue()
+    // Typst tabs rebuild through the typst binary, not the LaTeX pipeline.
+    if (currentFile.path.toLowerCase().endsWith(".typ")) {
+      const dir = pathDirname(currentFile.path) || "."
+      const stem = currentFile.name.replace(/\.[^.]+$/, "")
+      const tmpTyp = `${dir}/${stem}.comdtex-typst-rebuild.typ`
+      const tmpPdf = `${dir}/${stem}.comdtex-typst-rebuild.pdf`
+      try {
+        await writeTextFile(tmpTyp, editorContent)
+        const r = await Command.create("typst", ["compile", "--root", dir, tmpTyp, tmpPdf]).execute()
+        if (r.code === 0 && await exists(tmpPdf)) {
+          await copyFile(tmpPdf, pdfPath)
+          const restore = pdfPath
+          setPdfPath(null)
+          setTimeout(() => setPdfPath(restore), 0)
+        }
+      } catch { /* silent, like the LaTeX rebuild */ }
+      finally {
+        await remove(tmpTyp).catch(() => {})
+        await remove(tmpPdf).catch(() => {})
+      }
+      return
+    }
+    const content = resolveTransclusions(editorContent, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
     const dir = pathDirname(currentFile.path) || "."
     const base = currentFile.name.replace(/\.[^.]+$/, "")
-    const tmpTex = `${dir}/${base}.comdtex-rebuild.tex`
-    const tmpPdf = `${dir}/${base}.comdtex-rebuild.pdf`
+    const jobname = `${base}.comdtex-rebuild`
+    const tmpTex = `${dir}/${jobname}.tex`
+    const tmpPdf = `${dir}/${jobname}.pdf`
     try {
       await writeTextFile(tmpTex, tex)
       const attempts: Array<[string, string[]]> = [
-        ["tectonic", [tmpTex, "--outdir", dir]],
-        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
-        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-rebuild`, tmpTex]],
+        ["tectonic", ["--synctex", tmpTex, "--outdir", dir]],
+        ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
+        ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
       ]
       for (const [cmdName, args] of attempts) {
         try {
           const result = await Command.create(cmdName, args, { cwd: dir }).execute()
           if (result.code === 0 && await exists(tmpPdf)) {
             await copyFile(tmpPdf, pdfPath)
+            setSyncTex?.(await collectSyncTex(dir, jobname, editorContent, tex))
             // Force PdfPreviewPanel to reload by re-setting the same path with a
             // cache-busting suffix is awkward (Tauri convertFileSrc); instead we
             // toggle the path through null then back so the effect re-runs.
@@ -227,10 +258,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     } finally {
       await remove(tmpTex).catch(() => {})
       await remove(tmpPdf).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.aux`).catch(() => {})
-      await remove(`${dir}/${base}.comdtex-rebuild.log`).catch(() => {})
+      await remove(`${dir}/${jobname}.aux`).catch(() => {})
+      await remove(`${dir}/${jobname}.log`).catch(() => {})
+      await remove(`${dir}/${jobname}.synctex.gz`).catch(() => {})
+      await remove(`${dir}/${jobname}.synctex`).catch(() => {})
     }
-  }, [pdfPath, transclusionResolver, editorRef, setPdfPath])
+  }, [pdfPath, transclusionResolver, editorRef, setPdfPath, setSyncTex])
 
   const handleExportPdf = useCallback(async () => {
     await exportPdfAction({
@@ -277,6 +310,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
 
   const typstMessages = useMemo(() => ({
     pandocMissing: t.app.pandocMissingTypst,
+    typstMissing: t.app.typstBinaryMissing,
     generating: t.app.typstGenerating,
     typstSuccess: t.app.typstSuccess,
     typstError: t.app.typstError,
@@ -306,6 +340,20 @@ export function useExportActions(ctx: ExportActionsCtx) {
     })
   }, [deps, t, typstMessages, editorRef])
 
+  // Native compile of an open .typ file: the Typst source is the document,
+  // no pandoc conversion involved. Feeds the PDF preview like the LaTeX path.
+  const handleCompileTypstFilePdf = useCallback(async () => {
+    await compileTypstFilePdfAction({
+      activeFile: vaultRef.current.openFile,
+      deps,
+      dialogTitle: t.app.dialogExportPdf,
+      messages: typstMessages,
+      readEditorContent: () => editorRef.current?.getValue() ?? null,
+      toast: showToast,
+      onPdfSaved: setPdfPath,
+    })
+  }, [deps, t, typstMessages, editorRef, setPdfPath])
+
   const handleExportDocx = useCallback(async () => {
     const file = vaultRef.current.openFile
     if (!file) return
@@ -318,7 +366,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // Derive the temp path by APPENDING, not by swapping a `.docx` suffix: the
     // GTK save dialog on Linux doesn't reliably auto-append the filter
     // extension, so a `.replace(/\.docx$/…)` would be a no-op and tmpPath would
-    // equal outPath — pandoc would then read+write the same path and `remove`
+    // equal outPath: pandoc would then read+write the same path and `remove`
     // would delete the user's chosen file, destroying it.
     const tmpPath = `${outPath}.comdtex-tmp.md`
     try {
@@ -344,7 +392,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     }
     const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
     if (!outPath) return
-    // Append rather than swap the `.pdf` suffix — see handleExportDocx: an
+    // Append rather than swap the `.pdf` suffix: see handleExportDocx: an
     // extension-less outPath would otherwise make tmpPath === outPath and the
     // final `remove` would destroy the user's chosen file.
     const tmpPath = `${outPath}.comdtex-tmp.md`
@@ -394,7 +442,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const content = editor.getValue()
     let html: string
     try {
-      // annotate:false — data-source-line attrs are internal preview↔editor
+      // annotate:false: data-source-line attrs are internal preview↔editor
       // sync bookkeeping; skipping the annotation avoids shipping them as
       // noise in the exported standalone HTML AND skips the full-document
       // DOMParser+reserialize pass it would cost.
@@ -467,6 +515,7 @@ ${html}
     handleExportAnki,
     handleImportDocument,
     handleExportTypst,
+    handleCompileTypstFilePdf,
     handleExportTypstPdf,
     handleExportDocx,
     handleExportBeamer,
@@ -476,7 +525,7 @@ ${html}
   }), [
     handleExportMd, handleExportTex, handleExportProjectTex, handleCompileLatexPdf,
     rebuildPdfInPlace, handleExportPdf, handleExportAnki, handleImportDocument,
-    handleExportTypst, handleExportTypstPdf, handleExportDocx, handleExportBeamer,
+    handleExportTypst, handleExportTypstPdf, handleCompileTypstFilePdf, handleExportDocx, handleExportBeamer,
     handleExportReveal, handleExportHtml, handleExportObsidian,
   ])
 }

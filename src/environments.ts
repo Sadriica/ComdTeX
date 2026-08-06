@@ -87,11 +87,11 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
-// Inline error box for a special block whose renderer throws — so a single
+// Inline error box for a special block whose renderer throws, so a single
 // malformed `:::plot` / `:::graph` / … shows an error in place instead of
 // letting the exception bubble up and blank the ENTIRE preview pane.
 function specialEnvError(kind: string, e: unknown): string {
-  return `<pre class="math-error">Error in :::${kind} — ${escHtml(String(e))}</pre>`
+  return `<pre class="math-error">Error in :::${kind}: ${escHtml(String(e))}</pre>`
 }
 
 // ── Mermaid SVG cache for `:::flowchart` ─────────────────────────────────────
@@ -118,7 +118,7 @@ export function clearFlowchartSvgCache(): void {
 // no repaint loop).
 const excalidrawSvgCache = new Map<string, string>()
 export function setExcalidrawSvg(sceneB64: string, svg: string): void {
-  // Bounded: keys are whole base64 scenes and values full SVGs — with embedded
+  // Bounded: keys are whole base64 scenes and values full SVGs, with embedded
   // images both can reach MBs, and every save of a drawing mints a new key, so
   // an unbounded map is a session-long leak. Wholesale clear (the project's
   // cache pattern) just re-renders visible drawings once via the App effect.
@@ -154,7 +154,7 @@ export function clearSpecialRenderCache(): void {
   specialRenderCache.clear()
 }
 
-let excalidrawPlaceholderText = "Excalidraw — clic para editar"
+let excalidrawPlaceholderText = "Excalidraw: clic para editar"
 export function setExcalidrawPlaceholderText(text: string): void {
   excalidrawPlaceholderText = text
 }
@@ -171,7 +171,7 @@ function buildExcalidrawHTML(title: string, number: string, sceneB64: string): s
   return [
     `<div class="excalidraw-block" data-excalidraw-scene="${safeB64}">`,
     `<div class="excalidraw-header"><span class="excalidraw-title">${header}</span>`,
-    // The scene lives ONCE on the parent block's data-excalidraw-scene — the
+    // The scene lives ONCE on the parent block's data-excalidraw-scene; the
     // edit button must not repeat it: with image-heavy scenes the duplicate
     // attribute doubled the preview HTML that gets parsed + sanitized +
     // morphed on every debounced render.
@@ -207,7 +207,7 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
   // Read the same cache used by `:::flowchart`. Without this, every preview
   // re-render re-emits a `<pre><code class="language-mermaid">` block, which
   // makes the mermaid effect re-run, bump `mermaidVersion`, recompute
-  // `previewHtml`, and re-fire the effect — an infinite loop that pegs the
+  // `previewHtml`, and re-fire the effect: an infinite loop that pegs the
   // WebView at >100% CPU until it OOMs. With the cache hit, the second pass
   // emits a `<div class="mermaid-diagram">` (no `language-mermaid`), the
   // effect's "needs mermaid" gate goes false, and the loop terminates.
@@ -329,7 +329,7 @@ export function extractEnvironments(
   let current = text.replace(CODE_ENV_RE, (_match, lang: string | undefined, body: string, offset: number) => {
     const opening = lang ? `:::code ${lang}` : `:::code`
     const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
-    // Body is verbatim — preserve the trailing newline that closes its last line
+    // Body is verbatim: preserve the trailing newline that closes its last line
     // by NOT trimming. But strip the single trailing newline produced by `\n:::`.
     const verbatim = body.endsWith("\n") ? body.slice(0, -1) : body
     const cls = lang ? ` class="language-${escHtml(lang)}"` : ""
@@ -356,7 +356,7 @@ export function extractEnvironments(
         let html: string
         // NOT memoized: buildPseudocodeHTML embeds a Mermaid flowchart and reads
         // the (async-populated) `flowchartSvgCache`, so its output must be
-        // re-evaluated each render — otherwise the cached "no SVG yet" HTML keeps
+        // re-evaluated each render; otherwise the cached "no SVG yet" HTML keeps
         // re-triggering the mermaid effect in an infinite re-render loop.
         try { html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim()) }
         catch (e) { html = specialEnvError("pseudocode", e) }
@@ -374,7 +374,7 @@ export function extractEnvironments(
           ? `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}: ${escHtml(title)}</span></div>`
           : `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}</span></div>`
         // Cache hit: embed pre-rendered SVG inline so the next React paint
-        // shows the diagram immediately — no flash of source, no async wait.
+        // shows the diagram immediately: no flash of source, no async wait.
         // The source is base64-encoded into a data attribute so the mermaid
         // effect can re-render via the toolbar button if the user requests it.
         const cachedSvg = flowchartSvgCache.get(mermaidChart)
@@ -537,9 +537,9 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
 export type EnvironmentDocResolver = (docPath: string) => string | null
 
 // Matches, in priority order:
-//   1. `@[my folder/my note]@def:label` — escaped path (only needed for spaces)
-//   2. `@gp/calendario@def:label`       — bare vault-relative path
-//   3. `@def:label`                     — local ref (legacy form, unchanged)
+//   1. `@[my folder/my note]@def:label`: escaped path (only needed for spaces)
+//   2. `@gp/calendario@def:label`       : bare vault-relative path
+//   3. `@def:label`                     : local ref (legacy form, unchanged)
 //
 // The cross-file alternatives MUST come first: the old local-only pattern
 // `/@([a-zA-Z]+):([\w.-]+)/` happily matches the INNER `@def:label` of
@@ -562,7 +562,7 @@ const ENV_REF_RE = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w-]+(?
 // independent cache (App.tsx `vaultTextCache`, rebuilt only when the SET of
 // vault files changes), so for any document the user is not currently editing
 // the returned string is the SAME reference every render. `hit.content ===
-// content` is then a pointer compare that short-circuits before any scan —
+// content` is then a pointer compare that short-circuits before any scan:
 // O(1) per ref per render, zero disk I/O, zero re-prescan.
 interface CrossDocCacheEntry {
   content: string
@@ -570,7 +570,7 @@ interface CrossDocCacheEntry {
 }
 const crossDocCache = new Map<string, CrossDocCacheEntry>()
 
-// Prescan accounting — the cache's contract is "no re-prescan while typing",
+// Prescan accounting: the cache's contract is "no re-prescan while typing",
 // which is only meaningfully testable by counting actual prescans.
 let crossDocPrescans = 0
 export function envRefCacheStats(): { prescans: number; size: number } {
@@ -617,7 +617,7 @@ export function resolveEnvironmentRefs(
       const docPath = (bracketPath ?? barePath ?? "").trim()
       const label = `${crossPrefix}:${crossId}`
       // Missing file and missing label degrade identically to a broken LOCAL
-      // ref — a cross-ref must never throw out of the render pipeline.
+      // ref: a cross-ref must never throw out of the render pipeline.
       const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
       const ref = docLabels?.get(label)
       if (!ref) return `<span class="env-ref-broken">${kind} (?)</span>`

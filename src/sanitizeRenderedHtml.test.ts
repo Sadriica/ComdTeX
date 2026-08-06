@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 
-describe("sanitizeRenderedHtml — data: image policy", () => {
+describe("sanitizeRenderedHtml, data: image policy", () => {
   it("allows data:image/png base64 src", () => {
     const png =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9V4M0sAAAAAASUVORK5CYII="
@@ -75,7 +75,7 @@ describe("sanitizeRenderedHtml — data: image policy", () => {
   })
 })
 
-describe("sanitizeRenderedHtml — dangerous markup", () => {
+describe("sanitizeRenderedHtml, dangerous markup", () => {
   it("strips <script> nested inside inline <svg>", () => {
     const html = sanitizeRenderedHtml(
       '<svg><script>alert(1)</script><circle cx="5" cy="5" r="4"></circle></svg>',
@@ -101,7 +101,7 @@ describe("sanitizeRenderedHtml — dangerous markup", () => {
   })
 })
 
-describe("sanitizeRenderedHtml — iframes", () => {
+describe("sanitizeRenderedHtml, iframes", () => {
   it("keeps a youtube-nocookie embed iframe", () => {
     const html = sanitizeRenderedHtml(
       '<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"></iframe>',
@@ -116,7 +116,7 @@ describe("sanitizeRenderedHtml — iframes", () => {
   })
 })
 
-describe("sanitizeRenderedHtml — app-specific markup", () => {
+describe("sanitizeRenderedHtml, app-specific markup", () => {
   it("keeps task-list checkboxes with their state and line attribute", () => {
     const html = sanitizeRenderedHtml(
       '<input type="checkbox" class="preview-checkbox" data-line="3" checked>',

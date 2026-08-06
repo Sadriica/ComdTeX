@@ -78,7 +78,7 @@ interface MenuSection {
   items: MenuItem[]
 }
 
-// Monochrome folder icon (inline SVG with currentColor — emoji folder glyphs
+// Monochrome folder icon (inline SVG with currentColor; emoji folder glyphs
 // render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
 const FolderIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
@@ -86,7 +86,7 @@ const FolderIcon = (
   </svg>
 )
 
-// All panel modes contained (recursively) in a section's items — used to mark
+// All panel modes contained (recursively) in a section's items; used to mark
 // the section button active when one of its panels is the active sidebar mode.
 function collectPanelModes(items: MenuItem[]): PanelMode[] {
   const out: PanelMode[] = []
@@ -263,7 +263,7 @@ function getDirectButtons(t: T): { mode: PanelMode; icon: ReactNode; label: stri
     { mode: "focusTimer", icon: "◷", label: t.sidebar.focusTimer },
     {
       mode: "ai",
-      // Monochrome sparkle SVG — the ✦/✨ glyphs render coloured in WebKitGTK.
+      // Monochrome sparkle SVG: the ✦/✨ glyphs render coloured in WebKitGTK.
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
           <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
@@ -386,7 +386,7 @@ function MenuList({
             </button>
           )
         }
-        // submenu — opens as a flyout to the RIGHT (click to toggle)
+        // submenu: opens as a flyout to the RIGHT (click to toggle)
         const isOpen = openSub === i
         return (
           <div key={i} className="menu-sub">
@@ -569,7 +569,7 @@ function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen
         <button
           type="button"
           className={`menubar-focus-clock${focusClock.running ? " running" : " paused"}`}
-          title={`${t.focusTimer.barTitle} — ${focusClock.phase}`}
+          title={`${t.focusTimer.barTitle} (${focusClock.phase})`}
           onMouseDown={(e) => { e.preventDefault(); onToggleFocus?.() }}
         >
           <span className="menubar-focus-dot" aria-hidden="true">●</span>

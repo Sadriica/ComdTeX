@@ -23,12 +23,12 @@ interface KeepPanelProps {
  * Vault-wide collector for keep marks (`^^texto^^` / `^^def: texto^^`), grouped
  * by category. Same shape as LabelsPanel / TagPanel: `files` is App.tsx's
  * already-resident `vaultFiles` (the vault text cache overlaid with live tab
- * content), so the scan is pure in-memory work with no disk I/O — and it only
+ * content), so the scan is pure in-memory work with no disk I/O, and it only
  * runs while this panel is actually mounted.
  *
  * The panel is the source of truth: it re-derives from `files` on every render
  * pass, so it can never drift from the documents. The glossary is written only
- * when the user asks for it — nothing is auto-written to the vault.
+ * when the user asks for it; nothing is auto-written to the vault.
  */
 export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
   const t = useT()

@@ -5,6 +5,7 @@ import { lintFile, type LintContext } from "./contentLinter"
 import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
+import { registerTypstLanguage } from "./typstLanguage"
 
 export interface Completion {
   label: string
@@ -98,7 +99,7 @@ export const COMPLETIONS: Completion[] = [
 const COMPLETIONS_LC: string[] = COMPLETIONS.map((c) => c.label.toLowerCase())
 
 // ── In-block completions for special blocks ──────────────────────────────────
-// Static catalogs (~40 entries total — negligible footprint). Keyword grammar
+// Static catalogs (~40 entries total; negligible footprint). Keyword grammar
 // mirrors the real parsers (pseudocodeFlowchart.ts, truthTable.ts,
 // graphViz.ts, functionPlot.ts, commDiag.ts).
 
@@ -163,7 +164,7 @@ export function getSpecialBlockCompletions(type: string): Completion[] | null {
 
 /** Walks upward from the line ABOVE `lineNumber` looking for an unclosed
  *  `:::type` opener. A bare `:::` closer found first means we're outside.
- *  Bounded scan — O(maxScan) string work, no allocation beyond trims. */
+ *  Bounded scan: O(maxScan) string work, no allocation beyond trims. */
 export function findEnclosingSpecialBlock(
   getLine: (line: number) => string,
   lineNumber: number,
@@ -206,7 +207,7 @@ export function resolveTabCompletion(beforeCursor: string, word: string): TabCom
 
   const typed = triggerText.toLowerCase()
   const normalizedTyped = typed.startsWith(":::") ? typed.slice(3) : typed
-  // After a ::: prefix only block snippets qualify — otherwise `:::t` would
+  // After a ::: prefix only block snippets qualify; otherwise `:::t` would
   // match shorthands like `table`/`tan` and expand them mid-block.
   const matches = COMPLETIONS.filter((c) => {
     if (blockPrefixMatch && !c.snippet.startsWith(":::")) return false
@@ -256,7 +257,7 @@ const LATEX_COMMANDS: [string, string][] = [
 // typed suffix). Done once at module load instead of `cmd.slice(1)` per call.
 const LATEX_COMMAND_NAMES: string[] = LATEX_COMMANDS.map(([, cmd]) => cmd.slice(1))
 
-// Precomputed footnote label strings ("1".."50") — avoids allocating new
+// Precomputed footnote label strings ("1".."50"); avoids allocating new
 // strings + per-keystroke `padStart` calls inside the provider.
 const FOOTNOTE_LABELS: { label: string; sort: string }[] = Array.from({ length: 50 }, (_, i) => {
   const n = (i + 1).toString()
@@ -319,6 +320,7 @@ let crossRefHoverDisposable: monacoApi.IDisposable | null = null
 let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 
 export function setupMonaco(monaco: typeof monacoApi) {
+  registerTypstLanguage(monaco)
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
     triggerCharacters: ["[", "@", "\\", "^", ":"],
@@ -572,14 +574,14 @@ export function setupMonaco(monaco: typeof monacoApi) {
   //
   // NOTE: setLanguageConfiguration REPLACES markdown's built-in configuration
   // rather than merging into it. An earlier version of this call passed only the
-  // pair options, which silently dropped markdown's `onEnterRules` — that is why
+  // pair options, which silently dropped markdown's `onEnterRules`; that is why
   // lists, task items and quotes stopped continuing on Enter. Everything the
   // default config provided has to be restated here.
   //
   // List/quote/table continuation is NOT reinstated as `onEnterRules`: those can
   // only append a constant string, so they cannot increment an ordered list,
   // count a table's columns, or clear an abandoned marker. `setupEditorCommands`
-  // handles Enter explicitly via `resolveEnterOverride` instead — one mechanism,
+  // handles Enter explicitly via `resolveEnterOverride` instead: one mechanism,
   // so the two can never both fire on the same keystroke.
   monaco.languages.setLanguageConfiguration("markdown", {
     comments: { blockComment: ["<!--", "-->"] },
@@ -1040,7 +1042,7 @@ export function setupEditorCommands(
     const lineText = model.getLineContent(position.lineNumber)
     const beforeCursor = lineText.slice(0, position.column - 1)
     const word = model.getWordUntilPosition(position)
-    // Inside a special block only its own keywords expand — never the global
+    // Inside a special block only its own keywords expand; never the global
     // shorthands (`sin` inside :::plot must stay plain sin(), not \sin).
     const enclosingBlock = findEnclosingSpecialBlock((n) => model.getLineContent(n), position.lineNumber)
     const inBlockCompletions = enclosingBlock ? getSpecialBlockCompletions(enclosingBlock) : null
@@ -1067,7 +1069,7 @@ export function setupEditorCommands(
   // Monaco's markdown `onEnterRules` cannot increment an ordered list, count a
   // table's columns, or clear an abandoned marker, so Enter is handled here.
   // Everything below is a single `executeEdits`, which keeps it in the native
-  // undo stack — one Ctrl+Z undoes the continuation, exactly like typing it.
+  // undo stack: one Ctrl+Z undoes the continuation, exactly like typing it.
   editor.onKeyDown((e) => {
     if (e.keyCode !== monaco.KeyCode.Enter) return
     if (!isListContinuationEnabled()) return
@@ -1087,7 +1089,7 @@ export function setupEditorCommands(
 
     const { lineNumber, column } = selection.getPosition()
     const lineText = model.getLineContent(lineNumber)
-    // Mid-line Enter must split normally — continuing a marker there would
+    // Mid-line Enter must split normally; continuing a marker there would
     // duplicate text the user meant to push onto the next line.
     if (column !== lineText.length + 1) return
 
@@ -1155,7 +1157,7 @@ export interface CommentMarker {
 
 export interface CommentDecorationsHandle extends monacoApi.IDisposable {
   /**
-   * Replace the current set of glyphs. Cheap to call on every change —
+   * Replace the current set of glyphs. Cheap to call on every change:
    * Monaco reconciles the decoration deltas internally.
    */
   update(markers: CommentMarker[]): void
@@ -1171,7 +1173,7 @@ export function setupCommentDecorations(
   monaco: typeof monacoApi,
   onClickMarker: (id: string) => void,
 ): CommentDecorationsHandle {
-  // Make sure the glyph margin is enabled — otherwise the gutter is hidden.
+  // Make sure the glyph margin is enabled; otherwise the gutter is hidden.
   editor.updateOptions({ glyphMargin: true })
 
   const collection = editor.createDecorationsCollection([])
@@ -1196,7 +1198,7 @@ export function setupCommentDecorations(
     if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) return
     const lineNumber = e.target.position?.lineNumber
     if (!lineNumber) return
-    // Line might host multiple comments — fire for the first one we find.
+    // Line might host multiple comments; fire for the first one we find.
     const hit = markers.find((m) => m.line === lineNumber)
     if (hit) onClickMarker(hit.id)
   })
@@ -1222,13 +1224,13 @@ export interface KeepMarkDecorationsHandle extends monacoApi.IDisposable {
 /**
  * Decorate keep marks (`^^texto^^` / `^^def: texto^^`) in the editor.
  *
- * This is the ONLY surface where a keep mark is visible — the preview and every
+ * This is the ONLY surface where a keep mark is visible: the preview and every
  * export collapse it to plain text (see keepMarks.ts). The decoration is
  * deliberately subtle: a faint underline on the marked range plus a gutter
  * glyph, so the writer can see their own marks without the document looking
  * annotated.
  *
- * Scanning goes through `parseKeepMarks`, so math (`$x^{2^^3}$` — `^` is
+ * Scanning goes through `parseKeepMarks`, so math (`$x^{2^^3}$`, `^` is
  * LaTeX superscript) and code (`` `^^x^^` ``, fences) are excluded here exactly
  * as they are everywhere else.
  */

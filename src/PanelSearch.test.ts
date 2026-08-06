@@ -26,7 +26,7 @@ describe("matchesQuery", () => {
     expect(matchesQuery("Teorema", "integral")).toBe(false)
   })
 
-  it("does not treat ñ as n — they are different letters", () => {
+  it("does not treat ñ as n (they are different letters)", () => {
     expect(matchesQuery("año", "ano")).toBe(false)
   })
 })

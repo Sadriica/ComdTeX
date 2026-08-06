@@ -9,7 +9,7 @@ export type DepName = "pandoc" | "zip"
 interface DepsWarningProps {
   deps: DepStatus
   /** When true, PDF export uses the bundled WASM engine and pandoc is only
-   * required for DOCX/Beamer/MD→PDF — the message below reflects that. */
+   * required for DOCX/Beamer/MD→PDF: the message below reflects that. */
   useWasmTex?: boolean
   /** Names of deps the user has dismissed persistently. */
   dismissed: DepName[]
@@ -54,7 +54,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
   const handleInstall = async (item: (typeof missing)[number]) => {
     const ua = navigator.userAgent.toLowerCase()
     // For zip on Linux/Mac, also copy the install hint so the user can paste it
-    // in a terminal — convenience on top of opening the docs page.
+    // in a terminal: convenience on top of opening the docs page.
     if (item.name === "zip" && !ua.includes("win")) {
       try {
         await navigator.clipboard.writeText(getOsHint("zip"))
@@ -73,7 +73,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
         {t.deps.intro}{" "}
         {missing.map((item) => (
           <span key={item.name} className="deps-warning-item">
-            <strong>{item.label}</strong> — {item.feature}
+            <strong>{item.label}</strong>: {item.feature}
             {item.name === "zip" && (
               <span style={{ color: "#bb9900", fontSize: 10 }}>
                 {" "}({getOsHint("zip")})

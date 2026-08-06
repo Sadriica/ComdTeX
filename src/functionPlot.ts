@@ -2,7 +2,7 @@
  * Function Plotter for ComdTeX.
  *
  * Parses :::plot blocks and renders static SVG plots.
- * Uses a recursive descent parser — NO eval() or new Function().
+ * Uses a recursive descent parser: NO eval() or new Function().
  */
 
 // ── AST ───────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ function tokenize(src: string): Tok[] {
         if (i < src.length && /[0-9]/.test(src[i])) {
           while (i < src.length && /[0-9]/.test(src[i])) num += src[i++]
         } else {
-          i = saved // backtrack — 'e' was an identifier
+          i = saved // backtrack: 'e' was an identifier
           num = num.slice(0, -1)
         }
       }
@@ -127,7 +127,7 @@ class Parser {
     return this.parsePow()
   }
 
-  // powExpr = atomExpr ('^' unaryExpr)?   — right-associative
+  // powExpr = atomExpr ('^' unaryExpr)?   (right-associative)
   private parsePow(): Expr {
     const base = this.parseAtom()
     if (this.peek().kind === "OP" && this.peek().value === "^") {
@@ -416,7 +416,7 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
     const sx = toSvgX(xv, xMin, xMax, plotLeft, plotWidth)
     if (sx < plotLeft - 0.5 || sx > plotLeft + plotWidth + 0.5) continue
     svgLines.push(`<line x1="${sx.toFixed(1)}" y1="${plotTop}" x2="${sx.toFixed(1)}" y2="${plotTop + plotHeight}" stroke="#333" stroke-width="0.5"/>`)
-    // Tick label — format nicely
+    // Tick label: format nicely
     const label = Math.abs(xv) < 1e-9 ? "0" : (Math.abs(xv) >= 1000 || Math.abs(xv) < 0.01) ? xv.toExponential(1) : parseFloat(xv.toPrecision(4)).toString()
     svgLines.push(`<text x="${sx.toFixed(1)}" y="${(plotTop + plotHeight + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#888">${escHtml(label)}</text>`)
   }

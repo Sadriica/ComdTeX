@@ -2,7 +2,7 @@
  * Minimal single-range diff between two versions of a document.
  *
  * `editor.setValue()` replaces the whole buffer, which wipes the undo stack,
- * every collapsed region, all decorations and the selection — the user sees
+ * every collapsed region, all decorations and the selection: the user sees
  * text "move on its own" when an external change lands while they are typing.
  * Applying the smallest edit that turns `oldText` into `newText` keeps all of
  * that intact, and for the common case (one paragraph changed by a vault-wide
@@ -30,7 +30,7 @@ export function minimalEdit(oldText: string, newText: string): TextEdit | null {
   let prefix = 0
   while (prefix < maxPrefix && oldText.charCodeAt(prefix) === newText.charCodeAt(prefix)) prefix++
 
-  // Don't let the suffix scan cross into the prefix — the two must not overlap,
+  // Don't let the suffix scan cross into the prefix; the two must not overlap,
   // or the resulting range would be inverted.
   const maxSuffix = maxPrefix - prefix
   let suffix = 0
@@ -63,7 +63,7 @@ export interface LineDiffSummary {
  * How far apart two versions of a document are, in whole lines.
  *
  * Shown in the "changed on disk" prompt so the choice between reloading and
- * keeping your version is informed — "3 lines differ" and "400 lines differ"
+ * keeping your version is informed: "3 lines differ" and "400 lines differ"
  * call for very different decisions, and the dialog previously said neither.
  *
  * Computed by trimming the common head and tail, which is exact for the common

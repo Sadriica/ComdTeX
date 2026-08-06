@@ -14,7 +14,7 @@
 //
 // To bundle them, drop them into `public/wasm-tex/` (the Vite static
 // directory). The current source tree intentionally does NOT ship the
-// binaries — they are large and license-tracked separately.
+// binaries; they are large and license-tracked separately.
 //
 // Public protocol (kept stable so the worker can be swapped):
 //   in : { type: "init",    engineUrl?: string }
@@ -36,7 +36,7 @@ export interface WasmTexResult {
   status: WasmTexStatus
   /**
    * Uncompressed SyncTeX text, when the engine produced one (it currently does
-   * not — the bundled SwiftLaTeX pdftex WASM is built without SyncTeX support;
+   * not: the bundled SwiftLaTeX pdftex WASM is built without SyncTeX support;
    * see synctex.ts / docs). `null` means "no synctex data available" and
    * callers should fall back to their heading-based source shim.
    */
@@ -55,7 +55,7 @@ export interface WasmTexCompileOptions {
    * engine before compiling. Omit to keep the engine's current endpoint.
    */
   texliveUrl?: string
-  /** Abort signal — terminates the worker and rejects with status "error". */
+  /** Abort signal: terminates the worker and rejects with status "error". */
   signal?: AbortSignal
 }
 
@@ -259,7 +259,7 @@ export function getSharedWasmTexEngine(opts: WasmTexInitOptions = {}): {
   ready: Promise<void>
 } {
   if (!shared) shared = new WasmTexEngine()
-  // init() is idempotent — returns the cached promise on subsequent calls.
+  // init() is idempotent: returns the cached promise on subsequent calls.
   const ready = shared.init(opts)
   return { engine: shared, ready }
 }

@@ -73,7 +73,7 @@ function parseInlineArray(s: string): string[] {
 }
 
 /** Parse a flat YAML document. Handles: strings, quoted strings, inline arrays,
- *  bullet lists, and block scalars (| literal, > folded — collected as a single string). */
+ *  bullet lists, and block scalars (| literal, > folded, collected as a single string). */
 function parseYaml(text: string): FrontmatterData {
   const data: FrontmatterData = {}
   const lines = text.split("\n")
@@ -265,7 +265,7 @@ export function extractDetailedTags(text: string): DetailedTag[] {
     }
   }
 
-  // Inline #tags — not inside code blocks, not inside math
+  // Inline #tags, not inside code blocks, not inside math
   const content = parsed ? parsed.content : text
   // Strip fenced code blocks and inline code first
   const clean = content

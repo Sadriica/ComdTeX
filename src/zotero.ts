@@ -1,7 +1,7 @@
 /**
  * On-demand Zotero → BibTeX import (local HTTP API).
  *
- * IMPORTANT: every network call in this module is *opt-in / on-demand* — it
+ * IMPORTANT: every network call in this module is *opt-in / on-demand*: it
  * only runs when the user explicitly searches / imports from the Citation
  * Manager's "Import from Zotero" UI. ComdTeX makes no background or automatic
  * requests; the app stays fully offline unless the user triggers one here.
@@ -10,7 +10,7 @@
  * Better BibTeX (BBT) plugin installed. Both expose a local HTTP server on
  * port 23119. Nothing here works unless Zotero is open.
  *
- * Strategy (defensive — tries the most reliable path first):
+ * Strategy (defensive; tries the most reliable path first):
  *   1) Better BibTeX JSON-RPC at /better-bibtex/json-rpc
  *        - method `item.search` → returns matching items
  *        - method `item.export` → returns BibTeX text for given citekeys
@@ -148,7 +148,7 @@ export async function fetchZoteroBibtex(itemKeysOrQuery: string[] | string): Pro
   }
   if (citekeys.length === 0) return ""
 
-  // 1) Better BibTeX item.export — try the BBT translator, then plain BibTeX.
+  // 1) Better BibTeX item.export: try the BBT translator, then plain BibTeX.
   for (const translator of ["Better BibTeX", "BibTeX"]) {
     try {
       const out = await jsonRpc<unknown>("item.export", [citekeys, translator])
@@ -169,7 +169,7 @@ export async function fetchZoteroBibtex(itemKeysOrQuery: string[] | string): Pro
       if (text) return text
     }
   } catch {
-    // ignore — reported below
+    // ignore: reported below
   }
 
   throw new Error(ZOTERO_UNAVAILABLE)
@@ -179,7 +179,7 @@ export async function fetchZoteroBibtex(itemKeysOrQuery: string[] | string): Pro
 function normalizeExport(out: unknown): string {
   if (typeof out === "string") return out.trim()
   if (Array.isArray(out)) {
-    // [contentType, body] tuple — body is the second element.
+    // [contentType, body] tuple; body is the second element.
     const body = out[1] ?? out[0]
     return typeof body === "string" ? body.trim() : ""
   }

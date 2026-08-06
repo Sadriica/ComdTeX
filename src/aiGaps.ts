@@ -1,19 +1,19 @@
 /**
- * "Gaps" — explicit placeholders the author leaves for the AI to fill in later.
+ * "Gaps": explicit placeholders the author leaves for the AI to fill in later.
  *
  * The workflow this serves: writing class notes live, you know a definition or a
  * proof belongs somewhere but you do not want to stop and write it. You leave a
  * marker, keep going, and fill the holes afterwards.
  *
  * Two forms:
- *   {{?}}                  — fill in what belongs here
- *   {{? una pista}}        — same, with a hint for the model
+ *   {{?}}                  : fill in what belongs here
+ *   {{? una pista}}        : same, with a hint for the model
  *
  * Deliberately explicit rather than ghost-text autocompletion: the author says
  * where the AI may write, and nothing is generated until they ask. It also keeps
  * Tab free for shorthand expansion, which an inline-suggestion UI would fight.
  *
- * Pure — finding and replacing gaps involves no I/O and no React, so the
+ * Pure: finding and replacing gaps involves no I/O and no React, so the
  * behaviour is fully testable without a provider.
  */
 
@@ -62,7 +62,7 @@ export function gapAtOffset(text: string, offset: number): Gap | null {
  * Context handed to the model for one gap: the surrounding block, with the gap
  * itself marked so the model knows exactly what to replace.
  *
- * Bounded to `radius` lines each way — sending the whole document would be slow,
+ * Bounded to `radius` lines each way; sending the whole document would be slow,
  * expensive, and no more accurate for a local hole.
  */
 export function gapContext(text: string, gap: Gap, radius = 12): string {

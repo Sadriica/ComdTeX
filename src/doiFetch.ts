@@ -1,7 +1,7 @@
 /**
  * On-demand DOI / arXiv → BibTeX fetcher.
  *
- * IMPORTANT: every network call in this module is *opt-in / on-demand* — it
+ * IMPORTANT: every network call in this module is *opt-in / on-demand*: it
  * only runs when the user explicitly clicks "Add by DOI" in the Citation
  * Manager. ComdTeX makes no background or automatic network requests; the app
  * stays fully offline unless the user triggers a fetch here.

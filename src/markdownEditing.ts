@@ -3,7 +3,7 @@
  *
  * These live outside `monacoSetup.ts` so they can be unit-tested without a
  * Monaco instance. `monacoSetup.ts` wires them to the editor's Enter key, and
- * the "normalise table" command reuses the same table primitives — one parser,
+ * the "normalise table" command reuses the same table primitives: one parser,
  * so the linter, the command and Enter can never disagree about what a row is.
  *
  * Monaco's declarative `onEnterRules` are deliberately NOT used for this: they
@@ -21,7 +21,7 @@ const BLOCKQUOTE_RE = /^([ \t]*)((?:>[ \t]?)+)(.*)$/
 /** A line that looks like a pipe-table row: starts with `|` and holds another `|`. */
 const TABLE_ROW_RE = /^[ \t]*\|.*\|[ \t]*$/
 
-/** A GFM alignment row: `|---|:--:|` — cells are only dashes/colons. */
+/** A GFM alignment row: `|---|:--:|`; cells are only dashes/colons. */
 const TABLE_DELIM_CELL_RE = /^[ \t]*:?-+:?[ \t]*$/
 
 export type EnterOverride =
@@ -32,7 +32,7 @@ export type EnterOverride =
 
 /**
  * Split a pipe-table row into its cells, dropping the leading/trailing pipe.
- * Escaped pipes (`\|`) stay inside their cell — they are literal content.
+ * Escaped pipes (`\|`) stay inside their cell: they are literal content.
  */
 export function splitTableRow(line: string): string[] {
   const trimmed = line.trim()
@@ -72,7 +72,7 @@ function outdent(indent: string, tabSize: number): string {
  * What Enter should do on `lineText`. Returns null when Monaco's default Enter
  * is correct (ordinary prose), so the caller can simply not intervene.
  *
- * Only call this with the cursor at the end of the line — splitting a row or a
+ * Only call this with the cursor at the end of the line; splitting a row or a
  * list marker in the middle must keep Monaco's normal Enter.
  */
 export function resolveEnterOverride(lineText: string, tabSize = 2): EnterOverride | null {
@@ -122,7 +122,7 @@ export function resolveEnterOverride(lineText: string, tabSize = 2): EnterOverri
 
 /**
  * Pad every row of a pipe table to the header's column count and re-align the
- * pipes. Rows with *more* cells than the header keep them — silently dropping a
+ * pipes. Rows with *more* cells than the header keep them; silently dropping a
  * user's content would be worse than a ragged table.
  *
  * `lines` must be the contiguous table block (header, delimiter, body).
@@ -211,7 +211,7 @@ export interface DocumentSection {
  * Split a document into the sections at `level`, plus whatever precedes the
  * first one. Used by the "split into files" command for long per-subject notes.
  *
- * Content before the first heading of that level is returned as `preamble` —
+ * Content before the first heading of that level is returned as `preamble`:
  * it belongs to the original document (frontmatter, an intro) and must not be
  * silently attached to the first section or dropped.
  */
@@ -281,7 +281,7 @@ export interface FoldRange {
 /**
  * Foldable regions of a markdown document: `:::` blocks and heading sections.
  *
- * Heading folding is what makes a single long subject file workable — a section
+ * Heading folding is what makes a single long subject file workable: a section
  * runs from its heading to just before the next heading of the same or higher
  * level, so collapsing "Clase 3" hides that class and nothing else.
  *
@@ -343,7 +343,7 @@ export function computeFoldRanges(lines: string[]): FoldRange[] {
 /**
  * Rows whose cell count differs from the header's. markdown-it silently drops
  * the extra cells (or leaves the row short), so the preview quietly disagrees
- * with the source — worth a warning.
+ * with the source: worth a warning.
  *
  * Returns line indices relative to `lines`.
  */

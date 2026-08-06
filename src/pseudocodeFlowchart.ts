@@ -159,7 +159,7 @@ function generate(ast: ASTNode[]): string {
   }
 
   // Returns new open tails after processing all nodes. `firstLabel`, when given,
-  // labels the edges from the incoming `tails` into the FIRST node only — used to
+  // labels the edges from the incoming `tails` into the FIRST node only; used to
   // put "Yes"/"No" on the branches leaving an IF condition diamond.
   function gen(nodes: ASTNode[], tails: string[], firstLabel?: string): string[] {
     let first = true
@@ -242,7 +242,7 @@ function generate(ast: ASTNode[]): string {
     return tails
   }
 
-  // Drop a trailing structural `END` (closing an ALGORITHM/FUNCTION/PROCEDURE) —
+  // Drop a trailing structural `END` (closing an ALGORITHM/FUNCTION/PROCEDURE):
   // it would render as a stadium node disconnected from the flow because
   // genOne returns no tails for terminals. The closing token has no semantic
   // role in the diagram.

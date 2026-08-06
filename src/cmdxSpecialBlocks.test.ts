@@ -4,12 +4,12 @@ import { toStorage, toCmdx } from "./cmdxFormat"
 // Regression: ComdTeX-only blocks (truth tables, graphs, plots, flowcharts,
 // pseudocode, commutative diagrams, code) used to be rewritten to a generic
 // `> [!note] Type: title` callout on every save, which was lossy and
-// one-directional — reopening showed a "Nota (Type: …)" box with raw text and
+// one-directional: reopening showed a "Nota (Type: …)" box with raw text and
 // no reload could recover the original block. They must now round-trip verbatim.
 
 const SPECIAL_CASES: { name: string; src: string }[] = [
   {
-    name: "truth (title contains a colon — the reported case)",
+    name: "truth (title contains a colon, the reported case)",
     src: ":::truth[Equivalencia: contrapositiva]\n(p -> q) <-> (~q -> ~p)\n:::",
   },
   { name: "graph", src: ":::graph[Camino mínimo]\nA -- B : 4\nA -- C : 2\n:::" },
@@ -43,7 +43,7 @@ describe("special-block CMDX round-trip (lossless)", () => {
   // Regression: `:::code <lang>` (a code block WITH a language) was invisible to
   // the special-block mask because CMDX_ENV_START_RE rejects the trailing token,
   // so a shorthand token in the body (`lim`, `frac`, `abs`, `sqrt`, `table`, …)
-  // got expanded — corrupting the code listing on disk. Must be verbatim.
+  // got expanded, corrupting the code listing on disk. Must be verbatim.
   it("does not shorthand-expand a :::code block that has a language (tex)", () => {
     const src = ":::code python\nreturn abs(x) + sqrt(y)\n:::"
     const onDisk = toStorage(src, "tex")

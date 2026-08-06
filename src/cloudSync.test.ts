@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { isConflictFile, findConflicts, isPathInside } from "./cloudSync"
 import type { FileNode } from "./types"
 
-describe("isConflictFile — Dropbox", () => {
+describe("isConflictFile, Dropbox", () => {
   it("matches plain conflicted-copy pattern", () => {
     const m = isConflictFile("note (conflicted copy 2026-04-29).md")
     expect(m.isConflict).toBe(true)
@@ -28,7 +28,7 @@ describe("isConflictFile — Dropbox", () => {
   })
 })
 
-describe("isConflictFile — OneDrive heuristic", () => {
+describe("isConflictFile, OneDrive heuristic", () => {
   it("matches all-caps machine-name suffix (only with onedrive hint)", () => {
     const m = isConflictFile("note-DESKTOP123.md", "onedrive")
     expect(m.isConflict).toBe(true)

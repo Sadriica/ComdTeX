@@ -1,6 +1,6 @@
 // Extracted from App.tsx: the Command Palette entries factory. Declarative
-// data built from handlers + translations — moved verbatim (no behavior
-// change) to keep App.tsx smaller. See CLAUDE.md — App.tsx is a documented
+// data built from handlers + translations: moved verbatim (no behavior
+// change) to keep App.tsx smaller. See CLAUDE.md: App.tsx is a documented
 // refactor target.
 import type { RefObject } from "react"
 import type { PaletteCommand } from "./CommandPalette"
@@ -56,6 +56,7 @@ export interface PaletteCommandsCtx {
   setHelpOpen: (open: boolean) => void
   goBack: () => void
   goForward: () => void
+  handleShowInPdf: () => void
 }
 
 export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] {
@@ -67,6 +68,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros, handleOpenBib,
     setSettingsOpen, checkForUpdate, setUpdateInfo, handleAddCommentAtCursor,
     handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
+    handleShowInPdf,
   } = ctx
 
   const snippetCommands: PaletteCommand[] = COMPLETIONS.map((completion, index) => {
@@ -235,6 +237,8 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     { id: "exportProjectTex", label: t.palette.exportProjectTex, category: "Exportar", action: exportActions.handleExportProjectTex },
     { id: "compileLatexPdf", label: t.palette.compileLatexPdf, category: "Exportar", action: () => exportActions.handleCompileLatexPdf({ forceWasm: false }) },
     { id: "compileWasmPdf",  label: t.palette.compileWasmPdf,  category: "Exportar", action: () => exportActions.handleCompileLatexPdf({ forceWasm: true }) },
+    { id: "showInPdf",       label: t.palette.showInPdf,       category: "Exportar", action: handleShowInPdf },
+    { id: "compileTypstFilePdf", label: t.palette.compileTypstFilePdf, category: "Exportar", action: exportActions.handleCompileTypstFilePdf },
     { id: "exportPdf",  label: t.palette.exportPdf,         category: "Exportar", action: exportActions.handleExportPdf },
     { id: "exportHtml", label: t.palette.exportHtml,        category: "Exportar", action: exportActions.handleExportHtml },
     { id: "exportDocx", label: t.palette.exportDocx,        category: "Exportar", action: exportActions.handleExportDocx },

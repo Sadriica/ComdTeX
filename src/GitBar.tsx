@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { Command } from "@tauri-apps/plugin-shell"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
+import { openUrl } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
 import { showToast } from "./toastService"
 import { pathBasename, pathDirname } from "./pathUtils"
+import { collabState, defaultSaveMessage, unmergedFiles } from "./collabGuide"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -188,7 +190,7 @@ function BranchDropdown({ vaultPath, currentBranch, onClose, onRefresh }: {
             {b === currentBranch ? "✓ " : "  "}{b}
           </button>
         ))}
-        {branches.length === 0 && <div className="git-branch-empty">—</div>}
+        {branches.length === 0 && <div className="git-branch-empty">N/A</div>}
       </div>
       <div className="git-branch-new">
         <input className="git-branch-input" placeholder={g.newBranchPlaceholder}
@@ -335,7 +337,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
           {editing
             ? <input className="git-branch-input" value={name} onChange={e => setName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && save()} />
-            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{name || <em style={{color:"#555"}}>—</em>}</span>
+            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{name || <em style={{color:"#555"}}>N/A</em>}</span>
           }
         </div>
         <div className="git-config-row">
@@ -343,7 +345,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
           {editing
             ? <input className="git-branch-input" value={email} onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && save()} />
-            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{email || <em style={{color:"#555"}}>—</em>}</span>
+            : <span className="git-config-value" onClick={() => { load(); setEditing(true) }}>{email || <em style={{color:"#555"}}>N/A</em>}</span>
           }
         </div>
         {editing && (
@@ -401,6 +403,178 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
               </div>
             ))
         }
+      </div>
+    </GitSection>
+  )
+}
+
+// ── Guided collaboration ──────────────────────────────────────────────────────
+//
+// Plain language over the same git the panel below already speaks: share the
+// vault, bring changes, send changes, resolve "mine vs theirs". State logic
+// lives in collabGuide.ts (pure, tested); this component only runs commands.
+
+function CollabSection({ vaultPath, status, onRefresh }: {
+  vaultPath: string; status: GitStatus; onRefresh: () => void
+}) {
+  const g = useT().git
+  const [hasRemote, setHasRemote] = useState<boolean | null>(null)
+  const [remoteUrl, setRemoteUrl] = useState("")
+  const [saveMsg, setSaveMsg] = useState("")
+  const [busy, setBusy] = useState(false)
+  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+
+  useEffect(() => {
+    git("remote").then(r => setHasRemote(r.code === 0 && r.stdout.trim().length > 0)).catch(() => setHasRemote(false))
+  }, [git, status])
+
+  const run = useCallback(async (fn: () => Promise<void>) => {
+    setBusy(true)
+    try { await fn() } catch (e) { showToast(g.collabError(String(e)), "error", 6000) }
+    finally { setBusy(false); onRefresh() }
+  }, [g, onRefresh])
+
+  const connect = useCallback(() => run(async () => {
+    const url = remoteUrl.trim()
+    if (!url) return
+    const add = await git("remote", "add", "origin", url)
+    if (add.code !== 0) throw new Error(add.stderr || add.stdout)
+    const branch = status.branch || "main"
+    const push = await git("push", "-u", "origin", branch)
+    if (push.code !== 0) {
+      showToast(g.collabConnectError(push.stderr || push.stdout), "error", 6000)
+    } else {
+      showToast(g.collabConnected, "success")
+    }
+    setRemoteUrl("")
+  }), [run, git, remoteUrl, status.branch, g])
+
+  const bring = useCallback(() => run(async () => {
+    const r = await git("pull", "--no-rebase")
+    // A conflicted pull exits non-zero but leaves the merge in progress; the
+    // refresh will surface the conflict screen, which is the guidance itself.
+    if (r.code === 0) showToast(g.collabBrought, "success")
+  }), [run, git, g])
+
+  const send = useCallback(() => run(async () => {
+    const r = await git("push")
+    if (r.code !== 0) {
+      const text = `${r.stderr}\n${r.stdout}`
+      if (/rejected|non-fast-forward|fetch first/i.test(text)) {
+        showToast(g.collabPushRejected, "info", 6000)
+        return
+      }
+      throw new Error(r.stderr || r.stdout)
+    }
+    showToast(g.collabSent, "success")
+  }), [run, git, g])
+
+  const saveAndSend = useCallback(() => run(async () => {
+    const add = await git("add", "-A")
+    if (add.code !== 0) throw new Error(add.stderr)
+    const msg = saveMsg.trim() || defaultSaveMessage(new Date())
+    const commit = await git("commit", "-m", msg)
+    if (commit.code !== 0) throw new Error(commit.stderr || commit.stdout)
+    setSaveMsg("")
+    const push = await git("push")
+    if (push.code !== 0) {
+      const text = `${push.stderr}\n${push.stdout}`
+      if (/rejected|non-fast-forward|fetch first|no configured push destination|No configured push/i.test(text)) {
+        showToast(g.collabPushRejected, "info", 6000)
+        return
+      }
+      throw new Error(push.stderr || push.stdout)
+    }
+    showToast(g.collabSent, "success")
+  }), [run, git, saveMsg, g])
+
+  const keep = useCallback((path: string, side: "ours" | "theirs") => run(async () => {
+    const co = await git("checkout", `--${side}`, "--", path)
+    if (co.code !== 0) throw new Error(co.stderr)
+    const add = await git("add", "--", path)
+    if (add.code !== 0) throw new Error(add.stderr)
+    showToast(g.collabResolved(path), "success", 2000)
+  }), [run, git, g])
+
+  const finishMerge = useCallback(() => run(async () => {
+    const r = await git("commit", "--no-edit")
+    if (r.code !== 0) throw new Error(r.stderr || r.stdout)
+    showToast(g.collabMergeDone, "success", 4000)
+  }), [run, git, g])
+
+  if (hasRemote === null) return null
+  const state = collabState(status, hasRemote)
+  const conflicts = unmergedFiles(status)
+
+  return (
+    <GitSection title={g.collabTitle} defaultOpen={state !== "synced"}>
+      <div className="git-collab-body">
+        {state === "no-remote" && (
+          <>
+            <div className="git-collab-msg">{g.collabNoRemoteIntro}</div>
+            <button className="git-collab-btn" disabled={busy}
+              onClick={() => { openUrl("https://github.com/new").catch(() => {}) }}>
+              {g.collabCreateRepo} ↗
+            </button>
+            <div className="git-collab-connect">
+              <input className="git-branch-input" placeholder={g.collabPasteUrl}
+                value={remoteUrl} onChange={e => setRemoteUrl(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && connect()} />
+              <button className="git-collab-btn" disabled={busy || !remoteUrl.trim()} onClick={connect}>
+                {g.collabConnect}
+              </button>
+            </div>
+          </>
+        )}
+
+        {state === "conflicted" && (
+          <>
+            <div className="git-collab-msg">{g.collabConflictIntro}</div>
+            {conflicts.map(f => (
+              <div key={f.path} className="git-collab-conflict">
+                <span className="git-file-name" title={f.path}>{pathBasename(f.path) || f.path}</span>
+                <button className="git-collab-btn" disabled={busy} onClick={() => keep(f.path, "ours")}>{g.collabKeepMine}</button>
+                <button className="git-collab-btn" disabled={busy} onClick={() => keep(f.path, "theirs")}>{g.collabKeepTheirs}</button>
+              </div>
+            ))}
+            {conflicts.length === 0 && (
+              <button className="git-collab-btn git-collab-primary" disabled={busy} onClick={finishMerge}>
+                {g.collabFinishMerge}
+              </button>
+            )}
+          </>
+        )}
+
+        {state === "dirty" && (
+          <>
+            <div className="git-collab-msg">{g.collabDirtyMsg}</div>
+            <input className="git-branch-input" placeholder={g.collabSaveMsgPlaceholder}
+              value={saveMsg} onChange={e => setSaveMsg(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveAndSend()} />
+            <div className="git-collab-actions">
+              <button className="git-collab-btn git-collab-primary" disabled={busy} onClick={saveAndSend}>{g.collabSaveAndSend}</button>
+              <button className="git-collab-btn" disabled={busy} onClick={bring}>{g.collabBring}</button>
+            </div>
+          </>
+        )}
+
+        {(state === "behind" || state === "ahead" || state === "synced") && (
+          <>
+            <div className="git-collab-msg">
+              {state === "behind" ? g.collabBehindMsg(status.behind)
+                : state === "ahead" ? g.collabAheadMsg(status.ahead)
+                : g.collabSyncedMsg}
+            </div>
+            <div className="git-collab-actions">
+              <button className={`git-collab-btn${state === "behind" ? " git-collab-primary" : ""}`} disabled={busy} onClick={bring}>
+                {g.collabBring}{status.behind > 0 ? ` (${status.behind})` : ""}
+              </button>
+              <button className={`git-collab-btn${state === "ahead" ? " git-collab-primary" : ""}`} disabled={busy} onClick={send}>
+                {g.collabSend}{status.ahead > 0 ? ` (${status.ahead})` : ""}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </GitSection>
   )
@@ -467,6 +641,9 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
 
   return (
     <div className="git-panel-body">
+
+      {/* Guided collaboration (plain language) */}
+      <CollabSection vaultPath={vaultPath} status={status} onRefresh={onRefresh} />
 
       {/* Status summary */}
       <div className="git-status-summary">
@@ -646,7 +823,7 @@ export default function GitBar({ vaultPath }: GitBarProps) {
   }
 
   const total = status ? status.staged.length + status.unstaged.length + status.untracked.length : 0
-  const branchLabel = loading ? "…" : gitMissing ? "git?" : notRepo ? "no repo" : (status?.branch || "—")
+  const branchLabel = loading ? "…" : gitMissing ? "git?" : notRepo ? "no repo" : (status?.branch || "N/A")
 
   return (
     <div className="menu-item git-menu-item" ref={wrapRef}>

@@ -54,8 +54,8 @@ describe("parseKeepMarks", () => {
   })
 })
 
-describe("parseKeepMarks — edge cases (re-derived for the symmetric `^^`)", () => {
-  // Decision 1 — THE important one for `^^`. A single caret is ordinary prose
+describe("parseKeepMarks, edge cases (re-derived for the symmetric `^^`)", () => {
+  // Decision 1: THE important one for `^^`. A single caret is ordinary prose
   // ("2^10", "x^n"), so the inner text must be allowed to contain one.
   // Forbidding it (`[^^\n]*`) silently drops these marks.
   it("matches a mark whose text contains a caret", () => {
@@ -250,7 +250,7 @@ describe("keep marks are never parsed inside code", () => {
 // `^myid` at the end of a line is existing ComdTeX block-id syntax, and
 // `processBlockIds` runs BEFORE `stripKeepMarks` in renderMarkdown. The two
 // must not eat each other. `BLOCK_ID_TRAILING_RE` is /\s*\^([\w-]+)\s*$/, whose
-// `[\w-]+` cannot match a `^` — that is what keeps them apart.
+// `[\w-]+` cannot match a `^`, which is what keeps them apart.
 describe("keep marks and `^blockid` coexist", () => {
   it("does not mistake a line-ending keep mark for a block id", () => {
     const line = "Un texto ^^importante^^"
@@ -323,7 +323,7 @@ describe("stripKeepMarks", () => {
 
 // ── Hazard: round-trip through save ─────────────────────────────────────────
 // Keep marks are inline prose. The storage conversions in cmdxFormat.ts are
-// line/block-oriented (`:::env` ↔ callouts) plus `name(` shorthand expansion —
+// line/block-oriented (`:::env` ↔ callouts) plus `name(` shorthand expansion;
 // none of them can see `^^…^^`. So a mark needs NO maskSpecialBlocks handling;
 // these tests are the proof, and the regression guard if that ever changes.
 describe("round-trip through save (cmdxFormat)", () => {
@@ -534,9 +534,9 @@ describe("formatGlossary", () => {
     const md = formatGlossary(entries, { title: "Glosario", uncategorized: "Sin categoría" })
     expect(md).toContain("# Glosario")
     expect(md).toContain("## def")
-    expect(md).toContain("- grupo — `a.md:1`")
+    expect(md).toContain("- grupo (`a.md:1`)")
     expect(md).toContain("## Sin categoría")
-    expect(md).toContain("- suelto — `a.md:1`")
+    expect(md).toContain("- suelto (`a.md:1`)")
     expect(md).not.toContain(UNCATEGORIZED)
   })
 })

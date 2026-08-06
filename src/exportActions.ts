@@ -1,5 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog"
-import { copyFile, exists, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
+import { copyFile, exists, readFile, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { Command } from "@tauri-apps/plugin-shell"
 import { extractAnkiCards, exportAnkiTsv } from "./ankiExport"
@@ -12,8 +12,17 @@ import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
+import { buildTexLineMap } from "./texLineMap"
 import { resolveTransclusions } from "./transclusion"
 import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
+
+/** SyncTeX bundle for the last successful local compile. */
+export interface SyncTexBundle {
+  /** Uncompressed .synctex text, ready for parseSyncTex. */
+  synctex: string
+  /** tex line -> editor source line (see texLineMap.ts). */
+  texToSrc: number[]
+}
 
 export interface ActiveDocument {
   path: string
@@ -90,6 +99,51 @@ export interface ExportActionsContext {
    * surface a status indicator.
    */
   onWasmStatus?: (state: "idle" | "initializing" | "compiling") => void
+  /**
+   * Notified with SyncTeX data after a successful LOCAL compile (the WASM
+   * engine emits none, so its successes report null: stale data must never
+   * outlive the PDF it described).
+   */
+  onSyncTex?: (bundle: SyncTexBundle | null) => void
+}
+
+/** Gunzip via the browser's DecompressionStream; null when unsupported. */
+async function gunzipToText(bytes: Uint8Array): Promise<string | null> {
+  try {
+    if (typeof DecompressionStream === "undefined") return null
+    const stream = new Blob([bytes as BlobPart])
+      .stream()
+      .pipeThrough(new DecompressionStream("gzip"))
+    return await new Response(stream).text()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Read the .synctex(.gz) an engine left beside its output and turn it into a
+ * bundle mapped back to the editor's source. Best-effort: any failure is null.
+ */
+export async function collectSyncTex(
+  dir: string,
+  jobname: string,
+  sourceContent: string,
+  tex: string,
+): Promise<SyncTexBundle | null> {
+  try {
+    const gzPath = `${dir}/${jobname}.synctex.gz`
+    const plainPath = `${dir}/${jobname}.synctex`
+    let text: string | null = null
+    if (await exists(gzPath)) {
+      text = await gunzipToText(await readFile(gzPath))
+    } else if (await exists(plainPath)) {
+      text = await readTextFile(plainPath)
+    }
+    if (!text) return null
+    return { synctex: text, texToSrc: buildTexLineMap(sourceContent, tex) }
+  } catch {
+    return null
+  }
 }
 
 async function readMacros(vaultPath: string | null): Promise<string> {
@@ -238,7 +292,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   })
   if (!outPath) return
 
-  // ── Step 1 — try the bundled WASM engine if enabled ─────────────────────
+  // ── Step 1: try the bundled WASM engine if enabled ─────────────────────
   // WASM diagnostics are HELD here, not shown yet: a local engine may still
   // succeed (Step 2), and popping an error modal over a successful export
   // reads as failure. The modal only appears if every engine failed.
@@ -248,6 +302,10 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     const wasm = await tryCompileWithWasm(tex, ctx)
     if (wasm && wasm.status === "ok" && wasm.pdf) {
       await writeFile(outPath, wasm.pdf)
+      // The WASM engine ships without synctex output: clear any bundle from
+      // a previous local compile so clicks fall back to the heading shim
+      // instead of landing via a map that describes an older PDF.
+      ctx.onSyncTex?.(null)
       ctx.onPdfSaved?.(outPath)
       await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
       ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
@@ -261,16 +319,19 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     }
   }
 
-  // ── Step 2 — fall back to local LaTeX toolchain ─────────────────────────
+  // ── Step 2: fall back to local LaTeX toolchain ─────────────────────────
   const dir = pathDirname(currentFile.path) || "."
   const base = currentFile.name.replace(/\.[^.]+$/, "")
   const tmpTex = `${dir}/${base}.comdtex-compile.tex`
   const tmpPdf = `${dir}/${base}.comdtex-compile.pdf`
   await writeTextFile(tmpTex, tex)
+  const jobname = `${base}.comdtex-compile`
+  // -synctex=1 makes the engine emit <jobname>.synctex.gz beside the PDF,
+  // which is what powers click-to-source in the preview.
   const attempts: Array<[string, string[]]> = [
-    ["tectonic", [tmpTex, "--outdir", dir]],
-    ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
-    ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", `-jobname=${base}.comdtex-compile`, tmpTex]],
+    ["tectonic", ["--synctex", tmpTex, "--outdir", dir]],
+    ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
+    ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
   ]
   let lastError = ""
   try {
@@ -279,6 +340,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         const result = await Command.create(cmdName, args, { cwd: dir }).execute()
         if (result.code === 0 && await exists(tmpPdf)) {
           await copyFile(tmpPdf, outPath)
+          ctx.onSyncTex?.(await collectSyncTex(dir, jobname, content, tex))
           ctx.onPdfSaved?.(outPath)
           await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
@@ -289,7 +351,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         lastError = err instanceof Error ? err.message : String(err)
       }
     }
-    // Every engine failed — NOW surface the held WASM diagnostics (they are
+    // Every engine failed: NOW surface the held WASM diagnostics (they are
     // usually the most readable), falling back to the local engines' stderr.
     if (ctx.onLatexError && wasmDiags.length > 0) {
       ctx.onLatexError(wasmDiags)
@@ -298,8 +360,10 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   } finally {
     await remove(tmpTex).catch(() => {})
     await remove(tmpPdf).catch(() => {})
-    await remove(`${dir}/${base}.comdtex-compile.aux`).catch(() => {})
-    await remove(`${dir}/${base}.comdtex-compile.log`).catch(() => {})
+    await remove(`${dir}/${jobname}.aux`).catch(() => {})
+    await remove(`${dir}/${jobname}.log`).catch(() => {})
+    await remove(`${dir}/${jobname}.synctex.gz`).catch(() => {})
+    await remove(`${dir}/${jobname}.synctex`).catch(() => {})
   }
 }
 
@@ -375,7 +439,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
       pandocArgs.push("--include-in-header", tempHdrPath)
     }
 
-    // Engine preference: tectonic first — it fetches missing packages on
+    // Engine preference: tectonic first; it fetches missing packages on
     // demand, so it survives the partial TeX installs that break xelatex/
     // pdflatex with "xcolor.sty not found"-style errors. Then XeLaTeX (full
     // Unicode), then pdflatex. The FIRST failure's stderr is kept for the
@@ -390,7 +454,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
         if (attempt.code === 0) { result = attempt; break }
         if (!firstFailure) firstFailure = attempt
       } catch {
-        // pandoc itself unavailable/denied — try the next engine anyway
+        // pandoc itself unavailable/denied: try the next engine anyway
       }
     }
     if (!result) result = firstFailure ?? { code: -1, stderr: "pandoc failed", stdout: "" }
@@ -491,7 +555,7 @@ export interface ImportActionsContext {
 
 // Map a source extension to an explicit pandoc input format. When a format is
 // not listed pandoc infers it from the extension, which works for docx/odt/epub
-// etc. — we only pin the ambiguous ones.
+// etc.; we only pin the ambiguous ones.
 const PANDOC_INPUT_FORMATS: Record<string, string> = {
   tex: "latex",
   htm: "html",
@@ -559,6 +623,7 @@ export async function importDocument(ctx: ImportActionsContext) {
 
 export interface TypstMessages {
   pandocMissing: string
+  typstMissing: string
   generating: string
   typstSuccess: string
   typstError: (err: string) => string
@@ -573,6 +638,44 @@ export interface TypstExportContext {
   messages: TypstMessages
   readEditorContent: () => string | null
   toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void
+  onPdfSaved?: (outPath: string) => void
+}
+
+/**
+ * Compile the OPEN .typ file itself with the local typst binary (no pandoc
+ * involved): Typst sources are first-class in the vault, and this is their
+ * native compile path. The editor buffer is written to a sibling temp file so
+ * unsaved changes compile too; relative imports and images still resolve
+ * because the temp lives in the same directory.
+ */
+export async function compileTypstFilePdf(ctx: TypstExportContext) {
+  const file = ctx.activeFile
+  const content = ctx.readEditorContent()
+  if (content === null || !file || !file.path.toLowerCase().endsWith(".typ")) return
+  if (ctx.deps && !ctx.deps.typst) {
+    ctx.toast(ctx.messages.typstMissing, "error", 6000)
+    return
+  }
+  const outPath = await save({
+    title: ctx.dialogTitle,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    defaultPath: `${pathDirname(file.path) || "."}/${file.name.replace(/\.[^.]+$/, ".pdf")}`,
+  })
+  if (!outPath) return
+  const dir = pathDirname(file.path) || "."
+  const tmpTyp = await pathJoin(dir, `${file.name.replace(/\.[^.]+$/, "")}.comdtex-typst.tmp.typ`)
+  try {
+    ctx.toast(ctx.messages.generating, "info")
+    await writeTextFile(tmpTyp, content)
+    const typst = await Command.create("typst", ["compile", "--root", dir, tmpTyp, outPath]).execute()
+    if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
+    ctx.toast(ctx.messages.typstPdfSuccess, "success")
+    ctx.onPdfSaved?.(outPath)
+  } catch (e) {
+    ctx.toast(ctx.messages.typstPdfError((e as Error).message), "error", 8000)
+  } finally {
+    await remove(tmpTyp).catch(() => {})
+  }
 }
 
 /**

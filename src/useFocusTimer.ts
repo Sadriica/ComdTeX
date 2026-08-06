@@ -34,7 +34,7 @@ export function wordCount(text: string): number {
 export interface FocusTimer {
   timer: PomodoroState
   session: WritingSession | null
-  /** `Date.now()` of the last tick — drives the live session stats clock. */
+  /** `Date.now()` of the last tick: drives the live session stats clock. */
   now: number
   startTimer: () => void
   pauseTimer: () => void
@@ -73,7 +73,7 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
   // Wall-clock timestamp of the previous tick, so the timer advances by REAL
   // elapsed seconds (background tabs get throttled; a fixed 1s decrement drifts).
   // Initialised to 0 and stamped with Date.now() inside the effect when the
-  // interval arms — never read before that, so the placeholder is never used.
+  // interval arms; never read before that, so the placeholder is never used.
   const lastTickRef = useRef(0)
   const activePathRef = useRef(activePath ?? null)
   useEffect(() => { activePathRef.current = activePath ?? null }, [activePath])
@@ -126,7 +126,7 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
     setTimer((prev) => start(prev))
     const ts = Date.now()
     // Begin (or keep) a writing session anchored to the current word count, and
-    // start counting ACTIVE seconds — paused time is reported separately.
+    // start counting ACTIVE seconds; paused time is reported separately.
     setSession((prev) => resumeSession(prev ?? startSession(ts, wordCount(contentRef.current)), ts))
   }, [])
 

@@ -16,7 +16,7 @@ interface TitleBarProps {
 export default function TitleBar({ filename, isDirty, onClose, onSettingsClick }: TitleBarProps) {
   const t = useT()
   const title = filename
-    ? `${isDirty ? "● " : ""}${filename} — ComdTeX`
+    ? `${isDirty ? "● " : ""}${filename} (ComdTeX)`
     : "ComdTeX"
 
   return (

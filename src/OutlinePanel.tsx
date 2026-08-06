@@ -140,8 +140,8 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
               // Clear the click guard shortly after, in case no click followed.
               setTimeout(() => { didDragRef.current = false }, 0)
             }}
-            title={canReorder ? `${t.outline.lineTitle(h.line)} — ${t.outline.dragToReorder}` : t.outline.lineTitle(h.line)}
-            aria-label={canReorder ? `${h.text} — ${t.outline.dragToReorder}` : h.text}
+            title={canReorder ? `${t.outline.lineTitle(h.line)} (${t.outline.dragToReorder})` : t.outline.lineTitle(h.line)}
+            aria-label={canReorder ? `${h.text} (${t.outline.dragToReorder})` : h.text}
           >
             <span className="outline-level">H{h.level}</span>
             <span className="outline-text">{h.text}</span>

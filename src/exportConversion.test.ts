@@ -23,14 +23,14 @@ describe("exportConversion", () => {
 describe("specialBlocksToPandoc", () => {
   it("degrades special blocks to captioned code fences", () => {
     const out = toPandocMarkdownInput(":::truth[Contrapositiva]\n(p → q) ↔ (¬q → ¬p)\n:::")
-    expect(out).toContain("**Truth Table — Contrapositiva**")
+    expect(out).toContain("**Truth Table: Contrapositiva**")
     expect(out).toContain("```\n(p → q) ↔ (¬q → ¬p)\n```")
     expect(out).not.toContain(":::truth")
   })
 
   it("omits excalidraw bodies but keeps the caption", () => {
     const out = toPandocMarkdownInput(':::excalidraw[Boceto]\n{"type":"excalidraw"}\n:::')
-    expect(out).toContain("**Excalidraw — Boceto**")
+    expect(out).toContain("**Excalidraw: Boceto**")
     expect(out).not.toContain('{"type":"excalidraw"}')
   })
 

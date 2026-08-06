@@ -35,7 +35,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
   const t = useT()
   const equations = useMemo(() => parseEquations(content), [content])
   const [query, setQuery] = useState("")
-  // Match on the number, the label and the rendered preview — a long document's
+  // Match on the number, the label and the rendered preview; a long document's
   // equation list is otherwise only navigable by scrolling.
   const visible = useMemo(
     () => equations.filter((eq) =>
@@ -73,7 +73,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
           key={eq.number}
           className="eq-list-item"
           onClick={() => jump(eq.line)}
-          title={`${t.equations.lineTitle(eq.line)}${eq.label ? ` — ${eq.label}` : ""}`}
+          title={`${t.equations.lineTitle(eq.line)}${eq.label ? `: ${eq.label}` : ""}`}
         >
           <span className="eq-list-num">({eq.number})</span>
           {eq.label && <span className="eq-list-label">#{eq.label}</span>}

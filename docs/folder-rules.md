@@ -107,7 +107,7 @@ El **alcance** es `Solo esta carpeta` (por defecto) o `Todo el vault`.
 
 La fecha de una nota para el calendario sale de su frontmatter `date:` o del
 prefijo del nombre (`2026-03-04-clase.md`). Las que no tienen fecha se agrupan al
-final bajo *Sin fecha* — no se descartan.
+final bajo *Sin fecha*, no se descartan.
 
 ### Cómo se regeneran
 
@@ -172,5 +172,5 @@ plantilla por defecto de las reglas de carpeta.
 ```
 
 El parser es tolerante: una entrada mal escrita se descarta y el resto se aplica
-igual. Un `file` con `/`, `\` o `..` se rechaza — un archivo generado no puede
+igual. Un `file` con `/`, `\` o `..` se rechaza: un archivo generado no puede
 escribir fuera de su propia carpeta.

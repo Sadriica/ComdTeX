@@ -36,7 +36,7 @@ test("the user's decision-cycle flowchart keeps its node labels after sanitizati
   expect(r.safeHasForeignObject).toBe(false)
 
   // Labels survive the real sanitizer. `texts` joins each <tspan>, so a
-  // wrapped label loses its spaces — match on the wrap-free fragments.
+  // wrapped label loses its spaces; match on the wrap-free fragments.
   const joined = r.texts.join(" | ")
   expect(joined).toContain("Descartar")
   expect(joined).toContain("Decisión")
@@ -53,7 +53,7 @@ test("special characters and accents survive without securityLevel loose", async
   const r = all.binarySearch as RenderReport
   const joined = r.texts.join(" | ")
 
-  // `↺` on loop-back edges — the char the old `securityLevel: "loose"` comment
+  // `↺` on loop-back edges: the char the old `securityLevel: "loose"` comment
   // claimed to require. It renders fine under Mermaid's default strict level.
   expect(joined).toContain("↺")
   expect(joined).toContain("WHILE lo ≤ hi")

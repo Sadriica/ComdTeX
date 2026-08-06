@@ -21,7 +21,7 @@ installed.
 
 The engine runs inside a **dedicated Web Worker**
 (`src/wasmTex.worker.ts`) so the UI never freezes during compilation. The
-worker boots a SwiftLaTeX-style engine — currently `PdfTeXEngine` — and
+worker boots a SwiftLaTeX-style engine (currently `PdfTeXEngine`) and
 exposes a small message protocol used by `WasmTexEngine` in
 `src/wasmTex.ts`.
 
@@ -45,7 +45,7 @@ build:
 2. Place all three files in `public/wasm-tex/`. Vite serves the `public/`
    directory verbatim, so `/wasm-tex/PdfTeXEngine.js` becomes available
    at runtime with no further wiring.
-3. Rebuild — the bundled application now includes a full LaTeX compiler.
+3. Rebuild. The bundled application now includes a full LaTeX compiler.
 
 ## Package coverage
 
@@ -55,11 +55,11 @@ The SwiftLaTeX engines ship with the **TeX Live core** required for plain
 `fontspec`, `inputenc`, `fontenc`, and `babel-english`. The engine
 **lazy-fetches** any other package from the server configured in
 **Settings → PDF** (default <https://texlive2.swiftlatex.com/>) on first use.
-Results are cached **only in worker memory** — the cache does not survive an
+Results are cached **only in worker memory**: the cache does not survive an
 app restart, so a fresh session needs the server again. Two mitigations exist:
 
 - **Local mirror**: files dropped into `public/wasm-tex/texlive/` (flat,
-  keyed by filename) are served to the engine before any network request —
+  keyed by filename) are served to the engine before any network request;
   see `public/wasm-tex/texlive/README.md`.
 - **Configurable endpoint**: the package-server URL is a setting
   (`texliveUrl`), so users can point at a self-hosted or alternative mirror
@@ -67,7 +67,7 @@ app restart, so a fresh session needs the server again. Two mitigations exist:
   CSP `connect-src` in `tauri.conf.json` (the default one already is).
 
 When every engine fails (WASM *and* the local `tectonic`/`xelatex`/`pdflatex`
-fallbacks), the error modal appears — the WASM diagnostics are held until the
+fallbacks), the error modal appears: the WASM diagnostics are held until the
 fallback chain also fails, so a successful local compile never shows an error.
 
 What this means in practice:
@@ -75,7 +75,7 @@ What this means in practice:
 - **Works out of the box**: simple math papers, theorems/proofs, basic
   graphics inclusion, `lmodern`/Computer Modern fonts.
 - **Works with internet**: `tikz`, `pgfplots`, `biblatex`, exotic font
-  packages — fetched once, cached forever.
+  packages, fetched once and cached forever.
 - **Won't work today**: anything that needs shell-escape (`minted`,
   `epstopdf` invoked at compile time) or local font files outside of TeX
   Live.
@@ -104,11 +104,11 @@ Behaviour:
   documents; for short notes it's imperceptible.
 - The WASM engine is `pdftex`-based by default. Documents that hard-require
   XeTeX features (e.g. system fonts via `fontspec`) need the XeTeX engine
-  variant — drop `swiftlatexxetex.js` + `.wasm` into `public/wasm-tex/` and
+  variant: drop `swiftlatexxetex.js` + `.wasm` into `public/wasm-tex/` and
   flip the engine URL in `src/wasmTex.ts`.
 - The bundled engine ships **without synctex output**, so forward/inverse
   SyncTeX between the editor and the PDF preview is not available even though
-  the `.synctex` parser (`src/synctex.ts`) exists — no engine currently emits
+  the `.synctex` parser (`src/synctex.ts`) exists, because no engine currently emits
   the data it needs.
 
 ## Bundled engine

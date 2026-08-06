@@ -25,7 +25,7 @@ describe("findGaps", () => {
     expect(gaps.map((g) => g.line)).toEqual([1, 3])
   })
 
-  it("ignores gaps inside fenced code — that is documentation, not a request", () => {
+  it("ignores gaps inside fenced code (that is documentation, not a request)", () => {
     expect(findGaps("```\n{{?}}\n```\n")).toEqual([])
     expect(findGaps("~~~md\n{{? x}}\n~~~\n")).toEqual([])
   })

@@ -1,4 +1,4 @@
-# ComdTeX — Codex Context
+# ComdTeX: Codex Context
 
 ## Product Direction
 

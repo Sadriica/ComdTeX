@@ -1,0 +1,51 @@
+# Flatpak manifest for ComdTeX. Repackages the released .deb, the same
+# approach as packaging/aur/. Bump: update the two `url:`/`sha256:` pairs
+# below from the release's published .sha256 files (see update.sh).
+#
+# Local test build:
+#   flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47
+#   flatpak-builder --user --install --force-clean build io.github.sadriica.ComdTeX.yml
+#   flatpak run io.github.sadriica.ComdTeX
+#
+# Flathub submission (outward-facing, needs explicit go): fork
+# flathub/flathub, add this manifest + the metainfo, open a PR per
+# https://docs.flathub.org/docs/for-app-authors/submission
+app-id: io.github.sadriica.ComdTeX
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: comdtex
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Vaults are arbitrary user folders; the app is local-first by design.
+  - --filesystem=home
+  # DOI/arXiv fetch, optional BYO AI providers, update check.
+  - --share=network
+modules:
+  - name: comdtex
+    buildsystem: simple
+    build-commands:
+      - bsdtar -xf comdtex.deb data.tar.gz
+      - bsdtar -xf data.tar.gz -C /app --strip-components=1 usr
+      - install -Dm644 io.github.sadriica.ComdTeX.metainfo.xml /app/share/metainfo/io.github.sadriica.ComdTeX.metainfo.xml
+      - |
+        for f in /app/share/applications/*.desktop; do
+          sed -i 's/^Icon=.*/Icon=io.github.sadriica.ComdTeX/' "$f"
+          mv "$f" /app/share/applications/io.github.sadriica.ComdTeX.desktop
+        done
+      - |
+        for dir in /app/share/icons/hicolor/*/apps; do
+          for f in "$dir"/comdtex.png; do
+            [ -f "$f" ] && mv "$f" "$dir"/io.github.sadriica.ComdTeX.png
+          done
+        done
+    sources:
+      - type: file
+        url: https://github.com/Sadriica/ComdTeX/releases/download/v1.16.0/comdtex_1.16.0_amd64.deb
+        sha256: a56c414210c350af37be1d2dceaf5e64abc91ce7219a2cb68297896fa549777a
+        dest-filename: comdtex.deb
+      - type: file
+        path: io.github.sadriica.ComdTeX.metainfo.xml

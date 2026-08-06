@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { preprocess } from "./preprocessor"
 
-describe("preprocess — shorthands outside math (auto-wrap in $...$)", () => {
+describe("preprocess, shorthands outside math (auto-wrap in $...$)", () => {
   it("wraps frac in $...$", () => {
     expect(preprocess("frac(1, 2)")).toBe("$\\frac{1}{2}$")
   })
@@ -55,7 +55,7 @@ describe("preprocess — shorthands outside math (auto-wrap in $...$)", () => {
   })
 })
 
-describe("preprocess — shorthands inside $...$ (no wrap)", () => {
+describe("preprocess, shorthands inside $...$ (no wrap)", () => {
   it("expands frac inside inline math", () => {
     expect(preprocess("$frac(a, b)$")).toBe("$\\frac{a}{b}$")
   })
@@ -73,7 +73,7 @@ describe("preprocess — shorthands inside $...$ (no wrap)", () => {
   })
 })
 
-describe("preprocess — nesting", () => {
+describe("preprocess, nesting", () => {
   it("nests frac(sqrt(x), abs(y))", () => {
     expect(preprocess("frac(sqrt(x), abs(y))")).toBe("$\\frac{\\sqrt{x}}{\\left|y\\right|}$")
   })
@@ -83,7 +83,7 @@ describe("preprocess — nesting", () => {
   })
 })
 
-describe("preprocess — table shorthand", () => {
+describe("preprocess, table shorthand", () => {
   it("generates a markdown table header", () => {
     const out = preprocess("table(A, B, C)")
     expect(out).toContain("| A | B | C |")
@@ -96,7 +96,7 @@ describe("preprocess — table shorthand", () => {
   })
 })
 
-describe("preprocess — matrix shorthands", () => {
+describe("preprocess, matrix shorthands", () => {
   it("mat with 4 values → 2×2", () => {
     const out = preprocess("mat(1, 0, 0, 1)")
     expect(out).toContain("\\begin{bmatrix}")
@@ -111,7 +111,7 @@ describe("preprocess — matrix shorthands", () => {
   })
 })
 
-describe("preprocess — sup / sub", () => {
+describe("preprocess, sup / sub", () => {
   it("sup(x, n) → x^{n}", () => {
     expect(preprocess("sup(x, n)")).toBe("$x^{n}$")
   })
@@ -121,7 +121,7 @@ describe("preprocess — sup / sub", () => {
   })
 })
 
-describe("preprocess — decorators", () => {
+describe("preprocess, decorators", () => {
   it("hat, bar, tilde, dot, ddot", () => {
     expect(preprocess("hat(x)")).toBe("$\\hat{x}$")
     expect(preprocess("bar(x)")).toBe("$\\overline{x}$")
@@ -131,7 +131,7 @@ describe("preprocess — decorators", () => {
   })
 })
 
-describe("preprocess — whitespace tolerance in argument lists", () => {
+describe("preprocess, whitespace tolerance in argument lists", () => {
   it("lim(x, 0) with single space after comma", () => {
     expect(preprocess("lim(x, 0)")).toBe("$\\lim_{x \\to 0}$")
   })
@@ -153,7 +153,7 @@ describe("preprocess — whitespace tolerance in argument lists", () => {
   })
 })
 
-describe("preprocess — robustness", () => {
+describe("preprocess, robustness", () => {
   it("unclosed paren: does not throw, copies as-is", () => {
     expect(() => preprocess("frac(a, b")).not.toThrow()
   })
@@ -169,7 +169,7 @@ describe("preprocess — robustness", () => {
   })
 })
 
-describe("preprocess — code regions are skipped", () => {
+describe("preprocess, code regions are skipped", () => {
   it("expands frac(a,b) outside code", () => {
     expect(preprocess("frac(a,b)")).toBe("$\\frac{a}{b}$")
   })

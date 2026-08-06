@@ -125,7 +125,7 @@ describe("generateIndex", () => {
       file("/v/alfa.md", "# Primera"),
     ])
     expect(out.indexOf("[[alfa]]")).toBeLessThan(out.indexOf("[[zeta]]"))
-    expect(out).toContain("[[alfa]] — Primera")
+    expect(out).toContain("[[alfa]]: Primera")
   })
 
   it("omits the title when it just repeats the filename", () => {

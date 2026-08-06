@@ -1,4 +1,4 @@
-# Huecos `{{?}}` — dejar espacios para que la IA los rellene
+# Huecos `{{?}}`: dejar espacios para que la IA los rellene
 
 Escribiendo apuntes en clase sabes que ahí va una definición, un enunciado o un
 ejemplo, pero no quieres pararte a escribirlo. Dejas un hueco, sigues, y lo
@@ -29,7 +29,7 @@ Los huecos aparecen marcados en el editor con un aviso informativo (no un
 error: un hueco pendiente es un recordatorio deliberado, no un fallo). Así ves
 de un vistazo cuántos te quedan en un documento largo.
 
-Un `{{?}}` dentro de un bloque de código ` ``` ` **no** cuenta como hueco — ahí
+Un `{{?}}` dentro de un bloque de código ` ``` ` **no** cuenta como hueco: ahí
 es documentación sobre la función, no una petición.
 
 ## Rellenarlos
@@ -48,7 +48,7 @@ Ambos desde **Ctrl+P**. Mientras trabaja, la barra inferior muestra
 
 ### Qué se le envía al modelo
 
-Solo el bloque alrededor del hueco — unas 12 líneas a cada lado — más tu pista.
+Solo el bloque alrededor del hueco (unas 12 líneas a cada lado) más tu pista.
 No se manda el documento entero: para un hueco local no mejora el resultado y
 encarece cada llamada.
 

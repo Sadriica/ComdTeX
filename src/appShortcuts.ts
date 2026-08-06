@@ -115,19 +115,19 @@ export function handleGlobalShortcut(
     handlers.showBookmarks()
     return true
   }
-  // Ctrl/Cmd+Shift+A — open the AI assistant panel.
+  // Ctrl/Cmd+Shift+A: open the AI assistant panel.
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "a") {
     event.preventDefault()
     handlers.openAiPanel()
     return true
   }
-  // Ctrl/Cmd+Shift+O — insert a table of contents at the cursor.
+  // Ctrl/Cmd+Shift+O: insert a table of contents at the cursor.
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "o") {
     event.preventDefault()
     handlers.insertToc()
     return true
   }
-  // Ctrl/Cmd+Shift+E — toggle the document outline panel.
+  // Ctrl/Cmd+Shift+E: toggle the document outline panel.
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "e") {
     event.preventDefault()
     handlers.toggleOutline()

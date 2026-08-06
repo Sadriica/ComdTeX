@@ -62,6 +62,11 @@ export interface PdfPreviewPanelProps {
    * normally undefined and the shim remains active.
    */
   synctex?: string | null
+  /**
+   * Forward-sync request: scroll to `page`. `seq` makes repeated requests for
+   * the same page re-fire (state identity would otherwise swallow them).
+   */
+  focusPage?: { page: number; seq: number } | null
   /** Invert colours for dark themes. */
   invert?: boolean
 }
@@ -80,7 +85,7 @@ const ZOOM_STEP = 0.2
  * PDF preview pane. Renders the document page-by-page on canvases, virtualised
  * via IntersectionObserver so memory stays bounded for large PDFs.
  */
-export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, invert = false }: PdfPreviewPanelProps) {
+export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focusPage, invert = false }: PdfPreviewPanelProps) {
   const t = useT()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
@@ -221,7 +226,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, inver
       renderedRef.current.add(pageNum)
     } catch (err) {
       // RenderingCancelledException is expected when scrolling fast or
-      // resizing — don't surface those.
+      // resizing: don't surface those.
       const msg = err instanceof Error ? err.name : ""
       if (msg !== "RenderingCancelledException") {
         // eslint-disable-next-line no-console
@@ -300,6 +305,14 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, inver
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
 
+  // Forward sync: honor an external scroll request once per seq.
+  useEffect(() => {
+    if (!focusPage || pages.length === 0) return
+    const page = Math.min(Math.max(1, focusPage.page), pages.length)
+    setCurrentPage(page)
+    scrollToPage(page)
+  }, [focusPage, pages.length, scrollToPage])
+
   const goPrev = useCallback(() => {
     const next = Math.max(1, currentPage - 1)
     setCurrentPage(next)
@@ -326,7 +339,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, inver
     setFitWidth((f) => !f)
   }, [])
 
-  // Handle a click on a page canvas — derive PDF coordinates and the nearest
+  // Handle a click on a page canvas: derive PDF coordinates and the nearest
   // text (heading-style synctex shim).
   const handlePageClick = useCallback(async (pageNum: number, e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onClickSource) return

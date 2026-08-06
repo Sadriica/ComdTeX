@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: Sadriica.ComdTeX
+PackageVersion: 1.16.0
+InstallerType: nullsoft
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Sadriica/ComdTeX/releases/download/v1.16.0/comdtex_1.16.0_x64-setup.exe
+    InstallerSha256: B35A01C8F505BF65A693C40BE6D9BFDDF38774439536F6975E596C05DAC43A02
+ManifestType: installer
+ManifestVersion: 1.6.0

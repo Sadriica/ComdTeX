@@ -31,7 +31,7 @@ export interface Settings {
   /**
    * TeX package server the WASM engine downloads missing `.sty`/`.cls`/font
    * files from (SwiftLaTeX texlive-server layout). The default public server
-   * has a history of outages — this lets users point at a mirror.
+   * has a history of outages; this lets users point at a mirror.
    */
   texliveUrl: string
   /** Focus & Writing Session (Pomodoro) durations, in minutes. */
@@ -42,7 +42,7 @@ export interface Settings {
   pomodoroCyclesBeforeLongBreak: number
 
   // ── AI assistant (BYO key, optional) ───────────────────────────────────────
-  /** Master switch. When false ComdTeX is 100% offline — no AI network at all. */
+  /** Master switch. When false ComdTeX is 100% offline: no AI network at all. */
   aiEnabled: boolean
   /** Provider preset id: "anthropic" | "openai" | "gemini" | "openai-compatible" | "cli". */
   aiProviderId: string
@@ -53,7 +53,7 @@ export interface Settings {
   /**
    * API key. Kept in memory here for backwards-compatible consumer access,
    * but persisted in the OS keychain (via `secretStore.ts`) rather than in
-   * the `comdtex_settings` localStorage blob — see `useSettings()` below.
+   * the `comdtex_settings` localStorage blob; see `useSettings()` below.
    */
   aiApiKey: string
   /** Command line for the local agent CLI bridge (e.g. "opencode run" or "claude -p"). */
@@ -78,7 +78,7 @@ export interface Settings {
 
 /**
  * Factory defaults. Exported so tests can build a valid `Settings` by spreading
- * these and overriding what they care about — a hand-written literal has to be
+ * these and overriding what they care about; a hand-written literal has to be
  * updated every time a setting is added, which is churn with no coverage value.
  */
 export const DEFAULTS: Settings = {
@@ -137,7 +137,7 @@ function load(): Settings {
 
 /**
  * `aiApiKey` must never be written to the `comdtex_settings` localStorage
- * blob — it is persisted separately via the OS keychain (`secretStore.ts`).
+ * blob; it is persisted separately via the OS keychain (`secretStore.ts`).
  * This strips it before every `localStorage.setItem(KEY, ...)` call.
  */
 function withoutApiKey(settings: Settings): Omit<Settings, "aiApiKey"> {
@@ -184,7 +184,7 @@ export function useSettings() {
           }
         }
       } catch {
-        // ignore — non-fatal
+        // ignore: non-fatal
       }
 
       const keychainKey = legacyKey || (await getSecret(AI_API_KEY_SECRET)) || ""

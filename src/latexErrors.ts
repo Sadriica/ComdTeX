@@ -9,7 +9,7 @@ export interface LatexDiagnostic {
 /** TeX engines hard-wrap log output at `max_print_line` (79–80 columns),
  *  splitting messages mid-word ("…not lo" / "adable: …"). Rejoin those
  *  continuations so patterns match the full message. A line of exactly the
- *  wrap width is treated as continued — a natural 79/80-char line is rare and
+ *  wrap width is treated as continued; a natural 79/80-char line is rare and
  *  the cost of a false join is only a slightly longer message. */
 function unwrapLogLines(raw: string): string[] {
   const src = raw.split("\n")
@@ -33,7 +33,7 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
   while (i < lines.length) {
     const line = lines[i]
 
-    // Pattern 7 — Overfull hbox (warning)
+    // Pattern 7: Overfull hbox (warning)
     const overfullMatch = /Overfull \\hbox \((\d+(?:\.\d+)?)pt too wide\)/.exec(line)
     if (overfullMatch) {
       diags.push({
@@ -45,7 +45,7 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       continue
     }
 
-    // Pattern 9 — Font warning
+    // Pattern 9: Font warning
     if (/LaTeX Font Warning:|Font shape .+ undefined/.test(line)) {
       const msg = line.replace(/^.*LaTeX Font Warning:\s*/, "").trim() || line.trim()
       diags.push({ severity: "warning", message: msg })
@@ -53,7 +53,7 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       continue
     }
 
-    // Pattern 5 — LaTeX Error (environment/package)
+    // Pattern 5: LaTeX Error (environment/package)
     const latexErrMatch = /LaTeX Error:\s*(.+)/.exec(line)
     if (latexErrMatch) {
       const msg = latexErrMatch[1].trim()
@@ -62,18 +62,18 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       if (envMatch) {
         suggestion = `Unknown environment '${envMatch[1]}'. Check spelling or add the required package.`
       }
-      // Pattern 6 — File not found (LaTeX Error variant)
+      // Pattern 6: File not found (LaTeX Error variant)
       const fileMatch = /File `(.+?)' not found/.exec(msg)
       if (fileMatch) {
         const fname = fileMatch[1]
-        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
+        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
       }
       diags.push({ severity: "error", message: msg, suggestion })
       i++
       continue
     }
 
-    // Pattern 1–4, 6, 8, 10 — lines starting with "!"
+    // Pattern 1-4, 6, 8, 10: lines starting with "!"
     const fatalMatch = /^!\s*(.+)/.exec(line)
     if (fatalMatch) {
       const rawMsg = fatalMatch[1].trim()
@@ -92,45 +92,45 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
         }
       }
 
-      // Pattern 2 — Missing $
+      // Pattern 2: Missing $
       if (/Missing \$/.test(rawMsg)) {
         suggestion = "Math command used outside math mode. Wrap content in $...$ or $$...$$"
       }
-      // Pattern 3 — Extra alignment tab
+      // Pattern 3: Extra alignment tab
       else if (/Extra alignment tab/.test(rawMsg)) {
         suggestion = "Too many & separators in a row. Check column count in matrix or align environment."
       }
-      // Pattern 4 — Runaway argument / missing brace
+      // Pattern 4: Runaway argument / missing brace
       else if (/Runaway argument|Missing \}/.test(rawMsg)) {
-        suggestion = "Unclosed brace { — check that every { has a matching }"
+        suggestion = "Unclosed brace { : check that every { has a matching }"
       }
-      // Pattern 6 — File not found (! variant)
+      // Pattern 6: File not found (! variant)
       else if (/I can't find file/.test(rawMsg)) {
         const fnMatch = /`(.+?)'/.exec(rawMsg)
         const fname = fnMatch ? fnMatch[1] : "unknown"
-        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down) — check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
+        suggestion = `Missing package file '${fname}'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.`
       }
-      // Pattern 11 — Font not loadable (XeLaTeX defaults to Latin Modern OTF,
+      // Pattern 11: Font not loadable (XeLaTeX defaults to Latin Modern OTF,
       // which lives in the TeX distribution's fonts package, not the engine's)
       else if (/not loadable:|Metric \(TFM\) file/.test(rawMsg)) {
         suggestion =
           "A font required by the document is not installed in the TeX system. " +
-          "XeLaTeX's default fonts (Latin Modern) ship separately from the engine — " +
+          "XeLaTeX's default fonts (Latin Modern) ship separately from the engine: " +
           "on Arch install 'texlive-fontsrecommended', on Debian/Ubuntu 'texlive-fonts-recommended'. " +
           "Alternatively, compile with the built-in WASM engine (Settings → PDF)."
       }
-      // Pattern 8 — Missing \begin{document}
+      // Pattern 8: Missing \begin{document}
       else if (/Missing \\begin\{document\}/.test(rawMsg)) {
-        suggestion = "The document is missing \\begin{document}. This is added automatically on PDF export — the error may be in a custom header file."
+        suggestion = "The document is missing \\begin{document}. This is added automatically on PDF export: the error may be in a custom header file."
       }
-      // Pattern 1 — Undefined control sequence
+      // Pattern 1: Undefined control sequence
       else if (/Undefined control sequence/.test(rawMsg) && context) {
         // context typically is "\commandname" or text containing it
         const cmdMatch = /\\(\w+)/.exec(context)
         if (cmdMatch) {
-          suggestion = `Unknown command \\${cmdMatch[1]} — check spelling or define it in macros.md`
+          suggestion = `Unknown command \\${cmdMatch[1]}: check spelling or define it in macros.md`
         } else {
-          suggestion = "Unknown command — check spelling or define it in macros.md"
+          suggestion = "Unknown command: check spelling or define it in macros.md"
         }
         message = "Undefined control sequence"
       }

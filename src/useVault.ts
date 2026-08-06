@@ -44,8 +44,12 @@ function saveRecentVault(path: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next))
 }
 
-function editorModeForPath(path: string): "md" | "tex" | "pdf" {
-  if (path.toLowerCase().endsWith(".pdf")) return "pdf"
+function editorModeForPath(path: string): "md" | "tex" | "pdf" | "typ" {
+  const lower = path.toLowerCase()
+  if (lower.endsWith(".pdf")) return "pdf"
+  // Typst sources are edited raw (no CMDX conversion) with their own
+  // Monaco language and their own compile path (typst binary).
+  if (lower.endsWith(".typ")) return "typ"
   return storageFormatForPath(path) === "tex" ? "tex" : "md"
 }
 
@@ -61,14 +65,14 @@ function showConversionWarnings(path: string, content: string, phase: "opening" 
 
 export const README_FILENAME = "comdtex.md"
 
-export const README_CONTENT = `# Mi Vault — ComdTeX
+export const README_CONTENT = `# Mi Vault: ComdTeX
 
 > Este archivo es tuyo. Edítalo, bórralo, o úsalo como punto de partida.
 > Es tu área de juego para explorar todas las funciones de ComdTeX.
 
 ---
 
-## Shorthands — escribe y pulsa Tab
+## Shorthands: escribe y pulsa Tab
 
 Los shorthands son funciones cortas que se expanden a LaTeX. Cada uno se
 auto-envuelve en math, así que no necesitas escribir \`$\` para los más comunes:
@@ -77,7 +81,7 @@ La fracción frac(1, n+1) se hace pequeña cuando n crece.
 
 La raíz sqrt(2) es irracional.
 
-El límite fundamental: lim(x, 0) — escrito así, sin nada alrededor.
+El límite fundamental: lim(x, 0), escrito así, sin nada alrededor.
 
 La sumatoria sum(n=1, 100) llega a 5050.
 
@@ -269,7 +273,7 @@ D -- E : 3
 
 ## Plot de funciones
 
-Sin dependencias externas — el parser está integrado y NO usa \`eval\`:
+Sin dependencias externas: el parser está integrado y NO usa \`eval\`:
 
 :::plot[Densidad gaussiana]
 f(x) = exp(-x^2 / 2) / sqrt(2 * pi)
@@ -302,7 +306,7 @@ Estilos de flecha: \`->\` \`<-\` \`<->\` \`->>\` (epi) \`>->\` (mono) \`==>\` (d
 Enlaza otras notas del vault con \`[[nombre-de-nota]]\`. Haz clic en el preview para navegar.
 La pestaña **←** de la barra lateral muestra qué notas enlazan a la activa.
 
-Para **incrustar** el contenido de otra nota, usa \`![[otra-nota]]\` — se expande en línea
+Para **incrustar** el contenido de otra nota, usa \`![[otra-nota]]\`, se expande en línea
 durante el render. Ideal para tesis con un archivo principal y capítulos separados.
 
 ---
@@ -353,7 +357,7 @@ const IGNORED_TREE_DIRS = new Set([
 
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
-  return ext === "md" || ext === "tex" || ext === "bib"
+  return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ"
 }
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
@@ -371,7 +375,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       // Recurse defensively: an unreadable subdirectory (broken symlink,
       // socket/FIFO, permission-denied folder) must NOT abort the whole walk,
       // or one bad entry freezes the entire tree. Show the directory node
-      // unconditionally — an empty folder, or one holding only unsupported
+      // unconditionally: an empty folder, or one holding only unsupported
       // files, still belongs in the tree (previously such folders vanished).
       let children: FileNode[] = []
       try { children = await buildTree(fullPath, depth + 1) }
@@ -379,7 +383,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "pdf")
+      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "pdf")
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }
@@ -422,7 +426,7 @@ export function validateVaultPath(path: string): { valid: boolean; reason?: "emp
   if (!path || typeof path !== "string") return { valid: false, reason: "empty" }
   const trimmed = path.replace(/[\\/]+$/, "").trim()
   if (trimmed.length === 0) return { valid: false, reason: "empty" }
-  // `/` collapses to `` after the trailing-slash strip — catch it.
+  // `/` collapses to `` after the trailing-slash strip; catch it.
   if (path.replace(/\\/g, "/").replace(/\/+$/, "") === "") return { valid: false, reason: "system" }
   // Length sanity: a real user path is virtually never under 4 chars.
   if (trimmed.length < 4) return { valid: false, reason: "tooShort" }
@@ -446,7 +450,7 @@ function isPathInsideVault(path: string, vaultPath: string): boolean {
 // Crash-recovery drafts are written THROTTLED, not on every keystroke. The
 // previous per-keystroke `getDrafts()` parse + `JSON.stringify(all drafts)` +
 // synchronous `localStorage.setItem` blocked the main thread on each character,
-// and the cost scaled with the document size and the number of stored drafts —
+// and the cost scaled with the document size and the number of stored drafts,
 // making typing/pasting crawl in large files. Edits are queued in memory and
 // flushed to localStorage at most once per `DRAFT_FLUSH_MS`; the in-memory tab
 // content (and the 800ms autosave) remain the primary source of truth, so a
@@ -485,7 +489,7 @@ function clearDraft(path: string) {
  * Latest draft content for `path`, checking the in-memory `draftQueue` first
  * (edits from the last <300ms not yet flushed to localStorage) and falling back
  * to the persisted drafts. `getDrafts()` alone misses queued-but-unflushed
- * drafts — e.g. a rename right after a keystroke would strand the draft.
+ * drafts, e.g. a rename right after a keystroke would strand the draft.
  */
 function peekDraft(path: string): string | undefined {
   if (draftQueue.has(path)) return draftQueue.get(path)
@@ -567,7 +571,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       return pending !== undefined ? { ...tab, content: pending, isDirty: true } : tab
     })
   }, [openTabs])
-  // In-memory search index for the current vault — content/mtime cache so
+  // In-memory search index for the current vault: content/mtime cache so
   // repeat searches don't re-read+re-parse every unchanged file. One index
   // per vault: cleared whenever the user switches vaults (selectVault /
   // createVault) so a stale path from a previous vault can never leak in.
@@ -626,7 +630,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         if (BINARY_EXTS.has(ext)) continue
         try {
           const name = displayBasename(path)
-          // Use draft if present — cleared on save, its presence indicates unsaved changes
+          // Use draft if present: cleared on save, its presence indicates unsaved changes
           const draft = getDrafts().find((d) => d.path === path)
           const content = await readTextFile(path)
           let cachedMtime: number | undefined
@@ -661,7 +665,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     try {
       content = await readTextFile(readmePath)
       // Migration: older template versions wrote literal `\`` (backslash-backtick)
-      // sequences inside the code-block examples — they rendered as `\\\`\\\`\\\``
+      // sequences inside the code-block examples; they rendered as `\\\`\\\`\\\``
       // in the preview. Rewrite those to plain backticks. Safe: no real Markdown
       // pairs `\` immediately with a `` ` ``.
       if (/\\`/.test(content)) {
@@ -670,7 +674,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         catch { /* migration is best-effort; preview will still be correct */ }
       }
     } catch {
-      // Doesn't exist — create it
+      // Doesn't exist: create it
       content = README_CONTENT
       try {
         await writeTextFile(readmePath, content)
@@ -688,8 +692,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const selectVault = useCallback(async (preselected?: string) => {
     let selected: string | null | string[]
-    // Guard against accidental event-object invocation (e.g. `onClick={selectVault}`
-    // — React passes a SyntheticEvent which would silently skip the dialog).
+    // Guard against accidental event-object invocation (e.g. `onClick={selectVault}`,
+    // React passes a SyntheticEvent which would silently skip the dialog).
     if (typeof preselected === "string" && preselected.length > 0) {
       selected = preselected
     } else {
@@ -721,7 +725,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     saveTimers.current.clear()
     contentCommitTimers.current.forEach(clearTimeout)
     contentCommitTimers.current.clear()
-    // Drop the previous vault's cached file contents — paths are only unique
+    // Drop the previous vault's cached file contents: paths are only unique
     // within a vault, so a stale entry could otherwise "match" under the new
     // vault before its real content is ever synced.
     searchIndexRef.current.clear()
@@ -758,7 +762,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       )
       return
     }
-    // Grant scope BEFORE mkdir — the folder does not exist yet, so the
+    // Grant scope BEFORE mkdir: the folder does not exist yet, so the
     // Rust command permits a not-yet-existing path (see allow_vault_dir).
     try { await allowVaultDir(chosen) }
     catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error"); return }
@@ -801,7 +805,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       setActiveTabPath(node.path)
       return
     }
-    // PDFs open as a preview-mode tab — no text read, rendered by PdfPreviewPanel.
+    // PDFs open as a preview-mode tab: no text read, rendered by PdfPreviewPanel.
     if (node.ext === "pdf") {
       const pdfTab: OpenFile = { path: node.path, name: node.name, content: "", isDirty: false, mode: "pdf" }
       setOpenTabs((tabs) => tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, pdfTab])
@@ -911,7 +915,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * prompts the user with reload/overwrite/cancel. Passing `{ force: true }`
    * bypasses the mtime check (used after the user picks "Keep mine").
    *
-   * Returns `true` only if the bytes actually reached disk — callers that need
+   * Returns `true` only if the bytes actually reached disk: callers that need
    * to flush before destroying state (e.g. closeTab) rely on this signal so
    * they only clear drafts after a confirmed successful write.
    */
@@ -922,12 +926,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
   ): Promise<boolean> => {
     try {
       const openTab = openTabsRef.current.find((tab) => tab.path === path)
-      // Read-only modes (currently just PDF) must never write to disk —
+      // Read-only modes (currently just PDF) must never write to disk:
       // doing so would overwrite the binary file with text content.
       if (openTab?.mode === "pdf") return false
       // The external-change guard needs a DISK baseline (`cachedMtime`). Every
       // path that opens or creates an editable tab now sets one, so a missing
-      // baseline means we genuinely cannot tell — and must not prompt.
+      // baseline means we genuinely cannot tell, and must not prompt.
       //
       // Do NOT "fall back" to comparing the file against `openTab.content`:
       // that field is the LIVE buffer including unsaved edits, so it differs
@@ -940,7 +944,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
           const currentMtime = info.mtime?.getTime()
           if (currentMtime && currentMtime > openTab.cachedMtime) {
             // Mark the path as conflicted so subsequent autosaves stay blocked
-            // until the user decides — without this, the *next* keystroke would
+            // until the user decides: without this, the *next* keystroke would
             // refresh cachedMtime via a no-op path and silently overwrite the
             // external changes.
             conflictPaths.current.add(path)
@@ -957,7 +961,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
               const onDisk = toEditorContent(path, await readTextFile(path))
               const summary = diffLineSummary(onDisk, content)
               if (!summary.identical) diffLine = `\n${t.vault.conflictDiff(summary.added, summary.removed)}`
-            } catch { /* unreadable — the prompt still works without the summary */ }
+            } catch { /* unreadable: the prompt still works without the summary */ }
 
             let choice: string
             try {
@@ -977,7 +981,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
                 },
               )
             } catch {
-              // Tauri dialog unavailable (e.g. during tests) — fall back to the
+              // Tauri dialog unavailable (e.g. during tests): fall back to the
               // safe choice: don't overwrite, don't lose edits, leave conflict
               // pending so the user is forced to handle it explicitly.
               showToast(t.vault.fileChangedExternally(openTab.name), "error")
@@ -997,7 +1001,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
                 pendingContent.current.delete(path)
                 clearDraft(path)
                 conflictPaths.current.delete(path)
-                // Reflect the reloaded disk content in the index immediately —
+                // Reflect the reloaded disk content in the index immediately:
                 // avoids a stale cache entry surviving until the next search.
                 if (freshMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, freshMtime, fresh)
                 else searchIndexRef.current.invalidate(path)
@@ -1010,7 +1014,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
               // Force-save, fall through to the write below
               conflictPaths.current.delete(path)
             } else {
-              // Cancel — stay in conflict state, autosave remains blocked
+              // Cancel: stay in conflict state, autosave remains blocked
               return false
             }
           }
@@ -1030,7 +1034,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // bytes NEWER than what we just wrote, the tab is still dirty and that
       // newer content must survive: clearing isDirty/pendingContent/draft here
       // would strand it, because closeTab and flushPending both gate the flush
-      // on exactly those signals — so the edit is silently lost on the next tab
+      // on exactly those signals, so the edit is silently lost on the next tab
       // close, vault switch, or app quit. Only clear when nothing newer arrived.
       const superseded = pendingContent.current.has(path) && pendingContent.current.get(path) !== content
       setOpenTabs((tabs) => tabs.map((tab) =>
@@ -1093,7 +1097,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     pendingContent.current.set(path, content)
     saveDraft(path, content)
     // If there is an unresolved external-mod conflict, do NOT schedule an
-    // autosave — the user must explicitly resolve it first. The draft above
+    // autosave: the user must explicitly resolve it first. The draft above
     // still preserves the in-memory edits for crash recovery.
     if (conflictPaths.current.has(path)) return
     const existing = saveTimers.current.get(path)
@@ -1161,7 +1165,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     if (closedTab && !closedTab.isDirty) {
       saveClosedTab(path)
     }
-    // Note: clearDraft is intentionally NOT called here for dirty tabs — if
+    // Note: clearDraft is intentionally NOT called here for dirty tabs; if
     // the flush above failed, we want the draft to survive for crash recovery.
     // saveFile clears the draft on success.
     if (!closedTab?.isDirty) clearDraft(path)
@@ -1172,7 +1176,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * The directory a new file/folder should land in: `parentDir` when it is a
    * real directory inside the vault, the vault root otherwise.
    *
-   * The containment check is the security-relevant part — `parentDir` reaches
+   * The containment check is the security-relevant part: `parentDir` reaches
    * here from the file tree, and a path outside the vault would both escape the
    * runtime fs grant (`allowVaultDir`) and write where the user cannot see it.
    */
@@ -1189,7 +1193,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     if (!vaultPath) return
     const v = validate(name.replace(/\.[^.]+$/, ""))
     if (!v.valid) { showToast(v.error!, "error"); return }
-    const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") ? name : `${name}.md`
+    const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") || name.endsWith(".typ") ? name : `${name}.md`
     const targetDir = resolveParentDir(parentDir)
     const filePath = await pathJoin(targetDir, fileName)
     try {
@@ -1212,7 +1216,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const deleteFile = useCallback(async (path: string) => {
     try {
-      // Drop pending autosave before deleting — we don't want a queued write
+      // Drop pending autosave before deleting: we don't want a queued write
       // to recreate the file we're about to delete.
       const timer = saveTimers.current.get(path)
       if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
@@ -1341,8 +1345,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * guard against our own write.
    *
    * Use this for out-of-band programmatic writes (todo toggle, wikilink
-   * refactor, backlink removal) that target arbitrary vault files — open or
-   * not — instead of a raw `writeTextFile`, which would bypass masking and lose
+   * refactor, backlink removal) that target arbitrary vault files (open or
+   * not) instead of a raw `writeTextFile`, which would bypass masking and lose
    * the last in-flight autosave.
    *
    * Returns true if the bytes reached disk; throws are surfaced to the caller.
@@ -1380,7 +1384,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * For each pending path: cancel its queued timer (so it can't double-fire) and
    * await saveFile() against the latest in-memory content. Paths under an
    * unresolved external-modification conflict are skipped (saveFile would prompt
-   * a modal — not appropriate mid-quit; their drafts survive for recovery).
+   * a modal, not appropriate mid-quit; their drafts survive for recovery).
    */
   const flushPending = useCallback(async (): Promise<void> => {
     const entries = Array.from(pendingContent.current.entries())
@@ -1412,7 +1416,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const token = { cancelled: false }
     searchAbortRef.current = token
 
-    // Flatten the tree (cheap — no disk I/O) into candidates in the same
+    // Flatten the tree (cheap, no disk I/O) into candidates in the same
     // order the old recursive walk visited them, so result ordering and the
     // 500-result cap behave identically. mtime/content are fetched lazily by
     // the index only for candidates it actually reaches (see searchIndex.ts).
@@ -1469,7 +1473,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
           await replaceIn(node.children)
         } else if (node.type === "file" && isTextVaultFile(node)) {
           try {
-            // Read via the index cache — mtime-gated, so a file this pass
+            // Read via the index cache, mtime-gated, so a file this pass
             // (or the search that likely preceded it) already synced is
             // served from memory instead of re-read from disk. If the file
             // changed on disk since it was last cached, the mtime mismatch
@@ -1485,7 +1489,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
             re.lastIndex = 0
             const updated = editorContent.replace(re, replacement)
             // If this file has a queued autosave, cancel it and drop the stale
-            // pending content — otherwise the timer could fire after our write
+            // pending content: otherwise the timer could fire after our write
             // and clobber the replacement with the pre-replace buffer.
             const timer = saveTimers.current.get(node.path)
             if (timer) { clearTimeout(timer); saveTimers.current.delete(node.path) }

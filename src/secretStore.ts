@@ -2,8 +2,8 @@
  * OS-keychain-backed secret storage.
  *
  * Secrets like the AI provider API key (`settings.aiApiKey`) used to be
- * serialized in plaintext inside `localStorage` (`comdtex_settings`) — see
- * the "AI assistant — BYO provider" section in CLAUDE.md. This module routes
+ * serialized in plaintext inside `localStorage` (`comdtex_settings`); see
+ * the "AI assistant: BYO provider" section in CLAUDE.md. This module routes
  * secrets through the Rust `set_secret` / `get_secret` / `delete_secret`
  * commands (src-tauri/src/lib.rs), which use the `keyring` crate to reach
  * the platform keychain (Secret Service on Linux, Keychain on macOS,
@@ -13,7 +13,7 @@
  * window-manager setups without gnome-keyring/kwallet), so every function
  * here falls back to a namespaced `localStorage` key
  * (`comdtex_secret_<key>`) if the keychain invoke throws. This keeps the
- * app fully functional, just without OS-level secret protection — a
+ * app fully functional, just without OS-level secret protection (a
  * one-time console.warn surfaces the degradation to developers/power users.
  */
 import { invoke } from "@tauri-apps/api/core"
@@ -26,7 +26,7 @@ function warnFallbackOnce(err: unknown): void {
   if (warnedFallback) return
   warnedFallback = true
   console.warn(
-    "[secretStore] OS keychain unavailable — falling back to localStorage for secrets. " +
+    "[secretStore] OS keychain unavailable: falling back to localStorage for secrets. " +
       "This is common on Linux setups without a Secret Service provider (e.g. gnome-keyring/kwallet). " +
       `Underlying error: ${String(err)}`,
   )
@@ -79,7 +79,7 @@ export async function setSecret(key: string, value: string): Promise<void> {
     try {
       localStorage.setItem(fallbackKey(key), value)
     } catch {
-      // ignore — nothing more we can do
+      // ignore: nothing more we can do
     }
   }
 }

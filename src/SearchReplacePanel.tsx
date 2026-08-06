@@ -22,7 +22,7 @@ const IGNORED_SEARCH_DIRS = new Set(["node_modules"])
 // its own regex matching (wholeWord, matchStart/matchEnd for inline replace)
 // so it can't reuse VaultSearchIndex.search() directly, but it reuses the
 // SAME cache primitive (`syncFile`) that `useVault.search()` uses, so a file
-// unchanged since the last search — in this panel OR the Search panel — is
+// unchanged since the last search (in this panel OR the Search panel) is
 // served from memory instead of re-read from disk.
 const panelIndexes = new Map<string, VaultSearchIndex>()
 function getPanelIndex(vaultPath: string): VaultSearchIndex {

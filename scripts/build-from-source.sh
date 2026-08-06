@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ComdTeX build-from-source helper — checks prerequisites (with per-distro
+# ComdTeX build-from-source helper: checks prerequisites (with per-distro
 # install hints), builds the desktop app, and optionally installs it into
 # ~/.local with full launcher integration (same layout as scripts/install.sh,
 # but pointing at the locally built binary).
@@ -109,12 +109,12 @@ fi
 
 # ── Build ────────────────────────────────────────────────────────────────────
 # NO_STRIP: the linuxdeploy bundled by tauri ships an old strip that fails on
-# modern toolchains ('.relr.dyn' unknown type — hits Arch and other rolling
+# modern toolchains ('.relr.dyn' unknown type, hits Arch and other rolling
 # distros). Harmless elsewhere, so set it whenever building the AppImage.
 BUNDLES="deb"
 [[ $WANT_APPIMAGE -eq 1 ]] && BUNDLES="deb,appimage" && export NO_STRIP=true
 
-msg "Building ComdTeX (bundles: ${BUNDLES}) — this compiles Rust, expect several minutes…"
+msg "Building ComdTeX (bundles: ${BUNDLES}); this compiles Rust, expect several minutes…"
 npm run tauri build -- --bundles "$BUNDLES"
 
 TARGET="${ROOT_DIR}/src-tauri/target/release"

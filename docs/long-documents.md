@@ -73,7 +73,7 @@ Salvaguardas:
 ## Vistas derivadas en vez de mantenidas a mano
 
 Para no llevar a mano una lista de tareas o un calendario de la materia, declara
-un archivo generado en las reglas de la carpeta — ver
+un archivo generado en las reglas de la carpeta, ver
 [folder-rules.md](folder-rules.md).
 
 ## Continuación de listas y tablas

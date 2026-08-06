@@ -3,7 +3,7 @@ import DOMPurify from "dompurify"
 // ── URL scheme policy ───────────────────────────────────────────────────────
 //
 // Links (`<a href>`) may point to http(s), mailto, or fragment/relative
-// targets. `file:` and `asset:` are intentionally EXCLUDED from links — they
+// targets. `file:` and `asset:` are intentionally EXCLUDED from links: they
 // let a rendered document reference (and navigate to) arbitrary local files,
 // which is a meaningfully different risk from just *displaying* a local
 // image. This tightens the previous (pre-DOMPurify) sanitizer, which allowed
@@ -13,7 +13,7 @@ const LINK_SAFE = /^(#|\/(?!\/)|\.\.?\/|mailto:|https?:)/i
 // Images (and other media-ish src attributes) may additionally reference
 // `asset:`/`https://asset.localhost` (Tauri's asset protocol, used for vault
 // images) and `blob:` (object URLs), plus base64 raster `data:` images.
-// `data:image/svg+xml` stays rejected — inline SVG can carry <script>/on*
+// `data:image/svg+xml` stays rejected: inline SVG can carry <script>/on*
 // handlers and is never produced by KaTeX/Mermaid/Graphviz/function-plot in
 // this app's pipeline.
 const MEDIA_SAFE = /^(#|\/(?!\/)|\.\.?\/|https?:|blob:|asset:|https:\/\/asset\.localhost)/i

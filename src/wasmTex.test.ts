@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { WasmTexEngine, _resetSharedEngine } from "./wasmTex"
 
 // A minimal in-process Worker stand-in that the engine's WorkerFactory can
-// produce. We do NOT exercise actual WASM here — we only verify the message
+// produce. We do NOT exercise actual WASM here: we only verify the message
 // protocol contract between WasmTexEngine and its worker.
 
 interface Listener<T = unknown> { (ev: { data: T }): void }
@@ -42,7 +42,7 @@ afterEach(() => {
   _resetSharedEngine()
 })
 
-describe("WasmTexEngine — init protocol", () => {
+describe("WasmTexEngine, init protocol", () => {
   it("resolves init() when worker posts ready", async () => {
     const fake = new FakeWorker()
     fake.onPosted = (msg, post) => {
@@ -56,7 +56,7 @@ describe("WasmTexEngine — init protocol", () => {
     expect(fake.received[0]).toMatchObject({ type: "init", engineUrl: null })
   })
 
-  it("init() is idempotent — multiple calls return the same promise", () => {
+  it("init() is idempotent: multiple calls return the same promise", () => {
     const fake = new FakeWorker()
     fake.onPosted = (_msg, post) => post({ type: "ready" })
     const eng = new WasmTexEngine(() => fake as unknown as Worker)
@@ -76,7 +76,7 @@ describe("WasmTexEngine — init protocol", () => {
   })
 })
 
-describe("WasmTexEngine — compile protocol", () => {
+describe("WasmTexEngine, compile protocol", () => {
   it("compile() resolves with the worker's result message", async () => {
     const fake = new FakeWorker()
     fake.onPosted = (msg, post) => {
@@ -162,7 +162,7 @@ describe("WasmTexEngine — compile protocol", () => {
   })
 })
 
-describe("WasmTexEngine — dispose", () => {
+describe("WasmTexEngine, dispose", () => {
   it("dispose() terminates worker and rejects pending compiles", async () => {
     const fake = new FakeWorker()
     fake.onPosted = (msg, post) => {

@@ -59,7 +59,7 @@ describe("renderMarkdown", () => {
     it("numbers equations in textual order even when one is inside a :::env block", () => {
       // Regression: previously, `extractEnvironments` rendered nested content
       // recursively before the outer math regex ran, so the inner equation
-      // got number 1 and the outer (textually first) got number 2 — leaving
+      // got number 1 and the outer (textually first) got number 2, leaving
       // the rendered (N) out of sync with `@eq:label` references that use
       // prescan order.
       const text = [
@@ -101,7 +101,7 @@ describe("renderMarkdown", () => {
       // that referenced user-defined macros rendered as red `\macro` source
       // text (KaTeX `throwOnError: false` fallback). The fix gates the preview
       // on `macrosReady`, but the renderer itself must also remain correct
-      // when called with an empty macros object — the label-indexing pass
+      // when called with an empty macros object: the label-indexing pass
       // must precede the @eq resolution pass on every call so that the
       // textually-first equation gets number 1, etc.
       const text = [

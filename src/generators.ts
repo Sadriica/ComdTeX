@@ -1,12 +1,12 @@
 /**
- * Generated folder files — a task list, a calendar or an index built from the
+ * Generated folder files: a task list, a calendar or an index built from the
  * notes around them, declared in a folder's `.comdtex-folder.json`.
  *
  * This is the "one file per subject, written class by class" workflow: the notes
  * stay prose, and the cross-cutting views (what is still pending, what happens
  * when) are derived rather than maintained by hand.
  *
- * Pure functions over `{path, content}` — the caller does the I/O. Every
+ * Pure functions over `{path, content}`; the caller does the I/O. Every
  * generator emits the `comdtex:generated` marker so a regeneration can tell its
  * own output from a file somebody has since taken over by hand.
  */
@@ -75,7 +75,7 @@ export function documentTitle(file: SourceFile): string {
 
 /**
  * A date for the file: its frontmatter `date`, else a `YYYY-MM-DD` found at the
- * start of its filename. Null when neither is present — those files are grouped
+ * start of its filename. Null when neither is present: those files are grouped
  * under "sin fecha" rather than dropped, so nothing silently disappears.
  */
 export function documentDate(file: SourceFile): string | null {
@@ -122,7 +122,7 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 
   for (const [filePath, list] of byFile) {
     lines.push(`## [[${noteName(filePath)}]]`, "")
-    // Pending first inside each file — the point of the view is what is left.
+    // Pending first inside each file: the point of the view is what is left.
     for (const item of [...list.filter((i) => !i.done), ...list.filter((i) => i.done)]) {
       lines.push(`- [${item.done ? "x" : " "}] ${item.text}`)
     }
@@ -150,7 +150,7 @@ export function generateCalendar(files: SourceFile[], title = "Calendario"): str
       currentMonth = month
       lines.push(`## ${month}`, "")
     }
-    lines.push(`- **${date}** — [[${noteName(file.path)}]] ${documentTitle(file)}`)
+    lines.push(`- **${date}**: [[${noteName(file.path)}]] ${documentTitle(file)}`)
   }
   if (withoutDate.length > 0) {
     lines.push("", "## Sin fecha", "")
@@ -173,7 +173,7 @@ export function generateIndex(files: SourceFile[], title = "Índice"): string {
   for (const file of sorted) {
     const name = noteName(file.path)
     const heading = documentTitle(file)
-    lines.push(heading === name ? `- [[${name}]]` : `- [[${name}]] — ${heading}`)
+    lines.push(heading === name ? `- [[${name}]]` : `- [[${name}]]: ${heading}`)
   }
   lines.push("")
   return lines.join("\n")

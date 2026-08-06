@@ -3,13 +3,13 @@
  *
  * Uses the wooorm Hunspell dictionaries (`dictionary-es`, `dictionary-en`)
  * driven by `nspell`. The `.aff` / `.dic` data files are imported as raw
- * strings so the checker works fully offline in the bundled app — no network,
+ * strings so the checker works fully offline in the bundled app: no network,
  * no filesystem access, no manual downloads.
  *
  * Design notes:
  *  - Dictionaries are loaded lazily and asynchronously (the `.dic` files are
  *    ~0.5–0.7 MB each). Until a language's dictionary is ready, `checkText`
- *    returns `[]` — callers re-run once `onReady` fires.
+ *    returns `[]`; callers re-run once `onReady` fires.
  *  - Only ONE language is active per check, chosen from the document's
  *    frontmatter `lang:` (if present) or the app `settings.language`.
  *  - Before tokenising we mask out everything that is *not* prose: code spans

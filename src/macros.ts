@@ -14,7 +14,7 @@ export type KatexMacros = Record<string, string>
 /**
  * Extract the content of the first balanced `{...}` block starting at `pos`.
  * Returns null if there is no opening brace at `pos`.
- * Safe against deeply nested input — no regex backtracking.
+ * Safe against deeply nested input: no regex backtracking.
  */
 function extractBraceContent(s: string, pos: number): { content: string; end: number } | null {
   if (s[pos] !== "{") return null
@@ -36,7 +36,7 @@ export function parseMacros(text: string): KatexMacros {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith("%")) continue
 
-    // Match \newcommand{\name} — command name is the first brace group
+    // Match \newcommand{\name}: command name is the first brace group
     const prefix = /^\\newcommand/.exec(trimmed)
     if (!prefix) continue
 
@@ -65,7 +65,7 @@ export function parseMacros(text: string): KatexMacros {
 export const MACROS_FILENAME = "macros.md"
 
 /** Template shown to users when they create a macros file */
-export const MACROS_TEMPLATE = `% Macros personalizados — se aplican en todo el vault
+export const MACROS_TEMPLATE = `% Macros personalizados: se aplican en todo el vault
 % Sintaxis: \\newcommand{\\cmd}{definición}
 %           \\newcommand{\\cmd}[n]{definición con #1...#n}
 

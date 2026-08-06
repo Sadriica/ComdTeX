@@ -29,7 +29,7 @@ export interface LintContext {
   /**
    * Dictionary-based spell-checking. When `true`, the content linter emits
    * Hint markers for unknown words using the `spellLang` dictionary. Defaults
-   * to off — when disabled, NO dictionary is loaded and no spell work runs.
+   * to off; when disabled, NO dictionary is loaded and no spell work runs.
    */
   spellcheck?: boolean
   /** Active spell-check language (frontmatter `lang:` or `settings.language`). */
@@ -88,7 +88,7 @@ function mkMarker(
   }
 }
 
-// ── Strip code regions (preserve offsets — replace chars with spaces) ─────────
+// ── Strip code regions (preserve offsets, replace chars with spaces) ─────────
 
 /**
  * Replace fenced code blocks (``` … ```) and inline code (`…`) with spaces,
@@ -347,7 +347,7 @@ const BIBTEX_KNOWN_TYPES = new Set([
 ])
 const BIBTEX_SKIP_TYPES = new Set(["string", "preamble", "comment"])
 
-// Each inner array is an OR group — at least one field from the group must be present.
+// Each inner array is an OR group; at least one field from the group must be present.
 const BIBTEX_REQUIRED: Record<string, string[][]> = {
   article:       [["author"], ["title"], ["journal"], ["year"]],
   book:          [["author", "editor"], ["title"], ["publisher"], ["year"]],
@@ -543,7 +543,7 @@ function lintMacros(
 
 /**
  * Emit Hint markers for unknown words. Runs ONLY when `context.spellcheck` is
- * true — when off, this is never called, so no dictionary is loaded and no
+ * true; when off, this is never called, so no dictionary is loaded and no
  * tokenising happens (fully offline, zero overhead when disabled).
  *
  * Operates on the ORIGINAL text (not the code-stripped `clean`), because
@@ -574,7 +574,7 @@ function lintSpelling(
  * markdown-it follows GFM here: extra cells are dropped and missing ones are
  * rendered empty, so the preview quietly disagrees with the source and the
  * author never finds out. A warning (not an error) plus the "Normalizar tabla"
- * command is the fix — the document still renders.
+ * command is the fix; the document still renders.
  */
 function lintTables(
   text: string,
@@ -665,7 +665,7 @@ export function lintFile(
 }
 
 /**
- * Lightweight summary for background linting — does NOT require Monaco at runtime.
+ * Lightweight summary for background linting: does NOT require Monaco at runtime.
  * Uses numeric severity constants that match Monaco's MarkerSeverity enum values.
  */
 export function lintFileSummary(

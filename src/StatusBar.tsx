@@ -3,7 +3,7 @@ import { useT } from "./i18n"
 import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 
 interface StatusBarProps {
-  mode: "md" | "tex" | "pdf" | null
+  mode: "md" | "tex" | "pdf" | "typ" | null
   line: number
   col: number
   content: string
@@ -12,13 +12,13 @@ interface StatusBarProps {
   selectedWords?: number
   wordGoal?: number
   onGoToLine?: (line: number) => void
-  /** "wasm" | "local" — which TeX engine is preferred for PDF export. */
+  /** "wasm" | "local": which TeX engine is preferred for PDF export. */
   texEngine?: "wasm" | "local"
   /** "compiling" briefly displaces the engine label while a build is running. */
   texEngineState?: "idle" | "initializing" | "compiling"
   /** Cloud-sync provider that owns the current vault, if any. */
   cloudSync?: CloudSyncInfo | null
-  /** Click handler for the sync badge — typically opens the conflicts panel. */
+  /** Click handler for the sync badge: typically opens the conflicts panel. */
   onCloudSyncClick?: () => void
   /** Number of unresolved conflict files; turns the badge into a warning. */
   cloudConflictCount?: number
@@ -39,7 +39,7 @@ function charCount(text: string): number {
 export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount, readingWpm = 200, fillingGaps = false }: StatusBarProps) {
   const t = useT()
   // Memoized so the cursor moving (line/col change every keystroke) doesn't
-  // re-run these O(n) document scans — they only recompute when `content` (the
+  // re-run these O(n) document scans; they only recompute when `content` (the
   // debounced preview content) actually changes.
   const { wc, cc, readMin } = useMemo(() => {
     const w = wordCount(content)
@@ -59,7 +59,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
     <div className="status-bar">
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
-        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : t.statusBar.modeMarkdown}</span>}
+        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : mode === "typ" ? "Typst" : t.statusBar.modeMarkdown}</span>}
         {showTexEngine && (
           <span
             className="status-item status-tex-engine"

@@ -1,5 +1,5 @@
 /**
- * Per-folder rules — `.comdtex-folder.json`, stored inside the folder it governs.
+ * Per-folder rules: `.comdtex-folder.json`, stored inside the folder it governs.
  *
  * The point is that a folder can carry the conventions of the work that lives in
  * it: "every note here starts from the `clase` template, is named
@@ -7,7 +7,7 @@
  * the notes (rather than a hidden central registry) is visible, diffable and
  * survives moving the folder between vaults.
  *
- * This module is pure — no React, no filesystem. `useVault` reads the files and
+ * This module is pure: no React, no filesystem. `useVault` reads the files and
  * hands the parsed map in; everything here is a total function over that map, so
  * it is fully unit-testable.
  */
@@ -77,7 +77,7 @@ export function parseFolderRules(json: string): FolderRules | null {
       const e = entry as Record<string, unknown>
       const file = typeof e.file === "string" ? e.file.trim() : ""
       const type = e.type as GeneratorType
-      // A generated file must stay inside its own folder — a rule pointing at
+      // A generated file must stay inside its own folder; a rule pointing at
       // "../../notes.md" would let a config file write outside the folder the
       // user was looking at.
       if (!file || file.includes("/") || file.includes("\\") || file.includes("..")) return []
@@ -132,7 +132,7 @@ export function resolveRulesForDir(
   }), { version: 1 })
   // Generated files are NOT inherited: they name a concrete file inside the
   // folder that declared them, so inheriting would recreate a parent's index in
-  // every subfolder. Only the target folder's own declaration survives — the
+  // every subfolder. Only the target folder's own declaration survives; the
   // merge loop above would otherwise carry an ancestor's list down whenever the
   // target defines no rules of its own.
   const own = rulesByDir.get(chain[chain.length - 1])
@@ -165,7 +165,7 @@ export function ancestorChain(dirPath: string, vaultPath: string): string[] {
  * Filename for a new note, applying the folder's `filenamePattern`.
  *
  * `title` is whatever the user typed. When there is no pattern the name is
- * returned untouched — patterns are opt-in per folder.
+ * returned untouched: patterns are opt-in per folder.
  */
 export function applyFilenamePattern(rules: FolderRules | null, title: string): string {
   const trimmed = title.trim()
@@ -181,7 +181,7 @@ export function applyFilenamePattern(rules: FolderRules | null, title: string): 
 /**
  * Merge the folder's default frontmatter into `content`.
  *
- * Keys the document already defines always win — the rules supply defaults for
+ * Keys the document already defines always win: the rules supply defaults for
  * a new note, they must never rewrite what the author wrote.
  */
 export function applyFolderFrontmatter(rules: FolderRules | null, content: string): string {

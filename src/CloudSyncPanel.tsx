@@ -55,7 +55,7 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
       try {
         await rename(c.conflictPath, basePath)
       } catch (promoteErr) {
-        // Promotion failed — put the original back and surface the error.
+        // Promotion failed: put the original back and surface the error.
         await rename(backupPath, basePath)
         throw promoteErr
       }

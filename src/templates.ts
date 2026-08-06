@@ -7,6 +7,10 @@ export interface Template {
   icon: string
   content: string
   custom?: boolean
+  // Journal templates target a real LaTeX class on export (see
+  // `comdtex.texclass` in exporter.ts); they render in a separate section
+  // of the template picker. Undefined means the classic basics section.
+  category?: "journal"
 }
 
 const today = () => new Date().toISOString().split("T")[0]
@@ -267,6 +271,169 @@ comdtex.main: true
 `,
   },
   {
+    id: "journal-ieee",
+    name: "Paper IEEE",
+    description: "Conferencia IEEE (IEEEtran); exporta con la clase real",
+    icon: "Ⅰ",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, ieee]
+comdtex.main: true
+comdtex.texclass: ieeetran
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary of the contribution.
+
+# Introduction {#sec:introduction}
+
+Motivation, related work and contributions.
+
+# Method {#sec:method}
+
+$$
+y = f(x)
+$$ {#eq:model}
+
+# Results {#sec:results}
+
+| Metric | Value |
+|---|---|
+| Accuracy | 0.0 |
+{#tbl:results}
+
+# Conclusion {#sec:conclusion}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-acm",
+    name: "Paper ACM",
+    description: "Conferencia ACM (acmart sigconf); exporta con la clase real",
+    icon: "Λ",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, acm]
+comdtex.main: true
+comdtex.texclass: acmart
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary of the contribution.
+
+# Introduction {#sec:introduction}
+
+# Background {#sec:background}
+
+:::definition[Key concept]{#def:key}
+Definition the paper builds on.
+:::
+
+# Approach {#sec:approach}
+
+:::theorem[Main result]{#thm:main}
+Statement of the main result, using @def:key.
+:::
+
+:::proof
+Proof sketch.
+:::
+
+# Evaluation {#sec:evaluation}
+
+# Conclusion {#sec:conclusion}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-elsevier",
+    name: "Paper Elsevier",
+    description: "Revista Elsevier (elsarticle); exporta con la clase real",
+    icon: "Ε",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, elsevier]
+comdtex.main: true
+comdtex.texclass: elsarticle
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary.
+
+# Introduction {#sec:introduction}
+
+# Materials and methods {#sec:methods}
+
+$$
+y = f(x)
+$$ {#eq:model}
+
+# Results {#sec:results}
+
+# Discussion {#sec:discussion}
+
+# Conclusions {#sec:conclusions}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-apa",
+    name: "Manuscrito APA",
+    description: "Manuscrito estilo APA 7 (apa7); exporta con la clase real",
+    icon: "Ψ",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, apa]
+comdtex.main: true
+comdtex.texclass: apa7
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary (150-250 words).
+
+# Introduction {#sec:introduction}
+
+# Method {#sec:method}
+
+## Participants {#sec:participants}
+
+## Procedure {#sec:procedure}
+
+# Results {#sec:results}
+
+# Discussion {#sec:discussion}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
     id: "lecture-notes-book",
     name: "Libro de apuntes",
     description: "Capítulo con definiciones, teoremas, ejercicios y backlinks matemáticos",
@@ -333,7 +500,7 @@ export function loadCustomTemplates(): Template[] {
  * Turn an existing document into a reusable template by replacing the parts that
  * are specific to *that* note with template variables.
  *
- * Deliberately conservative — it only rewrites things that are unambiguously
+ * Deliberately conservative: it only rewrites things that are unambiguously
  * per-note metadata (the frontmatter `title`/`date`, the H1 when it matches the
  * title, and ISO dates in the frontmatter block). Body prose is left alone: a
  * date mentioned inside a paragraph is content, not a field, and rewriting it
@@ -357,7 +524,7 @@ export function parameterizeDocument(content: string, filename?: string): string
     out = block + content.slice(fmEnd[0].length)
   }
 
-  // The H1 only becomes {{title}} when it restates the note's identity —
+  // The H1 only becomes {{title}} when it restates the note's identity:
   // otherwise it is a real heading that belongs in the template as-is.
   const h1 = /^#[ \t]+(.+)$/m.exec(out)
   if (h1) {

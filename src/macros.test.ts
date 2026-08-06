@@ -43,7 +43,7 @@ describe("parseMacros", () => {
 
   it("does NOT support \\renewcommand (only literal \\newcommand is matched)", () => {
     // Surprising real behavior: the prefix regex only matches "\newcommand" at the
-    // start of the trimmed line, so \renewcommand lines are silently skipped —
+    // start of the trimmed line, so \renewcommand lines are silently skipped;
     // there is no special-case handling or fallback for renewcommand.
     const macros = parseMacros("\\renewcommand{\\R}{\\mathbb{Z}}")
     expect(macros).toEqual({})

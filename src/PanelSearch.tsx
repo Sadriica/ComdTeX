@@ -52,7 +52,7 @@ export default function PanelSearch({ value, onChange, placeholder, resultCount 
  * Case- and accent-insensitive substring match.
  *
  * Accent folding matters here: the UI is Spanish, and someone typing "indice"
- * must find "índice" — an exact match would make the filter feel broken.
+ * must find "índice"; an exact match would make the filter feel broken.
  */
 export function matchesQuery(haystack: string, query: string): boolean {
   if (!query.trim()) return true
@@ -65,7 +65,7 @@ function fold(s: string): string {
     // NFD would decompose ñ into "n" + combining tilde and the strip below
     // would turn it into a plain "n". In Spanish ñ is its own letter, not an
     // accented n, so it is parked on a private-use code point across the fold and
-    // restored afterwards. Accented vowels DO fold — "indice" finds "índice".
+    // restored afterwards. Accented vowels DO fold: "indice" finds "índice".
     .replace(/\u00f1/g, "\ue000")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

@@ -223,6 +223,8 @@ export interface T {
     customBadge: string
     variablesHint: string
     closeAriaLabel: string
+    sectionBasics: string
+    sectionJournals: string
   }
 
   titleBar: {
@@ -268,6 +270,7 @@ export interface T {
     exportProjectTex: string
     compileLatexPdf: string
     compileWasmPdf: string
+    showInPdf: string
     viewLabels: string
     viewQuality: string
     openDailyNote: string
@@ -279,6 +282,7 @@ export interface T {
     importDoc: string
     exportTypst: string
     exportTypstPdf: string
+    compileTypstFilePdf: string
     insertExcalidraw: string
     insertWikilink: string; insertTransclusion: string; insertFootnote: string
     insertCallout: string; insertCitation: string; insertFigure: string
@@ -543,6 +547,32 @@ export interface T {
     loadCommits: string
     // init state
     initGitRepo: string; recheckRepo: string
+    // Guided collaboration (plain language over git)
+    collabTitle: string
+    collabNoRemoteIntro: string
+    collabCreateRepo: string
+    collabPasteUrl: string
+    collabConnect: string
+    collabConnected: string
+    collabConnectError: (err: string) => string
+    collabSyncedMsg: string
+    collabAheadMsg: (n: number) => string
+    collabBehindMsg: (n: number) => string
+    collabDirtyMsg: string
+    collabSaveMsgPlaceholder: string
+    collabSaveAndSend: string
+    collabBring: string
+    collabSend: string
+    collabSent: string
+    collabBrought: string
+    collabPushRejected: string
+    collabConflictIntro: string
+    collabKeepMine: string
+    collabKeepTheirs: string
+    collabResolved: (path: string) => string
+    collabFinishMerge: string
+    collabMergeDone: string
+    collabError: (err: string) => string
     // errors
     discardConfirm: (name: string) => string
     commitError: (msg: string) => string
@@ -610,6 +640,7 @@ export interface T {
     typstPdfSuccess: string
     typstPdfError: (err: string) => string
     pandocMissingTypst: string
+    typstBinaryMissing: string
     /** Spell-check marker message for an unknown word. */
     spellError: (word: string) => string
   }
@@ -1077,6 +1108,9 @@ export interface T {
     page: string
     jumpedToHeading: (heading: string) => string
     headingNotFound: (heading: string) => string
+    jumpedToLine: (line: number) => string
+    syncUnavailable: string
+    syncNoMatch: string
   }
 
   cloudSync: {

@@ -101,7 +101,7 @@ describe("preview cross-reference anchors", () => {
     const html = renderMarkdown(doc, {}, undefined, undefined, undefined, undefined, undefined, { annotate: false })
     // Build the fragment the same way the preview pipeline does before calling
     // `annotateSourceLinesIn` (a DOMParser parse, no sanitizer needed for this
-    // assertion — we only care about the in-place annotation pass itself).
+    // assertion; we only care about the in-place annotation pass itself).
     const parsed = new DOMParser().parseFromString(`<div id="root">${html}</div>`, "text/html")
     const fragment = parsed.getElementById("root")!
     annotateSourceLinesIn(fragment, doc)
@@ -112,7 +112,7 @@ describe("preview cross-reference anchors", () => {
 
     const bodyHeadings = [...fragment.querySelectorAll("h1:not(.fm-title)")]
     expect(bodyHeadings.length).toBe(2)
-    // The FIRST body "# Notas" is on source line 4 (1-indexed) — it must not
+    // The FIRST body "# Notas" is on source line 4 (1-indexed); it must not
     // be shifted to line 8 (the second heading) by the frontmatter h1.
     expect(bodyHeadings[0].getAttribute("data-source-line")).toBe("4")
     expect(bodyHeadings[1].getAttribute("data-source-line")).toBe("8")
