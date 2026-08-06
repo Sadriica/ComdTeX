@@ -11,6 +11,7 @@
 // contain a `:::csv` block that must then be expanded.
 
 import { expandCsvBlocks } from "./csvRange"
+import { parseDataBlocks } from "./datasets"
 import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
 
 /**
@@ -19,8 +20,9 @@ import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
  *
  * A transcluded note is wrapped in HTML by `resolveTransclusions`, so a
  * `:::csv` block inside it would no longer look like a block afterwards.
- * The resolver is therefore wrapped to expand each note's own CSV blocks
- * BEFORE it is embedded, and the host document is expanded after.
+ * The resolver is therefore wrapped to expand each note's own data
+ * declarations and CSV blocks BEFORE it is embedded, and the host document
+ * is expanded after.
  */
 export function resolveDocumentContent(
   raw: string,
@@ -29,7 +31,13 @@ export function resolveDocumentContent(
   if (!resolver) return raw
   const resolveEmbedded: TransclusionResolver = (target) => {
     const content = resolver(target)
-    return content == null ? content : expandCsvBlocks(content, resolver)
+    if (content == null) return content
+    // An embedded note may declare its own datasets and use them.
+    const embedded = parseDataBlocks(content)
+    return expandCsvBlocks(embedded.content, resolver, embedded.datasets)
   }
-  return expandCsvBlocks(resolveTransclusions(raw, resolveEmbedded), resolver)
+  // Datasets are declared before anything reads them, and their blocks
+  // vanish: a declaration prints nothing, like a macro definition.
+  const { datasets, content } = parseDataBlocks(resolveTransclusions(raw, resolveEmbedded))
+  return expandCsvBlocks(content, resolver, datasets)
 }

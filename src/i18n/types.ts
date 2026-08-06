@@ -27,7 +27,7 @@ export interface T {
     definition: string; example: string; exercise: string
     proof: string; remark: string; note: string
     structures: string; table: string; matAuto: string; matFixed: string; matLiteral: string
-    lbl_csv: string
+    lbl_csv: string; lbl_data: string
     more: string
     math: string
     togglePreview: string

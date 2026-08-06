@@ -3,6 +3,19 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.25.0] - 2026-08-06
+
+### Added
+- **Named datasets: import once, use everywhere.** A `:::data` block declares a selection over a vault CSV and gives it a name, using the same label grammar as the rest of the editor:
+
+  ```
+  :::data{#data:growth}
+  growth.csv (A:D) (1:20)
+  :::
+  ```
+
+  The declaration prints nothing. Like a macro definition, it exists so other blocks can point at it: a `:::csv` block whose source is `@data:growth` renders that data as a table, and its own selection narrows the dataset further, so `@data:growth (A, C)` means "columns A and C of my growth data". A dataset is not a numbered element and is never cited in prose, which is why it has no number; but it does ride the label system, so the Labels panel reports duplicate declarations, references to datasets that do not exist, and datasets nobody uses. The editor warns about both mistakes while you write. A generated table can also carry `{#tbl:x}` and become citable with `@tbl:x` like any hand-written one. CSVs are parsed once and reused while the file is unchanged, so declaring a dataset costs nothing on the typing path.
+
 ## [1.24.0] - 2026-08-06
 
 ### Fixed

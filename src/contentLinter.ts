@@ -646,6 +646,43 @@ function lintBioConventions(
   )
 }
 
+/**
+ * Datasets are declared with `{#data:x}` and used with `@data:x`. A typo in
+ * either direction renders an honest note in the document, but the marker
+ * catches it while writing, which is where it costs least.
+ */
+function lintDataRefs(
+  text: string,
+  lineIdx: number[],
+  Severity: typeof monacoApi.MarkerSeverity,
+): monacoApi.editor.IMarkerData[] {
+  const markers: monacoApi.editor.IMarkerData[] = []
+  const declared = new Map<string, number>()
+
+  const declRe = /\{#(data:[\w:.-]+)\}/g
+  let m: RegExpExecArray | null
+  while ((m = declRe.exec(text)) !== null) {
+    const id = m[1]
+    if (declared.has(id)) {
+      markers.push(
+        mkMarker(lineIdx, m.index, m.index + m[0].length, `Dataset duplicado: ${id}`, Severity.Warning),
+      )
+    } else {
+      declared.set(id, m.index)
+    }
+  }
+
+  const refRe = /@(data:[\w-]+(?:\.[\w-]+)*)/g
+  while ((m = refRe.exec(text)) !== null) {
+    if (!declared.has(m[1])) {
+      markers.push(
+        mkMarker(lineIdx, m.index, m.index + m[0].length, `Dataset no declarado: @${m[1]}`, Severity.Warning),
+      )
+    }
+  }
+  return markers
+}
+
 export function lintContent(
   text: string,
   context: LintContext,
@@ -666,6 +703,7 @@ export function lintContent(
     // Opt-in per document (frontmatter `comdtex.domain: biology`): journals
     // return manuscripts over un-italicized binomials and gene symbols.
     ...lintBioConventions(text, lineIdx, context, Severity),
+    ...lintDataRefs(clean, lineIdx, Severity),
   ]
 
   if (context.spellcheck) {
