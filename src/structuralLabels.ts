@@ -1,4 +1,8 @@
-export type StructuralLabelKind = "sec" | "eq" | "fig" | "tbl" | "thm" | "lem" | "cor" | "prop" | "def" | "ex" | "exc"
+// `data` is deliberately in this list but is NOT a numbered element: a
+// dataset is declared to be used (like a macro), never cited as "Data 3".
+// It rides here so the Labels panel reports duplicate declarations, broken
+// `@data:` references and unused datasets exactly as it does for the rest.
+export type StructuralLabelKind = "sec" | "eq" | "fig" | "tbl" | "thm" | "lem" | "cor" | "prop" | "def" | "ex" | "exc" | "data"
 
 export interface StructuralLabel {
   id: string
@@ -28,6 +32,8 @@ export interface StructuralLabelIndex {
 }
 
 const KIND_ALIASES: Record<string, StructuralLabelKind> = {
+  data: "data",
+  dataset: "data",
   sec: "sec",
   eq: "eq",
   fig: "fig",
@@ -58,6 +64,7 @@ export const LABEL_KIND_TITLES: Record<StructuralLabelKind, string> = {
   def: "Definiciones",
   ex: "Ejemplos",
   exc: "Ejercicios",
+  data: "Datos",
 }
 
 function normalizeKind(kind: string): StructuralLabelKind | null {

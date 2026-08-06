@@ -256,30 +256,45 @@ export function renderCsvSelection(csvText: string, spec: CsvBlockSpec): string 
   return csvToMarkdownTable(header, rows, { caption: spec.caption })
 }
 
+import { resolveBlockSource, type DatasetMap } from "./datasets"
+
 // ── Block expansion ───────────────────────────────────────────────────────────
 
 /** Reads a vault file by name or path; the same shape transclusion uses. */
 export type CsvResolver = (target: string) => string | null
 
-const CSV_BLOCK_RE = /^:::csv(?:\[([^\]]*)\])?[ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm
+const CSV_BLOCK_RE = /^:::csv(?:\[([^\]]*)\])?(?:\{#((?:tbl|data):[\w:.-]+)\})?[ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm
 
 /**
  * Replace every `:::csv` block with the Markdown table its selection
  * describes. A missing file or an unparseable selection leaves an honest
  * note in place of the table: silence would look like a rendering bug.
  */
-export function expandCsvBlocks(content: string, resolver?: CsvResolver): string {
+export function expandCsvBlocks(
+  content: string,
+  resolver?: CsvResolver,
+  datasets?: DatasetMap,
+): string {
   if (!resolver || !content.includes(":::csv")) return content
-  return content.replace(CSV_BLOCK_RE, (full, caption: string | undefined, body: string) => {
-    const spec = parseCsvBlock(body, caption ?? "")
-    if (!spec) return full
-    const csvText = resolver(spec.file)
-    if (csvText == null) return `**${spec.caption || "CSV"}**\n\n*(${spec.file}: not found in this vault)*`
-    try {
-      const table = renderCsvSelection(csvText, spec)
-      return table || `**${spec.caption || "CSV"}**\n\n*(${spec.file}: empty selection)*`
-    } catch {
-      return `**${spec.caption || "CSV"}**\n\n*(${spec.file}: could not be read as CSV)*`
-    }
-  })
+  return content.replace(
+    CSV_BLOCK_RE,
+    (full, caption: string | undefined, label: string | undefined, body: string) => {
+      const spec = parseCsvBlock(body, caption ?? "")
+      if (!spec) return full
+      const note = (msg: string) => `**${spec.caption || "CSV"}**\n\n*(${msg})*`
+
+      // The source is either a file or a `@data:` reference to a dataset
+      // declared elsewhere in the document.
+      const { data, error } = resolveBlockSource(spec, datasets ?? new Map(), resolver)
+      if (error) return note(error)
+      if (!data) return note(`${spec.file}: could not be read as CSV`)
+      const table = csvToMarkdownTable(data.header, data.rows, {
+        caption: spec.caption,
+        // A `{#tbl:x}` on the block makes the generated table citable with
+        // `@tbl:x`, like any hand-written one.
+        label: label && label.startsWith("tbl:") ? label : undefined,
+      })
+      return table || note(`${spec.file}: empty selection`)
+    },
+  )
 }
