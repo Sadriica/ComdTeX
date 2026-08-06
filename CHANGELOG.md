@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.24.0] - 2026-08-06
 
+### Fixed
+- **Citations reach the PDF.** `[@key]` was rendered in the preview but exported as literal text, so a compiled PDF showed `[@rudin1976]` instead of a citation and carried no bibliography at all. The LaTeX export now emits real `\cite` (with `\cite[p. 321]{key}` for locators) and closes the document with `\bibliographystyle` and `\bibliography{references}`, choosing the bst that matches the document's citation style. Documents without citations are unchanged.
+- **Every export sees the same document.** Transclusions and `:::csv` selections were resolved on the preview and "Compile PDF" paths but not on "Export as .tex", "Export PDF" (pandoc), the project export or the rebuild-on-save, so the same note produced different output depending on the button pressed, and a `:::csv` block could ship as raw source. Resolution now lives in one place (`documentResolve.ts`) that every path calls, including inside transcluded notes, and a guard test fails if a future export handler forgets it.
+
 ### Added
 - **Real citation styles.** `comdtex.citestyle` in the frontmatter picks how citations read, in the preview and in the PDF: `vancouver` (ICMJE, required by over a thousand biomedical journals), `ama`, `apa` (APA 7), `author-year` (astronomy and the social sciences), or the previous ComdTeX style, which stays the default so nothing changes silently. Numbered styles keep their superscript brackets; author-year styles render inline as `(Rudin & Smith, 1976)`. The LaTeX export loads natbib with the matching options, except under acmart and apa7, which manage citations themselves.
 - **Cite by ADS bibcode and INSPIRE record.** The Citation Manager's fetch box now recognizes a NASA ADS bibcode (`2024ApJ...900....1A`) and an INSPIRE-HEP recid or URL alongside DOIs and arXiv ids, which is how astronomers and high-energy physicists actually cite. ADS needs a personal token: it is entered in Settings and stored in the OS keychain, never in the settings file.

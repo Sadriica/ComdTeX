@@ -18,8 +18,8 @@ import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preproce
 import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./references"
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
-import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
-import { expandCsvBlocks } from "./csvRange"
+import { processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
+import { resolveDocumentContent } from "./documentResolve"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 
@@ -589,11 +589,9 @@ export function renderMarkdown(
   let content = parsed ? parsed.content : raw
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
-  content = resolveTransclusions(content, transclusionResolver)
-  // `:::csv` blocks hold a SELECTION, not a copy of the data: expand them
-  // against the vault's CSV files on every render, so regenerating the CSV
-  // updates the table. Same resolver as transclusion (both read vault files).
-  content = expandCsvBlocks(content, transclusionResolver)
+  // Transclusions and `:::csv` selections, resolved exactly as every export
+  // path resolves them (documentResolve.ts is the single definition).
+  content = resolveDocumentContent(content, transclusionResolver)
   content = processBlockIds(content)
 
   // Keep marks (`^^texto^^` / `^^def: texto^^`) are invisible outside the

@@ -149,3 +149,49 @@ describe("journal classes via comdtex.texclass", () => {
     expect(tex).toContain("\\documentclass[12pt,a4paper]{article}")
   })
 })
+
+describe("citations reach LaTeX", () => {
+  it("turns [@key] into a real \\cite", () => {
+    const tex = exportToTex("As shown in [@rudin1976].", "", "T")
+    expect(tex).toContain("\\cite{rudin1976}")
+    expect(tex).not.toContain("[@rudin1976]")
+  })
+
+  it("carries a page locator the way LaTeX expects", () => {
+    const tex = exportToTex("See [@rudin1976, p. 321].", "", "T")
+    expect(tex).toContain("\\cite[p. 321]{rudin1976}")
+  })
+
+  it("closes the document with the bibliography when something was cited", () => {
+    const tex = exportToTex("Cited [@a].", "", "T")
+    expect(tex).toContain("\\bibliography{references}")
+    expect(tex).toContain("\\bibliographystyle{plain}")
+    // The commands must sit inside the document, before \end{document}.
+    expect(tex.indexOf("\\bibliography{references}")).toBeLessThan(tex.indexOf("\\end{document}"))
+  })
+
+  it("emits no bibliography for a document without citations", () => {
+    const tex = exportToTex("No citations here.", "", "T")
+    expect(tex).not.toContain("\\bibliography")
+  })
+
+  it("matches the bst to the citation style", () => {
+    const vanc = exportToTex("---\ncomdtex.citestyle: vancouver\n---\nCited [@a].", "", "T")
+    expect(vanc).toContain("\\bibliographystyle{unsrt}")
+    const apa = exportToTex("---\ncomdtex.citestyle: apa\n---\nCited [@a].", "", "T")
+    expect(apa).toContain("\\bibliographystyle{apalike}")
+    const ay = exportToTex("---\ncomdtex.citestyle: author-year\n---\nCited [@a].", "", "T")
+    expect(ay).toContain("\\bibliographystyle{plainnat}")
+  })
+
+  it("still resolves cross-references correctly next to citations", () => {
+    const tex = exportToTex("See @sec:intro and [@key].\n\n# Intro {#sec:intro}", "", "T")
+    expect(tex).toContain("\\cite{key}")
+    expect(tex).toContain("\\ref{sec:intro}")
+  })
+
+  it("leaves a bracketed non-citation alone", () => {
+    const tex = exportToTex("An array [a, b] and an email a@b.com.", "", "T")
+    expect(tex).not.toContain("\\cite")
+  })
+})
