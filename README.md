@@ -260,6 +260,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 ## Features
 
 ### Math & Writing
+- Tables from CSV by selection: a `:::csv` block naming `data.csv (A:B, D) (1:8, 12)` renders the slice as a table and re-reads the file on every render (letters, header names or indices; non-contiguous ranges; order preserved)
 - Units and chemistry: `si(9.81, m/s^2)` and `ce(H2O)` render in the preview and export as real `siunitx` and `mhchem`; packages load only when used
 - Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols
 - Shorthand system: expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting

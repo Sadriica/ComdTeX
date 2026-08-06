@@ -357,7 +357,7 @@ const IGNORED_TREE_DIRS = new Set([
 
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
-  return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ"
+  return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "csv"
 }
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
@@ -383,7 +383,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "pdf")
+      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "csv" || ext === "pdf")
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }

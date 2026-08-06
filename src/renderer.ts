@@ -19,6 +19,7 @@ import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./refe
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
+import { expandCsvBlocks } from "./csvRange"
 import { stripKeepMarks } from "./keepMarks"
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
@@ -585,6 +586,10 @@ export function renderMarkdown(
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
   content = resolveTransclusions(content, transclusionResolver)
+  // `:::csv` blocks hold a SELECTION, not a copy of the data: expand them
+  // against the vault's CSV files on every render, so regenerating the CSV
+  // updates the table. Same resolver as transclusion (both read vault files).
+  content = expandCsvBlocks(content, transclusionResolver)
   content = processBlockIds(content)
 
   // Keep marks (`^^texto^^` / `^^def: texto^^`) are invisible outside the
