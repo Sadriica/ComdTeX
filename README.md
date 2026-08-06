@@ -270,6 +270,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - User-defined text snippets via `snippets.md`
 - YAML frontmatter (title, author, date, abstract, tags)
 - Callout blocks (`> [!NOTE]`, `> [!WARNING]`, `> [!TIP]`, etc.)
+- Special blocks render as real diagrams in exports too: flowcharts, graphs, plots, commutative diagrams and Excalidraw drawings rasterize into the PDF (and as PNGs beside an exported `.tex`); truth tables export as real tables. Documents with diagrams compile through a local engine (the bundled WASM engine cannot read image files and keeps the code-fence fallback)
 - Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor), each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
 - Text formatting: `==highlight==`, coloured highlights (`<mark class="hl-green">…</mark>` and friends), `<u>underline</u>`
 - Live auto table of contents: drop a `[[toc]]` line and it expands into a navigable, always-current heading list
