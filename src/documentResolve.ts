@@ -12,6 +12,7 @@
 
 import { expandCsvBlocks } from "./csvRange"
 import { parseDataBlocks } from "./datasets"
+import { expandPlotData } from "./plotData"
 import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
 
 /**
@@ -34,10 +35,14 @@ export function resolveDocumentContent(
     if (content == null) return content
     // An embedded note may declare its own datasets and use them.
     const embedded = parseDataBlocks(content)
-    return expandCsvBlocks(embedded.content, resolver, embedded.datasets)
+    const withPlots = expandPlotData(embedded.content, embedded.datasets, resolver)
+    return expandCsvBlocks(withPlots, resolver, embedded.datasets)
   }
   // Datasets are declared before anything reads them, and their blocks
   // vanish: a declaration prints nothing, like a macro definition.
   const { datasets, content } = parseDataBlocks(resolveTransclusions(raw, resolveEmbedded))
-  return expandCsvBlocks(content, resolver, datasets)
+  // Plots that name a dataset become plots with literal series, so the
+  // renderer never needs a vault resolver.
+  const withPlots = expandPlotData(content, datasets, resolver)
+  return expandCsvBlocks(withPlots, resolver, datasets)
 }

@@ -163,7 +163,7 @@ describe("renderPlotHTML", () => {
   it("returns an error div (no throw) when no functions are defined", () => {
     const html = renderPlotHTML("", "# just a comment", "1")
     expect(html).toContain("plot-error")
-    expect(html).toContain("no functions defined")
+    expect(html).toContain("no functions or data defined")
   })
 
   it("returns an error div (no throw) for an invalid expression", () => {
