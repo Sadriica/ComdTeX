@@ -3,6 +3,22 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.28.0] - 2026-08-06
+
+### Changed
+- **Bring your own AI now means any provider, not the five that happened to be allow-listed.** The settings accepted any endpoint while the app only permitted requests to a fixed list of hosts compiled into it, so pointing ComdTeX at OpenRouter, DeepSeek, LM Studio or a lab server failed with nothing useful to show for it. Requests now leave through the desktop layer instead of the browser layer, so any provider reachable over https works, and so does one running on your own machine. The security barrier did not move: an address that is not https or local is still refused, and the app still ships no keys and makes no request until you enable it.
+- **Sync says where your vault actually stands before it offers you a switch.** It presented a cloud folder and version control as two equivalent options, when they are not: git keeps a history and stops on a conflict, while a synced folder keeps a copy and leaves a second file with a longer name. The Sync settings now open with your situation in one sentence, the single next step for it, and a button that takes you to the Git panel. The cloud toggles remain underneath, as what they are: a safety net for vaults kept in a synced folder.
+
+### Added
+- **Test connection, in AI settings.** A settings form that never proves it works leaves you guessing, and a rejected key, a model name that does not exist and a service that is not running all look the same. The test sends the smallest possible real request and tells you which of the four it is. The assistant now names the same causes the same way when a message fails, instead of forwarding the provider's raw text.
+- **A warning for a git repository inside a synced cloud folder.** The cloud client and git write to the same internal files, and the repository is corrupted sooner or later; it is silent until the day it is not. ComdTeX now says so, and says to move the vault out and share it with a remote instead.
+
+### Fixed
+- **Backlinks no longer read the whole vault from disk.** Opening the panel, or switching files with it open, re-read every file in the vault. It now asks the vault's own search, which keeps files cached until they change on disk.
+- **Draft saving no longer re-serializes every stored draft.** The crash-recovery list is kept in memory with storage as its mirror, instead of parsing and rewriting up to twenty whole documents every time one of them changes while you type.
+- **The equation cache no longer empties itself.** On reaching its limit it discarded everything, including equations rendered moments earlier in the same document, exactly on the heaviest documents; it now discards only the oldest.
+- Removed 33 translation strings that were declared and translated in both languages and displayed nowhere.
+
 ## [1.27.1] - 2026-08-06
 
 ### Fixed

@@ -13,7 +13,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
-import { sendMessage, getPreset, AiError, warmUp, isAiReady, type ChatMessage } from "./ai/aiProvider"
+import { sendMessage, getPreset, AiError, warmUp, isAiReady, classifyAiFailure, type ChatMessage } from "./ai/aiProvider"
 import { showToast } from "./toastService"
 import { useAiSessionContext } from "./useAiSession"
 
@@ -42,10 +42,28 @@ function aiErrorMessage(e: unknown, t: ReturnType<typeof useT>): string {
       case "missing-base-url":    return t.ai.errMissingBaseUrl
       case "missing-cli-command": return t.ai.errMissingCli
     }
-    return t.ai.errGeneric(e.message)
+    return namedFailure(e.message, t)
   }
   if (e instanceof DOMException && e.name === "AbortError") return ""
-  return t.ai.errGeneric(e instanceof Error ? e.message : String(e))
+  return namedFailure(e instanceof Error ? e.message : String(e), t)
+}
+
+/**
+ * Say which of the four things is wrong instead of forwarding the provider's
+ * raw text. A rejected key, a model that is not there and an endpoint that
+ * never answered need three different fixes, and the same settings screen
+ * fixes all three, so the message names the cause and still carries the
+ * provider's own words for anyone who wants them.
+ */
+function namedFailure(raw: string, t: ReturnType<typeof useT>): string {
+  switch (classifyAiFailure(raw)) {
+    case "unauthorized": return `${t.aiSettings.testUnauthorized} (${raw})`
+    case "no-model":     return `${t.aiSettings.testNoModel} (${raw})`
+    case "unreachable":  return `${t.aiSettings.testUnreachable} (${raw})`
+    case "bad-url":      return t.aiSettings.testBadUrl
+    case "incomplete":   return t.ai.errMissingApiKey
+    default:             return t.ai.errGeneric(raw)
+  }
 }
 
 // Warm-up fires at most once per provider configuration per app session: the

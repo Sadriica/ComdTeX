@@ -3,8 +3,9 @@ import { getSecret, setSecret } from "./secretStore"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
 import { useFocusTrap } from "./useFocusTrap"
-import { PROVIDER_PRESETS, getPreset } from "./ai/aiProvider"
+import { PROVIDER_PRESETS, getPreset, checkConnection, type AiCheck } from "./ai/aiProvider"
 import { providerLabel, type CloudProvider } from "./cloudSync"
+import { nextStep, type SyncPosture } from "./syncPosture"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
 
@@ -15,13 +16,17 @@ interface SettingsModalProps {
   initialSection?: string
   /** Provider that owns the current vault, if detected. Read-only display. */
   cloudProvider?: CloudProvider | null
+  /** Where this vault actually stands: versioned, shared, or neither. */
+  syncPosture?: SyncPosture
+  /** Hands the user over to the Git panel. */
+  onOpenGit?: () => void
   onClose: () => void
   onChange: (partial: Partial<Settings>) => void
 }
 
 type SectionId = "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "ai" | "sync"
 
-export default function SettingsModal({ open, settings, initialSection, cloudProvider, onClose, onChange }: SettingsModalProps) {
+export default function SettingsModal({ open, settings, initialSection, cloudProvider, syncPosture, onOpenGit, onClose, onChange }: SettingsModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
   // Initialize from the requested section. The parent passes a `key` derived
@@ -31,11 +36,43 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   // The ADS token is a credential: it lives in the OS keychain via
   // secretStore, never in the settings JSON alongside preferences.
   const [adsToken, setAdsToken] = useState("")
+  // Result of the last connection test. A settings form that never proves it
+  // works leaves the user guessing between a wrong key, a wrong model name and
+  // an endpoint that is simply not running.
+  const [aiCheck, setAiCheck] = useState<AiCheck | null>(null)
+  const [aiChecking, setAiChecking] = useState(false)
   useEffect(() => {
     let alive = true
     getSecret("ads_token").then((v) => { if (alive && v) setAdsToken(v) }).catch(() => {})
     return () => { alive = false }
   }, [])
+  const aiCheckMessage = (check: AiCheck): string => {
+    switch (check.code) {
+      case "ok": return t.aiSettings.testOk
+      case "incomplete": return t.aiSettings.testIncomplete
+      case "bad-url": return t.aiSettings.testBadUrl
+      case "unauthorized": return t.aiSettings.testUnauthorized
+      case "no-model": return t.aiSettings.testNoModel
+      case "unreachable": return t.aiSettings.testUnreachable
+      default: return t.aiSettings.testFailed
+    }
+  }
+
+  const cs = t.cloudSync.settings
+  const postureText =
+    syncPosture === "git-shared" ? cs.postureGitShared
+    : syncPosture === "git-local" ? cs.postureGitLocal
+    : syncPosture === "git-in-cloud" ? cs.postureGitInCloud
+    : syncPosture === "cloud-only" ? cs.postureCloudOnly
+    : cs.postureLocalOnly
+  const postureAlarming = syncPosture === "git-in-cloud"
+  const step = syncPosture ? nextStep(syncPosture) : null
+  const postureStep =
+    step === "move-out-of-cloud" ? cs.stepMoveOutOfCloud
+    : step === "add-remote" ? cs.stepAddRemote
+    : step === "start-git" ? cs.stepStartGit
+    : null
+
   useFocusTrap(modalRef, open, onClose)
   if (!open) return null
 
@@ -387,7 +424,22 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "sync" && (
               <>
-                <p className="setting-hint">{t.cloudSync.settings.intro}</p>
+                {/* Git is the mechanism and the cloud folder is the safety
+                    net, so the section says where this vault stands before it
+                    offers any switch to flip. */}
+                <div className="setting-section-title">{cs.posture}</div>
+                <p className={postureAlarming ? "setting-warn" : "setting-hint"}>{postureText}</p>
+                {postureStep && (
+                  <div className="setting-row">
+                    <span>{postureStep}</span>
+                    {onOpenGit && (
+                      <button className="setting-btn" onClick={onOpenGit}>{cs.openGit}</button>
+                    )}
+                  </div>
+                )}
+
+                <div className="setting-section-title">{t.settings.sections.sync}</div>
+                <p className="setting-hint">{cs.safetyNet}</p>
 
                 <label className="setting-row">
                   <span>
@@ -506,6 +558,32 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <p className="setting-hint">{t.aiSettings.apiKeyNote}</p>
                   </>
                 )}
+
+                <p className="setting-hint">{t.aiSettings.hostNote}</p>
+
+                <div className="setting-row">
+                  <span>
+                    {aiCheck && (
+                      <span className={aiCheck.code === "ok" ? "setting-ok" : "setting-warn"}>
+                        {aiCheckMessage(aiCheck)}
+                        {aiCheck.detail && aiCheck.code !== "ok" ? `: ${aiCheck.detail}` : ""}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    className="setting-btn"
+                    disabled={aiChecking}
+                    onClick={() => {
+                      setAiChecking(true)
+                      setAiCheck(null)
+                      void checkConnection(settings)
+                        .then(setAiCheck)
+                        .finally(() => setAiChecking(false))
+                    }}
+                  >
+                    {aiChecking ? t.aiSettings.testing : t.aiSettings.test}
+                  </button>
+                </div>
 
                 {settings.aiEnabled && (
                   <>

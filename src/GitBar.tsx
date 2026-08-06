@@ -739,9 +739,17 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-interface GitBarProps { vaultPath: string | null }
+interface GitBarProps {
+  vaultPath: string | null
+  /**
+   * Bumped by anyone who wants the panel opened from elsewhere (the Sync
+   * settings send the user here). A counter rather than a boolean, so
+   * asking twice in a row works.
+   */
+  openSignal?: number
+}
 
-export default function GitBar({ vaultPath }: GitBarProps) {
+export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
   const g = useT().git
 
   const [status, setStatus]         = useState<GitStatus | null>(null)
@@ -784,6 +792,10 @@ export default function GitBar({ vaultPath }: GitBarProps) {
     setPanelPos({ top: rect.bottom, left: rect.left })
     setPanelOpen(true)
   }, [])
+
+  useEffect(() => {
+    if (openSignal > 0) openPanel()
+  }, [openSignal, openPanel])
 
   useEffect(() => {
     if (!panelOpen) return

@@ -428,6 +428,16 @@ export interface T {
     cliNote: string
     warmup: string
     warmupDesc: string
+    test: string
+    testing: string
+    testOk: string
+    testIncomplete: string
+    testBadUrl: string
+    testUnauthorized: string
+    testNoModel: string
+    testUnreachable: string
+    testFailed: string
+    hostNote: string
   }
 
   todo: {
@@ -1122,7 +1132,6 @@ export interface T {
     keptCopyToast: (name: string) => string
     errorAction: (err: string) => string
     settings: {
-      intro: string
       bannerEnabled: string
       bannerEnabledDesc: string
       detectEnabled: string
@@ -1132,6 +1141,17 @@ export interface T {
       resetDismissed: string
       resetDismissedDesc: string
       resetDismissedDone: string
+      posture: string
+      postureGitShared: string
+      postureGitLocal: string
+      postureGitInCloud: string
+      postureCloudOnly: string
+      postureLocalOnly: string
+      stepMoveOutOfCloud: string
+      stepAddRemote: string
+      stepStartGit: string
+      openGit: string
+      safetyNet: string
     }
   }
 }
