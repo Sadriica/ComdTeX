@@ -172,11 +172,43 @@ function simulate(
 
 const FOLDER_COLORS_LIST = FOLDER_COLORS
 
+/**
+ * What makes two graphs the same picture: the same nodes (with the same tags,
+ * which colour and filter them) joined by the same edges. Prose edits change
+ * neither.
+ */
+function graphShapeKey(nodes: GraphNode[], edges: GraphEdge[]): string {
+  return (
+    nodes.map((n) => `${n.id}\x1f${n.tags.join(",")}`).join("\x1e") +
+    "\x1d" +
+    edges.map((e) => `${e.source}\x1f${e.target}`).join("\x1e")
+  )
+}
+
+// The layout is 80 steps of O(nodes^2) repulsion, and `openTabs` is a new
+// array on every keystroke. Laying the same graph out again while someone
+// types a word that changes no link is the difference between a smooth
+// editor and a stuttering one, so the last layout is kept and reused.
+let lastShapeKey: string | null = null
+let lastLayout: GraphNode[] = []
+
+function layoutFor(key: string, nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
+  if (key === lastShapeKey) return lastLayout
+  lastLayout = simulate(nodes, edges)
+  lastShapeKey = key
+  return lastLayout
+}
+
 export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: GraphPanelProps) {
   const t = useT()
+  // `openTabs` is a new array on every keystroke, and the layout is a
+  // force simulation: 80 steps of O(nodes^2) repulsion. Rebuilding the raw
+  // graph is linear and fine; laying it out again while someone types a word
+  // that changes no link is not. So the simulation keys on the SHAPE of the
+  // graph (its nodes and edges), and typing prose leaves the layout alone.
   const baseGraph = useMemo(() => {
     const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, openTabs)
-    const simulated = simulate(rawNodes, rawEdges)
+    const simulated = layoutFor(graphShapeKey(rawNodes, rawEdges), rawNodes, rawEdges)
     const folders = [...new Set(simulated.map((n) => n.folder))]
     const fc = new Map(folders.map((f, i) => [f, FOLDER_COLORS_LIST[i % FOLDER_COLORS_LIST.length]]))
     return { nodes: simulated, edges: rawEdges, folderColors: fc }

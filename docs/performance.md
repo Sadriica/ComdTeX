@@ -116,15 +116,14 @@ downstream memo (finding 2). Concrete steps, in order:
    lives in `openTabs` state).
 
 ### 4.2 Guard the remaining unconditional full-document passes (`renderer.ts`)
-Cheap `indexOf` short-circuits, same pattern `maskCodeRegions`/`injectToc`
-already use:
-- checkbox pass (`split("\n")` + 2 regexes/line + rebuild even with zero
-  `- [ ]` items),
-- `TOC_MARKER_RE` replace with no `[[toc]]` in the doc,
-- `attachSectionIds` (2 full-string regex replaces; guard on
-  `includes("\x02SECID")`).
-Also: count and consolidate the number of times one render splits the same
-document with `split("\n")`.
+✅ DONE (v1.27.1): the checkbox pass now guards on `includes("- [")`, the TOC
+replace on `/\[toc\]/i`, and `attachSectionIds` returns early without the
+`\x02SECID:` marker.
+Still open: one render splits the same document 3 times (`preprocessCallouts`,
+`preserveParagraphIndentationSource`, the checkbox pass when a task list
+exists) plus once in `buildParagraphLineMap`. Consolidating them means
+threading a line array through the pipeline, which is a larger change than
+the guards were.
 
 ### 4.3 KaTeX cache: FIFO-evict instead of clear-all
 `katexCache.clear()` at `KATEX_CACHE_MAX` wipes entries inserted earlier in
@@ -142,9 +141,8 @@ list against the last-persisted value and skips the redundant
 `localStorage.setItem` per keystroke.
 
 ### 4.5 Cache `buildParagraphLineMap` by `raw` identity
-Rebuilt O(lines × ~8 regexes) on every commit (twice with the split pane
-open). The map is read-only (mutation lives in the caller's `consumed` map);
-a two-line `lastRaw`/`lastMap` module cache dedupes identical-content commits.
+✅ DONE (v1.27.1): a one-entry `lastLineMapRaw`/`lastLineMap` module cache.
+The split pane commits the same `raw` twice, so it halves the cost outright.
 
 ### 4.6 Web Worker for `renderMarkdown` (the ceiling)
 After the above, the remaining per-refresh main-thread block is the string
@@ -183,3 +181,46 @@ synthetic doc (sections × [inline math + display math + list]) and times
 `// @vitest-environment jsdom`; run with
 `npx vitest run src/_bench.test.ts --disableConsoleIntercept`. Delete it
 afterwards (don't commit benches; they time out the default 5 s test budget).
+
+## 6. Audited 2026-08-06 (v1.27.1)
+
+Three audits swept the typing path, the vault-wide operations and the React
+memoisation. What was fixed:
+
+- **`.csv` files never reached the render resolver** (`App.tsx`). Not a
+  performance bug but found by the same sweep: `vaultFiles` holds only
+  `.md`/`.tex` because it also feeds the label scan and the diagnostics, so
+  every `:::csv` and `:::data` block rendered "not found in this vault" in the
+  app while the tests passed against injected resolvers. Data files now travel
+  in their own list (`vaultCsvFiles`), read once per change in the set of csv
+  paths so identity stays stable and `datasets.ts`'s pointer cache still works.
+- **`GraphPanel` relaid its force simulation on every keystroke**: 80 steps of
+  O(nodes²) repulsion, because `openTabs` is a new array per keystroke. The
+  layout is now keyed on the graph's shape (nodes, tags, edges).
+- **`memo(FileTree)` was defeated by one inline arrow prop**
+  (`onEditFolderRules`), which is exactly the component the memo exists for.
+- **`datasets.ts`'s `csvCache` had no cap**, unlike every sibling cache.
+- Roadmap 4.2 and 4.5 (above).
+
+Still open, deliberately:
+
+- `flushDrafts` (4.4) and the KaTeX clear-all (4.3) are unchanged.
+- `BacklinksPanel` reads every vault file from disk when it opens or the
+  active file changes, bypassing `VaultSearchIndex`. Bounded (not typing
+  triggered) but it should use the mtime cache.
+- `scanStructuralLabels`/`diagnoseDocuments` run a full O(vault) synchronous
+  scan ~600 ms after typing stops while the Labels or Document Lab panel is
+  open. Fine at today's scale; the first thing to move off-thread if vaults
+  grow.
+
+Measured on this machine after the changes (a synthetic thesis chapter:
+headings, labelled equations, theorem environments, tables, citations):
+
+| Document | `renderMarkdown` | `lintContent` |
+|---|---|---|
+| 2 KB | 10 ms | 1 ms |
+| 8 KB | 19 ms | 1 ms |
+| 26 KB | 49 ms | 3 ms |
+
+The render debounce is 150-700 ms by document size, and the linter has its own
+600 ms timer, so neither blocks a keystroke at these sizes.

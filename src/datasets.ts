@@ -90,6 +90,10 @@ interface CacheEntry {
 }
 
 const csvCache = new Map<string, CacheEntry>()
+// Bounded like every other module-level cache here (environments.ts,
+// monacoSetup.ts): a session that browses a vault full of data files should
+// not hold every table it ever looked at.
+const CSV_CACHE_MAX = 100
 let parseCount = 0
 
 /** Test seam: how many times a CSV was actually parsed. */
@@ -111,6 +115,7 @@ function tableFor(file: string, resolver: CsvResolver): string[][] | null {
   if (hit && hit.source === source) return hit.table
   const table = parseCsv(source)
   parseCount++
+  if (csvCache.size >= CSV_CACHE_MAX) csvCache.clear()
   csvCache.set(file, { source, table })
   return table
 }

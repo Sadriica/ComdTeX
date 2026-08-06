@@ -331,7 +331,14 @@ function elementTextKey(el: Element): string {
  * and consume them in order during annotation so repeated content (e.g. a
  * list of "TODO") still maps each `<li>` to its own source line.
  */
+// The map is read-only for callers (annotation tracks its own `consumed`
+// counts), and the preview commits the same `raw` twice whenever the split
+// pane is open. One entry is enough: consecutive commits share their text.
+let lastLineMapRaw: string | null = null
+let lastLineMap: Map<string, number[]> = new Map()
+
 export function buildParagraphLineMap(raw: string): Map<string, number[]> {
+  if (raw === lastLineMapRaw) return lastLineMap
   const map = new Map<string, number[]>()
   const lines = raw.split("\n")
   let inFence = false
@@ -380,6 +387,8 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
     if (existing) existing.push(i + 1)
     else map.set(key, [i + 1])
   }
+  lastLineMapRaw = raw
+  lastLineMap = map
   return map
 }
 
@@ -469,6 +478,8 @@ interface HeadingItem {
  * so `@sec:` links work with or without a `[[toc]]`.
  */
 function attachSectionIds(html: string): string {
+  // No marker, nothing to attach: skip two full-document regex scans.
+  if (html.indexOf("\x02SECID:") < 0) return html
   const out = html.replace(/<h([1-6])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
     const marker = SECTION_ID_MARKER_RE.exec(inner)
     if (!marker) return full
@@ -606,7 +617,12 @@ export function renderMarkdown(
   // Auto-generated table of contents: a standalone `[[toc]]` / `[toc]` line
   // becomes a placeholder now and is expanded into a live list (always in sync
   // with the current headings) after rendering, by `injectToc`.
-  content = content.replace(TOC_MARKER_RE, () => TOC_PLACEHOLDER)
+  // The marker is case-insensitive (`[toc]`, `[TOC]`, `[[Toc]]`), so the
+  // guard must be too; it only exists to skip a full-document replace on
+  // the documents that have no table of contents, which is most of them.
+  if (/\[toc\]/i.test(content)) {
+    content = content.replace(TOC_MARKER_RE, () => TOC_PLACEHOLDER)
+  }
 
   const numbered = numberHeadings(content)
   content = numbered.content
@@ -631,7 +647,9 @@ export function renderMarkdown(
   withRefs = resolveEnvironmentRefs(withRefs, envLabels, envRefResolver)
   withRefs = restoreCode(withRefs)
 
-  withRefs = withRefs.split('\n').map((line, i) => {
+  // Guarded like `maskCodeRegions`: most documents have no task list, and
+  // this is a full split/scan/join of the whole document per render.
+  if (withRefs.includes("- [")) withRefs = withRefs.split('\n').map((line, i) => {
     if (/^(\s*)-\s\[ \]/.test(line))
       return line.replace(/^(\s*)-\s\[ \]/, `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}">`)
     if (/^(\s*)-\s\[x\]/i.test(line))
