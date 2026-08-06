@@ -62,6 +62,7 @@ export const COMPLETIONS: Completion[] = [
   { label: "ce",    detail: "ce(H2O) → chemical formula (mhchem)",                 snippet: "ce(${1:H2O})" },
   { label: "csv",   detail: ":::csv block → table from a CSV selection",             snippet: ":::csv[${1:Title}]\n${2:data.csv} (${3:A:C}) (${4:1:10})\n:::" },
   { label: "data",  detail: ":::data block → a named dataset other blocks can use",   snippet: ":::data{#data:${1:name}}\n${2:data.csv} (${3:A:D}) (${4:1:20})\n:::" },
+  { label: "dataplot", detail: ":::plot from a dataset → line, scatter, bars, error bars", snippet: ":::plot[${1:Title}]\n@data:${2:name}\nx: ${3:time}\ny: (${4:S1, S2})\nkind: line\n:::" },
   { label: "sqrt",  detail: "sqrt(x) → √x",                                    snippet: "sqrt(${1:x})" },
   { label: "root",  detail: "root(n, x) → ⁿ√x",                               snippet: "root(${1:n}, ${2:x})" },
   { label: "sum",   detail: "sum(start, end) → Σ",                             snippet: "sum(${1:i=0}, ${2:n})" },

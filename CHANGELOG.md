@@ -3,6 +3,23 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.26.0] - 2026-08-06
+
+### Added
+- **Plots of your data, not only of your formulas.** A `:::plot` block can now name a dataset instead of a function, and draws one series per column:
+
+  ```
+  :::plot[Growth by strain]
+  @data:growth
+  x: time
+  y: (S1, S2, S3)
+  kind: line
+  error: sd
+  :::
+  ```
+
+  Four shapes: `line` (a line with a marker at every real measurement), `scatter` (markers only), `bars` (grouped by category) and error bars from a named uncertainty column, which can ride on any of them. Columns are chosen by header name, spreadsheet letter or index, exactly like a `:::csv` selection; leaving `y` out plots every column except x and the error column. A non-numeric x column (sample names, conditions) becomes evenly spaced categories, which is what bars need. The axes take their titles from the column headers, the legend combines functions and data series without ever reusing a colour, and the vertical range now respects real extremes and error bar caps instead of the percentile band that keeps a function's asymptotes from flattening the plot. Function plots are untouched. The plot reaches the PDF as an image like every other diagram.
+
 ## [1.25.0] - 2026-08-06
 
 ### Added

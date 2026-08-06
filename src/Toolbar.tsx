@@ -204,6 +204,7 @@ function getSections(t: T): MenuSection[] {
             a(t.toolbar.lbl_matLiteral,  "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
             a(t.toolbar.lbl_csv, ":::csv[${1:Título}]\n${2:datos.csv} (${3:A:C}) (${4:1:10})\n:::"),
             a(t.toolbar.lbl_data, ":::data{#data:${1:datos}}\n${2:datos.csv} (${3:A:D}) (${4:1:20})\n:::"),
+            a(t.toolbar.lbl_dataplot, ":::plot[${1:Título}]\n@data:${2:datos}\nx: ${3:tiempo}\ny: (${4:S1, S2})\nkind: line\n:::"),
           ],
         },
         {
