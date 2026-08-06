@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react"
 import type { BibEntry } from "./bibtex"
 import { parseBibtex } from "./bibtex"
-import { fetchBibtexForDoi } from "./doiFetch"
+import {
+  fetchBibtexForDoi,
+  fetchBibtexFromAds,
+  fetchBibtexFromInspire,
+  isAdsBibcode,
+  parseInspireInput,
+} from "./doiFetch"
+import { getSecret } from "./secretStore"
 import { searchZotero, fetchZoteroBibtex, type ZoteroItem } from "./zotero"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
@@ -122,7 +129,24 @@ export default function CitationManager({
     if (!query || fetching) return
     setFetching(true)
     try {
-      const { bibtex } = await fetchBibtexForDoi(query)
+      // The identifier decides the source: astronomers paste an ADS
+      // bibcode, physicists an INSPIRE recid or arXiv id, everyone else a
+      // DOI. All three publish BibTeX, so one box resolves them all.
+      let bibtex: string
+      if (isAdsBibcode(query)) {
+        const token = await getSecret("ads_token")
+        if (!token) { showToast(t.citationManager.adsTokenMissing, "error", 8000); return }
+        bibtex = await fetchBibtexFromAds(query, token)
+      } else {
+        const inspire = parseInspireInput(query)
+        // A bare arXiv id still prefers DOI resolution (CrossRef/DataCite);
+        // INSPIRE only owns explicit recids and its own URLs.
+        if (inspire && inspire.kind === "recid") {
+          bibtex = await fetchBibtexFromInspire(inspire)
+        } else {
+          bibtex = (await fetchBibtexForDoi(query)).bibtex
+        }
+      }
       // Validate it parses with the existing BibTeX parser.
       const parsed = parseBibtex(bibtex)
       if (parsed.size === 0) { showToast(t.citationManager.doiError, "error"); return }

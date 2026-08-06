@@ -121,6 +121,8 @@ export const en: T = {
     readingWpmDesc: "Used for the “~N min” estimate in the status bar.",
     syncScroll: "Sync editor↔preview scroll", previewVisible: "Show preview",
     closeAriaLabel: "Close settings",
+    adsToken: "NASA ADS token", adsTokenPlaceholder: "Paste your ADS token",
+    adsTokenNote: "Only needed to cite by ADS bibcode. Stored in the OS keychain, never in your settings.",
     sectionEditor: "Editor", sectionPreview: "Preview", sectionGeneral: "General",
     sectionDailyNotes: "Daily notes",
     dailyNotesEnabled: "Enable daily notes",
@@ -1088,6 +1090,7 @@ export const en: T = {
   },
 
   citationManager: {
+    adsTokenMissing: "To cite by ADS bibcode, add your ADS token in Settings.",
     title: "BibTeX Reference Manager",
     close: "Close",
     noEntries: "No entries. Add one below.",

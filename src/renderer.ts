@@ -21,6 +21,7 @@ import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { resolveTransclusions, processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
 import { expandCsvBlocks } from "./csvRange"
 import { stripKeepMarks } from "./keepMarks"
+import { pickCiteStyle } from "./citeStyles"
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .use(footnotePlugin)
@@ -582,6 +583,9 @@ export function renderMarkdown(
   resetFigCounters()
 
   const parsed = extractFrontmatter(raw)
+  // `comdtex.citestyle` decides both the in-text marker and the bibliography
+  // shape (Vancouver for biomedicine, author-year for astronomy, ...).
+  const citeStyle = pickCiteStyle(parsed?.data?.["comdtex.citestyle"])
   let content = parsed ? parsed.content : raw
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
@@ -657,11 +661,11 @@ export function renderMarkdown(
 
   let citedKeys: string[] = []
   if (bibMap) {
-    const resolved = resolveCitations(html, bibMap)
+    const resolved = resolveCitations(html, bibMap, citeStyle)
     html = resolved.text
     citedKeys = resolved.citedKeys
   }
-  const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap) : ""
+  const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap, citeStyle) : ""
 
   // Assign heading ids for navigation (always; `@sec:` anchors must resolve in
   // documents with no TOC), then expand the `[[toc]]` placeholder against them.

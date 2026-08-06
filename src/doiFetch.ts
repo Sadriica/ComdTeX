@@ -104,3 +104,63 @@ export async function fetchBibtexForDoi(rawInput: string): Promise<DoiResult> {
 
   throw new Error("not-found")
 }
+
+// ── Astronomy and high-energy physics identifiers ────────────────────────────
+//
+// These communities do not cite by DOI: astronomers copy a NASA ADS bibcode
+// (2024ApJ...900....1A) out of the ADS UI, and physicists pull entries from
+// INSPIRE-HEP. Both publish BibTeX directly, so the Citation Manager can
+// resolve them the same way it resolves a DOI.
+
+/** ADS bibcodes are exactly 19 characters: YYYYJJJJJVVVVMPPPPA. */
+export function isAdsBibcode(raw: string): boolean {
+  const s = raw.trim()
+  return /^\d{4}[A-Za-z.&]{5}[\w.]{4}[\w.][\w.]{4}[A-Z]$/.test(s) && s.length === 19
+}
+
+/** INSPIRE literature reference: a recid, an INSPIRE URL, or arXiv id. */
+export function parseInspireInput(raw: string): { kind: "recid" | "arxiv"; value: string } | null {
+  const s = raw.trim()
+  const url = /inspirehep\.net\/(?:literature|record)\/(\d+)/i.exec(s)
+  if (url) return { kind: "recid", value: url[1] }
+  if (/^inspire:(\d+)$/i.test(s)) return { kind: "recid", value: s.split(":")[1] }
+  const arxiv = /^(?:arxiv:)?(\d{4}\.\d{4,5})(?:v\d+)?$/i.exec(s)
+  if (arxiv) return { kind: "arxiv", value: arxiv[1] }
+  return null
+}
+
+/**
+ * Fetch BibTeX for an ADS bibcode. ADS requires a personal API token, which
+ * lives in the OS keychain (secretStore), never in the settings file.
+ */
+export async function fetchBibtexFromAds(bibcode: string, token: string): Promise<string> {
+  const res = await fetch("https://api.adsabs.harvard.edu/v1/export/bibtex", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ bibcode: [bibcode.trim()] }),
+  })
+  if (res.status === 401 || res.status === 403) {
+    throw new Error("ADS rejected the token")
+  }
+  if (!res.ok) throw new Error(`ADS returned ${res.status}`)
+  const data = (await res.json()) as { export?: string }
+  const bib = data.export?.trim()
+  if (!bib) throw new Error("ADS returned no BibTeX")
+  return bib
+}
+
+/** Fetch BibTeX from INSPIRE-HEP. No token needed. */
+export async function fetchBibtexFromInspire(ref: { kind: "recid" | "arxiv"; value: string }): Promise<string> {
+  const url =
+    ref.kind === "recid"
+      ? `https://inspirehep.net/api/literature/${ref.value}?format=bibtex`
+      : `https://inspirehep.net/api/arxiv/${ref.value}?format=bibtex`
+  const res = await fetch(url, { headers: { Accept: "application/x-bibtex" } })
+  if (!res.ok) throw new Error(`INSPIRE returned ${res.status}`)
+  const bib = (await res.text()).trim()
+  if (!bib.startsWith("@")) throw new Error("INSPIRE returned no BibTeX")
+  return bib
+}

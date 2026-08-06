@@ -17,6 +17,7 @@ import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
 import { stripKeepMarks } from "./keepMarks"
+import { pickCiteStyle } from "./citeStyles"
 
 interface LatexMacro {
   command: string
@@ -448,6 +449,7 @@ function buildJournalPreamble(
   hasCode: boolean,
   hasLinks: boolean,
   sci: SciPackages,
+  natbib: string | null,
 ): string {
   const cls = TEX_CLASSES[classId]
   const lines = [
@@ -465,6 +467,12 @@ function buildJournalPreamble(
   if (sci.units) lines.push("\\usepackage{siunitx}")
   if (sci.chem) lines.push("\\usepackage[version=4]{mhchem}")
   if (sci.tables) lines.push("\\usepackage{booktabs}", "\\usepackage{longtable}")
+  // acmart and apa7 manage citations themselves; adding natbib on top of
+  // them is a documented conflict, so journal classes only get it when the
+  // class does not already provide one.
+  if (natbib && classId !== "acmart" && classId !== "apa7") {
+    lines.push(`\\usepackage[${natbib}]{natbib}`)
+  }
   if (hasCode) {
     lines.push("\\usepackage{listings}")
     lines.push("\\usepackage{xcolor}")
@@ -486,7 +494,7 @@ function buildJournalPreamble(
 
 // ── Document template ─────────────────────────────────────────────────────────
 
-function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean, sci: SciPackages): string {
+function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean, sci: SciPackages, natbib: string | null): string {
   const lines = [
     "\\documentclass[12pt,a4paper]{article}",
     "\\usepackage[utf8]{inputenc}",
@@ -510,6 +518,9 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
   if (sci.units) lines.push("\\usepackage{siunitx}")
   if (sci.chem) lines.push("\\usepackage[version=4]{mhchem}")
   if (sci.tables) lines.push("\\usepackage{booktabs}", "\\usepackage{longtable}")
+  // The citation style decides natbib's options, so the exported PDF cites
+  // the way the preview does (numbers for Vancouver, author-year for APA).
+  if (natbib) lines.push(`\\usepackage[${natbib}]{natbib}`)
 
   if (hasCode) {
     lines.push("\\usepackage{listings}")
@@ -621,6 +632,7 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)
   const sci = detectSciPackages(body)
+  const natbib = pickCiteStyle(parsed?.data?.["comdtex.citestyle"]).natbib
 
   // Parse user macros for preamble
   const userMacros: LatexMacro[] = []
@@ -638,8 +650,8 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
   const cls = classId ? TEX_CLASSES[classId] : null
 
   const preamble = classId
-    ? buildJournalPreamble(classId, userMacros, hasCode, hasLinks, sci)
-    : buildPreamble(userMacros, hasCode, hasLinks, sci)
+    ? buildJournalPreamble(classId, userMacros, hasCode, hasLinks, sci, natbib)
+    : buildPreamble(userMacros, hasCode, hasLinks, sci, natbib)
 
   const docTitle = cls
     ? title

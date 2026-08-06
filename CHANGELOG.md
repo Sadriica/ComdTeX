@@ -3,6 +3,12 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.24.0] - 2026-08-06
+
+### Added
+- **Real citation styles.** `comdtex.citestyle` in the frontmatter picks how citations read, in the preview and in the PDF: `vancouver` (ICMJE, required by over a thousand biomedical journals), `ama`, `apa` (APA 7), `author-year` (astronomy and the social sciences), or the previous ComdTeX style, which stays the default so nothing changes silently. Numbered styles keep their superscript brackets; author-year styles render inline as `(Rudin & Smith, 1976)`. The LaTeX export loads natbib with the matching options, except under acmart and apa7, which manage citations themselves.
+- **Cite by ADS bibcode and INSPIRE record.** The Citation Manager's fetch box now recognizes a NASA ADS bibcode (`2024ApJ...900....1A`) and an INSPIRE-HEP recid or URL alongside DOIs and arXiv ids, which is how astronomers and high-energy physicists actually cite. ADS needs a personal token: it is entered in Settings and stored in the OS keychain, never in the settings file.
+
 ## [1.23.0] - 2026-08-05
 
 ### Added

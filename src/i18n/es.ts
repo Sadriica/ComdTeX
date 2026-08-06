@@ -121,6 +121,8 @@ export const es: T = {
     readingWpmDesc: "Se usa para el «~N min» de la barra inferior.",
     syncScroll: "Sincronizar scroll editor↔preview", previewVisible: "Mostrar preview",
     closeAriaLabel: "Cerrar configuración",
+    adsToken: "Token de NASA ADS", adsTokenPlaceholder: "Pega tu token de ADS",
+    adsTokenNote: "Solo para citar por bibcode de ADS. Se guarda en el llavero del sistema, nunca en los ajustes.",
     sectionEditor: "Editor", sectionPreview: "Vista previa", sectionGeneral: "General",
     sectionDailyNotes: "Notas diarias",
     dailyNotesEnabled: "Habilitar notas diarias",
@@ -1089,6 +1091,7 @@ export const es: T = {
   },
 
   citationManager: {
+    adsTokenMissing: "Para citar por bibcode de ADS, añade tu token de ADS en Ajustes.",
     title: "Gestor de Referencias BibTeX",
     close: "Cerrar",
     noEntries: "No hay entradas. Agrega una abajo.",

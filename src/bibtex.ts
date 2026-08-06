@@ -1,3 +1,4 @@
+import { CITE_STYLES, type CiteStyle } from "./citeStyles"
 /**
  * Minimal BibTeX parser and citation renderer.
  *
@@ -72,7 +73,8 @@ function esc(s: string): string {
  *  text and the ordered list of cited keys. */
 export function resolveCitations(
   text: string,
-  bibMap: Map<string, BibEntry>
+  bibMap: Map<string, BibEntry>,
+  style: CiteStyle = CITE_STYLES.default,
 ): { text: string; citedKeys: string[] } {
   const order: string[] = []
   const indexMap = new Map<string, number>()
@@ -89,7 +91,17 @@ export function resolveCitations(
       ? `${bibMap.get(key)!.fields.author ?? ""} (${bibMap.get(key)!.fields.year ?? "?"})`
       : `Clave no encontrada: ${key}`
     const noteStr = note ? `, ${esc(note)}` : ""
-    return `<sup><a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">[${n}${noteStr}]</a></sup>`
+    const entry = bibMap.get(key)
+    const marker = entry
+      ? style.inText({ type: entry.type, fields: entry.fields, n })
+      : `[${n}]`
+    // Numbered styles ride as superscript; author-year sits inline, which is
+    // how those venues actually print it.
+    const body = noteStr
+      ? marker.replace(/([\])])?$/, "") + noteStr + (marker.endsWith("]") || marker.endsWith(")") ? marker.slice(-1) : "")
+      : marker
+    const link = `<a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">${esc(body)}</a>`
+    return style.numbered ? `<sup>${link}</sup>` : link
   })
 
   return { text: result, citedKeys: order }
@@ -109,7 +121,19 @@ function formatAuthors(raw: string): string {
     .join("; ")
 }
 
-function formatEntry(entry: BibEntry, n: number): string {
+function formatEntry(entry: BibEntry, n: number, style: CiteStyle = CITE_STYLES.default): string {
+  if (style.id !== "default") {
+    const text = style.reference({ type: entry.type, fields: entry.fields, n })
+    return [
+      `<div class="bib-entry" id="bib-${esc(entry.key)}">`,
+      style.numbered ? `<span class="bib-number">${n}.</span>` : "",
+      `<span class="bib-content">${esc(text)}</span></div>`,
+    ].filter(Boolean).join("\n")
+  }
+  return formatEntryDefault(entry, n)
+}
+
+function formatEntryDefault(entry: BibEntry, n: number): string {
   const f = entry.fields
   const authors = f.author ? formatAuthors(f.author) : "?"
   const year = f.year ? `(${f.year})` : ""
@@ -138,14 +162,15 @@ function formatEntry(entry: BibEntry, n: number): string {
 
 export function renderBibliography(
   citedKeys: string[],
-  bibMap: Map<string, BibEntry>
+  bibMap: Map<string, BibEntry>,
+  style: CiteStyle = CITE_STYLES.default,
 ): string {
   if (citedKeys.length === 0) return ""
   const items = citedKeys
     .map((key, i) => {
       const entry = bibMap.get(key)
       if (!entry) return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] Referencia no encontrada: <code>${key}</code></div>`
-      return formatEntry(entry, i + 1)
+      return formatEntry(entry, i + 1, style)
     })
     .join("\n")
 
