@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.28.0] - 2026-08-06
 
+### Added
+- **Every setting now says what it is for, inside the app.** Nineteen of the thirty-four options in Settings were a label and a control with nothing else: what autosave delay means for your work, what preview theme is good for, what a word goal does, what to type as a base URL. Each one now carries a line underneath it. The web guide carries the long form, with a step-by-step walkthrough for connecting an AI provider and the four Focus timer durations that live outside the modal and had never been documented.
+
 ### Changed
 - **Bring your own AI now means any provider, not the five that happened to be allow-listed.** The settings accepted any endpoint while the app only permitted requests to a fixed list of hosts compiled into it, so pointing ComdTeX at OpenRouter, DeepSeek, LM Studio or a lab server failed with nothing useful to show for it. Requests now leave through the desktop layer instead of the browser layer, so any provider reachable over https works, and so does one running on your own machine. The security barrier did not move: an address that is not https or local is still refused, and the app still ships no keys and makes no request until you enable it.
 - **Sync says where your vault actually stands before it offers you a switch.** It presented a cloud folder and version control as two equivalent options, when they are not: git keeps a history and stops on a conflict, while a synced folder keeps a copy and leaves a second file with a longer name. The Sync settings now open with your situation in one sentence, the single next step for it, and a button that takes you to the Git panel. The cloud toggles remain underneath, as what they are: a safety net for vaults kept in a synced folder.
