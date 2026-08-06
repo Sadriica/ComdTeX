@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"
-import { writeTextFile, readTextFile, exists, copyFile, remove } from "@tauri-apps/plugin-fs"
+import { writeTextFile, readTextFile, exists, copyFile, remove, writeFile } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
@@ -31,6 +31,7 @@ import type { LatexDiagnostic } from "./latexErrors"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import type { DepStatus } from "./checkDeps"
+import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
 import { resolveTransclusions } from "./transclusion"
 import { composeProjectMarkdown } from "./projectExport"
 import { showToast } from "./toastService"
@@ -92,7 +93,28 @@ export function useExportActions(ctx: ExportActionsCtx) {
       } catch { /* ok */ }
     }
     const titleGuess = vaultRef.current.openFile?.name.replace(/\.[^.]+$/, "") ?? ""
-    const content = resolveTransclusions(editor.getValue(), transclusionResolver)
+    const path = await save({
+      title: t.app.dialogExportTex,
+      filters: [{ name: "LaTeX", extensions: ["tex"] }],
+      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
+    })
+    if (!path) return
+    // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png), so
+    // it compiles anywhere; on Overleaf, upload them together.
+    let raw = editor.getValue()
+    if (hasRasterBlocks(raw)) {
+      const outDir = pathDirname(path) || "."
+      const outBase = (path.split(/[\\/]/).pop() ?? "export").replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9-]+/g, "-")
+      try {
+        const replaced = await replaceDiagramsForExport(raw, async (i, _block, png) => {
+          const file = `${outBase}-diag-${i}.png`
+          await writeFile(`${outDir}/${file}`, png)
+          return file
+        })
+        raw = replaced.content
+      } catch { raw = editor.getValue() }
+    }
+    const content = resolveTransclusions(raw, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const author = fm?.author as string | undefined
@@ -103,12 +125,6 @@ export function useExportActions(ctx: ExportActionsCtx) {
       author,
       { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
     )
-    const path = await save({
-      title: t.app.dialogExportTex,
-      filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
-    })
-    if (!path) return
     await writeTextFile(path, tex)
   }, [t, transclusionResolver, editorRef])
 
@@ -222,13 +238,29 @@ export function useExportActions(ctx: ExportActionsCtx) {
       }
       return
     }
-    const content = resolveTransclusions(editorContent, transclusionResolver)
+    const dir = pathDirname(currentFile.path) || "."
+    const base = currentFile.name.replace(/\.[^.]+$/, "")
+    // Same diagram rasterization as the main compile path, so the auto
+    // rebuilt preview shows diagrams too. PNGs are cleaned after compiling.
+    let sourceForTex = editorContent
+    const rebuildDiagFiles: string[] = []
+    if (hasRasterBlocks(editorContent)) {
+      const safeBase = base.replace(/[^A-Za-z0-9-]+/g, "-")
+      try {
+        const replaced = await replaceDiagramsForExport(editorContent, async (i, _block, png) => {
+          const file = `${safeBase}-comdtex-diag-${i}.png`
+          await writeFile(`${dir}/${file}`, png)
+          rebuildDiagFiles.push(`${dir}/${file}`)
+          return file
+        })
+        sourceForTex = replaced.content
+      } catch { sourceForTex = editorContent }
+    }
+    const content = resolveTransclusions(sourceForTex, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
     const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
-    const dir = pathDirname(currentFile.path) || "."
-    const base = currentFile.name.replace(/\.[^.]+$/, "")
     const jobname = `${base}.comdtex-rebuild`
     const tmpTex = `${dir}/${jobname}.tex`
     const tmpPdf = `${dir}/${jobname}.pdf`
@@ -262,6 +294,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
       await remove(`${dir}/${jobname}.log`).catch(() => {})
       await remove(`${dir}/${jobname}.synctex.gz`).catch(() => {})
       await remove(`${dir}/${jobname}.synctex`).catch(() => {})
+      for (const f of rebuildDiagFiles) await remove(f).catch(() => {})
     }
   }, [pdfPath, transclusionResolver, editorRef, setPdfPath, setSyncTex])
 

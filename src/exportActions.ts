@@ -13,6 +13,7 @@ import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import { buildTexLineMap } from "./texLineMap"
+import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
 import { resolveTransclusions } from "./transclusion"
 import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
 
@@ -212,17 +213,35 @@ export async function exportMarkdown(ctx: ExportActionsContext) {
 }
 
 export async function exportLatex(ctx: ExportActionsContext) {
-  const content = ctx.readEditorContent()
-  if (content === null) return
+  const rawContent = ctx.readEditorContent()
+  if (rawContent === null) return
   const titleGuess = ctx.activeFile?.name.replace(/\.[^.]+$/, "") ?? ""
-  const tex = await buildLatex(content, titleGuess, ctx.vaultPath, ctx.resolveTransclusion)
-  const path = await save({
+  const outPathEarly = await save({
     title: ctx.dialogs.exportTex,
     filters: [{ name: "LaTeX", extensions: ["tex"] }],
     defaultPath: ctx.activeFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
   })
-  if (!path) return
-  await writeTextFile(path, tex)
+  if (!outPathEarly) return
+
+  // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png) so
+  // the file compiles anywhere (Overleaf included: upload them together).
+  let content = rawContent
+  if (hasRasterBlocks(rawContent)) {
+    const outDir = pathDirname(outPathEarly) || "."
+    const outBase = pathBasename(outPathEarly).replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9-]+/g, "-")
+    try {
+      const replaced = await replaceDiagramsForExport(rawContent, async (i, _block, png) => {
+        const file = `${outBase}-diag-${i}.png`
+        await writeFile(`${outDir}/${file}`, png)
+        return file
+      })
+      content = replaced.content
+    } catch {
+      content = rawContent
+    }
+  }
+  const tex = await buildLatex(content, titleGuess, ctx.vaultPath, ctx.resolveTransclusion)
+  await writeTextFile(outPathEarly, tex)
 }
 
 export async function exportProjectLatex(ctx: ExportActionsContext) {
@@ -281,9 +300,41 @@ async function tryCompileWithWasm(
 }
 
 export async function compileLatexPdf(ctx: ExportActionsContext) {
-  const content = ctx.readEditorContent()
+  const rawContent = ctx.readEditorContent()
   const currentFile = ctx.activeFile
-  if (content === null || !currentFile) return
+  if (rawContent === null || !currentFile) return
+
+  // Visual blocks (flowcharts, graphs, plots, commutative diagrams,
+  // Excalidraw scenes, truth tables) become real images/tables before the
+  // LaTeX conversion, so the PDF shows the diagram, not its source. Images
+  // live on disk beside the document, which the WASM engine cannot read:
+  // when diagrams rasterized, local engines get first claim and WASM stays
+  // as the no-diagrams fallback (fed the original content, whose blocks
+  // degrade to honest captioned code).
+  const diagDir = pathDirname(currentFile.path) || "."
+  const diagBase = currentFile.name.replace(/\.[^.]+$/, "")
+  const diagFiles: string[] = []
+  let content = rawContent
+  let diagramCount = 0
+  if (hasRasterBlocks(rawContent)) {
+    try {
+      // Sanitized prefix: the filename lands inside \includegraphics{...},
+      // where an underscore or space from the note's own name would break
+      // the compile (escTex escapes them into non-paths).
+      const safeBase = diagBase.replace(/[^A-Za-z0-9-]+/g, "-")
+      const replaced = await replaceDiagramsForExport(rawContent, async (i, _block, png) => {
+        const file = `${safeBase}-comdtex-diag-${i}.png`
+        await writeFile(`${diagDir}/${file}`, png)
+        diagFiles.push(`${diagDir}/${file}`)
+        return file
+      })
+      content = replaced.content
+      diagramCount = replaced.assets
+    } catch {
+      content = rawContent
+    }
+  }
+
   const tex = await buildLatex(content, currentFile.name.replace(/\.[^.]+$/, ""), ctx.vaultPath, ctx.resolveTransclusion)
   const outPath = await save({
     title: ctx.dialogs.exportPdf,
@@ -296,8 +347,11 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   // WASM diagnostics are HELD here, not shown yet: a local engine may still
   // succeed (Step 2), and popping an error modal over a successful export
   // reads as failure. The modal only appears if every engine failed.
+  // With rasterized diagrams the order flips: WASM cannot read image files
+  // from disk, so local engines go first and WASM becomes the last resort,
+  // fed the original content (blocks degrade to captioned code there).
   let wasmDiags: LatexDiagnostic[] = []
-  const wantWasm = ctx.useWasmTex !== false
+  const wantWasm = ctx.useWasmTex !== false && diagramCount === 0
   if (wantWasm) {
     const wasm = await tryCompileWithWasm(tex, ctx)
     if (wasm && wasm.status === "ok" && wasm.pdf) {
@@ -340,7 +394,10 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         const result = await Command.create(cmdName, args, { cwd: dir }).execute()
         if (result.code === 0 && await exists(tmpPdf)) {
           await copyFile(tmpPdf, outPath)
-          ctx.onSyncTex?.(await collectSyncTex(dir, jobname, content, tex))
+          // The line map anchors against the EDITOR's content (rawContent):
+          // diagram replacements shift line numbers in `content`, and jumps
+          // must land where the user actually is.
+          ctx.onSyncTex?.(await collectSyncTex(dir, jobname, rawContent, tex))
           ctx.onPdfSaved?.(outPath)
           await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
@@ -349,6 +406,23 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
         lastError = result.stderr || result.stdout || `${cmdName} falló`
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err)
+      }
+    }
+    // Local engines failed. When diagrams deferred the WASM engine, give it
+    // its honest chance now with the ORIGINAL content (no disk images).
+    if (ctx.useWasmTex !== false && diagramCount > 0) {
+      const texNoDiagrams = await buildLatex(rawContent, currentFile.name.replace(/\.[^.]+$/, ""), ctx.vaultPath, ctx.resolveTransclusion)
+      const wasm = await tryCompileWithWasm(texNoDiagrams, ctx)
+      if (wasm && wasm.status === "ok" && wasm.pdf) {
+        await writeFile(outPath, wasm.pdf)
+        ctx.onSyncTex?.(null)
+        ctx.onPdfSaved?.(outPath)
+        await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+        ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
+        return
+      }
+      if (wasm && wasm.status === "error") {
+        wasmDiags = parseLatexStderr(wasm.log)
       }
     }
     // Every engine failed: NOW surface the held WASM diagnostics (they are
@@ -364,6 +438,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     await remove(`${dir}/${jobname}.log`).catch(() => {})
     await remove(`${dir}/${jobname}.synctex.gz`).catch(() => {})
     await remove(`${dir}/${jobname}.synctex`).catch(() => {})
+    for (const f of diagFiles) await remove(f).catch(() => {})
   }
 }
 
@@ -408,10 +483,31 @@ export async function exportPdf(ctx: ExportActionsContext) {
 
   const tempHdrPath = `${currentFile.path}.comdtex-hdr.tex`
 
+  // Rasterize visual blocks into temp images beside the document so pandoc
+  // embeds the diagrams instead of printing their source. Pandoc runs with
+  // cwd at the document's folder, so relative filenames resolve.
+  const pandocDir = pathDirname(currentFile.path) || "."
+  const pandocSafeBase = currentFile.name.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9-]+/g, "-")
+  const pandocDiagFiles: string[] = []
+  let pandocContent = content
+  if (hasRasterBlocks(content)) {
+    try {
+      const replaced = await replaceDiagramsForExport(content, async (i, _block, png) => {
+        const file = `${pandocSafeBase}-comdtex-diag-${i}.png`
+        await writeFile(`${pandocDir}/${file}`, png)
+        pandocDiagFiles.push(`${pandocDir}/${file}`)
+        return file
+      })
+      pandocContent = replaced.content
+    } catch {
+      pandocContent = content
+    }
+  }
+
   try {
     ctx.toast(ctx.messages.generatingPdf, "info")
     const tempInputPath = `${currentFile.path}.comdtex-export.tmp.md`
-    await writeTextFile(tempInputPath, toPandocMarkdownInput(content))
+    await writeTextFile(tempInputPath, toPandocMarkdownInput(pandocContent))
 
     const pandocArgs: string[] = [
       tempInputPath,
@@ -450,7 +546,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
     for (const engine of ["tectonic", "xelatex", "pdflatex"]) {
       const args = pandocArgs.map((a) => (a === "--pdf-engine=xelatex" ? `--pdf-engine=${engine}` : a))
       try {
-        const attempt = await Command.create("pandoc", args).execute()
+        const attempt = await Command.create("pandoc", args, { cwd: pandocDir }).execute()
         if (attempt.code === 0) { result = attempt; break }
         if (!firstFailure) firstFailure = attempt
       } catch {
@@ -459,6 +555,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
     }
     if (!result) result = firstFailure ?? { code: -1, stderr: "pandoc failed", stdout: "" }
     await remove(tempInputPath).catch(() => {})
+    for (const f of pandocDiagFiles) await remove(f).catch(() => {})
     if (hasHeaderFooter) await remove(tempHdrPath).catch(() => {})
     if (result.code !== 0) {
       const stderrText = result.stderr || ""
@@ -477,6 +574,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
     await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
   } catch (err) {
     await remove(`${currentFile.path}.comdtex-export.tmp.md`).catch(() => {})
+    for (const f of pandocDiagFiles) await remove(f).catch(() => {})
     if (hasHeaderFooter) await remove(tempHdrPath).catch(() => {})
     ctx.toast(ctx.messages.pandocError((err as Error).message), "error")
   }

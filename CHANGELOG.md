@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.21.0] - 2026-08-05
+
+### Added
+- **Diagrams reach the PDF.** Exports used to degrade every visual block to captioned source code; now flowcharts (Mermaid), Graphviz graphs, function plots, commutative diagrams and Excalidraw drawings rasterize to real images in "Compile PDF", "Export PDF" (pandoc) and "Export as .tex" (PNGs saved beside the file for Overleaf), and truth tables become real tables. Auto-rebuild on save carries them too, and the print palette keeps diagrams readable on a white page regardless of the app theme. Honest limits: the bundled WASM engine cannot read image files, so documents with diagrams prefer a local engine (tectonic/xelatex/pdflatex) and fall back to WASM with the previous code-fence degradation; pseudocode and code blocks stay as code on purpose.
+
 ## [1.20.0] - 2026-08-05
 
 ### Added
