@@ -32,7 +32,7 @@ import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import type { DepStatus } from "./checkDeps"
 import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
-import { resolveTransclusions } from "./transclusion"
+import { resolveDocumentContent } from "./documentResolve"
 import { composeProjectMarkdown } from "./projectExport"
 import { showToast } from "./toastService"
 import type { useVault } from "./useVault"
@@ -114,7 +114,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
         raw = replaced.content
       } catch { raw = editor.getValue() }
     }
-    const content = resolveTransclusions(raw, transclusionResolver)
+    const content = resolveDocumentContent(raw, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const author = fm?.author as string | undefined
@@ -136,11 +136,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
         if (await exists(mp)) macrosText = await readTextFile(mp)
       } catch { /* ok */ }
     }
-    const content = composeProjectMarkdown(vaultFiles, vaultRef.current.activeTabPath)
-    if (!content) {
+    const composed = composeProjectMarkdown(vaultFiles, vaultRef.current.activeTabPath)
+    if (!composed) {
       showToast(t.app.noMainDocument, "error")
       return
     }
+    const content = resolveDocumentContent(composed, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || vaultRef.current.openFile?.name.replace(/\.[^.]+$/, "") || "project"
@@ -256,7 +257,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
         sourceForTex = replaced.content
       } catch { sourceForTex = editorContent }
     }
-    const content = resolveTransclusions(sourceForTex, transclusionResolver)
+    const content = resolveDocumentContent(sourceForTex, transclusionResolver)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")

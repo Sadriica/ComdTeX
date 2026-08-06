@@ -12,10 +12,9 @@ import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
-import { expandCsvBlocks } from "./csvRange"
+import { resolveDocumentContent } from "./documentResolve"
 import { buildTexLineMap } from "./texLineMap"
 import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
-import { resolveTransclusions } from "./transclusion"
 import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
 
 /** SyncTeX bundle for the last successful local compile. */
@@ -176,7 +175,7 @@ async function buildLatex(
   resolveTransclusion: (target: string) => string | null,
 ): Promise<string> {
   const macrosText = await readMacros(vaultPath)
-  const resolvedContent = expandCsvBlocks(resolveTransclusions(content, resolveTransclusion), resolveTransclusion)
+  const resolvedContent = resolveDocumentContent(content, resolveTransclusion)
   const parsed = extractFrontmatter(resolvedContent)
   const fm = parsed?.data
   return exportToTex(
@@ -246,7 +245,8 @@ export async function exportLatex(ctx: ExportActionsContext) {
 }
 
 export async function exportProjectLatex(ctx: ExportActionsContext) {
-  const content = composeProjectMarkdown(ctx.vaultFiles, ctx.activePath)
+  const composed = composeProjectMarkdown(ctx.vaultFiles, ctx.activePath)
+  const content = composed ? resolveDocumentContent(composed, ctx.resolveTransclusion) : composed
   if (!content) {
     ctx.toast(ctx.messages.noMainDocument, "error")
     return
@@ -444,7 +444,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
 }
 
 export async function exportPdf(ctx: ExportActionsContext) {
-  const content = ctx.readEditorContent()
+  let content = ctx.readEditorContent()
   const currentFile = ctx.activeFile
   if (content === null || !currentFile) {
     window.print()
@@ -483,6 +483,10 @@ export async function exportPdf(ctx: ExportActionsContext) {
   }
 
   const tempHdrPath = `${currentFile.path}.comdtex-hdr.tex`
+
+  // Same resolved document every other path sees: transclusions expanded and
+  // `:::csv` selections turned into tables before anything else looks at it.
+  content = resolveDocumentContent(content, ctx.resolveTransclusion)
 
   // Rasterize visual blocks into temp images beside the document so pandoc
   // embeds the diagrams instead of printing their source. Pandoc runs with
