@@ -43,7 +43,8 @@ import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
 import { getFileNameSet, flatFiles, findByName, findByVaultRelPath, matchesVaultRelPath } from "./wikilinks"
-import { pathJoin, pathDirname, displayBasename } from "./pathUtils"
+import { findVaultFile, type ResolvableFile } from "./vaultResolve"
+import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import type { FileNode } from "./types"
 import { writeTextFileAtomic } from "./atomicWrite"
 import TitleBar from "./TitleBar"
@@ -739,14 +740,51 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const vaultFilesRef = useRef(vaultFiles)
   useEffect(() => { vaultFilesRef.current = vaultFiles }, [vaultFiles])
 
+  // Data files, kept apart from `vaultFiles`. A `:::csv` or `:::data` block
+  // names a spreadsheet, and without this the block rendered "not found in
+  // this vault" in the app while every test passed, because tests inject
+  // their own resolver. Read once per change in the SET of csv paths, so an
+  // untouched file returns the identical string reference on every render
+  // and the pointer cache in datasets.ts short-circuits.
+  const [vaultCsvFiles, setVaultCsvFiles] = useState<ResolvableFile[]>([])
+  const vaultCsvPathsKey = useMemo(
+    () => vaultFileNodes.filter((f) => f.ext === "csv").map((f) => f.path).sort().join("\x00"),
+    [vaultFileNodes],
+  )
+  useEffect(() => {
+    let cancelled = false
+    const paths = vaultCsvPathsKey ? vaultCsvPathsKey.split("\x00") : []
+    if (paths.length === 0) {
+      setVaultCsvFiles([])
+      return
+    }
+    Promise.all(paths.map(async (path) => {
+      // Raw text on purpose: a CSV is data, not editor content.
+      try {
+        return { path, name: pathBasename(path), content: await readTextFile(path) }
+      } catch {
+        return { path, name: pathBasename(path), content: "" }
+      }
+    })).then((files) => {
+      if (!cancelled) setVaultCsvFiles(files)
+    }).catch(() => {
+      if (!cancelled) setVaultCsvFiles([])
+    })
+    return () => { cancelled = true }
+  }, [vaultCsvPathsKey])
+  const vaultCsvFilesRef = useRef(vaultCsvFiles)
+  useEffect(() => { vaultCsvFilesRef.current = vaultCsvFiles }, [vaultCsvFiles])
+
+  // Resolves the name a document writes into the file it means. Documents
+  // (`.md`/`.tex`) come from `vaultFiles`; data files (`.csv`) come from
+  // their own cache, because `vaultFiles` feeds the label scan, the
+  // diagnostics and vault search, and a spreadsheet is not a document.
+  // Both are read through refs so the callback identity stays stable and
+  // the render pipeline is not recreated on every keystroke.
   const transclusionResolver = useCallback((target: string): string | null => {
-    const files = vaultFilesRef.current
-    const lower = target.replace(/\.[^.]+$/, "").toLowerCase()
-    const found = files.find((file) =>
-      file.name.replace(/\.[^.]+$/, "").toLowerCase() === lower ||
-      file.name.toLowerCase() === target.toLowerCase() ||
-      file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`))
-    return found?.content || null
+    const found = findVaultFile(vaultFilesRef.current, target)
+    if (found) return found.content || null
+    return findVaultFile(vaultCsvFilesRef.current, target)?.content ?? null
   }, [])
 
   // Resolver for cross-file environment refs (`@gp/calendario@def:x`).
@@ -3094,6 +3132,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setFolderRulesEditor({ dirPath, rules })
   }, [folderRules])
 
+  // FileTree is memoised and re-renders with the whole vault; every prop it
+  // gets must keep a stable identity or the memo does nothing. This wrapper
+  // exists only to drop the promise without creating a new arrow in JSX.
+  const editFolderRules = useCallback((dir: string) => {
+    void handleEditFolderRules(dir)
+  }, [handleEditFolderRules])
+
   const handleSaveFolderRules = useCallback(async (dirPath: string, rules: FolderRules) => {
     try {
       await folderRules.write(dirPath, rules)
@@ -3810,7 +3855,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 onCreateFile={handleTreeCreateFile}
                 onCreateFolder={handleTreeCreateFolder}
                 onNewFromTemplate={handleNewFromTemplateIn}
-                onEditFolderRules={(dir) => void handleEditFolderRules(dir)}
+                onEditFolderRules={editFolderRules}
                 onSaveAsTemplate={handleSaveAsTemplate}
                 onDeleteFile={vault.deleteFile}
                 onRenameFile={handleRenameFile}

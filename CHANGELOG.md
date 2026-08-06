@@ -3,6 +3,16 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.27.1] - 2026-08-06
+
+### Fixed
+- **Data blocks can find their data.** `:::csv` and `:::data` blocks rendered "not found in this vault" for every spreadsheet in the app, while every test passed: the resolver that feeds the preview and all export paths was built from a list of documents that deliberately holds only `.md` and `.tex` files, so a `.csv` was never among them. Data files now travel in their own list, read once per change in the set of paths so an untouched file keeps the same string reference and the parse cache still short-circuits while you type. A target that carries a folder (`archive/growth.csv`) now wins over a bare name match, which is how an author disambiguates two files with the same name.
+- **Duplicate Line no longer advertises a shortcut that does something else.** The Edit menu showed `Ctrl+Shift+D`, which opens the daily note; the underlying editor action ships with no binding at all. It now shows `Shift+Alt+Down`, which really does duplicate the line.
+
+### Changed
+- **The vault graph no longer relays itself on every keystroke.** Its layout is eighty steps of an all-pairs force simulation, and it was rebuilt on every character typed while the Graph panel was open. It is now reused unless the graph's shape (its files, their tags, their links) actually changes, so typing prose leaves the layout alone.
+- **Fewer full-document passes per render.** The task-list rewrite, the table-of-contents marker and the section-id pass each scanned the whole document even when it contained none of them; they now skip the way the code-masking pass already did. The file tree's memoisation is no longer defeated by a callback rebuilt on every render, and the CSV parse cache is bounded like every other cache in the app.
+
 ## [1.27.0] - 2026-08-06
 
 ### Fixed

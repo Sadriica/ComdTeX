@@ -88,7 +88,10 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
         { label: t.menus.paste,           shortcut: "Ctrl+V",       disabled: !hasFile, action: () => runEditorAction("paste") },
         { label: t.menus.selectAll,       shortcut: "Ctrl+A",       disabled: !hasFile, action: () => runEditorAction("selectAll") },
         { separator: true },
-        { label: t.menus.duplicateLine,   shortcut: "Ctrl+Shift+D", disabled: !hasFile, action: () => runEditorAction("duplicateLine") },
+        // Shift+Alt+↓ is Monaco's real binding for copying a line down;
+        // `editor.action.duplicateSelection` ships with none, and Ctrl+Shift+D
+        // belongs to the daily note, so advertising it here was a lie.
+        { label: t.menus.duplicateLine,   shortcut: "Shift+Alt+↓",  disabled: !hasFile, action: () => runEditorAction("duplicateLine") },
         { label: t.menus.moveLineUp,      shortcut: "Alt+↑",        disabled: !hasFile, action: () => runEditorAction("moveLineUp") },
         { label: t.menus.moveLineDown,    shortcut: "Alt+↓",        disabled: !hasFile, action: () => runEditorAction("moveLineDown") },
         { label: t.menus.toggleComment,   shortcut: "Ctrl+/",       disabled: !hasFile, action: () => runEditorAction("toggleComment") },
