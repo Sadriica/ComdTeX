@@ -12,6 +12,7 @@ export const es: T = {
     mathInline: "Math inline", mathBlock: "Math bloque",
     mathOps: "Operaciones math", superscript: "Superíndice", subscript: "Subíndice",
     science: "Ciencia", lbl_quantity: "Cantidad con unidad", lbl_number: "Número", lbl_unit: "Unidad sola", lbl_chem: "Fórmula química",
+    lbl_csv: "Tabla desde CSV",
     fraction: "Fracción", sqrt: "Raíz cuadrada", nthRoot: "Raíz n-ésima", sum: "Sumatoria",
     integral: "Integral", limit: "Límite", partialDer: "Derivada parcial", derivative: "Derivada",
     gradient: "Gradiente", inverse: "Inversa", transpose: "Transpuesta",

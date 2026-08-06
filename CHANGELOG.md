@@ -3,6 +3,19 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.23.0] - 2026-08-05
+
+### Added
+- **Tables from a CSV, by selection.** A `:::csv` block holds a spreadsheet-style selection instead of a copy of the data, so regenerating the CSV updates the table:
+
+  ```
+  :::csv[Growth rates]
+  data.csv (A:B, D) (1:8, 12)
+  :::
+  ```
+
+  Columns accept spreadsheet letters, 1-based indices or header names; rows are 1-based over the data rows. Ranges use `:` and non-contiguous selections group in parentheses, so `(A, C, F)` and `(1:3, 7, 9:12)` both work, and the written order is respected: `(C, A)` really does put C first. Omitting a selector means everything. The CSV parser follows RFC 4180 (quoted fields, escaped quotes, embedded separators) and sniffs comma, semicolon, tab or pipe. A missing file or an unreadable selection leaves an honest note in the document instead of rendering nothing. `.csv` files are now first-class vault citizens, and the block expands in the preview, the PDF and every export.
+
 ## [1.22.0] - 2026-08-05
 
 ### Added

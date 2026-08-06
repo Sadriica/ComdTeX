@@ -202,6 +202,7 @@ function getSections(t: T): MenuSection[] {
             a(t.toolbar.lbl_matAuto,     "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})"),
             a(t.toolbar.lbl_matFixed,    "matf(${1:2}, ${2:2})"),
             a(t.toolbar.lbl_matLiteral,  "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
+            a(t.toolbar.lbl_csv, ":::csv[${1:Título}]\n${2:datos.csv} (${3:A:C}) (${4:1:10})\n:::"),
           ],
         },
         {

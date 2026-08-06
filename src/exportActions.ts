@@ -12,6 +12,7 @@ import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
+import { expandCsvBlocks } from "./csvRange"
 import { buildTexLineMap } from "./texLineMap"
 import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
 import { resolveTransclusions } from "./transclusion"
@@ -175,7 +176,7 @@ async function buildLatex(
   resolveTransclusion: (target: string) => string | null,
 ): Promise<string> {
   const macrosText = await readMacros(vaultPath)
-  const resolvedContent = resolveTransclusions(content, resolveTransclusion)
+  const resolvedContent = expandCsvBlocks(resolveTransclusions(content, resolveTransclusion), resolveTransclusion)
   const parsed = extractFrontmatter(resolvedContent)
   const fm = parsed?.data
   return exportToTex(

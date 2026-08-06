@@ -60,6 +60,7 @@ export const COMPLETIONS: Completion[] = [
   { label: "num",   detail: "num(6.022e23) → formatted number",                    snippet: "num(${1:6.022e23})" },
   { label: "unit",  detail: "unit(mol/L) → standalone unit",                       snippet: "unit(${1:mol/L})" },
   { label: "ce",    detail: "ce(H2O) → chemical formula (mhchem)",                 snippet: "ce(${1:H2O})" },
+  { label: "csv",   detail: ":::csv block → table from a CSV selection",             snippet: ":::csv[${1:Title}]\n${2:data.csv} (${3:A:C}) (${4:1:10})\n:::" },
   { label: "sqrt",  detail: "sqrt(x) → √x",                                    snippet: "sqrt(${1:x})" },
   { label: "root",  detail: "root(n, x) → ⁿ√x",                               snippet: "root(${1:n}, ${2:x})" },
   { label: "sum",   detail: "sum(start, end) → Σ",                             snippet: "sum(${1:i=0}, ${2:n})" },
