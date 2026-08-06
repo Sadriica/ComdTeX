@@ -20,6 +20,7 @@ import type * as monacoApi from "monaco-editor"
 import { checkText, type SpellLang } from "./spellcheck"
 import { raggedTableRows } from "./markdownEditing"
 import { findGaps } from "./aiGaps"
+import { findBioConventions } from "./bioConventions"
 
 export interface LintContext {
   /** Base names of vault files, lowercased, without extension. */
@@ -36,6 +37,8 @@ export interface LintContext {
   spellLang?: SpellLang
   /** Localised marker message for an unknown word (from i18n `app.spellError`). */
   spellMessage?: (word: string) => string
+  /** Localised marker message for a biology typography finding. */
+  bioMessage?: (kind: "binomial" | "gene", text: string) => string
 }
 
 export interface LintSummary {
@@ -620,6 +623,29 @@ function lintGaps(
   )
 }
 
+/**
+ * Taxonomic binomials and gene symbols that should be italic. Warnings only:
+ * `Bacillus` may be a genus or a surname, and only the author knows.
+ */
+function lintBioConventions(
+  text: string,
+  lineIdx: number[],
+  context: LintContext,
+  Severity: typeof monacoApi.MarkerSeverity,
+): monacoApi.editor.IMarkerData[] {
+  return findBioConventions(text).map((f) =>
+    mkMarker(
+      lineIdx,
+      f.start,
+      f.end,
+      context.bioMessage
+        ? context.bioMessage(f.kind, f.text)
+        : `${f.text}: italicize as ${f.suggestion}`,
+      Severity.Warning,
+    ),
+  )
+}
+
 export function lintContent(
   text: string,
   context: LintContext,
@@ -637,6 +663,9 @@ export function lintContent(
     ...lintShorthands(clean, lineIdx, Severity),
     ...lintTables(clean, lineIdx, Severity),
     ...lintGaps(text, lineIdx, Severity),
+    // Opt-in per document (frontmatter `comdtex.domain: biology`): journals
+    // return manuscripts over un-italicized binomials and gene symbols.
+    ...lintBioConventions(text, lineIdx, context, Severity),
   ]
 
   if (context.spellcheck) {

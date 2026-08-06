@@ -1,5 +1,8 @@
 import type * as monacoApi from "monaco-editor"
 import katex from "katex"
+// mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
+// exactly as it will in the LaTeX export (which loads the mhchem package).
+import "katex/contrib/mhchem"
 import type { KatexMacros } from "./macros"
 
 interface MathBlock {

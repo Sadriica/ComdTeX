@@ -1,5 +1,8 @@
 import { Children, createContext, isValidElement, useContext, useMemo, useState, type ReactNode } from "react"
 import katex from "katex"
+// mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
+// exactly as it will in the LaTeX export (which loads the mhchem package).
+import "katex/contrib/mhchem"
 import { useT } from "./i18n"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 

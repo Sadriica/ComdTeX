@@ -38,6 +38,7 @@
 
 // ── Balanced parenthesis parser ──────────────────────────────────────────────
 
+import { numberForPreview, quantity, unitsToMath, unitsToSiunitx } from "./units"
 function extractBalanced(text: string, start: number): { content: string; end: number } | null {
   let depth = 0
   for (let i = start; i < text.length; i++) {
@@ -70,7 +71,11 @@ function splitArgs(s: string): string[] {
 
 // ── Shorthand handlers ───────────────────────────────────────────────────────
 
-type Handler = (args: string[]) => string
+/** Shorthands render differently for the preview (KaTeX) and the LaTeX
+ * export (real packages), so every handler receives the target. Handlers
+ * that render identically simply ignore it. */
+export type ShorthandTarget = "preview" | "tex"
+type Handler = (args: string[], target: ShorthandTarget) => string
 
 export const HANDLERS: Record<string, Handler> = {
   mat: (args) => {
@@ -97,6 +102,14 @@ export const HANDLERS: Record<string, Handler> = {
     return `\\begin{bmatrix}${rowStrs.join(" \\\\ ")}\\end{bmatrix}`
   },
   frac:  ([a, b])     => `\\frac{${a}}{${b ?? "?"}}`,
+  // Units and quantities (siunitx on export, upright math in the preview).
+  si:    ([v, u], target) => quantity(v ?? "", u ?? "", target),
+  num:   ([v], target) =>
+    target === "tex" ? `\\num{${(v ?? "").trim()}}` : numberForPreview(v ?? ""),
+  unit:  ([u], target) =>
+    target === "tex" ? `\\unit{${unitsToSiunitx(u ?? "")}}` : unitsToMath(u ?? ""),
+  // Chemistry: KaTeX ships the mhchem extension, so \ce renders in both.
+  ce:    ([f]) => `\\ce{${(f ?? "").trim()}}`,
   sqrt:  ([x])        => `\\sqrt{${x}}`,
   root:  ([n, x])     => `\\sqrt[${n}]{${x ?? "?"}}`,
   sum:   ([from, to]) => `\\sum_{${from}}^{${to ?? "n"}}`,
@@ -142,7 +155,7 @@ const NAMES = Object.keys(HANDLERS).join("|")
 const SHORTHAND_RE = new RegExp(`\\b(${NAMES})\\s*\\(`, "g")
 
 /** Expande shorthands en `text`. Si `wrap=true`, los envuelve en $...$ */
-function expandShorthandsInRegion(text: string, wrap: boolean): string {
+function expandShorthandsInRegion(text: string, wrap: boolean, target: ShorthandTarget): string {
   let result = ""
   let cursor = 0
   SHORTHAND_RE.lastIndex = 0
@@ -161,9 +174,9 @@ function expandShorthandsInRegion(text: string, wrap: boolean): string {
     }
 
     // Recurse into arguments (no wrap: they are inside a math context)
-    const args = splitArgs(balanced.content).map((a) => expandShorthandsInRegion(a, false))
+    const args = splitArgs(balanced.content).map((a) => expandShorthandsInRegion(a, false, target))
 
-    const latex = HANDLERS[name](args)
+    const latex = HANDLERS[name](args, target)
     const output = wrap ? `$${latex}$` : latex
 
     result += text.slice(cursor, match.index) + output
@@ -277,7 +290,7 @@ function unmaskCode(text: string, slots: string[]): string {
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 
-export function preprocess(text: string): string {
+export function preprocess(text: string, target: ShorthandTarget = "preview"): string {
   // Mask code blocks before any math/shorthand processing so their contents
   // are preserved verbatim (no `frac(a,b)` → `\frac{a}{b}` inside code).
   const { masked, slots: codeSlots } = maskCode(text)
@@ -296,15 +309,15 @@ export function preprocess(text: string): string {
   while ((m = mathRe.exec(masked)) !== null) {
     // Text region before the math block → shorthands are auto-wrapped
     const before = masked.slice(cursor, m.index)
-    parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true))))
+    parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true, target))))
 
     // Dentro del bloque math → shorthands sin wrap
     if (m[1] !== undefined) {
       // Display block $$...$$
-      parts.push(`$$${expandShorthandsInRegion(m[1], false)}$$`)
+      parts.push(`$$${expandShorthandsInRegion(m[1], false, target)}$$`)
     } else {
       // Inline $...$
-      parts.push(`$${expandShorthandsInRegion(m[2], false)}$`)
+      parts.push(`$${expandShorthandsInRegion(m[2], false, target)}$`)
     }
 
     cursor = m.index + m[0].length
@@ -313,7 +326,7 @@ export function preprocess(text: string): string {
 
   // Texto restante
   const tail = masked.slice(cursor)
-  parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(tail, true))))
+  parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(tail, true, target))))
 
   return unmaskCode(parts.join(""), codeSlots)
 }

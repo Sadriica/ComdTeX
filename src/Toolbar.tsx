@@ -206,6 +206,16 @@ function getSections(t: T): MenuSection[] {
         },
         {
           kind: "submenu",
+          label: t.toolbar.science,
+          items: [
+            a(t.toolbar.lbl_quantity, "si(${1:9.81}, ${2:m/s^2})"),
+            a(t.toolbar.lbl_number,   "num(${1:6.022e23})"),
+            a(t.toolbar.lbl_unit,     "unit(${1:mol/L})"),
+            a(t.toolbar.lbl_chem,     "ce(${1:H2O})"),
+          ],
+        },
+        {
+          kind: "submenu",
           label: t.toolbar.decorators,
           items: [
             a("x̂  hat",   "hat(${1:x})"),

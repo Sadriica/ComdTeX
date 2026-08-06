@@ -3,6 +3,12 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.22.0] - 2026-08-05
+
+### Added
+- **Units and chemistry, written once and typeset twice.** New shorthands `si(9.81, m/s^2)`, `num(6.022e23)`, `unit(mol/L)` and `ce(H2O)`. The preview renders them through KaTeX (upright units, real scientific notation, and chemistry via KaTeX's own mhchem extension) while the LaTeX export emits genuine `siunitx` and `mhchem`, so journals get the formatting they demand. A unit parser (`units.ts`) understands SI prefixes, products, divisions and exponents, and degrades an unknown unit to upright text instead of breaking the compile. The packages load only when a document actually uses them, since recent mhchem versions cost real compile time.
+- **Biology typography check.** Opt in with `comdtex.domain: biology` in the frontmatter and the editor warns about taxonomic binomials and gene symbols that are not italicized, the two conventions manuscripts get returned over. Warnings only, never automatic rewrites: `Bacillus` may be a genus or a surname, and only the author knows. Code, math, links and already-italic text are never flagged, and common lab acronyms (PCR, ELISA, DNA) are not mistaken for gene symbols.
+
 ## [1.21.0] - 2026-08-05
 
 ### Added

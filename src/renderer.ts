@@ -2,6 +2,9 @@ import MarkdownIt from "markdown-it"
 import footnotePlugin from "markdown-it-footnote"
 import markPlugin from "markdown-it-mark"
 import katex from "katex"
+// mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
+// exactly as it will in the LaTeX export (which loads the mhchem package).
+import "katex/contrib/mhchem"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { preprocess } from "./preprocessor"
 import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs, type EnvironmentDocResolver } from "./environments"
