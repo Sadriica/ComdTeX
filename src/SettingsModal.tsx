@@ -129,6 +129,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <option value="en">English</option>
                   </select>
                 </label>
+                <p className="setting-hint">{t.settings.hints.language}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.adsToken}</span>
@@ -152,6 +153,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <option value="hc-black">{t.settings.highContrast}</option>
                   </select>
                 </label>
+                <p className="setting-hint">{t.settings.hints.theme}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.touchpadGestures}</span>
@@ -161,6 +163,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ touchpadGestures: !settings.touchpadGestures })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.touchpadGestures}</p>
               </>
             )}
 
@@ -177,6 +180,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <span className="setting-value">{settings.fontSize}px</span>
                   </div>
                 </label>
+                <p className="setting-hint">{t.settings.hints.fontSize}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.autosave}</span>
@@ -190,6 +194,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <option value={3000}>3 s</option>
                   </select>
                 </label>
+                <p className="setting-hint">{t.settings.hints.autoSaveMs}</p>
 
                 <div className="setting-row">
                   <span>{t.settings.wordGoal}</span>
@@ -213,6 +218,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={(e) => onChange({ vimMode: e.target.checked })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.wordGoal}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.typewriterMode}</span>
@@ -222,6 +228,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ typewriterMode: !settings.typewriterMode })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.typewriterMode}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.wordWrap}</span>
@@ -231,6 +238,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ wordWrap: !settings.wordWrap })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.wordWrap}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.minimap}</span>
@@ -240,6 +248,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ minimapEnabled: !settings.minimapEnabled })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.minimapEnabled}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.spellcheck}</span>
@@ -303,6 +312,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <span className="setting-value">{settings.previewFontSize}px</span>
                   </div>
                 </label>
+                <p className="setting-hint">{t.settings.hints.previewFontSize}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.previewVisible}</span>
@@ -312,6 +322,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ previewVisible: !settings.previewVisible })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.previewVisible}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.syncScroll}</span>
@@ -321,6 +332,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ syncScroll: !settings.syncScroll })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.syncScroll}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.mathPreview}</span>
@@ -330,6 +342,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ mathPreview: !(settings.mathPreview ?? true) })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.mathPreview}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.previewTheme}</span>
@@ -342,6 +355,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     <option value="light">{t.settings.light}</option>
                   </select>
                 </label>
+                <p className="setting-hint">{t.settings.hints.previewTheme}</p>
               </>
             )}
 
@@ -355,6 +369,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={() => onChange({ dailyNotesEnabled: !settings.dailyNotesEnabled })}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.dailyNotesEnabled}</p>
 
                 <label className="setting-row">
                   <span>{t.settings.dailyNotesFolder}</span>
@@ -366,6 +381,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     disabled={!settings.dailyNotesEnabled}
                   />
                 </label>
+                <p className="setting-hint">{t.settings.hints.dailyNotesFolder}</p>
 
                 <label className="setting-row setting-row-stack">
                   <span>{t.settings.dailyNotesTemplate}</span>
@@ -508,6 +524,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     ))}
                   </select>
                 </label>
+                <p className="setting-hint">{t.settings.hints.aiProviderId}</p>
 
                 {aiPreset.needsBaseUrl && (
                   <label className="setting-row">
@@ -519,6 +536,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                       onChange={(e) => onChange({ aiBaseUrl: e.target.value })}
                     />
                   </label>
+                )}
+                {aiPreset.needsBaseUrl && (
+                  <p className="setting-hint">{t.settings.hints.aiBaseUrl}</p>
                 )}
 
                 {aiPreset.isCli ? (

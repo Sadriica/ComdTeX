@@ -121,6 +121,27 @@ export interface T {
     autoRebuildPdf: string; autoRebuildPdfDesc: string
     wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
     wasmTexUnavailable: string
+    hints: {
+      language: string
+      theme: string
+      touchpadGestures: string
+      fontSize: string
+      autoSaveMs: string
+      wordGoal: string
+      vimMode: string
+      typewriterMode: string
+      wordWrap: string
+      minimapEnabled: string
+      previewFontSize: string
+      previewVisible: string
+      syncScroll: string
+      mathPreview: string
+      previewTheme: string
+      dailyNotesEnabled: string
+      dailyNotesFolder: string
+      aiProviderId: string
+      aiBaseUrl: string
+    }
     sections: {
       general: string
       editor: string
