@@ -1,6 +1,9 @@
 import type * as monacoApi from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import katex from "katex"
+// mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
+// exactly as it will in the LaTeX export (which loads the mhchem package).
+import "katex/contrib/mhchem"
 import { lintFile, type LintContext } from "./contentLinter"
 import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
@@ -53,6 +56,10 @@ export const COMPLETIONS: Completion[] = [
   { label: "mat",   detail: "mat(v1, v2, ...) → auto-sized matrix",            snippet: "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})" },
   { label: "matf",  detail: "matf(rows, cols, v1, ...) → explicit-size matrix",snippet: "matf(${1:2}, ${2:2})" },
   { label: "frac",  detail: "frac(num, den) → a/b",                            snippet: "frac(${1:a}, ${2:b})" },
+  { label: "si",    detail: "si(value, unit) → quantity with units (siunitx)",     snippet: "si(${1:9.81}, ${2:m/s^2})" },
+  { label: "num",   detail: "num(6.022e23) → formatted number",                    snippet: "num(${1:6.022e23})" },
+  { label: "unit",  detail: "unit(mol/L) → standalone unit",                       snippet: "unit(${1:mol/L})" },
+  { label: "ce",    detail: "ce(H2O) → chemical formula (mhchem)",                 snippet: "ce(${1:H2O})" },
   { label: "sqrt",  detail: "sqrt(x) → √x",                                    snippet: "sqrt(${1:x})" },
   { label: "root",  detail: "root(n, x) → ⁿ√x",                               snippet: "root(${1:n}, ${2:x})" },
   { label: "sum",   detail: "sum(start, end) → Σ",                             snippet: "sum(${1:i=0}, ${2:n})" },

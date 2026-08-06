@@ -353,7 +353,7 @@ function mdToTex(raw: string): string {
     /((?:^\s*\|.*\|\s*\n)+)\s*\{#(tbl:[\w:.-]+)\}/gm,
     (_match, tableRows, label) => `${tableRows}\n{#${label}}\n`,
   )
-  const preprocessed = preprocess(preprocessFigureLabels(tableSafeText))
+  const preprocessed = preprocess(preprocessFigureLabels(tableSafeText), "tex")
   let tokens
   try {
     tokens = md.parse(preprocessed, {})
@@ -361,6 +361,21 @@ function mdToTex(raw: string): string {
     tokens = md.parse(raw, {})
   }
   return tokensToTex(tokens, slots)
+}
+
+/** Which science packages the generated body actually needs. */
+export interface SciPackages {
+  units: boolean
+  chem: boolean
+  tables: boolean
+}
+
+export function detectSciPackages(texBody: string): SciPackages {
+  return {
+    units: /\\(qty|num|unit|SI|si)\{/.test(texBody),
+    chem: /\\ce\{/.test(texBody),
+    tables: /\\begin\{(longtable|tabular)\}/.test(texBody),
+  }
 }
 
 // ── Journal document classes ──────────────────────────────────────────────────
@@ -432,6 +447,7 @@ function buildJournalPreamble(
   macros: LatexMacro[],
   hasCode: boolean,
   hasLinks: boolean,
+  sci: SciPackages,
 ): string {
   const cls = TEX_CLASSES[classId]
   const lines = [
@@ -446,6 +462,9 @@ function buildJournalPreamble(
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
   ]
+  if (sci.units) lines.push("\\usepackage{siunitx}")
+  if (sci.chem) lines.push("\\usepackage[version=4]{mhchem}")
+  if (sci.tables) lines.push("\\usepackage{booktabs}", "\\usepackage{longtable}")
   if (hasCode) {
     lines.push("\\usepackage{listings}")
     lines.push("\\usepackage{xcolor}")
@@ -467,7 +486,7 @@ function buildJournalPreamble(
 
 // ── Document template ─────────────────────────────────────────────────────────
 
-function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean): string {
+function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean, sci: SciPackages): string {
   const lines = [
     "\\documentclass[12pt,a4paper]{article}",
     "\\usepackage[utf8]{inputenc}",
@@ -484,6 +503,13 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
   ]
+
+  // Science packages load only when the document actually uses them: recent
+  // mhchem versions add real compile time, and an unused siunitx is noise in
+  // the preamble a user may hand off to a journal.
+  if (sci.units) lines.push("\\usepackage{siunitx}")
+  if (sci.chem) lines.push("\\usepackage[version=4]{mhchem}")
+  if (sci.tables) lines.push("\\usepackage{booktabs}", "\\usepackage{longtable}")
 
   if (hasCode) {
     lines.push("\\usepackage{listings}")
@@ -594,6 +620,7 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)
+  const sci = detectSciPackages(body)
 
   // Parse user macros for preamble
   const userMacros: LatexMacro[] = []
@@ -611,8 +638,8 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
   const cls = classId ? TEX_CLASSES[classId] : null
 
   const preamble = classId
-    ? buildJournalPreamble(classId, userMacros, hasCode, hasLinks)
-    : buildPreamble(userMacros, hasCode, hasLinks)
+    ? buildJournalPreamble(classId, userMacros, hasCode, hasLinks, sci)
+    : buildPreamble(userMacros, hasCode, hasLinks, sci)
 
   const docTitle = cls
     ? title

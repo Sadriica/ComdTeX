@@ -13,6 +13,7 @@ export interface T {
     orderedList: string; taskList: string; link: string; codeBlock: string
     mathInline: string; mathBlock: string
     mathOps: string; superscript: string; subscript: string
+    science: string; lbl_quantity: string; lbl_number: string; lbl_unit: string; lbl_chem: string
     fraction: string; sqrt: string; nthRoot: string; sum: string
     integral: string; limit: string; partialDer: string; derivative: string
     gradient: string; inverse: string; transpose: string
