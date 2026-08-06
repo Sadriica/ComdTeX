@@ -3,7 +3,7 @@ import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
 import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
-import { writeTextFile, readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
+import { readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath } from "@tauri-apps/plugin-opener"
@@ -2834,7 +2834,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const handleSaveBib = useCallback(async (bibtexString: string) => {
     if (!vault.vaultPath) return
     const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
-    await writeTextFile(bibPath, bibtexString)
+    await writeTextFileAtomic(bibPath, bibtexString)
     await vault.loadVault()
     showToast(t.app.bibSaved, "success")
   }, [vault, t])
@@ -2844,7 +2844,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const handlePersistBib = useCallback(async (bibtexString: string) => {
     if (!vault.vaultPath) return
     const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
-    await writeTextFile(bibPath, bibtexString)
+    await writeTextFileAtomic(bibPath, bibtexString)
     setBibMap(parseBibtex(bibtexString))
   }, [vault.vaultPath])
 
@@ -3055,7 +3055,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const vaultPath = vaultRef.current.vaultPath
     if (!vaultPath) return
     const mp = await pathJoin(vaultPath, MACROS_FILENAME)
-    if (!(await exists(mp))) await writeTextFile(mp, MACROS_TEMPLATE)
+    if (!(await exists(mp))) await writeTextFileAtomic(mp, MACROS_TEMPLATE)
     await vaultRef.current.loadVault()
     await vaultRef.current.openFilePath(mp)
   }, [])
@@ -3411,7 +3411,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const vaultPath = vaultRef.current.vaultPath
     if (!vaultPath) return
     const bp = await pathJoin(vaultPath, BIBTEX_FILENAME)
-    if (!(await exists(bp))) await writeTextFile(bp, BIB_TEMPLATE)
+    if (!(await exists(bp))) await writeTextFileAtomic(bp, BIB_TEMPLATE)
     await vaultRef.current.loadVault()
     await vaultRef.current.openFilePath(bp)
   }, [])
@@ -3621,7 +3621,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (!fileExists) {
         const tplRaw = settings.dailyNotesTemplate || "# {{date:YYYY-MM-DD}}\n\n"
         const content = processTemplateVariables(tplRaw, filename)
-        await writeTextFile(filePath, content)
+        await writeTextFileAtomic(filePath, content)
         await vaultRef.current.loadVault()
         showToast(t.app.dailyNoteCreated(filename), "success")
       } else {

@@ -762,6 +762,7 @@ export const en: T = {
     pandocMissingTypst: "Pandoc is not installed. Visit pandoc.org to install it.",
     typstBinaryMissing: "The typst binary is not installed. Visit typst.app to install it.",
     spellError: (word) => `Possible spelling error: ${word}`,
+    texAssetsCopied: (n) => `${n} asset${n !== 1 ? "s" : ""} copied alongside the .tex`,
   },
 
   welcome: {

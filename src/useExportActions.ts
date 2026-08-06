@@ -23,6 +23,7 @@ import {
   exportTypstPdf as exportTypstPdfAction,
   compileTypstFilePdf as compileTypstFilePdfAction,
   collectSyncTex,
+  bundleTexAssets,
   type SyncTexBundle,
 } from "./exportActions"
 import type { ProjectFile } from "./projectExport"
@@ -125,7 +126,13 @@ export function useExportActions(ctx: ExportActionsCtx) {
       author,
       { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
     )
-    await writeTextFile(path, tex)
+
+    // Bundle referenced images and references.bib next to the .tex, so the
+    // export compiles anywhere else (Overleaf, a journal), not only here.
+    const outDir = pathDirname(path) || "."
+    const { tex: bundledTex, copied } = await bundleTexAssets(content, tex, outDir, vaultRef.current.vaultPath)
+    await writeTextFile(path, bundledTex)
+    if (copied > 0) showToast(t.app.texAssetsCopied(copied), "success")
   }, [t, transclusionResolver, editorRef])
 
   const handleExportProjectTex = useCallback(async () => {
