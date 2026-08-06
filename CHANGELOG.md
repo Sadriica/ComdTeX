@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.24.0] - 2026-08-06
 
 ### Fixed
+- **Citations reach the PDF.** `[@key]` was rendered in the preview but exported as literal text, so a compiled PDF showed `[@rudin1976]` instead of a citation and carried no bibliography at all. The LaTeX export now emits real `\cite` (with `\cite[p. 321]{key}` for locators) and closes the document with `\bibliographystyle` and `\bibliography{references}`, choosing the bst that matches the document's citation style. Documents without citations are unchanged.
 - **Every export sees the same document.** Transclusions and `:::csv` selections were resolved on the preview and "Compile PDF" paths but not on "Export as .tex", "Export PDF" (pandoc), the project export or the rebuild-on-save, so the same note produced different output depending on the button pressed, and a `:::csv` block could ship as raw source. Resolution now lives in one place (`documentResolve.ts`) that every path calls, including inside transcluded notes, and a guard test fails if a future export handler forgets it.
 
 ### Added

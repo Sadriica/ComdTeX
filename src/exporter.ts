@@ -102,20 +102,35 @@ function crossRefToTex(docPath: string, prefix: string, id: string): string {
   return `${name}~(${escTex(docPath)})`
 }
 
+// Set while converting a document: tells exportToTex whether to emit the
+// bibliography commands. Reset at the start of every export.
+let citedInLastPass = false
+
 function textRefsToTex(text: string): string {
   const out: string[] = []
-  // Cross-file alternatives first, otherwise the local pattern matches the
-  // INNER `@def:x` of `@doc@def:x` and emits a dangling `\ref{def:x}` while
-  // leaving `@doc` as escaped prose.
-  const re = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+  // Citations first: `[@key]` and `[@key, p. 321]` become real \cite, which
+  // is what makes the bibliography work in the PDF. They are matched here,
+  // with the other refs, so the surrounding prose still gets escaped exactly
+  // once (a separate pass would escape the emitted macro).
+  //
+  // Cross-file @refs come before local ones, otherwise the local pattern
+  // matches the INNER `@def:x` of `@doc@def:x` and emits a dangling
+  // `\ref{def:x}` while leaving `@doc` as escaped prose.
+  const re = /\[@([\w:.-]+)(?:,\s*([^\]]*))?\]|@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
     out.push(escTex(text.slice(last, m.index)))
-    if (m[3] !== undefined) {
-      out.push(crossRefToTex((m[1] ?? m[2] ?? "").trim(), m[3], m[4]))
+    if (m[1] !== undefined) {
+      // `[@key, p. 321]` becomes \cite[p. 321]{key}: LaTeX's own way of
+      // carrying a locator, so every citation style renders it correctly.
+      const note = m[2]?.trim()
+      out.push(note ? `\\cite[${escTex(note)}]{${m[1]}}` : `\\cite{${m[1]}}`)
+      citedInLastPass = true
+    } else if (m[5] !== undefined) {
+      out.push(crossRefToTex((m[3] ?? m[4] ?? "").trim(), m[5], m[6]))
     } else {
-      out.push(refToTex(m[5], m[6]))
+      out.push(refToTex(m[7], m[8]))
     }
     last = m.index + m[0].length
   }
@@ -379,6 +394,21 @@ export function detectSciPackages(texBody: string): SciPackages {
   }
 }
 
+/** BibTeX style file matching a citation style. */
+function bibStyleFor(style: { id: string }): string {
+  switch (style.id) {
+    case "vancouver":
+    case "ama":
+      return "unsrt"
+    case "apa":
+      return "apalike"
+    case "author-year":
+      return "plainnat"
+    default:
+      return "plain"
+  }
+}
+
 // ── Journal document classes ──────────────────────────────────────────────────
 //
 // A document may pick its export class via frontmatter: `comdtex.texclass:
@@ -627,12 +657,14 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
   // superscript (`$x^{2^^3}$`) is left alone.
   const raw = stripKeepMarks(rawInput)
   const parsed = extractFrontmatter(raw)
+  citedInLastPass = false
   const body = mdToTex(parsed?.content ?? raw)
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)
   const sci = detectSciPackages(body)
-  const natbib = pickCiteStyle(parsed?.data?.["comdtex.citestyle"]).natbib
+  const citeStyle = pickCiteStyle(parsed?.data?.["comdtex.citestyle"])
+  const natbib = citeStyle.natbib
 
   // Parse user macros for preamble
   const userMacros: LatexMacro[] = []
@@ -687,6 +719,10 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
     "\\begin{document}",
     elsFrontmatter + maketitle,
     body,
+    // The vault's references.bib is the bibliography database; BibTeX reads
+    // it from the same directory as the .tex, which is where every export
+    // path writes both.
+    citedInLastPass ? `\n\\bibliographystyle{${bibStyleFor(citeStyle)}}\n\\bibliography{references}` : "",
     "\\end{document}",
   ].filter((l) => l !== undefined).join("\n")
 }
