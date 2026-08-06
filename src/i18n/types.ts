@@ -121,6 +121,9 @@ export interface T {
     autoRebuildPdf: string; autoRebuildPdfDesc: string
     wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
     wasmTexUnavailable: string
+    searchPlaceholder: string
+    searchNoResults: string
+    docsLink: string
     hints: {
       language: string
       theme: string
@@ -713,6 +716,7 @@ export interface T {
   }
 
   helpPanel: {
+    docsLink: string
     environments: string; shorthands: string; equations: string
     macros: string; bibtex: string; frontmatter: string; wikilinks: string
     tplFromFile: string; tplFromFileDesc: string
@@ -1059,6 +1063,7 @@ export interface T {
 
   deps: {
     intro: string
+    troubleshooting: string
     pandocFeatureWasm: string
     pandocFeatureNoWasm: string
     zipFeature: string

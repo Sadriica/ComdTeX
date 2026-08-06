@@ -4217,6 +4217,59 @@ html, body, #root {
   box-sizing: border-box;
 }
 .setting-textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Settings search: the box, its results, and the mark left on a row the user
+   jumped to, since landing on the right tab is only half the answer when the
+   tab is longer than the window. */
+.settings-search {
+  position: relative; padding: 8px 12px; border-bottom: 1px solid var(--border, #3c3c3c);
+}
+.settings-search input {
+  width: 100%; box-sizing: border-box; padding: 5px 8px; font-size: 12px;
+  background: var(--input-bg, #3c3c3c); color: inherit;
+  border: 1px solid var(--border, #555); border-radius: 3px;
+}
+.settings-results {
+  position: absolute; left: 12px; right: 12px; top: 100%; z-index: 5;
+  max-height: 260px; overflow-y: auto;
+  background: var(--panel-bg, #252526); border: 1px solid var(--border, #3c3c3c);
+  border-radius: 0 0 3px 3px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.settings-result {
+  display: flex; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 6px 10px; font-size: 12px; text-align: left;
+  background: none; border: 0; color: inherit; cursor: pointer;
+}
+.settings-result:hover { background: var(--hover-bg, #2a2d2e); }
+.settings-result-section { opacity: 0.6; white-space: nowrap; }
+.settings-result-empty { padding: 8px 10px; font-size: 12px; opacity: 0.7; }
+
+.setting-row-found {
+  animation: setting-found 1.6s ease-out;
+  border-radius: 3px;
+}
+@keyframes setting-found {
+  from { background: var(--accent-soft, rgba(86, 156, 214, 0.35)); }
+  to   { background: transparent; }
+}
+
+/* The bridge to the long-form guide. Every tab has a page that says more than
+   a line under a control can. */
+.settings-footer {
+  padding: 8px 12px; border-top: 1px solid var(--border, #3c3c3c); text-align: right;
+}
+.deps-warning-docs {
+  background: none; border: 0; padding: 2px 4px; margin-left: 8px;
+  font-size: 11px; color: inherit; opacity: 0.85; cursor: pointer;
+  text-decoration: underline;
+}
+
+.settings-docs-link, .hp-docs-link {
+  background: none; border: 0; padding: 2px 4px; cursor: pointer;
+  font-size: 11px; color: var(--link, #569cd6);
+}
+.settings-docs-link:hover, .hp-docs-link:hover { text-decoration: underline; }
+.hp-docs-link { display: block; margin: 4px 8px 0; text-align: left; }
+
 /* A heading inside a settings section, for when a section tells a story in
    two parts (what your situation is, then the switches for it). */
 .setting-section-title {
