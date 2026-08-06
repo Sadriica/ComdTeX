@@ -3,6 +3,16 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.29.0] - 2026-08-06
+
+### Added
+- **Settings has a search box.** Thirty-four options across seven tabs, grouped by what they belong to rather than by the word you have in your head, meant looking for "autosave" involved opening three tabs. Type a word, click the result, and it opens the right tab and marks the row. A guard test fails the build if an option is ever added to Settings without being added to what search can find.
+- **The app links to the documentation.** It never did: the short line under a control and the long explanation on the site had no way to reach each other. Settings now links to the page for the tab you are on, the Help panel links to the documentation, and the missing-tools banner links to the new troubleshooting page.
+- **A troubleshooting page**, covering the failures that actually happen: the TeX package server outages that stall a compile, which external tool each export needs, building the AppImage on Arch, Google Drive overwriting silently where Dropbox and OneDrive leave a conflict copy, and the API key falling back out of the OS keychain on Linux setups without one.
+
+### Fixed
+- The repository's own notes claimed ComdTeX checks for `git` at startup and that the missing-tools banner names every tool. Neither is true: `git` is not probed (the Git panel reports its own absence) and the banner only ever names `pandoc` and `zip`. The documentation now says what the code does.
+
 ## [1.28.0] - 2026-08-06
 
 ### Added

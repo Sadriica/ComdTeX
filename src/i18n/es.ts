@@ -137,6 +137,9 @@ export const es: T = {
     wasmTexCompiling: "Compilando LaTeX (WASM)…",
     wasmTexFallback: "Motor WASM no disponible, intentando LaTeX local",
     wasmTexUnavailable: "Motor LaTeX WASM no incluido en esta build",
+    searchPlaceholder: "Buscar ajustes…",
+    searchNoResults: "Ningún ajuste coincide con eso.",
+    docsLink: "Leer la guía completa",
     hints: {
       language: "Idioma de toda la interfaz. Se aplica de inmediato, sin reiniciar.",
       theme: "Colores del editor. El alto contraste está pensado para baja visión y salas muy iluminadas.",
@@ -836,6 +839,7 @@ export const es: T = {
   },
 
   helpPanel: {
+    docsLink: "Documentación completa",
     environments: "Entornos matemáticos", shorthands: "Shorthands matemáticos: Tab",
     formatting: "Formato de texto (Markdown)",
     formattingIntro: "Marcado en línea para dar formato al texto. El resaltado por colores y el subrayado usan HTML, permitido en el preview.",
@@ -1304,6 +1308,7 @@ export const es: T = {
   },
 
   deps: {
+    troubleshooting: "Solución de problemas",
     intro: "⚠ Algunas funciones requieren herramientas externas:",
     pandocFeatureWasm: "necesario para exportar DOCX, Beamer y Markdown→PDF (no para PDF normal)",
     pandocFeatureNoWasm: "necesario para exportar PDF, DOCX, Beamer",

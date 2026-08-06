@@ -6,8 +6,10 @@ import { useFocusTrap } from "./useFocusTrap"
 import { PROVIDER_PRESETS, getPreset, checkConnection, type AiCheck } from "./ai/aiProvider"
 import { providerLabel, type CloudProvider } from "./cloudSync"
 import { nextStep, type SyncPosture } from "./syncPosture"
+import { findSettings, type SettingsSectionId } from "./settingsIndex"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
+import { openUrl } from "@tauri-apps/plugin-opener"
 
 interface SettingsModalProps {
   open: boolean
@@ -39,6 +41,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   // Result of the last connection test. A settings form that never proves it
   // works leaves the user guessing between a wrong key, a wrong model name and
   // an endpoint that is simply not running.
+  const [query, setQuery] = useState("")
   const [aiCheck, setAiCheck] = useState<AiCheck | null>(null)
   const [aiChecking, setAiChecking] = useState(false)
   useEffect(() => {
@@ -88,6 +91,35 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
   const aiPreset = getPreset(settings.aiProviderId)
 
+  // Jump to an option found by search: switch to its tab, then bring the row
+  // into view and mark it, because landing on the right tab is only half the
+  // answer when the tab is longer than the window.
+  const goToSetting = (id: string, target: SettingsSectionId) => {
+    setSection(target)
+    setQuery("")
+    requestAnimationFrame(() => {
+      const row = modalRef.current?.querySelector(`[data-setting="${id}"]`)
+      if (!row) return
+      row.scrollIntoView({ block: "center" })
+      row.classList.add("setting-row-found")
+      setTimeout(() => row.classList.remove("setting-row-found"), 1600)
+    })
+  }
+
+  // Each tab has a page on the site that says more than a line under a
+  // control can. Nothing in the app linked to the documentation before this,
+  // so the short text and the long text had no way to reach each other.
+  const DOCS_BASE = "https://comdtex.witara.site"
+  const docsPageFor: Record<SectionId, string> = {
+    general: "settings", editor: "settings", preview: "settings",
+    dailyNotes: "daily-notes", pdf: "compile-pdf", sync: "collaboration", ai: "ai",
+  }
+  const docsUrl = `${DOCS_BASE}/${settings.language}/${docsPageFor[section]}`
+
+  const results = findSettings(query, t)
+  const sectionLabel = (id: SettingsSectionId) =>
+    tabs.find((tab) => tab.id === id)?.label ?? id
+
   const handleResetCloudHints = () => {
     try { localStorage.removeItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) } catch { /* ignore */ }
     showToast(t.cloudSync.settings.resetDismissedDone, "success")
@@ -99,6 +131,34 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
         <div className="modal-header">
           <span>{t.settings.title}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>✕</button>
+        </div>
+
+        <div className="settings-search">
+          <input
+            type="text"
+            value={query}
+            placeholder={t.settings.searchPlaceholder}
+            aria-label={t.settings.searchPlaceholder}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query.trim() !== "" && (
+            <div className="settings-results">
+              {results.length === 0 ? (
+                <div className="settings-result-empty">{t.settings.searchNoResults}</div>
+              ) : (
+                results.map((entry) => (
+                  <button
+                    key={entry.id}
+                    className="settings-result"
+                    onClick={() => goToSetting(entry.id, entry.section)}
+                  >
+                    <span>{entry.label(t)}</span>
+                    <span className="settings-result-section">{sectionLabel(entry.section)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <div className="settings-body">
@@ -119,7 +179,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
           <div className="settings-content" role="tabpanel">
             {section === "general" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="language">
                   <span>{t.settings.language}</span>
                   <select
                     value={settings.language}
@@ -131,7 +191,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.language}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="wordGoal">
                   <span>{t.settings.adsToken}</span>
                   <input
                     type="password"
@@ -142,7 +202,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.adsTokenNote}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="theme">
                   <span>{t.settings.theme}</span>
                   <select
                     value={settings.theme}
@@ -155,7 +215,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.theme}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="touchpadGestures">
                   <span>{t.settings.touchpadGestures}</span>
                   <input
                     type="checkbox"
@@ -169,7 +229,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "editor" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="fontSize">
                   <span>{t.settings.editorFont}</span>
                   <div className="setting-control">
                     <input
@@ -182,7 +242,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.fontSize}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="autoSaveMs">
                   <span>{t.settings.autosave}</span>
                   <select
                     value={settings.autoSaveMs}
@@ -210,7 +270,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <span className="setting-value">{settings.wordGoal === 0 ? t.settings.wordGoalOff : `${settings.wordGoal} ${t.settings.words}`}</span>
                 </div>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="vimMode">
                   <span>{t.settings.vimMode}</span>
                   <input
                     type="checkbox"
@@ -220,7 +280,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.wordGoal}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="typewriterMode">
                   <span>{t.settings.typewriterMode}</span>
                   <input
                     type="checkbox"
@@ -230,7 +290,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.typewriterMode}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="wordWrap">
                   <span>{t.settings.wordWrap}</span>
                   <input
                     type="checkbox"
@@ -240,7 +300,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.wordWrap}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="minimapEnabled">
                   <span>{t.settings.minimap}</span>
                   <input
                     type="checkbox"
@@ -250,7 +310,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.minimapEnabled}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="spellcheck">
                   <span>{t.settings.spellcheck}</span>
                   <input
                     type="checkbox"
@@ -259,7 +319,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   />
                 </label>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="listContinuation">
                   <span>{t.settings.listContinuation}</span>
                   <input
                     type="checkbox"
@@ -269,7 +329,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.listContinuationDesc}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="autoFoldExcalidraw">
                   <span>{t.settings.autoFoldExcalidraw}</span>
                   <input
                     type="checkbox"
@@ -279,7 +339,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.autoFoldExcalidrawDesc}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="readingWpm">
                   <span>{t.settings.readingWpm}</span>
                   <input
                     type="number"
@@ -301,7 +361,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "preview" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="previewFontSize">
                   <span>{t.settings.previewFont}</span>
                   <div className="setting-control">
                     <input
@@ -314,7 +374,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.previewFontSize}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="previewVisible">
                   <span>{t.settings.previewVisible}</span>
                   <input
                     type="checkbox"
@@ -324,7 +384,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.previewVisible}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="syncScroll">
                   <span>{t.settings.syncScroll}</span>
                   <input
                     type="checkbox"
@@ -334,7 +394,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.syncScroll}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="mathPreview">
                   <span>{t.settings.mathPreview}</span>
                   <input
                     type="checkbox"
@@ -344,7 +404,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.mathPreview}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="previewTheme">
                   <span>{t.settings.previewTheme}</span>
                   <select
                     value={settings.previewTheme}
@@ -361,7 +421,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "dailyNotes" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="dailyNotesEnabled">
                   <span>{t.settings.dailyNotesEnabled}</span>
                   <input
                     type="checkbox"
@@ -371,7 +431,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.dailyNotesEnabled}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="dailyNotesFolder">
                   <span>{t.settings.dailyNotesFolder}</span>
                   <input
                     type="text"
@@ -383,7 +443,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.settings.hints.dailyNotesFolder}</p>
 
-                <label className="setting-row setting-row-stack">
+                <label className="setting-row setting-row-stack" data-setting="dailyNotesTemplate">
                   <span>{t.settings.dailyNotesTemplate}</span>
                   <textarea
                     className="setting-textarea"
@@ -399,7 +459,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "pdf" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="useWasmTex">
                   <span>
                     {t.settings.useWasmTex}
                     <span className="setting-help">: {t.settings.useWasmTexDesc}</span>
@@ -411,7 +471,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   />
                 </label>
                 {settings.useWasmTex && (
-                  <label className="setting-row">
+                  <label className="setting-row" data-setting="texliveUrl">
                     <span>
                       {t.settings.texliveUrl}
                       <span className="setting-help">: {t.settings.texliveUrlDesc}</span>
@@ -424,7 +484,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     />
                   </label>
                 )}
-                <label className="setting-row">
+                <label className="setting-row" data-setting="autoRebuildPdf">
                   <span>
                     {t.settings.autoRebuildPdf}
                     <span className="setting-help">: {t.settings.autoRebuildPdfDesc}</span>
@@ -457,7 +517,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <div className="setting-section-title">{t.settings.sections.sync}</div>
                 <p className="setting-hint">{cs.safetyNet}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="cloudSyncBannerEnabled">
                   <span>
                     {t.cloudSync.settings.bannerEnabled}
                     <span className="setting-help">: {t.cloudSync.settings.bannerEnabledDesc}</span>
@@ -469,7 +529,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   />
                 </label>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="cloudSyncDetectEnabled">
                   <span>
                     {t.cloudSync.settings.detectEnabled}
                     <span className="setting-help">: {t.cloudSync.settings.detectEnabledDesc}</span>
@@ -503,7 +563,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
             {section === "ai" && (
               <>
-                <label className="setting-row">
+                <label className="setting-row" data-setting="aiEnabled">
                   <span>{t.aiSettings.enabled}</span>
                   <input
                     type="checkbox"
@@ -513,7 +573,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 </label>
                 <p className="setting-hint">{t.aiSettings.enabledDesc}</p>
 
-                <label className="setting-row">
+                <label className="setting-row" data-setting="aiProviderId">
                   <span>{t.aiSettings.provider}</span>
                   <select
                     value={settings.aiProviderId}
@@ -527,7 +587,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <p className="setting-hint">{t.settings.hints.aiProviderId}</p>
 
                 {aiPreset.needsBaseUrl && (
-                  <label className="setting-row">
+                  <label className="setting-row" data-setting="aiBaseUrl">
                     <span>{t.aiSettings.baseUrl}</span>
                     <input
                       type="text"
@@ -543,7 +603,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
                 {aiPreset.isCli ? (
                   <>
-                    <label className="setting-row">
+                    <label className="setting-row" data-setting="aiCliCommand">
                       <span>{t.aiSettings.cliCommand}</span>
                       <input
                         type="text"
@@ -556,7 +616,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   </>
                 ) : (
                   <>
-                    <label className="setting-row">
+                    <label className="setting-row" data-setting="aiModel">
                       <span>{t.aiSettings.model}</span>
                       <input
                         type="text"
@@ -566,7 +626,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                       />
                     </label>
 
-                    <label className="setting-row">
+                    <label className="setting-row" data-setting="aiApiKey">
                       <span>{t.aiSettings.apiKey}</span>
                       <input
                         type="password"
@@ -607,7 +667,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
                 {settings.aiEnabled && (
                   <>
-                    <label className="setting-row">
+                    <label className="setting-row" data-setting="aiWarmupEnabled">
                       <span>{t.aiSettings.warmup}</span>
                       <input
                         type="checkbox"
@@ -621,6 +681,15 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
               </>
             )}
           </div>
+        </div>
+
+        <div className="settings-footer">
+          <button
+            className="settings-docs-link"
+            onClick={() => { void openUrl(docsUrl).catch(() => {}) }}
+          >
+            {t.settings.docsLink} ↗
+          </button>
         </div>
       </div>
     </div>

@@ -137,6 +137,9 @@ export const en: T = {
     wasmTexCompiling: "Compiling LaTeX (WASM)…",
     wasmTexFallback: "WASM engine unavailable, trying local LaTeX",
     wasmTexUnavailable: "WASM LaTeX engine not bundled in this build",
+    searchPlaceholder: "Search settings…",
+    searchNoResults: "No setting matches that.",
+    docsLink: "Read the full guide",
     hints: {
       language: "Language of the whole interface. Applies at once, no restart.",
       theme: "Colours for the editor. High contrast is built for low vision and bright rooms.",
@@ -835,6 +838,7 @@ export const en: T = {
   },
 
   helpPanel: {
+    docsLink: "Full documentation",
     environments: "Math environments", shorthands: "Math shorthands: Tab",
     formatting: "Text formatting (Markdown)",
     formattingIntro: "Inline markup for formatting text. Coloured highlights and underline use HTML, which is allowed in the preview.",
@@ -1303,6 +1307,7 @@ export const en: T = {
   },
 
   deps: {
+    troubleshooting: "Troubleshooting",
     intro: "⚠ Some features require external tools:",
     pandocFeatureWasm: "needed to export DOCX, Beamer and Markdown→PDF (not for normal PDF)",
     pandocFeatureNoWasm: "needed to export PDF, DOCX, Beamer",
