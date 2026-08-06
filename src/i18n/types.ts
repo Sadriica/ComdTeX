@@ -10,7 +10,7 @@ export interface T {
     hlPurple: string; hlOrange: string; hlRed: string; hlPink: string
     headings: string; heading1: string; heading2: string; heading3: string
     insert: string; quote: string; separator: string; list: string; insertToc: string
-    orderedList: string; taskList: string; link: string; codeBlock: string
+    taskList: string; link: string; codeBlock: string
     mathInline: string; mathBlock: string
     mathOps: string; superscript: string; subscript: string
     science: string; lbl_quantity: string; lbl_number: string; lbl_unit: string; lbl_chem: string
@@ -26,7 +26,7 @@ export interface T {
     theorem: string; lemma: string; corollary: string; proposition: string
     definition: string; example: string; exercise: string
     proof: string; remark: string; note: string
-    structures: string; table: string; matAuto: string; matFixed: string; matLiteral: string
+    table: string; matAuto: string; matFixed: string; matLiteral: string
     lbl_csv: string; lbl_data: string; lbl_dataplot: string
     more: string
     math: string
@@ -34,7 +34,7 @@ export interface T {
     symbolPicker: string
     // labels inside dropdowns
     lbl_heading1: string; lbl_heading2: string; lbl_heading3: string
-    lbl_quote: string; lbl_separator: string; lbl_list: string
+    lbl_separator: string; lbl_list: string
     lbl_orderedList: string; lbl_taskList: string; lbl_link: string; lbl_codeBlock: string
     lbl_superscript: string; lbl_subscript: string; lbl_fraction: string
     lbl_sqrt: string; lbl_nthRoot: string; lbl_sum: string; lbl_integral: string
@@ -43,7 +43,7 @@ export interface T {
     lbl_theorem: string; lbl_lemma: string; lbl_corollary: string
     lbl_proposition: string; lbl_definition: string; lbl_example: string
     lbl_exercise: string; lbl_proof: string; lbl_remark: string; lbl_note: string
-    lbl_table: string; lbl_matAuto: string; lbl_matFixed: string; lbl_matLiteral: string
+    lbl_matAuto: string; lbl_matFixed: string; lbl_matLiteral: string
     // trig / math functions
     sin: string; cos: string; tan: string; cot: string; sec: string; csc: string
     exp: string; ln: string; log: string
@@ -86,7 +86,6 @@ export interface T {
   }
 
   outline: {
-    noHeadings: string
     filterPlaceholder: string
     lineTitle: (n: number) => string
     totalWords: string
@@ -97,7 +96,6 @@ export interface T {
   backlinks: {
     noFile: string; searching: string
     links: (n: number) => string
-    noLinks: string
   }
 
   settings: {
@@ -112,14 +110,12 @@ export interface T {
     readingWpm: string; readingWpmDesc: string
     closeAriaLabel: string
     adsToken: string; adsTokenPlaceholder: string; adsTokenNote: string
-    sectionEditor: string; sectionPreview: string; sectionGeneral: string
-    sectionDailyNotes: string
+    sectionPreview: string; sectionGeneral: string
     dailyNotesEnabled: string
     dailyNotesFolder: string
     dailyNotesFolderPlaceholder: string
     dailyNotesTemplate: string
     dailyNotesTemplateHint: string
-    sectionPdf: string
     useWasmTex: string; useWasmTexDesc: string
     texliveUrl: string; texliveUrlDesc: string
     autoRebuildPdf: string; autoRebuildPdfDesc: string
@@ -242,7 +238,6 @@ export interface T {
     selectedWords: (n: number) => string
     selectionTitle: string
     readingTimeTitle: string
-    readingTime: (min: number) => string
     modeMarkdown: string; modeTex: string
     ln: string; col: string; goToLineTitle: string
     wordGoalTitle: (current: number, goal: number) => string
@@ -257,13 +252,13 @@ export interface T {
     findInFile: string; searchVault: string; focusMode: string; newFromTemplate: string
     editMacros: string; editBib: string; settings: string; shortcuts: string
     openVault: string; viewOutline: string; viewBacklinks: string
-    viewTags: string; viewProperties: string; viewGraph: string
-    viewTodo: string; viewEquations: string; viewStats: string
+    viewProperties: string; viewGraph: string
+    viewEquations: string; viewStats: string
     insertToc: string; typewriterMode: string; syncScroll: string
     wordWrap: string; minimap: string; exportDocx: string
     spellcheck: string; exportBeamer: string
     goBack: string; goForward: string
-    viewEnvironments: string; citationManager: string
+    citationManager: string
     vaultBackup: string; copyHtml: string; copyLatex: string
     searchReplace: string; tableEditor: string; exportReveal: string
     normalizeTable: string; normalizeTableNone: string; normalizeTableDone: string
@@ -274,8 +269,6 @@ export interface T {
     compileLatexPdf: string
     compileWasmPdf: string
     showInPdf: string
-    viewLabels: string
-    viewQuality: string
     openDailyNote: string
     showOnboarding: string
     viewPdf: string
@@ -375,7 +368,6 @@ export interface T {
     deleteConversation: string
     settingsShortcut: string
     stop: string
-    thinking: string
     you: string
     assistant: string
     insertAtCursor: string
@@ -387,7 +379,6 @@ export interface T {
     emptyThread: string
     ctxCurrentFile: string
     ctxSelection: (n: number) => string
-    ctxNote: string
     quickActions: string
     errMissingApiKey: string
     errMissingBaseUrl: string
@@ -475,7 +466,6 @@ export interface T {
     elapsed: string
     wpm: string
     goalProgress: string
-    noActiveDoc: string
     phaseDone: (phase: string) => string
   }
 
@@ -491,11 +481,9 @@ export interface T {
   git: {
     noVault: string
     notRepo: string
-    gitNotFound: string
     gitNotFoundTitle: string
     gitNotFoundHint: string
     refresh: string
-    noChanges: string
     staged: string
     changes: string
     untracked: string
@@ -507,7 +495,6 @@ export interface T {
     unstageOne: string
     discard: string
     recentCommits: string
-    initRepo: string
     initSuccess: string
     commitSuccess: string
     // remote
@@ -535,8 +522,6 @@ export interface T {
     noStashes: string
     stashError: (msg: string) => string
     // panel
-    showChanges: string
-    hidePanel: string
     // remotes section
     remotes: string; reloadRemotes: string; noRemotes: string
     editRemoteUrl: string; removeRemote: string; addRemote: string
@@ -598,16 +583,16 @@ export interface T {
   }
 
   app: {
-    subtitle: string; openFolder: string; dropImage: string
-    f1: string; f2: string; f3: string; f4: string; f5: string
+    openFolder: string; dropImage: string
+    f2: string; f3: string; f4: string; f5: string
     pandocMissing: string; generatingPdf: string; pdfDone: string
     pandocError: (e: string) => string
     unsavedChanges: (names: string) => string
     imageAdded: (f: string) => string; imagePasted: (f: string) => string
     errCopyImage: (e: string) => string; errPasteImage: (e: string) => string
-    noClipboardPath: string; noFilePath: string
+    noFilePath: string
     fileNotInVault: (name: string) => string
-    dialogSelectVault: string; dialogExportMd: string
+    dialogExportMd: string
     dialogExportTex: string; dialogExportPdf: string
     exportDocxSuccess: string; exportDocxError: string
     exportBeamerSuccess: string; exportBeamerError: string
@@ -689,7 +674,6 @@ export interface T {
     renameRefactorDone: (count: number) => string
     moved: (name: string) => string
     moveError: string
-    replaceSuccess: (n: number) => string
     replaceError: string
     closeTabSaveError: (name: string, err: string) => string
     invalidPath: (path: string) => string
@@ -960,8 +944,6 @@ export interface T {
 
   tagPanel: {
     noFiles: string
-    noTags: string
-    addTagsHint: string
     filterPlaceholder: string
     typeAriaLabel: string
     allTypes: string
@@ -1024,8 +1006,6 @@ export interface T {
     missingEmbed: (name: string) => string
     references: (n: number) => string
     line: string
-    searchLabel: string
-    replaceLabel: string
     searching: string
     replacing: string
     search: string
@@ -1067,7 +1047,6 @@ export interface T {
     title: string
     addAriaLabel: string
     addAtCursor: string
-    addPlaceholder: string
     save: string
     cancel: string
     resolved: string

@@ -3904,6 +3904,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               <BacklinksPanel
                 currentFile={vault.openFile}
                 tree={vault.tree}
+                onSearch={vault.search}
                 onOpenFile={(node, line) => {
                   if (line !== undefined) pendingJumpRef.current = line
                   handleOpenFileNode(node)
