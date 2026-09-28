@@ -12,10 +12,10 @@
 // - A single `sendMessage(messages, opts)` entry point dispatches to whichever
 //   provider the user configured in Settings.
 //
-// SECURITY NOTE: the API key is read from `settings.aiApiKey`, which the MVP
-// stores in localStorage. Storing the key in the OS keychain (e.g. via a Tauri
-// plugin) is a planned follow-up; see TODO below.
-// TODO (phase 2): move API key storage to the OS keychain instead of localStorage.
+// SECURITY NOTE: the API key is stored in the OS keychain (see
+// `src/secretStore.ts`, `getSecret`/`setSecret`/`deleteSecret` over the Rust
+// `keyring` commands, with a namespaced localStorage fallback when the
+// keychain is unavailable), not on `settings.aiApiKey` directly.
 
 import type { Settings } from "../useSettings"
 // Built-in ComdTeX system prompt. Imported as a raw string (Vite `?raw`) and
