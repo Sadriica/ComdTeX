@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - The repository's own notes claimed ComdTeX checks for `git` at startup and that the missing-tools banner names every tool. Neither is true: `git` is not probed (the Git panel reports its own absence) and the banner only ever names `pandoc` and `zip`. The documentation now says what the code does.
+- **The new documentation links pointed at pages that don't exist.** They assumed a language segment in the URL (`/en/settings`, `/es/troubleshooting`); the site keeps language client-side and serves every page at `/docs/<page>`, so every link from Settings, the Help panel and the missing-tools banner led to a 404. They now point at the real URLs.
 
 ## [1.28.0] - 2026-08-06
 

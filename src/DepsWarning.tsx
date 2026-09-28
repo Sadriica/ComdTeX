@@ -1,6 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
 import type { DepStatus } from "./checkDeps"
-import { useT, LANGS } from "./i18n"
+import { useT } from "./i18n"
+import { docsUrl } from "./docsLinks"
 
 const DOCS_BASE = "https://github.com/sadriica/comdtex/blob/main/docs/installing-deps.md"
 
@@ -29,7 +30,6 @@ function getOsHint(tool: DepName): string {
 
 export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: DepsWarningProps) {
   const t = useT()
-  const lang = t === LANGS.en ? "en" : "es"
   const missing: Array<{ name: DepName; label: string; feature: string; url: string }> = []
 
   if (!deps.pandoc && !dismissed.includes("pandoc")) {
@@ -100,7 +100,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
           is a page rather than a banner. */}
       <button
         className="deps-warning-docs"
-        onClick={() => { void openUrl(`https://comdtex.witara.site/${lang}/troubleshooting`).catch(() => {}) }}
+        onClick={() => { void openUrl(docsUrl("troubleshooting")).catch(() => {}) }}
       >
         {t.deps.troubleshooting} ↗
       </button>

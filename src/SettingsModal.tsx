@@ -10,6 +10,7 @@ import { findSettings, type SettingsSectionId } from "./settingsIndex"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
 import { openUrl } from "@tauri-apps/plugin-opener"
+import { docsUrl, type DocsPage } from "./docsLinks"
 
 interface SettingsModalProps {
   open: boolean
@@ -109,12 +110,11 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   // Each tab has a page on the site that says more than a line under a
   // control can. Nothing in the app linked to the documentation before this,
   // so the short text and the long text had no way to reach each other.
-  const DOCS_BASE = "https://comdtex.witara.site"
-  const docsPageFor: Record<SectionId, string> = {
+  const docsPageFor: Record<SectionId, DocsPage> = {
     general: "settings", editor: "settings", preview: "settings",
     dailyNotes: "daily-notes", pdf: "compile-pdf", sync: "collaboration", ai: "ai",
   }
-  const docsUrl = `${DOCS_BASE}/${settings.language}/${docsPageFor[section]}`
+  const sectionDocsUrl = docsUrl(docsPageFor[section])
 
   const results = findSettings(query, t)
   const sectionLabel = (id: SettingsSectionId) =>
@@ -686,7 +686,7 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
         <div className="settings-footer">
           <button
             className="settings-docs-link"
-            onClick={() => { void openUrl(docsUrl).catch(() => {}) }}
+            onClick={() => { void openUrl(sectionDocsUrl).catch(() => {}) }}
           >
             {t.settings.docsLink} ↗
           </button>

@@ -3,9 +3,10 @@ import katex from "katex"
 // mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
 // exactly as it will in the LaTeX export (which loads the mhchem package).
 import "katex/contrib/mhchem"
-import { useT, LANGS } from "./i18n"
+import { useT } from "./i18n"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { openUrl } from "@tauri-apps/plugin-opener"
+import { docsUrl } from "./docsLinks"
 
 /**
  * Active filter text, read by `Section` so it can drop the rows that do not
@@ -130,7 +131,6 @@ function EnvCard({
 export default function HelpPanel() {
   const t = useT()
   const hp = t.helpPanel
-  const lang = t === LANGS.en ? "en" : "es"
   const [query, setQuery] = useState("")
 
   return (
@@ -143,7 +143,7 @@ export default function HelpPanel() {
           used to point there. */}
       <button
         className="hp-docs-link"
-        onClick={() => { void openUrl(`https://comdtex.witara.site/${lang}`).catch(() => {}) }}
+        onClick={() => { void openUrl(docsUrl()).catch(() => {}) }}
       >
         {t.helpPanel.docsLink} ↗
       </button>
