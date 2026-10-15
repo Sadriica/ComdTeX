@@ -14,7 +14,7 @@ export function toExportMarkdownContent(cmdxContent: string): string {
   // structural labels ({#sec:…}, {#eq:…}, etc.) and cross-references (@eq:…).
   // exportToObsidianMarkdown then strips those labels from visible text and
   // rewrites cross-references as backtick code spans: work not done by toStorageMd.
-  return exportToObsidianMarkdown(toStorageMd(cmdxContent))
+  return exportToObsidianMarkdown(toStorageMd(cmdxContent, { envLabels: false }))
 }
 
 // ComdTeX-only special blocks are preserved verbatim by toStorageMd (a
@@ -65,5 +65,5 @@ export function toPandocMarkdownInput(cmdxContent: string): string {
   // `^^` reaches a .docx / .typ / Beamer / PDF output. See keepMarks.ts.
   // Special blocks degrade to captioned code fences BEFORE toStorageMd so its
   // verbatim masking never sees them (export-only path; storage is untouched).
-  return toStorageMd(specialBlocksToPandoc(stripKeepMarks(cmdxContent)))
+  return toStorageMd(specialBlocksToPandoc(stripKeepMarks(cmdxContent)), { envLabels: false })
 }
