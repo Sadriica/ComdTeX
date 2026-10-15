@@ -75,7 +75,7 @@ async function jsonRpc<T>(method: string, params: unknown[]): Promise<T> {
 function formatAuthors(creators: unknown): string {
   if (!Array.isArray(creators)) return ""
   const names = creators
-    .map(c => {
+    .map((c) => {
       if (!c || typeof c !== "object") return ""
       const o = c as Record<string, unknown>
       const last = typeof o.lastName === "string" ? o.lastName : ""
@@ -118,7 +118,7 @@ export async function searchZotero(query: string): Promise<ZoteroItem[]> {
   if (!Array.isArray(raw)) return []
 
   return raw
-    .map(r => {
+    .map((r) => {
       if (!r || typeof r !== "object") return null
       const o = r as Record<string, unknown>
       const citekey = itemCitekey(o)
@@ -144,7 +144,7 @@ export async function fetchZoteroBibtex(itemKeysOrQuery: string[] | string): Pro
   if (Array.isArray(itemKeysOrQuery)) {
     citekeys = itemKeysOrQuery.filter(Boolean)
   } else {
-    citekeys = (await searchZotero(itemKeysOrQuery)).map(i => i.citekey)
+    citekeys = (await searchZotero(itemKeysOrQuery)).map((i) => i.citekey)
   }
   if (citekeys.length === 0) return ""
 

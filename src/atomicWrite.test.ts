@@ -27,14 +27,14 @@ describe("tempFileNameFor", () => {
 
   it("strips leading dots so hidden targets get a non-hidden temp file", () => {
     expect(tempFileNameFor(".comdtex-comments.json", "abc123")).toBe(
-      "comdtex-comments.json.tmp-abc123"
+      "comdtex-comments.json.tmp-abc123",
     )
     expect(tempFileNameFor(".comdtex-comments.json").startsWith(".")).toBe(false)
   })
 
   it("keeps the original basename recognizable inside the temp name", () => {
     expect(tempFileNameFor("references.bib", "deadbeef0000")).toBe(
-      "references.bib.tmp-deadbeef0000"
+      "references.bib.tmp-deadbeef0000",
     )
   })
 

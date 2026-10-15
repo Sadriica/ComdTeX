@@ -2,7 +2,8 @@ import { scanStructuralLabels } from "./structuralLabels"
 import { pathBasename } from "./pathUtils"
 
 export type DiagnosticSeverity = "error" | "warning" | "info"
-export type DiagnosticCategory = "references" | "citations" | "assets" | "math" | "tables" | "export" | "structure"
+export type DiagnosticCategory =
+  "references" | "citations" | "assets" | "math" | "tables" | "export" | "structure"
 
 export interface DiagnosticIssue {
   severity: DiagnosticSeverity
@@ -40,7 +41,15 @@ function push(
   line: number,
   context?: string,
 ) {
-  issues.push({ severity, category, message, filePath: file.path, fileName: file.name, line, context })
+  issues.push({
+    severity,
+    category,
+    message,
+    filePath: file.path,
+    fileName: file.name,
+    line,
+    context,
+  })
 }
 
 function collectBibKeys(files: DiagnosticFile[]): Set<string> {
@@ -62,7 +71,14 @@ function scanCitations(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
     let match: RegExpExecArray | null
     while ((match = re.exec(file.content)) !== null) {
       if (!bibKeys.has(match[1])) {
-        push(issues, file, "warning", "citations", `Cita no encontrada: @${match[1]}`, lineOf(file.content, match.index))
+        push(
+          issues,
+          file,
+          "warning",
+          "citations",
+          `Cita no encontrada: @${match[1]}`,
+          lineOf(file.content, match.index),
+        )
       }
     }
   }
@@ -80,7 +96,14 @@ function scanImages(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
       if (/^(https?:|data:|file:)/i.test(src)) continue
       const clean = src.replace(/^\.\//, "")
       if (!known.has(clean.toLowerCase()) && !basenames.has(pathBasename(clean).toLowerCase())) {
-        push(issues, file, "warning", "assets", `Imagen local no encontrada: ${src}`, lineOf(file.content, match.index))
+        push(
+          issues,
+          file,
+          "warning",
+          "assets",
+          `Imagen local no encontrada: ${src}`,
+          lineOf(file.content, match.index),
+        )
       }
     }
   }
@@ -90,7 +113,14 @@ function scanMath(file: DiagnosticFile, issues: DiagnosticIssue[]) {
   const dollars = [...file.content.matchAll(/\$\$/g)]
   if (dollars.length % 2 !== 0) {
     const last = dollars[dollars.length - 1]
-    push(issues, file, "error", "math", "Bloque $$ sin cerrar", last ? lineOf(file.content, last.index ?? 0) : 1)
+    push(
+      issues,
+      file,
+      "error",
+      "math",
+      "Bloque $$ sin cerrar",
+      last ? lineOf(file.content, last.index ?? 0) : 1,
+    )
   }
 }
 
@@ -101,13 +131,25 @@ function countCells(row: string): number {
 function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[]) {
   const lines = file.content.split("\n")
   for (let i = 0; i < lines.length - 1; i++) {
-    if (!lines[i].includes("|") || !/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) continue
+    if (
+      !lines[i].includes("|") ||
+      !/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])
+    )
+      continue
     const expected = countCells(lines[i])
     let j = i + 2
     while (j < lines.length && lines[j].includes("|") && !/^\s*\{#tbl:/.test(lines[j])) {
       const cells = countCells(lines[j])
       if (cells !== expected) {
-        push(issues, file, "warning", "tables", `Fila de tabla con ${cells} columnas; se esperaban ${expected}`, j + 1, lines[j].trim())
+        push(
+          issues,
+          file,
+          "warning",
+          "tables",
+          `Fila de tabla con ${cells} columnas; se esperaban ${expected}`,
+          j + 1,
+          lines[j].trim(),
+        )
       }
       j++
     }
@@ -116,7 +158,10 @@ function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[]) {
 
 function scanExportRisks(file: DiagnosticFile, issues: DiagnosticIssue[]) {
   const checks: Array<[RegExp, string]> = [
-    [/<(iframe|video|audio|details|script|style)\b/i, "HTML embebido puede degradarse en LaTeX/Overleaf"],
+    [
+      /<(iframe|video|audio|details|script|style)\b/i,
+      "HTML embebido puede degradarse en LaTeX/Overleaf",
+    ],
     [/```mermaid\b/i, "Mermaid no se exporta como diagrama nativo en LaTeX"],
     [/>\s*\[![A-Z]+\]/, "Callout estilo Obsidian se degrada en LaTeX"],
     [/!\[\[[^\]]+\]\]/, "Transclusión: verifica que el archivo exista antes de exportar"],
@@ -137,7 +182,14 @@ function scanAcademicStructure(file: DiagnosticFile, issues: DiagnosticIssue[]) 
   while ((match = theoremRe.exec(file.content)) !== null) {
     const after = file.content.slice(match.index, match.index + 1200)
     if (!/^:::proof\b/m.test(after)) {
-      push(issues, file, "info", "structure", "Teorema sin demostración cercana", lineOf(file.content, match.index))
+      push(
+        issues,
+        file,
+        "info",
+        "structure",
+        "Teorema sin demostración cercana",
+        lineOf(file.content, match.index),
+      )
     }
   }
 }
@@ -194,7 +246,11 @@ export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
   return {
     issues: issues.sort((a, b) => {
       const severity = { error: 0, warning: 1, info: 2 }
-      return severity[a.severity] - severity[b.severity] || a.fileName.localeCompare(b.fileName) || a.line - b.line
+      return (
+        severity[a.severity] - severity[b.severity] ||
+        a.fileName.localeCompare(b.fileName) ||
+        a.line - b.line
+      )
     }),
     errors: issues.filter((issue) => issue.severity === "error").length,
     warnings: issues.filter((issue) => issue.severity === "warning").length,

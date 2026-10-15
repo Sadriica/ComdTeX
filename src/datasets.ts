@@ -18,13 +18,7 @@
 // on every keystroke is not acceptable. Same technique as the cross-file
 // environment cache in environments.ts.
 
-import {
-  parseCsv,
-  parseCsvBlock,
-  selectCsv,
-  type CsvBlockSpec,
-  type CsvResolver,
-} from "./csvRange"
+import { parseCsv, parseCsvBlock, selectCsv, type CsvBlockSpec, type CsvResolver } from "./csvRange"
 
 /** A declared dataset: its label plus the selection it names. */
 export interface DatasetDecl {

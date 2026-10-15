@@ -95,7 +95,9 @@ export async function fetchBibtexForDoi(rawInput: string): Promise<DoiResult> {
 
   // arXiv-derived DOIs live only in DataCite; plain DOIs try CrossRef first.
   if (!isArxiv) {
-    const cr = await tryFetch(`${CROSSREF}/${encodeURIComponent(doi)}/transform/application/x-bibtex`)
+    const cr = await tryFetch(
+      `${CROSSREF}/${encodeURIComponent(doi)}/transform/application/x-bibtex`,
+    )
     if (cr) return { bibtex: cr }
   }
 
@@ -153,7 +155,10 @@ export async function fetchBibtexFromAds(bibcode: string, token: string): Promis
 }
 
 /** Fetch BibTeX from INSPIRE-HEP. No token needed. */
-export async function fetchBibtexFromInspire(ref: { kind: "recid" | "arxiv"; value: string }): Promise<string> {
+export async function fetchBibtexFromInspire(ref: {
+  kind: "recid" | "arxiv"
+  value: string
+}): Promise<string> {
   const url =
     ref.kind === "recid"
       ? `https://inspirehep.net/api/literature/${ref.value}?format=bibtex`

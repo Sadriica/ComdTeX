@@ -16,7 +16,12 @@ function extractHeadingSection(content: string, heading: string): string {
   const start = lines.findIndex((line) => {
     const match = /^(#{1,6})\s+(.+)$/.exec(line)
     if (!match) return false
-    return match[2].replace(/\s*\{#[\w:.-]+\}\s*$/, "").trim().toLowerCase() === normalizedHeading
+    return (
+      match[2]
+        .replace(/\s*\{#[\w:.-]+\}\s*$/, "")
+        .trim()
+        .toLowerCase() === normalizedHeading
+    )
   })
   if (start < 0) return content
 
@@ -107,14 +112,19 @@ export function resolveTransclusions(
 export function processBlockIds(text: string): string {
   const lines = text.split("\n")
   let inFence = false
-  return lines.map((line) => {
-    if (/^```/.test(line.trim())) { inFence = !inFence; return line }
-    if (inFence) return line
-    const m = BLOCK_ID_TRAILING_RE.exec(line)
-    if (!m) return line
-    const id = m[1]
-    return line.replace(BLOCK_ID_TRAILING_RE, ` <!--block:${id}-->`)
-  }).join("\n")
+  return lines
+    .map((line) => {
+      if (/^```/.test(line.trim())) {
+        inFence = !inFence
+        return line
+      }
+      if (inFence) return line
+      const m = BLOCK_ID_TRAILING_RE.exec(line)
+      if (!m) return line
+      const id = m[1]
+      return line.replace(BLOCK_ID_TRAILING_RE, ` <!--block:${id}-->`)
+    })
+    .join("\n")
 }
 
 /**

@@ -20,8 +20,14 @@ describe("diagnoseDocuments", () => {
 
     expect(summary.errors).toBeGreaterThan(0)
     expect(summary.issues.map((issue) => issue.message)).toContain("Referencia rota: @eq:missing")
-    expect(summary.issues.some((issue) => issue.message.includes("Label duplicado: sec:intro"))).toBe(true)
-    expect(summary.issues.some((issue) => issue.message.includes("Cita no encontrada: @missing"))).toBe(true)
-    expect(summary.issues.some((issue) => issue.message.includes("Bloque $$ sin cerrar"))).toBe(true)
+    expect(
+      summary.issues.some((issue) => issue.message.includes("Label duplicado: sec:intro")),
+    ).toBe(true)
+    expect(
+      summary.issues.some((issue) => issue.message.includes("Cita no encontrada: @missing")),
+    ).toBe(true)
+    expect(summary.issues.some((issue) => issue.message.includes("Bloque $$ sin cerrar"))).toBe(
+      true,
+    )
   })
 })

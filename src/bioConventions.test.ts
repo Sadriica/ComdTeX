@@ -99,7 +99,9 @@ describe("science packages load only when used", () => {
   it("carries the science packages into journal classes too", () => {
     const tex = exportToTex(
       "---\ntitle: P\ncomdtex.texclass: ieeetran\n---\nMedimos $si(3, kg)$.",
-      "", "P", "Ada",
+      "",
+      "P",
+      "Ada",
     )
     expect(tex).toContain("\\documentclass[conference]{IEEEtran}")
     expect(tex).toContain("\\usepackage{siunitx}")

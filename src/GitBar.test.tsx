@@ -47,7 +47,9 @@ describe("StashSection", () => {
     fireEvent.click(popButtons[1])
 
     await waitFor(() => {
-      expect(executed).toContainEqual(expect.arrayContaining(["-C", "/vault", "stash", "pop", "stash@{1}"]))
+      expect(executed).toContainEqual(
+        expect.arrayContaining(["-C", "/vault", "stash", "pop", "stash@{1}"]),
+      )
     })
   })
 })

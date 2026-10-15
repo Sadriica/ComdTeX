@@ -26,7 +26,11 @@ interface Stats {
 
 function computeStats(tree: FileNode[], openTabs: OpenFile[], wikiNames: Set<string>): Stats {
   const allFiles = flatFiles(tree)
-  let words = 0, wikilinks = 0, equations = 0, figures = 0, citations = 0
+  let words = 0,
+    wikilinks = 0,
+    equations = 0,
+    figures = 0,
+    citations = 0
   const tags = new Set<string>()
   const brokenLinks: BrokenLink[] = []
 
@@ -90,7 +94,15 @@ function computeStats(tree: FileNode[], openTabs: OpenFile[], wikiNames: Set<str
   }
 }
 
-const Row = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
+const Row = ({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string | number
+  accent?: boolean
+}) => (
   <div className={`stats-row${accent ? " stats-accent" : ""}`}>
     <span className="stats-label">{label}</span>
     <span className="stats-value">{value}</span>
@@ -115,10 +127,7 @@ export default function VaultStatsPanel({
   onRemoveLink,
 }: VaultStatsPanelProps) {
   const t = useT()
-  const stats = useMemo(
-    () => computeStats(tree, openTabs, wikiNames),
-    [tree, openTabs, wikiNames]
-  )
+  const stats = useMemo(() => computeStats(tree, openTabs, wikiNames), [tree, openTabs, wikiNames])
 
   const [menuFor, setMenuFor] = useState<BrokenLink | null>(null)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -156,17 +165,17 @@ export default function VaultStatsPanel({
     <div className="stats-panel">
       <div className="stats-section">
         <div className="stats-section-title">{t.stats.vault}</div>
-        <Row label={t.stats.files}    value={stats.fileCount} />
-        <Row label={t.stats.open}     value={stats.openCount} />
-        <Row label={t.stats.words}    value={stats.wordCount.toLocaleString()} />
-        <Row label={t.stats.tags}     value={stats.tagCount} />
+        <Row label={t.stats.files} value={stats.fileCount} />
+        <Row label={t.stats.open} value={stats.openCount} />
+        <Row label={t.stats.words} value={stats.wordCount.toLocaleString()} />
+        <Row label={t.stats.tags} value={stats.tagCount} />
       </div>
       <div className="stats-section">
         <div className="stats-section-title">{t.stats.content}</div>
-        <Row label={t.stats.equations}  value={stats.equationCount} />
-        <Row label={t.stats.figures}    value={stats.figureCount} />
-        <Row label={t.stats.citations}  value={stats.citationCount} />
-        <Row label={t.stats.wikilinks}  value={stats.wikilinkCount} />
+        <Row label={t.stats.equations} value={stats.equationCount} />
+        <Row label={t.stats.figures} value={stats.figureCount} />
+        <Row label={t.stats.citations} value={stats.citationCount} />
+        <Row label={t.stats.wikilinks} value={stats.wikilinkCount} />
       </div>
       {stats.brokenLinks.length > 0 && (
         <div className="stats-section stats-broken">
@@ -216,7 +225,9 @@ export default function VaultStatsPanel({
             },
             {
               label: t.brokenLinks.ignore,
-              action: () => { /* close only */ },
+              action: () => {
+                /* close only */
+              },
             },
           ]}
         />

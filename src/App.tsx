@@ -1,4 +1,13 @@
-import { lazy, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  lazy,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
@@ -12,7 +21,26 @@ import { renderMarkdown } from "./renderer"
 import { MERMAID_CONFIG } from "./mermaidConfig"
 import type { CmdKAnchor } from "./CmdKEdit"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
-import { setupMonaco, setupEditorCommands, setupContentLinter, setupMathHover, setupCommentDecorations, setupKeepMarkDecorations, updateVaultFileNames, updateBibSuggestions, updateBibHoverEntries, updateOpenFilesSnapshot, updateUserSnippets, enableVimMode, applyTypewriterMode, updateMacroCompletions, updateStructuralLabelSuggestions, type CommentDecorationsHandle, type CommentMarker, type KeepMarkDecorationsHandle } from "./monacoSetup"
+import {
+  setupMonaco,
+  setupEditorCommands,
+  setupContentLinter,
+  setupMathHover,
+  setupCommentDecorations,
+  setupKeepMarkDecorations,
+  updateVaultFileNames,
+  updateBibSuggestions,
+  updateBibHoverEntries,
+  updateOpenFilesSnapshot,
+  updateUserSnippets,
+  enableVimMode,
+  applyTypewriterMode,
+  updateMacroCompletions,
+  updateStructuralLabelSuggestions,
+  type CommentDecorationsHandle,
+  type CommentMarker,
+  type KeepMarkDecorationsHandle,
+} from "./monacoSetup"
 import {
   loadComments,
   addComment as addCommentToVault,
@@ -43,7 +71,13 @@ import { AiSessionProvider } from "./useAiSession"
 import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
-import { getFileNameSet, flatFiles, findByName, findByVaultRelPath, matchesVaultRelPath } from "./wikilinks"
+import {
+  getFileNameSet,
+  flatFiles,
+  findByName,
+  findByVaultRelPath,
+  matchesVaultRelPath,
+} from "./wikilinks"
 import { findVaultFile, type ResolvableFile } from "./vaultResolve"
 import { syncPosture } from "./syncPosture"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
@@ -84,7 +118,13 @@ import LatexErrorModal from "./LatexErrorModal"
 import { extractFrontmatter } from "./frontmatter"
 import { checkDependencies, type DepStatus } from "./checkDeps"
 import DepsWarning, { type DepName } from "./DepsWarning"
-import { findCloudFolders, findConflicts, isPathInside, type CloudSyncInfo, type ConflictEntry } from "./cloudSync"
+import {
+  findCloudFolders,
+  findConflicts,
+  isPathInside,
+  type CloudSyncInfo,
+  type ConflictEntry,
+} from "./cloudSync"
 import CloudSyncPanel from "./CloudSyncPanel"
 import CloudSyncBanner from "./CloudSyncBanner"
 import TableEditor from "./TableEditor"
@@ -96,7 +136,13 @@ import { handleGlobalShortcut } from "./appShortcuts"
 import { useTouchpadGestures } from "./useTouchpadGestures"
 import ErrorBoundary, { LazyRegion } from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
-import { buildSearchRegExp, replaceMatchAt, replaceMatches, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
+import {
+  buildSearchRegExp,
+  replaceMatchAt,
+  replaceMatches,
+  type SearchReplaceOptions,
+  type SearchReplaceTarget,
+} from "./searchReplace"
 import { toEditorContent, toDiskContent } from "./cmdxFormat"
 import { resolveTransclusions } from "./transclusion"
 import { scanStructuralLabels } from "./structuralLabels"
@@ -105,18 +151,40 @@ import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
-import { processTemplateVariables, parameterizeDocument, saveCustomTemplate, loadCustomTemplates, TEMPLATES } from "./templates"
-import { setFlowchartSvg, setExcalidrawSvg, getExcalidrawSvg, setExcalidrawPlaceholderText } from "./environments"
+import {
+  processTemplateVariables,
+  parameterizeDocument,
+  saveCustomTemplate,
+  loadCustomTemplates,
+  TEMPLATES,
+} from "./templates"
+import {
+  setFlowchartSvg,
+  setExcalidrawSvg,
+  getExcalidrawSvg,
+  setExcalidrawPlaceholderText,
+} from "./environments"
 import { STORAGE_KEYS } from "./storageKeys"
 import { saveViewState, restoreViewState, readLegacyCursor } from "./editorViewState"
-import { findSpecialBlockStarts, findTableBlock, normalizeTableBlock, splitIntoSections, sectionSlug } from "./markdownEditing"
+import {
+  findSpecialBlockStarts,
+  findTableBlock,
+  normalizeTableBlock,
+  splitIntoSections,
+  sectionSlug,
+} from "./markdownEditing"
 import { minimalEdit } from "./textDiff"
 import { findGaps, gapAtOffset, gapContext, cleanGapCompletion } from "./aiGaps"
 import { isAiReady, sendInlineEdit } from "./ai/aiProvider"
 import { formatClock } from "./pomodoro"
 import { useFolderRules } from "./useFolderRules"
 import FolderRulesModal from "./FolderRulesModal"
-import { applyFilenamePattern, applyFolderFrontmatter, isGeneratedFile, type FolderRules } from "./folderRules"
+import {
+  applyFilenamePattern,
+  applyFolderFrontmatter,
+  isGeneratedFile,
+  type FolderRules,
+} from "./folderRules"
 import { runGenerator, type SourceFile } from "./generators"
 import "katex/dist/katex.min.css"
 import "./App.css"
@@ -144,14 +212,22 @@ async function collectSourceFiles(root: string, recursive: boolean): Promise<Sou
   const out: SourceFile[] = []
   const walk = async (dir: string) => {
     let entries
-    try { entries = await readDir(dir) } catch { return }
+    try {
+      entries = await readDir(dir)
+    } catch {
+      return
+    }
     for (const entry of entries) {
       if (!entry.name || entry.name.startsWith(".")) continue
       const full = await pathJoin(dir, entry.name)
       if (entry.isDirectory) {
         if (recursive) await walk(full)
       } else if (/\.(md|tex)$/i.test(entry.name)) {
-        try { out.push({ path: full, content: await readTextFile(full) }) } catch { /* unreadable */ }
+        try {
+          out.push({ path: full, content: await readTextFile(full) })
+        } catch {
+          /* unreadable */
+        }
       }
     }
   }
@@ -170,11 +246,36 @@ function monacoRange(model: monaco.editor.ITextModel, start: number, end: number
     endColumn: to.column,
   }
 }
-export type SidebarMode = "files" | "search" | "searchReplace" | "outline" | "backlinks" | "tags" | "labels" | "keep" | "quality" | "properties" | "graph" | "todo" | "equations" | "environments" | "stats" | "help" | "symbols" | "pdfPreview" | "comments" | "cloudSync" | "focusTimer" | "ai"
+export type SidebarMode =
+  | "files"
+  | "search"
+  | "searchReplace"
+  | "outline"
+  | "backlinks"
+  | "tags"
+  | "labels"
+  | "keep"
+  | "quality"
+  | "properties"
+  | "graph"
+  | "todo"
+  | "equations"
+  | "environments"
+  | "stats"
+  | "help"
+  | "symbols"
+  | "pdfPreview"
+  | "comments"
+  | "cloudSync"
+  | "focusTimer"
+  | "ai"
 
 function loadRecentFiles(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
-  catch { return [] }
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]")
+  } catch {
+    return []
+  }
 }
 
 function saveRecentFiles(paths: string[]) {
@@ -182,8 +283,11 @@ function saveRecentFiles(paths: string[]) {
 }
 
 function loadBookmarks(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) ?? "{}") }
-  catch { return {} }
+  try {
+    return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) ?? "{}")
+  } catch {
+    return {}
+  }
 }
 
 function saveBookmarks(bookmarks: Record<number, number>) {
@@ -203,8 +307,11 @@ function renderErrorHtml(error: unknown): string {
 }
 
 function currentTauriWindow() {
-  try { return getCurrentWindow() }
-  catch { return null }
+  try {
+    return getCurrentWindow()
+  } catch {
+    return null
+  }
 }
 
 const BIB_TEMPLATE = `% references.bib: BibTeX references for ComdTeX
@@ -414,7 +521,13 @@ export default function App() {
   )
 }
 
-function AppContent({ settings, updateSettings }: { settings: Settings; updateSettings: (p: Partial<Settings>) => void }) {
+function AppContent({
+  settings,
+  updateSettings,
+}: {
+  settings: Settings
+  updateSettings: (p: Partial<Settings>) => void
+}) {
   const t = useT()
   // Ref-bridge: useVault fires `onAfterSave` whenever a file lands on disk
   // (manual save or autosave). The actual reload logic lives further down in
@@ -423,7 +536,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const afterSaveRef = useRef<((path: string, basename: string) => void) | undefined>(undefined)
   const vault = useVault({
     autoSaveMs: settings.autoSaveMs,
-    onAfterSave: (path, basename) => { afterSaveRef.current?.(path, basename) },
+    onAfterSave: (path, basename) => {
+      afterSaveRef.current?.(path, basename)
+    },
   })
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   // Last content the editor model is known to hold (the user's last keystroke
@@ -482,7 +597,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [recentFiles, setRecentFiles] = useState<string[]>(() => loadRecentFiles())
   const [bookmarks, setBookmarks] = useState<Record<number, number>>(() => loadBookmarks())
   const bookmarksRef = useRef(bookmarks)
-  useEffect(() => { bookmarksRef.current = bookmarks }, [bookmarks])
+  useEffect(() => {
+    bookmarksRef.current = bookmarks
+  }, [bookmarks])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [macros, setMacros] = useState<KatexMacros>({})
@@ -512,18 +629,26 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [cloudInfo, setCloudInfo] = useState<CloudSyncInfo | null>(null)
   const [cloudSuggestion, setCloudSuggestion] = useState<CloudSyncInfo | null>(null)
   const [cloudBannerDismissed, setCloudBannerDismissed] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) === "1" } catch { return false }
+    try {
+      return localStorage.getItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) === "1"
+    } catch {
+      return false
+    }
   })
   const dismissCloudBanner = useCallback(() => {
     setCloudBannerDismissed(true)
-    try { localStorage.setItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED, "1") } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED, "1")
+    } catch {}
   }, [])
 
   const dismissDep = useCallback((name: DepName) => {
     setDepsDismissed((prev) => {
       if (prev.includes(name)) return prev
       const next = [...prev, name]
-      try { localStorage.setItem(STORAGE_KEYS.DEPS_DISMISSED, JSON.stringify(next)) } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEPS_DISMISSED, JSON.stringify(next))
+      } catch {}
       return next
     })
   }, [])
@@ -532,11 +657,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [previewContent, setPreviewContent] = useState("")
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 })
   const cursorPosRef = useRef(cursorPos)
-  useEffect(() => { cursorPosRef.current = cursorPos }, [cursorPos])
+  useEffect(() => {
+    cursorPosRef.current = cursorPos
+  }, [cursorPos])
   const cursorUiTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [selectedWords, setSelectedWords] = useState(0)
   const selectedWordsRef = useRef(selectedWords)
-  useEffect(() => { selectedWordsRef.current = selectedWords }, [selectedWords])
+  useEffect(() => {
+    selectedWordsRef.current = selectedWords
+  }, [selectedWords])
   const [tabLintCounts, setTabLintCounts] = useState<Record<string, LintSummary>>({})
   const [focusMode, setFocusMode] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -547,13 +676,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Pomodoro / writing-session state, lifted out of FocusTimerPanel so the timer
   // keeps running (and notifies on phase change) when the panel is closed, e.g.
   // while iterating between the Pomodoro panel and the AI assistant.
-  const pomodoroConfig = useMemo(() => ({
-    workMin: settings.pomodoroWorkMin,
-    breakMin: settings.pomodoroBreakMin,
-    longBreakMin: settings.pomodoroLongBreakMin,
-    cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
-  }), [settings.pomodoroWorkMin, settings.pomodoroBreakMin, settings.pomodoroLongBreakMin, settings.pomodoroCyclesBeforeLongBreak])
-  const focusTimer = useFocusTimer(pomodoroConfig, vault.openFile?.content ?? "", vault.activeTabPath)
+  const pomodoroConfig = useMemo(
+    () => ({
+      workMin: settings.pomodoroWorkMin,
+      breakMin: settings.pomodoroBreakMin,
+      longBreakMin: settings.pomodoroLongBreakMin,
+      cyclesBeforeLongBreak: settings.pomodoroCyclesBeforeLongBreak,
+    }),
+    [
+      settings.pomodoroWorkMin,
+      settings.pomodoroBreakMin,
+      settings.pomodoroLongBreakMin,
+      settings.pomodoroCyclesBeforeLongBreak,
+    ],
+  )
+  const focusTimer = useFocusTimer(
+    pomodoroConfig,
+    vault.openFile?.content ?? "",
+    vault.activeTabPath,
+  )
   /**
    * Compact timer readout for the top bar, so the countdown stays visible while
    * the Enfoque panel is closed. Null until a session exists: the bar looks
@@ -564,12 +705,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const phase = focusTimer.timer.phase
     return {
       clock: formatClock(focusTimer.timer.remainingSec),
-      phase: phase === "work" ? t.focusTimer.phaseWork
-        : phase === "break" ? t.focusTimer.phaseBreak
-          : t.focusTimer.phaseLongBreak,
+      phase:
+        phase === "work"
+          ? t.focusTimer.phaseWork
+          : phase === "break"
+            ? t.focusTimer.phaseBreak
+            : t.focusTimer.phaseLongBreak,
       running: focusTimer.timer.running,
     }
-  }, [focusTimer.session, focusTimer.timer.remainingSec, focusTimer.timer.phase, focusTimer.timer.running, t])
+  }, [
+    focusTimer.session,
+    focusTimer.timer.remainingSec,
+    focusTimer.timer.phase,
+    focusTimer.timer.running,
+    t,
+  ])
   // Search & Replace inputs/results, lifted so they survive the panel unmounting.
   const searchReplaceState = useSearchReplaceState()
   // Ctrl/Cmd+K inline AI edit: null when the floating widget is closed.
@@ -581,7 +731,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Excalidraw editor: `open` toggles the modal; `sceneB64` is the scene being
   // edited (empty for a new drawing); `targetLine` is the 1-based source line of
   // the block body to replace on save (null = insert a fresh block at cursor).
-  const [excalidraw, setExcalidraw] = useState<{ open: boolean; sceneB64: string; targetLine: number | null }>({ open: false, sceneB64: "", targetLine: null })
+  const [excalidraw, setExcalidraw] = useState<{
+    open: boolean
+    sceneB64: string
+    targetLine: number | null
+  }>({ open: false, sceneB64: "", targetLine: null })
   const [excalidrawVersion, setExcalidrawVersion] = useState(0)
   const [latexDiagnostics, setLatexDiagnostics] = useState<LatexDiagnostic[] | null>(null)
   const [pdfPath, setPdfPath] = useState<string | null>(null)
@@ -592,7 +746,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const [comments, setComments] = useState<Comment[]>([])
   const commentDecorationsRef = useRef<CommentDecorationsHandle | null>(null)
   const keepMarkDecorationsRef = useRef<KeepMarkDecorationsHandle | null>(null)
-  const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">("idle")
+  const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">(
+    "idle",
+  )
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("files")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Read inside togglePanel's updater, which must not close over a stale mode.
@@ -622,8 +778,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // arrows would change identity every render and the (potentially huge) file
   // tree would re-render on every keystroke (the "big vault = slow typing" cause).
   // Depend on the stable method, not the `vault` object (a fresh literal each render).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleSelectVault = useCallback(() => { void vault.selectVault() }, [vault.selectVault])
+  const handleSelectVault = useCallback(() => {
+    void vault.selectVault()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vault.selectVault])
   const handleConflictClick = useCallback(() => openPanel("cloudSync"), [openPanel])
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [editorWidth, setEditorWidth] = useState<number | null>(null)
@@ -639,27 +797,30 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // prop identity changed each render). readOnly keys off the boolean, since
   // `vault.openFile` mints a new object identity on each keystroke.
   const editorReadOnly = !vault.openFile
-  const editorOptions = useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(() => ({
-    fontSize: settings.fontSize,
-    lineHeight: Math.round(settings.fontSize * 1.6),
-    wordWrap: wordWrap ? "on" : "off",
-    minimap: { enabled: minimapEnabled },
-    scrollBeyondLastLine: false,
-    renderWhitespace: "none",
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-    padding: { top: 16, bottom: 16 },
-    readOnly: editorReadOnly,
-    // Keep prose typing cheap. Math/editor shorthands still expand with Tab
-    // (setupEditorCommands), and Monaco still offers contextual completions via
-    // trigger chars such as "[", "@", "\" plus manual Ctrl+Space.
-    quickSuggestions: { other: false, comments: false, strings: false },
-    suggestOnTriggerCharacters: true,
-    snippetSuggestions: "top",
-    // Smooth caret animation keeps the GPU compositor busy (~6% CPU on
-    // Linux/WebKitGTK); not worth it. "solid" avoids the idle blink repaint.
-    cursorSmoothCaretAnimation: "off",
-    cursorBlinking: "solid",
-  }), [settings.fontSize, wordWrap, minimapEnabled, editorReadOnly])
+  const editorOptions = useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
+    () => ({
+      fontSize: settings.fontSize,
+      lineHeight: Math.round(settings.fontSize * 1.6),
+      wordWrap: wordWrap ? "on" : "off",
+      minimap: { enabled: minimapEnabled },
+      scrollBeyondLastLine: false,
+      renderWhitespace: "none",
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      padding: { top: 16, bottom: 16 },
+      readOnly: editorReadOnly,
+      // Keep prose typing cheap. Math/editor shorthands still expand with Tab
+      // (setupEditorCommands), and Monaco still offers contextual completions via
+      // trigger chars such as "[", "@", "\" plus manual Ctrl+Space.
+      quickSuggestions: { other: false, comments: false, strings: false },
+      suggestOnTriggerCharacters: true,
+      snippetSuggestions: "top",
+      // Smooth caret animation keeps the GPU compositor busy (~6% CPU on
+      // Linux/WebKitGTK); not worth it. "solid" avoids the idle blink repaint.
+      cursorSmoothCaretAnimation: "off",
+      cursorBlinking: "solid",
+    }),
+    [settings.fontSize, wordWrap, minimapEnabled, editorReadOnly],
+  )
   const [navHistory, setNavHistory] = useState<string[]>([])
   const [navFuture, setNavFuture] = useState<string[]>([])
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
@@ -703,7 +864,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Latest open tabs for action handlers and derived vault-wide views. Keep the
   // ref fresh without forcing every consumer to depend on per-keystroke content.
   const openTabsRef = useRef(vault.openTabs)
-  useEffect(() => { openTabsRef.current = vault.openTabs }, [vault.openTabs])
+  useEffect(() => {
+    openTabsRef.current = vault.openTabs
+  }, [vault.openTabs])
 
   const openTabsShapeKey = useMemo(
     () => vault.openTabs.map((tab) => `${tab.path}\x1f${tab.name}\x1f${tab.mode}`).join("\x1e"),
@@ -740,7 +903,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Mermaid pipeline on every character). On a 6KB README that's ~50% sustained
   // CPU on the WebView process.
   const vaultFilesRef = useRef(vaultFiles)
-  useEffect(() => { vaultFilesRef.current = vaultFiles }, [vaultFiles])
+  useEffect(() => {
+    vaultFilesRef.current = vaultFiles
+  }, [vaultFiles])
 
   // Data files, kept apart from `vaultFiles`. A `:::csv` or `:::data` block
   // names a spreadsheet, and without this the block rendered "not found in
@@ -750,7 +915,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // and the pointer cache in datasets.ts short-circuits.
   const [vaultCsvFiles, setVaultCsvFiles] = useState<ResolvableFile[]>([])
   const vaultCsvPathsKey = useMemo(
-    () => vaultFileNodes.filter((f) => f.ext === "csv").map((f) => f.path).sort().join("\x00"),
+    () =>
+      vaultFileNodes
+        .filter((f) => f.ext === "csv")
+        .map((f) => f.path)
+        .sort()
+        .join("\x00"),
     [vaultFileNodes],
   )
   useEffect(() => {
@@ -760,22 +930,30 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       setVaultCsvFiles([])
       return
     }
-    Promise.all(paths.map(async (path) => {
-      // Raw text on purpose: a CSV is data, not editor content.
-      try {
-        return { path, name: pathBasename(path), content: await readTextFile(path) }
-      } catch {
-        return { path, name: pathBasename(path), content: "" }
-      }
-    })).then((files) => {
-      if (!cancelled) setVaultCsvFiles(files)
-    }).catch(() => {
-      if (!cancelled) setVaultCsvFiles([])
-    })
-    return () => { cancelled = true }
+    Promise.all(
+      paths.map(async (path) => {
+        // Raw text on purpose: a CSV is data, not editor content.
+        try {
+          return { path, name: pathBasename(path), content: await readTextFile(path) }
+        } catch {
+          return { path, name: pathBasename(path), content: "" }
+        }
+      }),
+    )
+      .then((files) => {
+        if (!cancelled) setVaultCsvFiles(files)
+      })
+      .catch(() => {
+        if (!cancelled) setVaultCsvFiles([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [vaultCsvPathsKey])
   const vaultCsvFilesRef = useRef(vaultCsvFiles)
-  useEffect(() => { vaultCsvFilesRef.current = vaultCsvFiles }, [vaultCsvFiles])
+  useEffect(() => {
+    vaultCsvFilesRef.current = vaultCsvFiles
+  }, [vaultCsvFiles])
 
   // Resolves the name a document writes into the file it means. Documents
   // (`.md`/`.tex`) come from `vaultFiles`; data files (`.csv`) come from
@@ -828,9 +1006,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // Stable Markdown→HTML renderer for the AI panel, so memoized assistant
   // messages aren't re-rendered through the KaTeX pipeline on every streamed
   // token (the prop identity stays put until its inputs actually change).
-  const aiRenderHtml = useCallback((md: string) => sanitizeRenderedHtml(
-    renderMarkdown(md, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, undefined, { annotate: false })
-  ), [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver])
+  const aiRenderHtml = useCallback(
+    (md: string) =>
+      sanitizeRenderedHtml(
+        renderMarkdown(
+          md,
+          macros,
+          vault.vaultPath ?? undefined,
+          wikiNames,
+          bibMap,
+          transclusionResolver,
+          undefined,
+          { annotate: false },
+        ),
+      ),
+    [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver],
+  )
 
   // ── Current heading (breadcrumb) ──────────────────────────────────────────
   // Keyed on the DEBOUNCED `previewContent` (not the live editor content) so it
@@ -846,7 +1037,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     return heading
   }, [previewContent, cursorPos.line])
 
-  useEffect(() => { checkDependencies().then(setDeps) }, [])
+  useEffect(() => {
+    checkDependencies().then(setDeps)
+  }, [])
 
   // Detect whether the current vault lives inside a cloud-sync folder, and
   // (if not) whether one is available on this machine to suggest moving in.
@@ -859,13 +1052,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       setCloudSuggestion(null)
       return
     }
-    findCloudFolders().then((folders) => {
-      if (cancelled) return
-      const owner = folders.find((f) => isPathInside(path, f.rootPath)) ?? null
-      setCloudInfo(owner)
-      setCloudSuggestion(owner ? null : (folders[0] ?? null))
-    }).catch(() => { if (!cancelled) { setCloudInfo(null); setCloudSuggestion(null) } })
-    return () => { cancelled = true }
+    findCloudFolders()
+      .then((folders) => {
+        if (cancelled) return
+        const owner = folders.find((f) => isPathInside(path, f.rootPath)) ?? null
+        setCloudInfo(owner)
+        setCloudSuggestion(owner ? null : (folders[0] ?? null))
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCloudInfo(null)
+          setCloudSuggestion(null)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
   }, [vault.vaultPath])
 
   // Whether the vault keeps history at all, and whether that history exists
@@ -879,12 +1081,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   useEffect(() => {
     let cancelled = false
     const path = vault.vaultPath
-    if (!path) { setGitFacts({ isRepo: false, hasRemote: false }); return }
+    if (!path) {
+      setGitFacts({ isRepo: false, hasRemote: false })
+      return
+    }
     void (async () => {
       try {
         const repo = await runGit(path, ["rev-parse", "--git-dir"])
         if (cancelled) return
-        if (repo.code !== 0) { setGitFacts({ isRepo: false, hasRemote: false }); return }
+        if (repo.code !== 0) {
+          setGitFacts({ isRepo: false, hasRemote: false })
+          return
+        }
         const remote = await runGit(path, ["remote"])
         if (cancelled) return
         setGitFacts({ isRepo: true, hasRemote: remote.stdout.trim().length > 0 })
@@ -893,11 +1101,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         if (!cancelled) setGitFacts({ isRepo: false, hasRemote: false })
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [vault.vaultPath])
 
   const cloudConflicts: ConflictEntry[] = useMemo(
-    () => (cloudInfo && settings.cloudSyncDetectEnabled ? findConflicts(vault.tree, cloudInfo.provider) : []),
+    () =>
+      cloudInfo && settings.cloudSyncDetectEnabled
+        ? findConflicts(vault.tree, cloudInfo.provider)
+        : [],
     [cloudInfo, vault.tree, settings.cloudSyncDetectEnabled],
   )
 
@@ -917,17 +1130,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateOpenFilesSnapshot(openTabsRef.current.map((t) => ({ name: t.name, content: t.content })))
+      updateOpenFilesSnapshot(
+        openTabsRef.current.map((t) => ({ name: t.name, content: t.content })),
+      )
     }, 600)
     return () => clearTimeout(timer)
   }, [vault.openTabs])
 
   useEffect(() => {
-    updateStructuralLabelSuggestions(scanStructuralLabels(vaultFiles).labels.map((label) => ({
-      id: label.id,
-      kind: label.kind,
-      detail: `${label.fileName}:${label.line}`,
-    })))
+    updateStructuralLabelSuggestions(
+      scanStructuralLabels(vaultFiles).labels.map((label) => ({
+        id: label.id,
+        kind: label.kind,
+        detail: `${label.fileName}:${label.line}`,
+      })),
+    )
   }, [vaultFiles])
 
   // Build a vault-wide text cache (used by transclusion + wikilink resolution).
@@ -938,62 +1155,89 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // overlaid via vault.openTabs, but we read it through a ref so the effect
   // doesn't itself depend on per-keystroke content changes.
   const vaultFilePathsKey = useMemo(
-    () => vaultFileNodes.filter((f) => f.ext === "md" || f.ext === "tex").map((f) => f.path).sort().join("\x00"),
+    () =>
+      vaultFileNodes
+        .filter((f) => f.ext === "md" || f.ext === "tex")
+        .map((f) => f.path)
+        .sort()
+        .join("\x00"),
     [vaultFileNodes],
   )
   useEffect(() => {
     let cancelled = false
     const paths = vaultFilePathsKey ? vaultFilePathsKey.split("\x00") : []
-    Promise.all(paths.map(async (path) => {
-      const openTab = openTabsRef.current.find((tab) => tab.path === path)
-      if (openTab) return [path, openTab.content] as const
-      try {
-        return [path, toEditorContent(path, await readTextFile(path))] as const
-      } catch {
-        return [path, ""] as const
-      }
-    })).then((entries) => {
-      if (!cancelled) setVaultTextCache(new Map(entries))
-    }).catch(() => {
-      if (!cancelled) setVaultTextCache(new Map())
-    })
-    return () => { cancelled = true }
+    Promise.all(
+      paths.map(async (path) => {
+        const openTab = openTabsRef.current.find((tab) => tab.path === path)
+        if (openTab) return [path, openTab.content] as const
+        try {
+          return [path, toEditorContent(path, await readTextFile(path))] as const
+        } catch {
+          return [path, ""] as const
+        }
+      }),
+    )
+      .then((entries) => {
+        if (!cancelled) setVaultTextCache(new Map(entries))
+      })
+      .catch(() => {
+        if (!cancelled) setVaultTextCache(new Map())
+      })
+    return () => {
+      cancelled = true
+    }
   }, [vaultFilePathsKey])
 
-  useEffect(() => { macrosRef.current = macros }, [macros])
-  useEffect(() => { mathPreviewEnabledRef.current = settings.mathPreview ?? true }, [settings.mathPreview])
-  useEffect(() => { autoFoldExcalidrawRef.current = settings.autoFoldExcalidraw ?? true }, [settings.autoFoldExcalidraw])
-  useEffect(() => { listContinuationRef.current = settings.listContinuation ?? true }, [settings.listContinuation])
-  useEffect(() => { settingsRef.current = settings }, [settings])
-  useEffect(() => { aiEnabledRef.current = settings.aiEnabled }, [settings.aiEnabled])
+  useEffect(() => {
+    macrosRef.current = macros
+  }, [macros])
+  useEffect(() => {
+    mathPreviewEnabledRef.current = settings.mathPreview ?? true
+  }, [settings.mathPreview])
+  useEffect(() => {
+    autoFoldExcalidrawRef.current = settings.autoFoldExcalidraw ?? true
+  }, [settings.autoFoldExcalidraw])
+  useEffect(() => {
+    listContinuationRef.current = settings.listContinuation ?? true
+  }, [settings.listContinuation])
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+  useEffect(() => {
+    aiEnabledRef.current = settings.aiEnabled
+  }, [settings.aiEnabled])
 
   // ── Custom preview CSS ────────────────────────────────────────────────────
   useEffect(() => {
     if (!vault.vaultPath) return
-    pathJoin(vault.vaultPath, "custom.css").then(async (cssPath) => {
-      if (await exists(cssPath)) {
-        const css = await readTextFile(cssPath)
-        setCustomCss(css)
-      } else {
-        setCustomCss("")
-      }
-    }).catch(() => {})
+    pathJoin(vault.vaultPath, "custom.css")
+      .then(async (cssPath) => {
+        if (await exists(cssPath)) {
+          const css = await readTextFile(cssPath)
+          setCustomCss(css)
+        } else {
+          setCustomCss("")
+        }
+      })
+      .catch(() => {})
   }, [vault.vaultPath, vault.tree])
 
   // ── User snippets from snippets.md ───────────────────────────────────────
   useEffect(() => {
     if (!vault.vaultPath) return
-    pathJoin(vault.vaultPath, "snippets.md").then(async (path) => {
-      if (!(await exists(path))) return
-      const raw = await readTextFile(path)
-      // Format: lines starting with "> prefix | description | snippet body"
-      const snippets = raw.split("\n").flatMap((line) => {
-        const m = /^>\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)$/.exec(line.trim())
-        if (!m) return []
-        return [{ label: m[1], detail: m[2], snippet: m[3].replace(/\\n/g, "\n") }]
+    pathJoin(vault.vaultPath, "snippets.md")
+      .then(async (path) => {
+        if (!(await exists(path))) return
+        const raw = await readTextFile(path)
+        // Format: lines starting with "> prefix | description | snippet body"
+        const snippets = raw.split("\n").flatMap((line) => {
+          const m = /^>\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)$/.exec(line.trim())
+          if (!m) return []
+          return [{ label: m[1], detail: m[2], snippet: m[3].replace(/\\n/g, "\n") }]
+        })
+        updateUserSnippets(snippets)
       })
-      updateUserSnippets(snippets)
-    }).catch(() => {})
+      .catch(() => {})
   }, [vault.vaultPath, vault.tree])
 
   // ── Typewriter mode: keep cursor line centered ────────────────────────────
@@ -1003,7 +1247,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Word wrap / minimap / spellcheck toggles ─────────────────────────────
   useEffect(() => {
-    editorRef.current?.updateOptions({ wordWrap: wordWrap ? "on" : "off", minimap: { enabled: minimapEnabled } })
+    editorRef.current?.updateOptions({
+      wordWrap: wordWrap ? "on" : "off",
+      minimap: { enabled: minimapEnabled },
+    })
   }, [wordWrap, minimapEnabled])
 
   useEffect(() => {
@@ -1033,8 +1280,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })
 
     // Find the active heading index (last heading at or before cursor)
-    const activeIdx = headingLines.reduce((found, lineNum, i) =>
-      lineNum <= cursorPos.line ? i : found, -1)
+    const activeIdx = headingLines.reduce(
+      (found, lineNum, i) => (lineNum <= cursorPos.line ? i : found),
+      -1,
+    )
 
     const previewEl = previewPaneRef.current
     if (!previewEl) return
@@ -1096,13 +1345,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const entries = [...bibMap.entries()].map(([key, entry]) => ({
       key,
       author: entry.fields.author,
-      title:  entry.fields.title,
-      year:   entry.fields.year,
+      title: entry.fields.title,
+      year: entry.fields.year,
     }))
     updateBibSuggestions(entries)
-    updateBibHoverEntries([...bibMap.entries()].map(([key, entry]) => ({
-      key, type: entry.type, fields: entry.fields,
-    })))
+    updateBibHoverEntries(
+      [...bibMap.entries()].map(([key, entry]) => ({
+        key,
+        type: entry.type,
+        fields: entry.fields,
+      })),
+    )
   }, [bibMap])
 
   // ── Background lint of all open tabs ─────────────────────────────────────
@@ -1114,7 +1367,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // context (wikiNames/bibKeys) changes, since a stale-content skip would
   // otherwise reuse a summary computed against the old context.
   const lintCacheRef = useRef<Map<string, { content: string; summary: LintSummary }>>(new Map())
-  const lintContextRef = useRef<{ wikiNames: typeof wikiNames; bibKeys: typeof bibKeys } | null>(null)
+  const lintContextRef = useRef<{ wikiNames: typeof wikiNames; bibKeys: typeof bibKeys } | null>(
+    null,
+  )
   useEffect(() => {
     const timer = setTimeout(() => {
       const prevContext = lintContextRef.current
@@ -1158,15 +1413,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   const confirmClose = useCallback(async (): Promise<boolean> => {
     // Flush pending autosaves before deciding: this both persists in-flight
     // edits and clears the dirty flag on tabs that save successfully.
-    try { await vault.flushPending() } catch { /* best-effort */ }
+    try {
+      await vault.flushPending()
+    } catch {
+      /* best-effort */
+    }
     const dirtyTabs = openTabsRef.current.filter((t) => t.isDirty)
     if (dirtyTabs.length === 0) return true
     const names = dirtyTabs.map((t) => t.name).join(", ")
     try {
-      return await tauriConfirm(
-        t.app.unsavedChanges(names),
-        { title: "ComdTeX", kind: "warning" }
-      )
+      return await tauriConfirm(t.app.unsavedChanges(names), { title: "ComdTeX", kind: "warning" })
     } catch {
       // Dialog unavailable: allow the close (matches prior behavior).
       return true
@@ -1192,17 +1448,28 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     let unlisten: (() => void) | undefined
     let cancelled = false
     let closing = false
-    win.onCloseRequested(async (event) => {
-      if (closing) return
-      // Block the default close while we flush + confirm asynchronously.
-      event.preventDefault()
-      const proceed = await confirmCloseRef.current()
-      if (proceed) { closing = true; await win.close() }
-    }).then((fn) => {
-      if (cancelled) { fn(); return }
-      unlisten = fn
-    })
-    return () => { cancelled = true; unlisten?.() }
+    win
+      .onCloseRequested(async (event) => {
+        if (closing) return
+        // Block the default close while we flush + confirm asynchronously.
+        event.preventDefault()
+        const proceed = await confirmCloseRef.current()
+        if (proceed) {
+          closing = true
+          await win.close()
+        }
+      })
+      .then((fn) => {
+        if (cancelled) {
+          fn()
+          return
+        }
+        unlisten = fn
+      })
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
   }, [])
 
   // ── Auto-refresh vault on window focus ────────────────────────────────────
@@ -1211,20 +1478,28 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!win) return
     let unlisten: (() => void) | undefined
     let cancelled = false
-    win.onFocusChanged(({ payload: focused }) => {
-      // Only refresh the file tree on refocus: NOT loadVault(). loadVault runs
-      // restoreTabs(), which rebuilds every tab from disk/draft and would
-      // clobber unsaved in-memory edits (drafts flush at 300ms, autosave at
-      // 800ms, so recent keystrokes aren't persisted yet). On Wayland/Sway
-      // focus events fire constantly, so this was silently discarding edits.
-      if (focused && vault.vaultPath) vault.refreshTree(vault.vaultPath)
-    }).then((fn) => {
-      // If the effect was cleaned up before the listener finished registering,
-      // immediately tear down the listener instead of leaking it.
-      if (cancelled) { fn(); return }
-      unlisten = fn
-    })
-    return () => { cancelled = true; unlisten?.() }
+    win
+      .onFocusChanged(({ payload: focused }) => {
+        // Only refresh the file tree on refocus: NOT loadVault(). loadVault runs
+        // restoreTabs(), which rebuilds every tab from disk/draft and would
+        // clobber unsaved in-memory edits (drafts flush at 300ms, autosave at
+        // 800ms, so recent keystrokes aren't persisted yet). On Wayland/Sway
+        // focus events fire constantly, so this was silently discarding edits.
+        if (focused && vault.vaultPath) vault.refreshTree(vault.vaultPath)
+      })
+      .then((fn) => {
+        // If the effect was cleaned up before the listener finished registering,
+        // immediately tear down the listener instead of leaking it.
+        if (cancelled) {
+          fn()
+          return
+        }
+        unlisten = fn
+      })
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.vaultPath])
 
@@ -1265,12 +1540,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         const raw = localStorage.getItem(STORAGE_KEYS.WINDOW_STATE)
         if (!raw) return
         const state = JSON.parse(raw) as {
-          width?: number; height?: number; x?: number; y?: number; maximized?: boolean
+          width?: number
+          height?: number
+          x?: number
+          y?: number
+          maximized?: boolean
         }
         const { PhysicalSize, PhysicalPosition } = await import("@tauri-apps/api/dpi")
         if (cancelled) return
-        if (typeof state.width === "number" && typeof state.height === "number"
-            && state.width > 200 && state.height > 200) {
+        if (
+          typeof state.width === "number" &&
+          typeof state.height === "number" &&
+          state.width > 200 &&
+          state.height > 200
+        ) {
           await win.setSize(new PhysicalSize(state.width, state.height))
         }
         if (typeof state.x === "number" && typeof state.y === "number") {
@@ -1284,8 +1567,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     void restore()
 
-    win.onResized(scheduleSave).then((fn) => { if (cancelled) fn(); else unlisteners.push(fn) })
-    win.onMoved(scheduleSave).then((fn) => { if (cancelled) fn(); else unlisteners.push(fn) })
+    win.onResized(scheduleSave).then((fn) => {
+      if (cancelled) fn()
+      else unlisteners.push(fn)
+    })
+    win.onMoved(scheduleSave).then((fn) => {
+      if (cancelled) fn()
+      else unlisteners.push(fn)
+    })
 
     return () => {
       cancelled = true
@@ -1329,10 +1618,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         e,
         {
           focusMode,
-          isTextInputTarget: e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement,
+          isTextInputTarget:
+            e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement,
         },
         {
-          toggleFocusMode: () => setFocusMode((f) => { const next = !f; showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info"); return next }),
+          toggleFocusMode: () =>
+            setFocusMode((f) => {
+              const next = !f
+              showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info")
+              return next
+            }),
           exitFocusMode: () => setFocusMode(false),
           openCommandPalette: () => setPaletteOpen(true),
           openQuickSwitcher: () => setQuickSwitcherOpen(true),
@@ -1362,14 +1657,16 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           },
           showBookmarks: () => setBookmarksOpen(true),
           togglePreview: () => updateSettings({ previewVisible: !settings.previewVisible }),
-          zoomIn: () => updateSettings({
-            fontSize: Math.min(24, settings.fontSize + 1),
-            previewFontSize: Math.min(24, settings.previewFontSize + 1),
-          }),
-          zoomOut: () => updateSettings({
-            fontSize: Math.max(11, settings.fontSize - 1),
-            previewFontSize: Math.max(11, settings.previewFontSize - 1),
-          }),
+          zoomIn: () =>
+            updateSettings({
+              fontSize: Math.min(24, settings.fontSize + 1),
+              previewFontSize: Math.min(24, settings.previewFontSize + 1),
+            }),
+          zoomOut: () =>
+            updateSettings({
+              fontSize: Math.max(11, settings.fontSize - 1),
+              previewFontSize: Math.max(11, settings.previewFontSize - 1),
+            }),
           resetZoom: () => updateSettings({ fontSize: 15, previewFontSize: 15 }),
           openHelp: () => setHelpOpen(true),
           saveAs: () => {
@@ -1387,10 +1684,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               await vault.loadVault()
             })()
           },
-          openVault: () => { void vault.selectVault() },
+          openVault: () => {
+            void vault.selectVault()
+          },
           nextTab,
           prevTab,
-          closeTab: () => { if (vault.activeTabPath) vault.closeTab(vault.activeTabPath) },
+          closeTab: () => {
+            if (vault.activeTabPath) vault.closeTab(vault.activeTabPath)
+          },
           reopenTab: () => {
             const closed = vault.getClosedTabs()
             if (closed.length > 0) {
@@ -1403,15 +1704,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             const editor = editorRef.current
             if (!editor) return
             const pos = editor.getPosition()
-            editor.executeEdits("insert-toc", [{
-              range: {
-                startLineNumber: pos?.lineNumber ?? 1,
-                startColumn: pos?.column ?? 1,
-                endLineNumber: pos?.lineNumber ?? 1,
-                endColumn: pos?.column ?? 1,
+            editor.executeEdits("insert-toc", [
+              {
+                range: {
+                  startLineNumber: pos?.lineNumber ?? 1,
+                  startColumn: pos?.column ?? 1,
+                  endLineNumber: pos?.lineNumber ?? 1,
+                  endColumn: pos?.column ?? 1,
+                },
+                text: "[[toc]]\n",
               },
-              text: "[[toc]]\n",
-            }])
+            ])
             editor.focus()
           },
           toggleOutline: () => {
@@ -1426,23 +1729,39 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [focusMode, settings.previewVisible, settings.fontSize, settings.previewFontSize, t, updateSettings, vault, nextTab, prevTab, openPanel])
+  }, [
+    focusMode,
+    settings.previewVisible,
+    settings.fontSize,
+    settings.previewFontSize,
+    t,
+    updateSettings,
+    vault,
+    nextTab,
+    prevTab,
+    openPanel,
+  ])
 
   // ── Linter + math hover + pending-timer cleanup on unmount ────────────────
-  useEffect(() => () => {
-    linterDisposableRef.current?.dispose()
-    mathHoverDisposableRef.current?.dispose()
-    mathPreviewDisposableRef.current?.dispose()
-    commentDecorationsRef.current?.dispose()
-    keepMarkDecorationsRef.current?.dispose()
-    if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
-    if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-  }, [])
+  useEffect(
+    () => () => {
+      linterDisposableRef.current?.dispose()
+      mathHoverDisposableRef.current?.dispose()
+      mathPreviewDisposableRef.current?.dispose()
+      commentDecorationsRef.current?.dispose()
+      keepMarkDecorationsRef.current?.dispose()
+      if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
+      if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
+    },
+    [],
+  )
 
   // ── Macros + BibTeX ───────────────────────────────────────────────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { vault.loadVault() }, [])
+  useEffect(() => {
+    vault.loadVault()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadMacros = useCallback(async (vaultPath: string, signal?: { cancelled: boolean }) => {
     try {
@@ -1453,15 +1772,26 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         if (!signal?.cancelled) {
           setMacros(parseMacros(text))
           // Extract macro names for Monaco completions
-          const macroNames = text.match(/\\newcommand\{(\\[a-zA-Z]+)\}/g)
-            ?.map((m) => m.replace(/\\newcommand\{/, "").replace(/\}/, "")) ?? []
+          const macroNames =
+            text
+              .match(/\\newcommand\{(\\[a-zA-Z]+)\}/g)
+              ?.map((m) => m.replace(/\\newcommand\{/, "").replace(/\}/, "")) ?? []
           updateMacroCompletions(macroNames)
         }
       } else {
-        if (!signal?.cancelled) { setMacros({}); updateMacroCompletions([]) }
+        if (!signal?.cancelled) {
+          setMacros({})
+          updateMacroCompletions([])
+        }
       }
-    } catch { if (!signal?.cancelled) { setMacros({}); updateMacroCompletions([]) } }
-    finally { if (!signal?.cancelled) setMacrosReady(true) }
+    } catch {
+      if (!signal?.cancelled) {
+        setMacros({})
+        updateMacroCompletions([])
+      }
+    } finally {
+      if (!signal?.cancelled) setMacrosReady(true)
+    }
   }, [])
 
   const loadBib = useCallback(async (vaultPath: string, signal?: { cancelled: boolean }) => {
@@ -1474,16 +1804,25 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       } else {
         if (!signal?.cancelled) setBibMap(new Map())
       }
-    } catch { if (!signal?.cancelled) setBibMap(new Map()) }
+    } catch {
+      if (!signal?.cancelled) setBibMap(new Map())
+    }
   }, [])
 
   useEffect(() => {
-    if (!vault.vaultPath) { setMacros({}); setBibMap(new Map()); setMacrosReady(true); return }
+    if (!vault.vaultPath) {
+      setMacros({})
+      setBibMap(new Map())
+      setMacrosReady(true)
+      return
+    }
     setMacrosReady(false)
     const signal = { cancelled: false }
     loadMacros(vault.vaultPath, signal)
     loadBib(vault.vaultPath, signal)
-    return () => { signal.cancelled = true }
+    return () => {
+      signal.cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.vaultPath])
 
@@ -1497,12 +1836,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   // ── Per-line comments: load on vault change ──────────────────────────────
   useEffect(() => {
-    if (!vault.vaultPath) { setComments([]); return }
+    if (!vault.vaultPath) {
+      setComments([])
+      return
+    }
     let cancelled = false
     loadComments(vault.vaultPath)
-      .then((loaded) => { if (!cancelled) setComments(loaded) })
-      .catch(() => { if (!cancelled) setComments([]) })
-    return () => { cancelled = true }
+      .then((loaded) => {
+        if (!cancelled) setComments(loaded)
+      })
+      .catch(() => {
+        if (!cancelled) setComments([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [vault.vaultPath])
 
   // ── Per-line comments: refresh gutter glyphs whenever comments / file change
@@ -1510,7 +1858,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const handle = commentDecorationsRef.current
     if (!handle) return
     const activePath = vault.openFile?.path ?? null
-    if (!activePath || !vault.vaultPath) { handle.update([]); return }
+    if (!activePath || !vault.vaultPath) {
+      handle.update([])
+      return
+    }
     const activeContent = vault.openFile?.content ?? ""
     const markers: CommentMarker[] = comments
       .filter((c) => commentToAbsolute(c.filePath, vault.vaultPath!) === activePath)
@@ -1536,7 +1887,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (basename === MACROS_FILENAME) loadMacros(vault.vaultPath)
       else if (basename === BIBTEX_FILENAME) loadBib(vault.vaultPath)
     }
-    return () => { afterSaveRef.current = undefined }
+    return () => {
+      afterSaveRef.current = undefined
+    }
   }, [vault.vaultPath, loadMacros, loadBib])
 
   // Bump on each successful mermaid render so the next memoized previewHtml
@@ -1550,35 +1903,57 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // delay). Only the main preview pane passes a sink (`renderCostRef`); the
   // split reference pane calls this same function but passes nothing, so it
   // can never poison the main pane's adaptive debounce.
-  const renderPreviewHtml = useCallback((content: string, costSink?: { current: number }) => {
-    // Defer rendering until the macros file has been loaded once for this
-    // vault. Without this gate the first paint of a freshly-opened file uses
-    // `macros = {}`, so any equation that relies on a user-defined macro
-    // renders as red `\macro` source text (KaTeX's `throwOnError: false`
-    // fallback). The async `loadMacros` then completes and triggers a second
-    // render that fixes things: exactly the "top renders raw, scroll/edit
-    // makes it correct" symptom users were reporting.
-    if (!macrosReady) return ""
-    const t0 = performance.now()
-    try {
-      // RAW pipeline output: NOT sanitized and NOT line-annotated here. The
-      // commit effects hand this string to commitPreview() (previewMorph.ts),
-      // which sanitizes to a DocumentFragment, annotates it in place, and
-      // morphs, so the (KaTeX-heavy, potentially multi-MB) document HTML is
-      // parsed ONCE per refresh instead of three times with two re-serializes.
-      // This string must never reach the DOM by any other path.
-      return renderMarkdown(content, macros, vault.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, envRefResolver, { annotate: false })
-    } catch (e) {
-      return renderErrorHtml(e)
-    } finally {
-      if (costSink) costSink.current = performance.now() - t0
-    }
-    // mermaidVersion / excalidrawVersion: deliberate cache-busters. They are not
-    // read inside the callback; bumping them changes its identity so re-renders
-    // that follow a mermaid/excalidraw SVG cache population read the freshly
-    // stored SVGs and embed them inline.
+  const renderPreviewHtml = useCallback(
+    (content: string, costSink?: { current: number }) => {
+      // Defer rendering until the macros file has been loaded once for this
+      // vault. Without this gate the first paint of a freshly-opened file uses
+      // `macros = {}`, so any equation that relies on a user-defined macro
+      // renders as red `\macro` source text (KaTeX's `throwOnError: false`
+      // fallback). The async `loadMacros` then completes and triggers a second
+      // render that fixes things: exactly the "top renders raw, scroll/edit
+      // makes it correct" symptom users were reporting.
+      if (!macrosReady) return ""
+      const t0 = performance.now()
+      try {
+        // RAW pipeline output: NOT sanitized and NOT line-annotated here. The
+        // commit effects hand this string to commitPreview() (previewMorph.ts),
+        // which sanitizes to a DocumentFragment, annotates it in place, and
+        // morphs, so the (KaTeX-heavy, potentially multi-MB) document HTML is
+        // parsed ONCE per refresh instead of three times with two re-serializes.
+        // This string must never reach the DOM by any other path.
+        return renderMarkdown(
+          content,
+          macros,
+          vault.vaultPath ?? undefined,
+          wikiNames,
+          bibMap,
+          transclusionResolver,
+          envRefResolver,
+          { annotate: false },
+        )
+      } catch (e) {
+        return renderErrorHtml(e)
+      } finally {
+        if (costSink) costSink.current = performance.now() - t0
+      }
+      // mermaidVersion / excalidrawVersion: deliberate cache-busters. They are not
+      // read inside the callback; bumping them changes its identity so re-renders
+      // that follow a mermaid/excalidraw SVG cache population read the freshly
+      // stored SVGs and embed them inline.
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, envRefResolver, mermaidVersion, excalidrawVersion])
+    [
+      macros,
+      macrosReady,
+      vault.vaultPath,
+      wikiNames,
+      bibMap,
+      transclusionResolver,
+      envRefResolver,
+      mermaidVersion,
+      excalidrawVersion,
+    ],
+  )
 
   const deferredPreviewContent = useDeferredValue(previewContent)
 
@@ -1587,7 +1962,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // so drafting with the preview collapsed still paid the whole render cost.
   const previewHtml = useMemo(
     () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent, renderCostRef) : ""),
-    [settings.previewVisible, renderPreviewHtml, deferredPreviewContent]
+    [settings.previewVisible, renderPreviewHtml, deferredPreviewContent],
   )
 
   // Commit previewHtml via `commitPreview` (sanitize → annotate → block-level
@@ -1615,14 +1990,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   const splitTab = useMemo(
     () => vault.openTabs.find((t) => t.path === splitFile) ?? null,
-    [vault.openTabs, splitFile]
+    [vault.openTabs, splitFile],
   )
 
   const deferredSplitContent = useDeferredValue(splitTab?.content ?? "")
 
   const splitPreviewHtml = useMemo(
-    () => splitTab ? renderPreviewHtml(deferredSplitContent) : "",
-    [renderPreviewHtml, splitTab, deferredSplitContent]
+    () => (splitTab ? renderPreviewHtml(deferredSplitContent) : ""),
+    [renderPreviewHtml, splitTab, deferredSplitContent],
   )
 
   // Same single-parse commit (sanitize → annotate → morph) for the split
@@ -1649,14 +2024,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
   }, [settings.previewVisible])
 
-  const previewNeedsMermaid = useMemo(
-    () => previewHtml.includes("language-mermaid"),
-    [previewHtml]
-  )
+  const previewNeedsMermaid = useMemo(() => previewHtml.includes("language-mermaid"), [previewHtml])
 
   const splitNeedsMermaid = useMemo(
     () => splitPreviewHtml.includes("language-mermaid"),
-    [splitPreviewHtml]
+    [splitPreviewHtml],
   )
 
   // ── Mermaid diagram rendering ─────────────────────────────────────────────
@@ -1678,53 +2050,55 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (cancelled) return
 
       let storedAny = false
-      await Promise.all(blocks.map(async (el, index) => {
-        const pre = el.parentElement
-        if (!pre) return
+      await Promise.all(
+        blocks.map(async (el, index) => {
+          const pre = el.parentElement
+          if (!pre) return
 
-        const sourceAttr = pre.getAttribute("data-mermaid-source-b64") ?? ""
-        // Use the EXACT mermaid source from the b64 attribute, NOT el.textContent.
-        // After the escHtml → markdown-it → sanitize → DOM round-trip, textContent
-        // can differ from the original source, so the cache key written below would
-        // never match the one environments.ts reads with (`mermaidChart`) → the
-        // mermaid effect re-renders forever, pegging CPU until the WebView OOMs.
-        // The b64 attr is `btoa(mermaidChart)` verbatim, so this round-trips exactly.
-        const diagram = sourceAttr
-          ? decodeURIComponent(escape(atob(sourceAttr)))
-          : (el.textContent ?? "")
-        const div = document.createElement("div")
-        div.className = "mermaid-diagram"
-        if (sourceAttr) div.setAttribute("data-mermaid-source-b64", sourceAttr)
-        pre.replaceWith(div)
+          const sourceAttr = pre.getAttribute("data-mermaid-source-b64") ?? ""
+          // Use the EXACT mermaid source from the b64 attribute, NOT el.textContent.
+          // After the escHtml → markdown-it → sanitize → DOM round-trip, textContent
+          // can differ from the original source, so the cache key written below would
+          // never match the one environments.ts reads with (`mermaidChart`) → the
+          // mermaid effect re-renders forever, pegging CPU until the WebView OOMs.
+          // The b64 attr is `btoa(mermaidChart)` verbatim, so this round-trips exactly.
+          const diagram = sourceAttr
+            ? decodeURIComponent(escape(atob(sourceAttr)))
+            : (el.textContent ?? "")
+          const div = document.createElement("div")
+          div.className = "mermaid-diagram"
+          if (sourceAttr) div.setAttribute("data-mermaid-source-b64", sourceAttr)
+          pre.replaceWith(div)
 
-        try {
-          const { svg } = await mermaid.render(
-            `mermaid-${suffix}-${index}-${Math.random().toString(36).slice(2)}`,
-            diagram,
-          )
-          if (cancelled) return
-          const safe = sanitizeRenderedHtml(svg)
-          div.innerHTML = safe
-          // Populate the cache so future re-renders embed the SVG inline, but
-          // ONLY for ComdTeX-generated blocks that carry the b64 source attr
-          // (whose key matches what environments.ts reads). For a raw ```mermaid
-          // fence there's no such attr, so caching under el.textContent would
-          // never be hit and would just re-render every pass; skip it.
-          if (sourceAttr) {
-            setFlowchartSvg(diagram, safe)
-            storedAny = true
+          try {
+            const { svg } = await mermaid.render(
+              `mermaid-${suffix}-${index}-${Math.random().toString(36).slice(2)}`,
+              diagram,
+            )
+            if (cancelled) return
+            const safe = sanitizeRenderedHtml(svg)
+            div.innerHTML = safe
+            // Populate the cache so future re-renders embed the SVG inline, but
+            // ONLY for ComdTeX-generated blocks that carry the b64 source attr
+            // (whose key matches what environments.ts reads). For a raw ```mermaid
+            // fence there's no such attr, so caching under el.textContent would
+            // never be hit and would just re-render every pass; skip it.
+            if (sourceAttr) {
+              setFlowchartSvg(diagram, safe)
+              storedAny = true
+            }
+          } catch (err) {
+            console.warn("Mermaid render failed", err)
+            const fallback = document.createElement("pre")
+            fallback.textContent = diagram
+            const button = document.createElement("button")
+            button.className = "mermaid-rerender-btn"
+            button.textContent = "↻ Re-render"
+            button.onclick = () => setMermaidVersion((v) => v + 1)
+            div.replaceChildren(button, fallback)
           }
-        } catch (err) {
-          console.warn("Mermaid render failed", err)
-          const fallback = document.createElement("pre")
-          fallback.textContent = diagram
-          const button = document.createElement("button")
-          button.className = "mermaid-rerender-btn"
-          button.textContent = "↻ Re-render"
-          button.onclick = () => setMermaidVersion((v) => v + 1)
-          div.replaceChildren(button, fallback)
-        }
-      }))
+        }),
+      )
 
       // If we stored at least one fresh SVG, bump the version so the next
       // render of `previewHtml` (already debounced) reads the cache and
@@ -1734,11 +2108,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
 
     Promise.all([
-      previewNeedsMermaid ? renderInContainer(previewPaneRef.current, "preview") : Promise.resolve(),
+      previewNeedsMermaid
+        ? renderInContainer(previewPaneRef.current, "preview")
+        : Promise.resolve(),
       splitNeedsMermaid ? renderInContainer(splitPreviewRef.current, "split") : Promise.resolve(),
     ]).catch((err) => console.error("Mermaid rendering failed", err))
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid])
   // mermaidVersion participates only as a trigger for renderPreviewHtml deps
   // (read below), not as a dep of this effect; it would cause a re-render loop.
@@ -1753,7 +2131,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   useEffect(() => {
     let cancelled = false
     const placeholders = previewPaneRef.current
-      ? [...previewPaneRef.current.querySelectorAll<HTMLElement>(".excalidraw-block .excalidraw-placeholder")]
+      ? [
+          ...previewPaneRef.current.querySelectorAll<HTMLElement>(
+            ".excalidraw-block .excalidraw-placeholder",
+          ),
+        ]
       : []
     // Only blocks with a non-empty scene that isn't already cached need rendering.
     const pending = placeholders
@@ -1790,7 +2172,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (storedAny && !cancelled) setExcalidrawVersion((v) => v + 1)
     })().catch((err) => console.warn("Excalidraw export failed", err))
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [previewHtml, excalidrawVersion])
 
   // Keep the renderer's placeholder text in sync with the active language.
@@ -1838,9 +2222,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!editor || !vimStatusRef.current) return
 
     if (settings.vimMode) {
-      enableVimMode(editor, vimStatusRef.current).then((vm) => {
-        vimRef.current = vm
-      }).catch(console.error)
+      enableVimMode(editor, vimStatusRef.current)
+        .then((vm) => {
+          vimRef.current = vm
+        })
+        .catch(console.error)
     } else {
       vimRef.current?.dispose()
       vimRef.current = null
@@ -1885,28 +2271,27 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (starts.length > 0) editor.trigger("comdtex", "editor.fold", { selectionLines: starts })
   }, [])
 
-  const handleEditorMount: OnMount = useCallback((editor, monaco) => {
-    editorRef.current = editor
-    setupEditorCommands(editor, monaco, () => listContinuationRef.current)
-    // Note: Monaco has built-in spell-check via browser (no config needed)
-    linterDisposableRef.current?.dispose()
-    linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
-      vaultFileNames: lintWikiNamesRef.current,
-      bibKeys: lintBibKeysRef.current,
-      spellcheck: lintSpellEnabledRef.current,
-      spellLang: lintSpellLangRef.current,
-      spellMessage: lintSpellMessageRef.current,
-    }))
+  const handleEditorMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor
+      setupEditorCommands(editor, monaco, () => listContinuationRef.current)
+      // Note: Monaco has built-in spell-check via browser (no config needed)
+      linterDisposableRef.current?.dispose()
+      linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
+        vaultFileNames: lintWikiNamesRef.current,
+        bibKeys: lintBibKeysRef.current,
+        spellcheck: lintSpellEnabledRef.current,
+        spellLang: lintSpellLangRef.current,
+        spellMessage: lintSpellMessageRef.current,
+      }))
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      const f = vault.openFile
-      // PDF tabs are read-only: Ctrl+S would otherwise call saveFile with the
-      // empty placeholder content and destroy the underlying PDF.
-      if (f && f.mode !== "pdf") vault.saveFile(f.path, editor.getValue())
-    })
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
-      () => {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        const f = vault.openFile
+        // PDF tabs are read-only: Ctrl+S would otherwise call saveFile with the
+        // empty placeholder content and destroy the underlying PDF.
+        if (f && f.mode !== "pdf") vault.saveFile(f.path, editor.getValue())
+      })
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () => {
         void (async () => {
           const path = await save({
             title: t.menus.saveAs,
@@ -1918,169 +2303,174 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           await writeTextFileAtomic(path, toDiskContent(path, editor.getValue()))
           await vault.loadVault()
         })()
-      }
-    )
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO,
-      () => { void vault.selectVault() }
-    )
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
-      () => openPanel("search")
-    )
-    // Ctrl/Cmd+B / Ctrl/Cmd+I: bold / italic. The command palette advertises
-    // these shortcuts but Monaco has no default binding for them; wire them to
-    // the same selection-aware insert the palette uses so they wrap the current
-    // selection (matching the palette's snippets exactly).
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
-      () => insertSnippet(editorRef.current, "**${1:texto}**"),
-    )
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI,
-      () => insertSnippet(editorRef.current, "_${1:texto}_"),
-    )
-    // Ctrl/Cmd+K inline AI edit (flagship). Monaco normally reserves Ctrl+K as a
-    // CHORD prefix (e.g. Ctrl+K Ctrl+C); registering a plain Ctrl+K command here
-    // overrides the chord with a single-stroke binding, which is what we want.
-    // Routed through a ref so this once-bound command always calls the latest
-    // handler (and re-reads settings.aiEnabled) without re-binding on every render.
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK,
-      () => openCmdkRef.current(),
-    )
-    editor.onDidChangeCursorPosition((e) => {
-      const nextCursor = { line: e.position.lineNumber, col: e.position.column }
-      const previousCursor = cursorPosRef.current
-      cursorPosRef.current = nextCursor
-      if (nextCursor.line !== previousCursor.line) {
-        if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
-        cursorUiTimerRef.current = undefined
-        setCursorPos(nextCursor)
-      } else {
-        if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
-        cursorUiTimerRef.current = setTimeout(() => {
+      })
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO, () => {
+        void vault.selectVault()
+      })
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF, () =>
+        openPanel("search"),
+      )
+      // Ctrl/Cmd+B / Ctrl/Cmd+I: bold / italic. The command palette advertises
+      // these shortcuts but Monaco has no default binding for them; wire them to
+      // the same selection-aware insert the palette uses so they wrap the current
+      // selection (matching the palette's snippets exactly).
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () =>
+        insertSnippet(editorRef.current, "**${1:texto}**"),
+      )
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () =>
+        insertSnippet(editorRef.current, "_${1:texto}_"),
+      )
+      // Ctrl/Cmd+K inline AI edit (flagship). Monaco normally reserves Ctrl+K as a
+      // CHORD prefix (e.g. Ctrl+K Ctrl+C); registering a plain Ctrl+K command here
+      // overrides the chord with a single-stroke binding, which is what we want.
+      // Routed through a ref so this once-bound command always calls the latest
+      // handler (and re-reads settings.aiEnabled) without re-binding on every render.
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => openCmdkRef.current())
+      editor.onDidChangeCursorPosition((e) => {
+        const nextCursor = { line: e.position.lineNumber, col: e.position.column }
+        const previousCursor = cursorPosRef.current
+        cursorPosRef.current = nextCursor
+        if (nextCursor.line !== previousCursor.line) {
+          if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
           cursorUiTimerRef.current = undefined
-          setCursorPos(cursorPosRef.current)
-        }, 100)
-      }
-      // Debounced view-state snapshot, so closing the app (or crashing) keeps
-      // the place without waiting for a tab switch. The switch itself saves
-      // synchronously during render: this timer is only the "still here" case,
-      // and aborting on a path change keeps file A's state off file B's key.
-      if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
-      const scheduledPath = activeFilePathRef.current
-      cursorSaveRef.current = setTimeout(() => {
-        const currentPath = activeFilePathRef.current
-        if (!currentPath || currentPath !== scheduledPath) return
-        saveViewState(currentPath, editor)
-      }, 500)
-    })
-    // Expose a ref to current scroll state for syncScroll
-    ;(editor as unknown as { _comdtexSyncRef?: boolean })._comdtexSyncRef = true
-    editor.onDidChangeCursorSelection(() => {
-      const model = editor.getModel()
-      const sel = editor.getSelection()
-      let nextSelectedWords = 0
-      if (model && sel && !sel.isEmpty()) {
-        const text = model.getValueInRange(sel)
-        nextSelectedWords = text.trim() ? text.trim().split(/\s+/).length : 0
-      }
-      if (nextSelectedWords !== selectedWordsRef.current) {
-        selectedWordsRef.current = nextSelectedWords
-        setSelectedWords(nextSelectedWords)
-      }
-    })
-
-    // Math hover preview
-    mathHoverDisposableRef.current?.dispose()
-    mathHoverDisposableRef.current = setupMathHover(editor, () => macrosRef.current, () => mathPreviewEnabledRef.current)
-
-    mathPreviewDisposableRef.current?.dispose()
-    mathPreviewDisposableRef.current = setupDisplayMathPreview(
-      editor,
-      () => macrosRef.current,
-      () => mathPreviewEnabledRef.current,
-    )
-
-    // Per-line comment gutter glyphs
-    commentDecorationsRef.current?.dispose()
-    commentDecorationsRef.current = setupCommentDecorations(editor, monaco, () => {
-      // Click on a glyph: surface the comments panel.
-      openPanel("comments")
-    })
-
-    // Keep-mark decorations: the ONLY place a `^^…^^` mark is visible.
-    keepMarkDecorationsRef.current?.dispose()
-    keepMarkDecorationsRef.current = setupKeepMarkDecorations(editor, monaco, () => {
-      openPanel("keep")
-    })
-
-    // ── Editor → Preview double-click sync ───────────────────────────────────
-    editor.onMouseDown((e) => {
-      if (e.event.detail !== 2) return // only double-click
-      const lineNum = e.target.position?.lineNumber
-      if (!lineNum) return
-
-      const preview = document.querySelector(".preview-content")
-      if (!preview) return
-
-      const annotated = Array.from(preview.querySelectorAll("[data-source-line]")) as HTMLElement[]
-      if (annotated.length === 0) return
-
-      let best: HTMLElement | null = null
-      let bestLine = 0
-      for (const el of annotated) {
-        const l = parseInt(el.dataset.sourceLine ?? "0")
-        if (l <= lineNum && l >= bestLine) {
-          bestLine = l
-          best = el
+          setCursorPos(nextCursor)
+        } else {
+          if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
+          cursorUiTimerRef.current = setTimeout(() => {
+            cursorUiTimerRef.current = undefined
+            setCursorPos(cursorPosRef.current)
+          }, 100)
         }
+        // Debounced view-state snapshot, so closing the app (or crashing) keeps
+        // the place without waiting for a tab switch. The switch itself saves
+        // synchronously during render: this timer is only the "still here" case,
+        // and aborting on a path change keeps file A's state off file B's key.
+        if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
+        const scheduledPath = activeFilePathRef.current
+        cursorSaveRef.current = setTimeout(() => {
+          const currentPath = activeFilePathRef.current
+          if (!currentPath || currentPath !== scheduledPath) return
+          saveViewState(currentPath, editor)
+        }, 500)
+      })
+      // Expose a ref to current scroll state for syncScroll
+      ;(editor as unknown as { _comdtexSyncRef?: boolean })._comdtexSyncRef = true
+      editor.onDidChangeCursorSelection(() => {
+        const model = editor.getModel()
+        const sel = editor.getSelection()
+        let nextSelectedWords = 0
+        if (model && sel && !sel.isEmpty()) {
+          const text = model.getValueInRange(sel)
+          nextSelectedWords = text.trim() ? text.trim().split(/\s+/).length : 0
+        }
+        if (nextSelectedWords !== selectedWordsRef.current) {
+          selectedWordsRef.current = nextSelectedWords
+          setSelectedWords(nextSelectedWords)
+        }
+      })
+
+      // Math hover preview
+      mathHoverDisposableRef.current?.dispose()
+      mathHoverDisposableRef.current = setupMathHover(
+        editor,
+        () => macrosRef.current,
+        () => mathPreviewEnabledRef.current,
+      )
+
+      mathPreviewDisposableRef.current?.dispose()
+      mathPreviewDisposableRef.current = setupDisplayMathPreview(
+        editor,
+        () => macrosRef.current,
+        () => mathPreviewEnabledRef.current,
+      )
+
+      // Per-line comment gutter glyphs
+      commentDecorationsRef.current?.dispose()
+      commentDecorationsRef.current = setupCommentDecorations(editor, monaco, () => {
+        // Click on a glyph: surface the comments panel.
+        openPanel("comments")
+      })
+
+      // Keep-mark decorations: the ONLY place a `^^…^^` mark is visible.
+      keepMarkDecorationsRef.current?.dispose()
+      keepMarkDecorationsRef.current = setupKeepMarkDecorations(editor, monaco, () => {
+        openPanel("keep")
+      })
+
+      // ── Editor → Preview double-click sync ───────────────────────────────────
+      editor.onMouseDown((e) => {
+        if (e.event.detail !== 2) return // only double-click
+        const lineNum = e.target.position?.lineNumber
+        if (!lineNum) return
+
+        const preview = document.querySelector(".preview-content")
+        if (!preview) return
+
+        const annotated = Array.from(
+          preview.querySelectorAll("[data-source-line]"),
+        ) as HTMLElement[]
+        if (annotated.length === 0) return
+
+        let best: HTMLElement | null = null
+        let bestLine = 0
+        for (const el of annotated) {
+          const l = parseInt(el.dataset.sourceLine ?? "0")
+          if (l <= lineNum && l >= bestLine) {
+            bestLine = l
+            best = el
+          }
+        }
+
+        if (best) {
+          best.scrollIntoView({ behavior: "smooth", block: "center" })
+          best.classList.add("sync-highlight")
+          setTimeout(() => best?.classList.remove("sync-highlight"), 800)
+        }
+      })
+
+      editor.focus()
+
+      // Put the caret, the scroll and the collapsed regions back: synchronously,
+      // while the editor is fresh and before the user can type into it.
+      restoreEditorPlacement(editor)
+
+      // Apply vim mode if already enabled in settings
+      if (settings.vimMode && vimStatusRef.current) {
+        enableVimMode(editor, vimStatusRef.current)
+          .then((vm) => {
+            vimRef.current = vm
+          })
+          .catch(console.error)
       }
 
-      if (best) {
-        best.scrollIntoView({ behavior: "smooth", block: "center" })
-        best.classList.add("sync-highlight")
-        setTimeout(() => best?.classList.remove("sync-highlight"), 800)
+      // Apply typewriter mode from settings
+      applyTypewriterMode(editor, settings.typewriterMode)
+    },
+    [vault, settings.vimMode, settings.typewriterMode, t, openPanel, restoreEditorPlacement],
+  )
+
+  const handleChange = useCallback(
+    (value: string | undefined) => {
+      const content = value ?? ""
+      // Record what the user just typed so the external-content-sync effect can
+      // tell "the editor already has this" (O(1) reference check) from a genuine
+      // external change (conflict reload / replace / programmatic edit).
+      lastEditorContentRef.current = content
+      // Ignore onChange fires on mount / programmatic value change
+      // Compare against the LIVE buffer (pending keystrokes), not React state,
+      // which lags typing by up to 250ms: a stale comparison could swallow an
+      // edit that reverts to the last committed text.
+      const livePath = vault.openFile?.path
+      const liveContent = livePath ? vault.getLiveContent(livePath) : undefined
+      if (content !== (liveContent ?? vault.openFile?.content ?? "")) {
+        vault.updateContent(content)
       }
-    })
-
-    editor.focus()
-
-    // Put the caret, the scroll and the collapsed regions back: synchronously,
-    // while the editor is fresh and before the user can type into it.
-    restoreEditorPlacement(editor)
-
-    // Apply vim mode if already enabled in settings
-    if (settings.vimMode && vimStatusRef.current) {
-      enableVimMode(editor, vimStatusRef.current).then((vm) => {
-        vimRef.current = vm
-      }).catch(console.error)
-    }
-
-    // Apply typewriter mode from settings
-    applyTypewriterMode(editor, settings.typewriterMode)
-  }, [vault, settings.vimMode, settings.typewriterMode, t, openPanel, restoreEditorPlacement])
-
-  const handleChange = useCallback((value: string | undefined) => {
-    const content = value ?? ""
-    // Record what the user just typed so the external-content-sync effect can
-    // tell "the editor already has this" (O(1) reference check) from a genuine
-    // external change (conflict reload / replace / programmatic edit).
-    lastEditorContentRef.current = content
-    // Ignore onChange fires on mount / programmatic value change
-    // Compare against the LIVE buffer (pending keystrokes), not React state,
-    // which lags typing by up to 250ms: a stale comparison could swallow an
-    // edit that reverts to the last committed text.
-    const livePath = vault.openFile?.path
-    const liveContent = livePath ? vault.getLiveContent(livePath) : undefined
-    if (content !== (liveContent ?? vault.openFile?.content ?? "")) {
-      vault.updateContent(content)
-    }
-    // Debounce preview 150ms to avoid re-rendering on every keystroke
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(content), previewDelayMs())
-  }, [vault])
+      // Debounce preview 150ms to avoid re-rendering on every keystroke
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
+      previewDebounceRef.current = setTimeout(() => setPreviewContent(content), previewDelayMs())
+    },
+    [vault],
+  )
 
   // Push EXTERNAL content changes into the Monaco model. The editor is now
   // uncontrolled (`defaultValue` + `key` per tab), so the user's own keystrokes
@@ -2113,7 +2503,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (!edit) return
       const range = monacoRange(model, edit.start, edit.end)
       ed.executeEdits("externalSync", [{ range, text: edit.text }])
-    } catch { /* editor disposed mid-swap: the key remount re-seeds it */ }
+    } catch {
+      /* editor disposed mid-swap: the key remount re-seeds it */
+    }
     // Intentionally key on the content/mode PRIMITIVES, not the `vault.openFile`
     // object (whose identity changes every keystroke; depending on it would run
     // this effect per keystroke, defeating the purpose).
@@ -2125,7 +2517,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const editor = editorRef.current
     if (!editor) return
     // Gated when AI is off: a short hint, nothing else.
-    if (!aiEnabledRef.current) { showToast(t.ai.cmdk.disabledHint, "info"); return }
+    if (!aiEnabledRef.current) {
+      showToast(t.ai.cmdk.disabledHint, "info")
+      return
+    }
     const model = editor.getModel()
     if (!model) return
     const sel = editor.getSelection()
@@ -2138,42 +2533,55 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     } else {
       // Insert mode: a zero-width range at the cursor.
       const pos = editor.getPosition() ?? { lineNumber: 1, column: 1 }
-      range = { startLineNumber: pos.lineNumber, startColumn: pos.column, endLineNumber: pos.lineNumber, endColumn: pos.column }
+      range = {
+        startLineNumber: pos.lineNumber,
+        startColumn: pos.column,
+        endLineNumber: pos.lineNumber,
+        endColumn: pos.column,
+      }
     }
     setCmdkAnchor({ range, hasSelection, selectionText })
   }, [t])
-  useEffect(() => { openCmdkRef.current = openCmdk }, [openCmdk])
+  useEffect(() => {
+    openCmdkRef.current = openCmdk
+  }, [openCmdk])
 
   // ── FrontmatterPanel: write changed content back to the editor ────────────
-  const handleFrontmatterChange = useCallback((newContent: string) => {
-    const editor = editorRef.current
-    if (!editor) return
-    editor.setValue(newContent)
-    vault.updateContent(newContent)
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), previewDelayMs())
-  }, [vault])
+  const handleFrontmatterChange = useCallback(
+    (newContent: string) => {
+      const editor = editorRef.current
+      if (!editor) return
+      editor.setValue(newContent)
+      vault.updateContent(newContent)
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
+      previewDebounceRef.current = setTimeout(() => setPreviewContent(newContent), previewDelayMs())
+    },
+    [vault],
+  )
 
   // ── OutlinePanel: drag-to-reorder document sections ──────────────────────
   // Move the dragged heading's whole section to before the target heading,
   // applied as a single full-document replace via executeEdits so it is a
   // single undoable change. Renumbering (equations/figures) happens at render.
-  const handleOutlineReorder = useCallback((fromLine: number, toLine: number) => {
-    const editor = editorRef.current
-    if (!editor) return
-    const model = editor.getModel()
-    if (!model) return
-    const current = model.getValue()
-    const next = reorderSection(current, fromLine, toLine)
-    if (next === current) return
-    const fullRange = model.getFullModelRange()
-    editor.pushUndoStop()
-    editor.executeEdits("outline-reorder", [{ range: fullRange, text: next }])
-    editor.pushUndoStop()
-    vault.updateContent(next)
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
-    previewDebounceRef.current = setTimeout(() => setPreviewContent(next), previewDelayMs())
-  }, [vault])
+  const handleOutlineReorder = useCallback(
+    (fromLine: number, toLine: number) => {
+      const editor = editorRef.current
+      if (!editor) return
+      const model = editor.getModel()
+      if (!model) return
+      const current = model.getValue()
+      const next = reorderSection(current, fromLine, toLine)
+      if (next === current) return
+      const fullRange = model.getFullModelRange()
+      editor.pushUndoStop()
+      editor.executeEdits("outline-reorder", [{ range: fullRange, text: next }])
+      editor.pushUndoStop()
+      vault.updateContent(next)
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
+      previewDebounceRef.current = setTimeout(() => setPreviewContent(next), previewDelayMs())
+    },
+    [vault],
+  )
 
   // ── Recent files ─────────────────────────────────────────────────────────
   const trackRecent = useCallback((path: string) => {
@@ -2184,19 +2592,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     })
   }, [])
 
-  const handleOpenFileNode = useCallback((node: Parameters<typeof vault.openFileNode>[0]) => {
-    if (node.type === "file" && vault.activeTabPath && vault.activeTabPath !== node.path) {
-      setNavHistory((h) => [...h.slice(-49), vault.activeTabPath!])
-      setNavFuture([])
-    }
-    vault.openFileNode(node)
-    if (node.type === "file") trackRecent(node.path)
-    // Depend on the stable methods (not the `vault` object, which is a fresh
-    // literal every render) so this prop stays stable across keystrokes and
-    // FileTree's React.memo actually holds. activeTabPath only changes on tab
-    // switch (not while typing).
+  const handleOpenFileNode = useCallback(
+    (node: Parameters<typeof vault.openFileNode>[0]) => {
+      if (node.type === "file" && vault.activeTabPath && vault.activeTabPath !== node.path) {
+        setNavHistory((h) => [...h.slice(-49), vault.activeTabPath!])
+        setNavFuture([])
+      }
+      vault.openFileNode(node)
+      if (node.type === "file") trackRecent(node.path)
+      // Depend on the stable methods (not the `vault` object, which is a fresh
+      // literal every render) so this prop stays stable across keystrokes and
+      // FileTree's React.memo actually holds. activeTabPath only changes on tab
+      // switch (not while typing).
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vault.openFileNode, vault.activeTabPath, trackRecent])
+    [vault.openFileNode, vault.activeTabPath, trackRecent],
+  )
 
   const goBack = useCallback(() => {
     if (navHistory.length === 0) return
@@ -2204,7 +2615,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const node = findVaultNodeByPath(prev)
     if (!node) return
     setNavHistory((h) => h.slice(0, -1))
-    if (vaultRef.current.activeTabPath) setNavFuture((f) => [vaultRef.current.activeTabPath!, ...f.slice(0, 49)])
+    if (vaultRef.current.activeTabPath)
+      setNavFuture((f) => [vaultRef.current.activeTabPath!, ...f.slice(0, 49)])
     vaultRef.current.openFileNode(node)
   }, [navHistory, findVaultNodeByPath])
 
@@ -2214,17 +2626,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const node = findVaultNodeByPath(next)
     if (!node) return
     setNavFuture((f) => f.slice(1))
-    if (vaultRef.current.activeTabPath) setNavHistory((h) => [...h.slice(-49), vaultRef.current.activeTabPath!])
+    if (vaultRef.current.activeTabPath)
+      setNavHistory((h) => [...h.slice(-49), vaultRef.current.activeTabPath!])
     vaultRef.current.openFileNode(node)
   }, [navFuture, findVaultNodeByPath])
 
   // ── Per-line comment handlers ─────────────────────────────────────────────
   const handleAddCommentAtCursor = useCallback(async () => {
     const vaultPath = vaultRef.current.vaultPath
-    if (!vaultPath) { showToast(t.comments.noVault, "error"); return }
+    if (!vaultPath) {
+      showToast(t.comments.noVault, "error")
+      return
+    }
     const editor = editorRef.current
     const file = vaultRef.current.openFile
-    if (!editor || !file) { showToast(t.comments.noFile, "error"); return }
+    if (!editor || !file) {
+      showToast(t.comments.noFile, "error")
+      return
+    }
     const pos = editor.getPosition()
     if (!pos) return
     const line = pos.lineNumber
@@ -2257,46 +2676,55 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
   }, [t, openPanel])
 
-  const handleDeleteComment = useCallback(async (id: string) => {
-    if (!vault.vaultPath) return
-    const removed = comments.find((c) => c.id === id)
-    setComments((prev) => prev.filter((c) => c.id !== id))
-    try {
-      await deleteCommentInVault(vault.vaultPath, id)
-      showToast(t.comments.deletedToast, "info")
-    } catch (e) {
-      // Roll back if write failed.
-      if (removed) setComments((prev) => [...prev, removed])
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    }
-  }, [vault.vaultPath, comments, t])
+  const handleDeleteComment = useCallback(
+    async (id: string) => {
+      if (!vault.vaultPath) return
+      const removed = comments.find((c) => c.id === id)
+      setComments((prev) => prev.filter((c) => c.id !== id))
+      try {
+        await deleteCommentInVault(vault.vaultPath, id)
+        showToast(t.comments.deletedToast, "info")
+      } catch (e) {
+        // Roll back if write failed.
+        if (removed) setComments((prev) => [...prev, removed])
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    },
+    [vault.vaultPath, comments, t],
+  )
 
-  const handleToggleCommentResolved = useCallback(async (id: string) => {
-    if (!vault.vaultPath) return
-    const target = comments.find((c) => c.id === id)
-    if (!target) return
-    const next = !target.resolved
-    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: next } : c)))
-    try {
-      await updateCommentInVault(vault.vaultPath, id, { resolved: next })
-    } catch (e) {
-      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: !next } : c)))
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    }
-  }, [vault.vaultPath, comments])
+  const handleToggleCommentResolved = useCallback(
+    async (id: string) => {
+      if (!vault.vaultPath) return
+      const target = comments.find((c) => c.id === id)
+      if (!target) return
+      const next = !target.resolved
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: next } : c)))
+      try {
+        await updateCommentInVault(vault.vaultPath, id, { resolved: next })
+      } catch (e) {
+        setComments((prev) => prev.map((c) => (c.id === id ? { ...c, resolved: !next } : c)))
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    },
+    [vault.vaultPath, comments],
+  )
 
-  const handleEditCommentBody = useCallback(async (id: string, body: string) => {
-    if (!vault.vaultPath) return
-    const original = comments.find((c) => c.id === id)
-    if (!original) return
-    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body } : c)))
-    try {
-      await updateCommentInVault(vault.vaultPath, id, { body })
-    } catch (e) {
-      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body: original.body } : c)))
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    }
-  }, [vault.vaultPath, comments])
+  const handleEditCommentBody = useCallback(
+    async (id: string, body: string) => {
+      if (!vault.vaultPath) return
+      const original = comments.find((c) => c.id === id)
+      if (!original) return
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body } : c)))
+      try {
+        await updateCommentInVault(vault.vaultPath, id, { body })
+      } catch (e) {
+        setComments((prev) => prev.map((c) => (c.id === id ? { ...c, body: original.body } : c)))
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    },
+    [vault.vaultPath, comments],
+  )
 
   const handleToggleCommentAtCursor = useCallback(() => {
     const vaultPath = vaultRef.current.vaultPath
@@ -2307,46 +2735,58 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const pos = editor.getPosition()
     if (!pos) return
     const filePath = file.path
-    const match = comments.find((c) =>
-      commentToAbsolute(c.filePath, vaultPath) === filePath && c.line === pos.lineNumber,
+    const match = comments.find(
+      (c) => commentToAbsolute(c.filePath, vaultPath) === filePath && c.line === pos.lineNumber,
     )
-    if (!match) { showToast(t.comments.noCommentAtCursor, "info"); return }
+    if (!match) {
+      showToast(t.comments.noCommentAtCursor, "info")
+      return
+    }
     void handleToggleCommentResolved(match.id)
   }, [comments, handleToggleCommentResolved, t])
 
-  const handleJumpToComment = useCallback((absolutePath: string, line: number) => {
-    const editor = editorRef.current
-    const targetTab = vault.openTabs.find((tab) => tab.path === absolutePath)
-    if (targetTab) {
-      vault.switchTab(absolutePath)
-      // Wait a tick for the tab switch to mount the new model.
-      setTimeout(() => {
-        editor?.revealLineInCenter(line)
-        editor?.setPosition({ lineNumber: line, column: 1 })
-        editor?.focus()
-      }, 50)
-      return
-    }
-    // File not open: open via the vault.
-    const node = findVaultNodeByPath(absolutePath)
-    if (node) {
-      pendingJumpRef.current = line
-      vault.openFileNode(node)
-    } else {
-      // Out-of-vault: just show the line in the current editor when paths match.
-      if (vault.openFile?.path === absolutePath) {
-        editor?.revealLineInCenter(line)
-        editor?.setPosition({ lineNumber: line, column: 1 })
-        editor?.focus()
+  const handleJumpToComment = useCallback(
+    (absolutePath: string, line: number) => {
+      const editor = editorRef.current
+      const targetTab = vault.openTabs.find((tab) => tab.path === absolutePath)
+      if (targetTab) {
+        vault.switchTab(absolutePath)
+        // Wait a tick for the tab switch to mount the new model.
+        setTimeout(() => {
+          editor?.revealLineInCenter(line)
+          editor?.setPosition({ lineNumber: line, column: 1 })
+          editor?.focus()
+        }, 50)
+        return
       }
-    }
-  }, [vault, findVaultNodeByPath])
+      // File not open: open via the vault.
+      const node = findVaultNodeByPath(absolutePath)
+      if (node) {
+        pendingJumpRef.current = line
+        vault.openFileNode(node)
+      } else {
+        // Out-of-vault: just show the line in the current editor when paths match.
+        if (vault.openFile?.path === absolutePath) {
+          editor?.revealLineInCenter(line)
+          editor?.setPosition({ lineNumber: line, column: 1 })
+          editor?.focus()
+        }
+      }
+    },
+    [vault, findVaultNodeByPath],
+  )
 
   // ── Navigation keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.altKey && e.key === "ArrowLeft")  { e.preventDefault(); goBack() }
-      if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); goForward() }
+      if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault()
+        goBack()
+      }
+      if (e.altKey && e.key === "ArrowRight") {
+        e.preventDefault()
+        goForward()
+      }
       // Ctrl/Cmd + Shift + M → add a comment on the current line.
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
         e.preventDefault()
@@ -2365,58 +2805,69 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // texToSrc map (texLineMap.ts) turns that into an editor line. When the PDF
   // came from the WASM engine (which emits no SyncTeX), we fall back to the
   // heading shim below: match the nearest text snippet against headings.
-  const handlePdfClickSource = useCallback((page: number, _x: number, _y: number, nearestText: string, sync?: { file: string; line: number }) => {
-    void page; void _x; void _y
-    const editor = editorRef.current
-    if (!editor) return
-    if (sync && syncTex) {
-      const srcLine = syncTex.texToSrc[sync.line] ?? 0
-      if (srcLine > 0) {
-        const model = editor.getModel()
-        const clamped = model ? Math.min(srcLine, model.getLineCount()) : srcLine
-        editor.revealLineInCenter(clamped)
-        editor.setPosition({ lineNumber: clamped, column: 1 })
-        editor.focus()
-        showToast(t.pdfPreview.jumpedToLine(clamped), "success", 2000)
-        return
+  const handlePdfClickSource = useCallback(
+    (
+      page: number,
+      _x: number,
+      _y: number,
+      nearestText: string,
+      sync?: { file: string; line: number },
+    ) => {
+      void page
+      void _x
+      void _y
+      const editor = editorRef.current
+      if (!editor) return
+      if (sync && syncTex) {
+        const srcLine = syncTex.texToSrc[sync.line] ?? 0
+        if (srcLine > 0) {
+          const model = editor.getModel()
+          const clamped = model ? Math.min(srcLine, model.getLineCount()) : srcLine
+          editor.revealLineInCenter(clamped)
+          editor.setPosition({ lineNumber: clamped, column: 1 })
+          editor.focus()
+          showToast(t.pdfPreview.jumpedToLine(clamped), "success", 2000)
+          return
+        }
       }
-    }
-    if (!nearestText) return
-    const model = editor.getModel()
-    if (!model) return
-    // Walk the document for a heading that matches the nearest text snippet.
-    const needle = nearestText.toLowerCase().trim()
-    if (needle.length < 2) return
-    const lineCount = model.getLineCount()
-    let bestLine = -1
-    for (let i = 1; i <= lineCount; i++) {
-      const line = model.getLineContent(i)
-      const m = /^#{1,6}\s+(.+)$/.exec(line)
-      if (!m) continue
-      const heading = m[1].trim().toLowerCase()
-      if (heading === needle || heading.startsWith(needle) || needle.startsWith(heading)) {
-        bestLine = i
-        break
-      }
-    }
-    if (bestLine === -1) {
-      // Fallback: any line containing the snippet.
+      if (!nearestText) return
+      const model = editor.getModel()
+      if (!model) return
+      // Walk the document for a heading that matches the nearest text snippet.
+      const needle = nearestText.toLowerCase().trim()
+      if (needle.length < 2) return
+      const lineCount = model.getLineCount()
+      let bestLine = -1
       for (let i = 1; i <= lineCount; i++) {
-        if (model.getLineContent(i).toLowerCase().includes(needle)) {
+        const line = model.getLineContent(i)
+        const m = /^#{1,6}\s+(.+)$/.exec(line)
+        if (!m) continue
+        const heading = m[1].trim().toLowerCase()
+        if (heading === needle || heading.startsWith(needle) || needle.startsWith(heading)) {
           bestLine = i
           break
         }
       }
-    }
-    if (bestLine > 0) {
-      editor.revealLineInCenter(bestLine)
-      editor.setPosition({ lineNumber: bestLine, column: 1 })
-      editor.focus()
-      showToast(t.pdfPreview.jumpedToHeading(nearestText), "success", 2000)
-    } else {
-      showToast(t.pdfPreview.headingNotFound(nearestText), "info", 2000)
-    }
-  }, [t, syncTex])
+      if (bestLine === -1) {
+        // Fallback: any line containing the snippet.
+        for (let i = 1; i <= lineCount; i++) {
+          if (model.getLineContent(i).toLowerCase().includes(needle)) {
+            bestLine = i
+            break
+          }
+        }
+      }
+      if (bestLine > 0) {
+        editor.revealLineInCenter(bestLine)
+        editor.setPosition({ lineNumber: bestLine, column: 1 })
+        editor.focus()
+        showToast(t.pdfPreview.jumpedToHeading(nearestText), "success", 2000)
+      } else {
+        showToast(t.pdfPreview.headingNotFound(nearestText), "info", 2000)
+      }
+    },
+    [t, syncTex],
+  )
 
   // ── Forward sync: editor line -> PDF page (local compiles only) ───────────
   const handleShowInPdf = useCallback(() => {
@@ -2459,35 +2910,63 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const wikiMatch = /\[\[([^\]]+)\]\]/.exec(line)
     if (wikiMatch) {
       const targetName = wikiMatch[1].trim()
-      const targetNode = vaultFileNodes.find((f) => f.name === targetName || f.name === targetName + ".md")
-      if (targetNode) { handleOpenFileNode(targetNode); return }
+      const targetNode = vaultFileNodes.find(
+        (f) => f.name === targetName || f.name === targetName + ".md",
+      )
+      if (targetNode) {
+        handleOpenFileNode(targetNode)
+        return
+      }
     }
 
     const citeMatch = /@([a-zA-Z0-9_-]+)/.exec(line)
-    if (citeMatch) { setCitationManagerOpen(true); return }
+    if (citeMatch) {
+      setCitationManagerOpen(true)
+      return
+    }
 
     // Try structural label
     const labelMatch = /@([a-zA-Z0-9_-]+):/.exec(line)
-    if (labelMatch) { openPanel("labels"); return }
+    if (labelMatch) {
+      openPanel("labels")
+      return
+    }
   }, [handleOpenFileNode, vaultFileNodes, openPanel])
 
-  useTouchpadGestures({
-    openCommandPalette: () => setPaletteOpen(true),
-    nextTab,
-    prevTab,
-    searchVault,
-    goToDefinition,
-    zoomIn: () => updateSettings({ fontSize: Math.min(24, settings.fontSize + 1), previewFontSize: Math.min(24, settings.previewFontSize + 1) }),
-    zoomOut: () => updateSettings({ fontSize: Math.max(11, settings.fontSize - 1), previewFontSize: Math.max(11, settings.previewFontSize - 1) }),
-    resetZoom: () => updateSettings({ fontSize: 15, previewFontSize: 15 }),
-  }, settings.touchpadGestures && !!vault.vaultPath)
+  useTouchpadGestures(
+    {
+      openCommandPalette: () => setPaletteOpen(true),
+      nextTab,
+      prevTab,
+      searchVault,
+      goToDefinition,
+      zoomIn: () =>
+        updateSettings({
+          fontSize: Math.min(24, settings.fontSize + 1),
+          previewFontSize: Math.min(24, settings.previewFontSize + 1),
+        }),
+      zoomOut: () =>
+        updateSettings({
+          fontSize: Math.max(11, settings.fontSize - 1),
+          previewFontSize: Math.max(11, settings.previewFontSize - 1),
+        }),
+      resetZoom: () => updateSettings({ fontSize: 15, previewFontSize: 15 }),
+    },
+    settings.touchpadGestures && !!vault.vaultPath,
+  )
 
-  const handleOpenRecent = useCallback((path: string) => {
-    const node = findVaultNodeByPath(path)
-    if (node) { handleOpenFileNode(node); return }
-    // File not in current tree: show a helpful message
-    showToast(t.app.fileNotInVault(displayBasename(path)), "error")
-  }, [findVaultNodeByPath, handleOpenFileNode, t])
+  const handleOpenRecent = useCallback(
+    (path: string) => {
+      const node = findVaultNodeByPath(path)
+      if (node) {
+        handleOpenFileNode(node)
+        return
+      }
+      // File not in current tree: show a helpful message
+      showToast(t.app.fileNotInVault(displayBasename(path)), "error")
+    },
+    [findVaultNodeByPath, handleOpenFileNode, t],
+  )
 
   const clearRecent = useCallback(() => {
     setRecentFiles([])
@@ -2495,195 +2974,223 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   // ── Wikilink click in preview ─────────────────────────────────────────────
-  const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = e.target as HTMLElement
-    const editor = editorRef.current
+  const handlePreviewClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = e.target as HTMLElement
+      const editor = editorRef.current
 
-    // ── In-page cross-reference: scroll the preview to the target ──────────
-    // Must come first: a cross-reference link (@tbl:/@fig:/@sec:/@thm:, TOC
-    // entries) sits inside a paragraph carrying `data-source-line`, so without
-    // this branch the fallback at the bottom hijacks the click and jumps the
-    // editor to the line the *reference* is written on instead of the target.
-    const anchor = el.closest('a[href^="#"]') as HTMLAnchorElement | null
-    if (anchor) {
-      e.preventDefault()
-      const id = decodeURIComponent(anchor.getAttribute("href")?.slice(1) ?? "")
-      // Attribute selector, not `#id`: ids like `env-thm:main` contain a colon,
-      // which is a pseudo-class separator in a CSS id selector.
-      const target = id ? previewPaneRef.current?.querySelector(`[id="${id.replace(/["\\]/g, "\\$&")}"]`) : null
-      target?.scrollIntoView({ behavior: "smooth", block: "start" })
-      return
-    }
-
-    // ── Any other link: never let the webview navigate away from the app ───
-    // http(s)/mailto open in the system handler; wikilinks fall through to
-    // their own branch below; everything else (relative, file:, etc.) is
-    // swallowed because navigating would replace the whole UI.
-    const linkEl = el.closest("a[href]") as HTMLAnchorElement | null
-    if (linkEl && !linkEl.classList.contains("wikilink")) {
-      e.preventDefault()
-      const href = (linkEl.getAttribute("href") ?? "").trim()
-      if (/^(https?:|mailto:)/i.test(href)) {
-        openUrl(href).catch(() => showToast(href, "error"))
-      }
-      return
-    }
-
-    // Copy LaTeX from KaTeX
-    const katexWrapper = el.closest(".katex-wrapper") as HTMLElement | null
-    if (katexWrapper) {
-      const expr = katexWrapper.dataset.expr
-      if (expr) {
-        navigator.clipboard.writeText(decodeURIComponent(expr)).then(() => {
-          katexWrapper.classList.add("copied")
-          showToast(t.app.copiedLatex, "success")
-          setTimeout(() => katexWrapper.classList.remove("copied"), 1500)
-        })
-      }
-      return
-    }
-
-    const heading = el.closest("h1, h2, h3, h4") as HTMLElement | null
-    if (heading && editor && vault.openFile) {
-      const headingText = (heading.textContent || "")
-        .replace(/^\d+(?:\.\d+)*\s+/, "")
-        .trim()
-        .toLowerCase()
-      const lines = vault.openFile.content.split("\n")
-      const targetLine = lines.findIndex((line) => {
-        const match = /^#{1,4}\s+(.+)$/.exec(line.trim())
-        return match?.[1].trim().toLowerCase() === headingText
-      })
-      if (targetLine >= 0) {
-        suppressPreviewScrollOnce.current = true
-        editor.revealLineInCenter(targetLine + 1, 0) // smooth
-        editor.setPosition({ lineNumber: targetLine + 1, column: 1 })
-        editor.focus()
+      // ── In-page cross-reference: scroll the preview to the target ──────────
+      // Must come first: a cross-reference link (@tbl:/@fig:/@sec:/@thm:, TOC
+      // entries) sits inside a paragraph carrying `data-source-line`, so without
+      // this branch the fallback at the bottom hijacks the click and jumps the
+      // editor to the line the *reference* is written on instead of the target.
+      const anchor = el.closest('a[href^="#"]') as HTMLAnchorElement | null
+      if (anchor) {
+        e.preventDefault()
+        const id = decodeURIComponent(anchor.getAttribute("href")?.slice(1) ?? "")
+        // Attribute selector, not `#id`: ids like `env-thm:main` contain a colon,
+        // which is a pseudo-class separator in a CSS id selector.
+        const target = id
+          ? previewPaneRef.current?.querySelector(`[id="${id.replace(/["\\]/g, "\\$&")}"]`)
+          : null
+        target?.scrollIntoView({ behavior: "smooth", block: "start" })
         return
       }
-    }
 
-    // ── Clickable checkboxes ───────────────────────────────────────────────
-    if (el.classList.contains("preview-checkbox")) {
-      const input = el as HTMLInputElement
-      const lineIdx = parseInt(input.dataset.line ?? "-1")
-      if (lineIdx >= 0 && vault.openFile) {
-        // Edit the editor's OWN buffer: vault.openFile.content is React state
-        // that lags typing by up to 250ms, and setValue() would wipe undo.
-        const editor = editorRef.current
-        const model = editor?.getModel()
-        const toggle = (line: string) => (input.checked
-          ? line.replace(/^(\s*)-\s\[ \]/, "$1- [x]")
-          : line.replace(/^(\s*)-\s\[x\]/i, "$1- [ ]"))
-        if (editor && model) {
-          if (lineIdx + 1 <= model.getLineCount()) {
-            const lineNo = lineIdx + 1
-            const line = model.getLineContent(lineNo)
-            const newLine = toggle(line)
-            if (newLine !== line) {
-              editor.pushUndoStop()
-              editor.executeEdits("preview-checkbox", [{
-                range: { startLineNumber: lineNo, startColumn: 1, endLineNumber: lineNo, endColumn: line.length + 1 },
-                text: newLine,
-              }])
-              editor.pushUndoStop()
-            }
-          }
-        } else {
-          const lines = (vault.getLiveContent(vault.openFile.path) ?? vault.openFile.content).split("\n")
-          if (lines[lineIdx] !== undefined) {
-            lines[lineIdx] = toggle(lines[lineIdx])
-            vault.updateContent(lines.join("\n"))
-          }
+      // ── Any other link: never let the webview navigate away from the app ───
+      // http(s)/mailto open in the system handler; wikilinks fall through to
+      // their own branch below; everything else (relative, file:, etc.) is
+      // swallowed because navigating would replace the whole UI.
+      const linkEl = el.closest("a[href]") as HTMLAnchorElement | null
+      if (linkEl && !linkEl.classList.contains("wikilink")) {
+        e.preventDefault()
+        const href = (linkEl.getAttribute("href") ?? "").trim()
+        if (/^(https?:|mailto:)/i.test(href)) {
+          openUrl(href).catch(() => showToast(href, "error"))
+        }
+        return
+      }
+
+      // Copy LaTeX from KaTeX
+      const katexWrapper = el.closest(".katex-wrapper") as HTMLElement | null
+      if (katexWrapper) {
+        const expr = katexWrapper.dataset.expr
+        if (expr) {
+          navigator.clipboard.writeText(decodeURIComponent(expr)).then(() => {
+            katexWrapper.classList.add("copied")
+            showToast(t.app.copiedLatex, "success")
+            setTimeout(() => katexWrapper.classList.remove("copied"), 1500)
+          })
+        }
+        return
+      }
+
+      const heading = el.closest("h1, h2, h3, h4") as HTMLElement | null
+      if (heading && editor && vault.openFile) {
+        const headingText = (heading.textContent || "")
+          .replace(/^\d+(?:\.\d+)*\s+/, "")
+          .trim()
+          .toLowerCase()
+        const lines = vault.openFile.content.split("\n")
+        const targetLine = lines.findIndex((line) => {
+          const match = /^#{1,4}\s+(.+)$/.exec(line.trim())
+          return match?.[1].trim().toLowerCase() === headingText
+        })
+        if (targetLine >= 0) {
+          suppressPreviewScrollOnce.current = true
+          editor.revealLineInCenter(targetLine + 1, 0) // smooth
+          editor.setPosition({ lineNumber: targetLine + 1, column: 1 })
+          editor.focus()
+          return
         }
       }
-      return
-    }
 
-    // ── Excalidraw: open the drawing editor for this block ─────────────────
-    const exEdit = el.closest(".excalidraw-edit") as HTMLElement | null
-    if (exEdit) {
-      e.preventDefault()
-      e.stopPropagation()
-      const sceneB64 = exEdit.closest<HTMLElement>(".excalidraw-block")?.getAttribute("data-excalidraw-scene") ?? ""
-      const line = parseInt(exEdit.dataset.line ?? "", 10)
-      setExcalidraw({ open: true, sceneB64, targetLine: Number.isFinite(line) && line > 0 ? line : null })
-      return
-    }
-
-    // ── Cross-file environment ref navigation ──────────────────────────────
-    // `@gp/calendario@def:x` → open the target file and jump to the env.
-    // Must run BEFORE the `data-source-line` fallback below, which would
-    // otherwise just move the cursor within the CURRENT file.
-    const envCross = el.closest(".env-ref-cross") as HTMLElement | null
-    if (envCross) {
-      e.preventDefault()
-      const docPath = envCross.dataset.target
-      if (!docPath) return
-      const node = findByVaultRelPath(vault.tree, docPath)
-      if (!node) return
-      const envLabel = envCross.dataset.envLabel
-      if (envLabel) {
-        const content = vaultFiles.find((file) => file.path === node.path)?.content ?? ""
-        const line = content.split("\n").findIndex((candidate) => candidate.includes(`{#${envLabel}}`))
-        if (line >= 0) pendingJumpRef.current = line + 1
+      // ── Clickable checkboxes ───────────────────────────────────────────────
+      if (el.classList.contains("preview-checkbox")) {
+        const input = el as HTMLInputElement
+        const lineIdx = parseInt(input.dataset.line ?? "-1")
+        if (lineIdx >= 0 && vault.openFile) {
+          // Edit the editor's OWN buffer: vault.openFile.content is React state
+          // that lags typing by up to 250ms, and setValue() would wipe undo.
+          const editor = editorRef.current
+          const model = editor?.getModel()
+          const toggle = (line: string) =>
+            input.checked
+              ? line.replace(/^(\s*)-\s\[ \]/, "$1- [x]")
+              : line.replace(/^(\s*)-\s\[x\]/i, "$1- [ ]")
+          if (editor && model) {
+            if (lineIdx + 1 <= model.getLineCount()) {
+              const lineNo = lineIdx + 1
+              const line = model.getLineContent(lineNo)
+              const newLine = toggle(line)
+              if (newLine !== line) {
+                editor.pushUndoStop()
+                editor.executeEdits("preview-checkbox", [
+                  {
+                    range: {
+                      startLineNumber: lineNo,
+                      startColumn: 1,
+                      endLineNumber: lineNo,
+                      endColumn: line.length + 1,
+                    },
+                    text: newLine,
+                  },
+                ])
+                editor.pushUndoStop()
+              }
+            }
+          } else {
+            const lines = (
+              vault.getLiveContent(vault.openFile.path) ?? vault.openFile.content
+            ).split("\n")
+            if (lines[lineIdx] !== undefined) {
+              lines[lineIdx] = toggle(lines[lineIdx])
+              vault.updateContent(lines.join("\n"))
+            }
+          }
+        }
+        return
       }
-      handleOpenFileNode(node)
-      return
-    }
 
-    // ── Wikilink navigation ────────────────────────────────────────────────
-    const link = el.closest(".wikilink") as HTMLElement | null
-    if (link) {
-      e.preventDefault()
-      const wikiTarget = link.dataset.target
-      if (!wikiTarget) return
-      const node = findByName(vault.tree, wikiTarget)
-      if (node) {
-        const heading = link.dataset.heading
-        if (heading) {
+      // ── Excalidraw: open the drawing editor for this block ─────────────────
+      const exEdit = el.closest(".excalidraw-edit") as HTMLElement | null
+      if (exEdit) {
+        e.preventDefault()
+        e.stopPropagation()
+        const sceneB64 =
+          exEdit.closest<HTMLElement>(".excalidraw-block")?.getAttribute("data-excalidraw-scene") ??
+          ""
+        const line = parseInt(exEdit.dataset.line ?? "", 10)
+        setExcalidraw({
+          open: true,
+          sceneB64,
+          targetLine: Number.isFinite(line) && line > 0 ? line : null,
+        })
+        return
+      }
+
+      // ── Cross-file environment ref navigation ──────────────────────────────
+      // `@gp/calendario@def:x` → open the target file and jump to the env.
+      // Must run BEFORE the `data-source-line` fallback below, which would
+      // otherwise just move the cursor within the CURRENT file.
+      const envCross = el.closest(".env-ref-cross") as HTMLElement | null
+      if (envCross) {
+        e.preventDefault()
+        const docPath = envCross.dataset.target
+        if (!docPath) return
+        const node = findByVaultRelPath(vault.tree, docPath)
+        if (!node) return
+        const envLabel = envCross.dataset.envLabel
+        if (envLabel) {
           const content = vaultFiles.find((file) => file.path === node.path)?.content ?? ""
-          const line = content.split("\n").findIndex((candidate) => {
-            const match = /^#{1,6}\s+(.+)$/.exec(candidate)
-            return match?.[1].replace(/\s*\{#[\w:.-]+\}\s*$/, "").trim().toLowerCase() === heading.toLowerCase()
-          })
+          const line = content
+            .split("\n")
+            .findIndex((candidate) => candidate.includes(`{#${envLabel}}`))
           if (line >= 0) pendingJumpRef.current = line + 1
         }
         handleOpenFileNode(node)
+        return
       }
-      return
-    }
 
-    // ── Transclusion: click header / block to jump to source file ──────────
-    const transclusion = el.closest(".transclusion") as HTMLElement | null
-    if (transclusion && el.closest(".transclusion-header")) {
-      const source = transclusion.dataset.source
-      if (source) {
-        const node = findByName(vault.tree, source)
-        if (node) handleOpenFileNode(node)
+      // ── Wikilink navigation ────────────────────────────────────────────────
+      const link = el.closest(".wikilink") as HTMLElement | null
+      if (link) {
+        e.preventDefault()
+        const wikiTarget = link.dataset.target
+        if (!wikiTarget) return
+        const node = findByName(vault.tree, wikiTarget)
+        if (node) {
+          const heading = link.dataset.heading
+          if (heading) {
+            const content = vaultFiles.find((file) => file.path === node.path)?.content ?? ""
+            const line = content.split("\n").findIndex((candidate) => {
+              const match = /^#{1,6}\s+(.+)$/.exec(candidate)
+              return (
+                match?.[1]
+                  .replace(/\s*\{#[\w:.-]+\}\s*$/, "")
+                  .trim()
+                  .toLowerCase() === heading.toLowerCase()
+              )
+            })
+            if (line >= 0) pendingJumpRef.current = line + 1
+          }
+          handleOpenFileNode(node)
+        }
+        return
       }
-      return
-    }
 
-    // ── Fallback: jump editor to the source line of any annotated block ────
-    // Single click anywhere inside an element (or descendant) carrying
-    // `data-source-line` reveals that line in the editor and focuses it.
-    if (editor) {
-      const sourceEl = (e.target as Element).closest("[data-source-line]") as HTMLElement | null
-      if (sourceEl) {
-        const lineNum = parseInt(sourceEl.dataset.sourceLine ?? "", 10)
-        if (Number.isFinite(lineNum) && lineNum > 0) {
-          // Mark the cursor change as preview-originated so the scroll-sync
-          // effect doesn't yank the preview back up to the section heading.
-          suppressPreviewScrollOnce.current = true
-          // ScrollType.Smooth = 0 (vs default Immediate = 1).
-          editor.revealLineInCenter(lineNum, 0)
-          editor.setPosition({ lineNumber: lineNum, column: 1 })
-          editor.focus()
+      // ── Transclusion: click header / block to jump to source file ──────────
+      const transclusion = el.closest(".transclusion") as HTMLElement | null
+      if (transclusion && el.closest(".transclusion-header")) {
+        const source = transclusion.dataset.source
+        if (source) {
+          const node = findByName(vault.tree, source)
+          if (node) handleOpenFileNode(node)
+        }
+        return
+      }
+
+      // ── Fallback: jump editor to the source line of any annotated block ────
+      // Single click anywhere inside an element (or descendant) carrying
+      // `data-source-line` reveals that line in the editor and focuses it.
+      if (editor) {
+        const sourceEl = (e.target as Element).closest("[data-source-line]") as HTMLElement | null
+        if (sourceEl) {
+          const lineNum = parseInt(sourceEl.dataset.sourceLine ?? "", 10)
+          if (Number.isFinite(lineNum) && lineNum > 0) {
+            // Mark the cursor change as preview-originated so the scroll-sync
+            // effect doesn't yank the preview back up to the section heading.
+            suppressPreviewScrollOnce.current = true
+            // ScrollType.Smooth = 0 (vs default Immediate = 1).
+            editor.revealLineInCenter(lineNum, 0)
+            editor.setPosition({ lineNumber: lineNum, column: 1 })
+            editor.focus()
+          }
         }
       }
-    }
-  }, [vault, vaultFiles, handleOpenFileNode, t.app.copiedLatex])
+    },
+    [vault, vaultFiles, handleOpenFileNode, t.app.copiedLatex],
+  )
 
   // ── Wikilink hover preview ────────────────────────────────────────────────
   // Show a floating preview card with the first ~10 non-empty lines of the
@@ -2726,7 +3233,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     let currentLink: HTMLElement | null = null
 
     const removeCard = () => {
-      if (timer) { clearTimeout(timer); timer = null }
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
       if (card && card.parentNode) card.parentNode.removeChild(card)
       card = null
       currentLink = null
@@ -2739,7 +3249,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const isBroken = link.classList.contains("wikilink-broken")
       card = document.createElement("div")
       card.className = "wikilink-hover-card"
-      const W = 400, H = 300
+      const W = 400,
+        H = 300
       const left = Math.min(x + 12, window.innerWidth - W - 8)
       const top = Math.min(y + 16, window.innerHeight - H - 8)
       card.style.left = `${Math.max(8, left)}px`
@@ -2757,9 +3268,22 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         } else {
           const parsed = extractFrontmatter(content)
           const body = parsed?.content ?? content
-          const lines = body.split("\n").filter((l) => l.trim() !== "").slice(0, 10).join("\n")
+          const lines = body
+            .split("\n")
+            .filter((l) => l.trim() !== "")
+            .slice(0, 10)
+            .join("\n")
           try {
-            const rendered = renderMarkdown(lines, data.macros, data.vaultPath ?? undefined, data.wikiNames, data.bibMap, data.transclusionResolver, undefined, { annotate: false })
+            const rendered = renderMarkdown(
+              lines,
+              data.macros,
+              data.vaultPath ?? undefined,
+              data.wikiNames,
+              data.bibMap,
+              data.transclusionResolver,
+              undefined,
+              { annotate: false },
+            )
             html = sanitizeRenderedHtml(rendered)
           } catch {
             html = `<div class="wikilink-hover-empty">${escapeHoverText(data.hoverNotFound)}</div>`
@@ -2777,8 +3301,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if (link === currentLink) return
       removeCard()
       currentLink = link
-      const x = e.clientX, y = e.clientY
-      timer = setTimeout(() => { timer = null; showCard(link, x, y) }, 300)
+      const x = e.clientX,
+        y = e.clientY
+      timer = setTimeout(() => {
+        timer = null
+        showCard(link, x, y)
+      }, 300)
     }
 
     const onOut = (e: MouseEvent) => {
@@ -2800,26 +3328,30 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   // ── Preview → Editor double-click sync ───────────────────────────────────
-  const handlePreviewDblClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    let el: HTMLElement | null = e.target as HTMLElement
-    while (el && el !== e.currentTarget) {
-      const line = el.dataset.sourceLine
-      if (line) {
-        const lineNum = parseInt(line)
-        if (!isNaN(lineNum) && editorRef.current) {
-          editorRef.current.revealLineInCenter(lineNum)
-          editorRef.current.setPosition({ lineNumber: lineNum, column: 1 })
-          editorRef.current.focus()
+  const handlePreviewDblClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      let el: HTMLElement | null = e.target as HTMLElement
+      while (el && el !== e.currentTarget) {
+        const line = el.dataset.sourceLine
+        if (line) {
+          const lineNum = parseInt(line)
+          if (!isNaN(lineNum) && editorRef.current) {
+            editorRef.current.revealLineInCenter(lineNum)
+            editorRef.current.setPosition({ lineNumber: lineNum, column: 1 })
+            editorRef.current.focus()
+          }
+          return
         }
-        return
+        el = el.parentElement
       }
-      el = el.parentElement
-    }
-  }, [editorRef])
+    },
+    [editorRef],
+  )
 
   // ── File actions ──────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
-    const f = vaultRef.current.openFile; const editor = editorRef.current
+    const f = vaultRef.current.openFile
+    const editor = editorRef.current
     // PDF tabs render via PdfPreviewPanel, not the Monaco editor: calling
     // editor.getValue() on a PDF tab returns the text-tab placeholder content
     // ("") and writing that back overwrites the user's PDF. Block save.
@@ -2827,7 +3359,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   const handleSaveAs = useCallback(async () => {
-    const editor = editorRef.current; if (!editor) return
+    const editor = editorRef.current
+    if (!editor) return
     const path = await save({
       title: t.menus.saveAs,
       filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
@@ -2847,7 +3380,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!settings.autoRebuildPdf) return
     if (sidebarMode !== "pdfPreview") return
     if (!pdfPath) return
-    const timer = setTimeout(() => { rebuildPdfInPlace() }, 3000)
+    const timer = setTimeout(() => {
+      rebuildPdfInPlace()
+    }, 3000)
     return () => clearTimeout(timer)
   }, [settings.autoRebuildPdf, sidebarMode, pdfPath, vault.openFile?.content, rebuildPdfInPlace])
 
@@ -2903,10 +3438,21 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const file = vaultRef.current.openFile
     if (!file) return
     try {
-      const html = renderMarkdown(file.content, macros, vaultRef.current.vaultPath ?? undefined, wikiNames, bibMap, transclusionResolver, undefined, { annotate: false })
+      const html = renderMarkdown(
+        file.content,
+        macros,
+        vaultRef.current.vaultPath ?? undefined,
+        wikiNames,
+        bibMap,
+        transclusionResolver,
+        undefined,
+        { annotate: false },
+      )
       await navigator.clipboard.writeText(sanitizeRenderedHtml(html))
       showToast(t.app.copiedHtml, "success")
-    } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
+    } catch {
+      showToast(t.app.copyError ?? "Error al copiar", "error")
+    }
   }, [macros, wikiNames, bibMap, transclusionResolver, t])
 
   const handleCopyLatex = useCallback(async () => {
@@ -2919,7 +3465,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         try {
           const mp = await pathJoin(vaultPath, MACROS_FILENAME)
           if (await exists(mp)) macrosText = await readTextFile(mp)
-        } catch { /* ok */ }
+        } catch {
+          /* ok */
+        }
       }
       const title = file.name.replace(/\.[^.]+$/, "")
       const parsed = extractFrontmatter(file.content)
@@ -2930,86 +3478,111 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         macrosText,
         (fm?.title as string) || title,
         author,
-        { headerLeft: fm?.headerLeft as string, headerCenter: fm?.headerCenter as string, headerRight: fm?.headerRight as string, footerLeft: fm?.footerLeft as string, footerCenter: fm?.footerCenter as string, footerRight: fm?.footerRight as string }
+        {
+          headerLeft: fm?.headerLeft as string,
+          headerCenter: fm?.headerCenter as string,
+          headerRight: fm?.headerRight as string,
+          footerLeft: fm?.footerLeft as string,
+          footerCenter: fm?.footerCenter as string,
+          footerRight: fm?.footerRight as string,
+        },
       )
       await navigator.clipboard.writeText(tex)
       showToast(t.app.copiedLatex, "success")
-    } catch { showToast(t.app.copyError ?? "Error al copiar", "error") }
+    } catch {
+      showToast(t.app.copyError ?? "Error al copiar", "error")
+    }
   }, [transclusionResolver, t])
 
-  const handleSaveBib = useCallback(async (bibtexString: string) => {
-    if (!vault.vaultPath) return
-    const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
-    await writeTextFileAtomic(bibPath, bibtexString)
-    await vault.loadVault()
-    showToast(t.app.bibSaved, "success")
-  }, [vault, t])
+  const handleSaveBib = useCallback(
+    async (bibtexString: string) => {
+      if (!vault.vaultPath) return
+      const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
+      await writeTextFileAtomic(bibPath, bibtexString)
+      await vault.loadVault()
+      showToast(t.app.bibSaved, "success")
+    },
+    [vault, t],
+  )
 
   // Persist references.bib without closing the manager and refresh the
   // in-memory bib map (used by "Add by DOI" for immediate availability).
-  const handlePersistBib = useCallback(async (bibtexString: string) => {
-    if (!vault.vaultPath) return
-    const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
-    await writeTextFileAtomic(bibPath, bibtexString)
-    setBibMap(parseBibtex(bibtexString))
-  }, [vault.vaultPath])
+  const handlePersistBib = useCallback(
+    async (bibtexString: string) => {
+      if (!vault.vaultPath) return
+      const bibPath = await pathJoin(vault.vaultPath, BIBTEX_FILENAME)
+      await writeTextFileAtomic(bibPath, bibtexString)
+      setBibMap(parseBibtex(bibtexString))
+    },
+    [vault.vaultPath],
+  )
 
   const handleFind = useCallback(() => editorRef.current?.trigger("menu", "actions.find", null), [])
 
   // ── Search & Replace: replace in a single file ───────────────────────────
-  const handleReplaceInFile = useCallback(async (
-    filePath: string,
-    search: string,
-    replace: string,
-    opts: SearchReplaceOptions,
-    target?: SearchReplaceTarget,
-  ): Promise<number> => {
-    try {
-      // Prefer the open tab's in-memory content over disk: if the file has
-      // unsaved edits, reading disk would run the replace against stale bytes
-      // and then overwrite the user's edits. Route the write through
-      // writeFileSafe so the pending autosave is cancelled (otherwise it could
-      // fire after our write and clobber the replacement with the pre-edit
-      // buffer) and the tab/draft/mtime stay consistent.
-      const openTab = vault.openTabs.find((tb) => tb.path === filePath)
-      const text = openTab ? openTab.content : toEditorContent(filePath, await readTextFile(filePath))
-      const re = buildSearchRegExp(search, opts)
-      if (!re) return 0
-      const { count, content: newContent } = target
-        ? replaceMatchAt(text, re, replace, target, opts)
-        : replaceMatches(text, re, replace, opts)
-      if (count === 0) return 0
-      await vault.writeFileSafe(filePath, newContent)
-      return count
-    } catch (e) {
-      showToast(t.app.replaceError((e as Error).message), "error")
-      return 0
-    }
-  }, [vault, t])
+  const handleReplaceInFile = useCallback(
+    async (
+      filePath: string,
+      search: string,
+      replace: string,
+      opts: SearchReplaceOptions,
+      target?: SearchReplaceTarget,
+    ): Promise<number> => {
+      try {
+        // Prefer the open tab's in-memory content over disk: if the file has
+        // unsaved edits, reading disk would run the replace against stale bytes
+        // and then overwrite the user's edits. Route the write through
+        // writeFileSafe so the pending autosave is cancelled (otherwise it could
+        // fire after our write and clobber the replacement with the pre-edit
+        // buffer) and the tab/draft/mtime stay consistent.
+        const openTab = vault.openTabs.find((tb) => tb.path === filePath)
+        const text = openTab
+          ? openTab.content
+          : toEditorContent(filePath, await readTextFile(filePath))
+        const re = buildSearchRegExp(search, opts)
+        if (!re) return 0
+        const { count, content: newContent } = target
+          ? replaceMatchAt(text, re, replace, target, opts)
+          : replaceMatches(text, re, replace, opts)
+        if (count === 0) return 0
+        await vault.writeFileSafe(filePath, newContent)
+        return count
+      } catch (e) {
+        showToast(t.app.replaceError((e as Error).message), "error")
+        return 0
+      }
+    },
+    [vault, t],
+  )
 
-  const handleBreadcrumbNavigate = useCallback((path: string) => {
-    const node = findVaultNodeByPath(path)
-    if (node) {
-      handleOpenFileNode(node)
-      return
-    }
-    setSidebarMode("files")
-  }, [findVaultNodeByPath, handleOpenFileNode])
+  const handleBreadcrumbNavigate = useCallback(
+    (path: string) => {
+      const node = findVaultNodeByPath(path)
+      if (node) {
+        handleOpenFileNode(node)
+        return
+      }
+      setSidebarMode("files")
+    },
+    [findVaultNodeByPath, handleOpenFileNode],
+  )
 
   // ── Table editor: insert markdown at cursor ───────────────────────────────
   const handleInsertTable = useCallback((markdown: string) => {
     const editor = editorRef.current
     if (!editor) return
     const pos = editor.getPosition()
-    editor.executeEdits("insert-table", [{
-      range: {
-        startLineNumber: pos?.lineNumber ?? 1,
-        startColumn: pos?.column ?? 1,
-        endLineNumber: pos?.lineNumber ?? 1,
-        endColumn: pos?.column ?? 1,
+    editor.executeEdits("insert-table", [
+      {
+        range: {
+          startLineNumber: pos?.lineNumber ?? 1,
+          startColumn: pos?.column ?? 1,
+          endLineNumber: pos?.lineNumber ?? 1,
+          endColumn: pos?.column ?? 1,
+        },
+        text: markdown + "\n",
       },
-      text: markdown + "\n",
-    }])
+    ])
     editor.focus()
     setTableEditorOpen(false)
   }, [])
@@ -3047,10 +3620,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         const line = pos?.lineNumber ?? 1
         const col = pos?.column ?? 1
         const text = `\n:::excalidraw\n${sceneB64}\n:::\n`
-        editor.executeEdits("excalidraw-insert", [{
-          range: { startLineNumber: line, startColumn: col, endLineNumber: line, endColumn: col },
-          text,
-        }])
+        editor.executeEdits("excalidraw-insert", [
+          {
+            range: { startLineNumber: line, startColumn: col, endLineNumber: line, endColumn: col },
+            text,
+          },
+        ])
       }
       editor.focus()
       return { open: false, sceneB64: "", targetLine: null }
@@ -3071,15 +3646,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     const editor = editorRef.current
     if (!editor) return
     const pos = editor.getPosition()
-    editor.executeEdits("insert-toc", [{
-      range: {
-        startLineNumber: pos?.lineNumber ?? 1,
-        startColumn: pos?.column ?? 1,
-        endLineNumber: pos?.lineNumber ?? 1,
-        endColumn: pos?.column ?? 1,
+    editor.executeEdits("insert-toc", [
+      {
+        range: {
+          startLineNumber: pos?.lineNumber ?? 1,
+          startColumn: pos?.column ?? 1,
+          endLineNumber: pos?.lineNumber ?? 1,
+          endColumn: pos?.column ?? 1,
+        },
+        text: "[[toc]]\n",
       },
-      text: "[[toc]]\n",
-    }])
+    ])
     editor.focus()
   }, [])
 
@@ -3091,34 +3668,40 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * Reading the clipboard ourselves and inserting through `executeEdits` gives a
    * working menu entry that still lands in the native undo stack.
    */
-  const runEditorAction = useCallback((id: EditorActionId) => {
-    const editor = editorRef.current
-    if (!editor) return
-    editor.focus()
+  const runEditorAction = useCallback(
+    (id: EditorActionId) => {
+      const editor = editorRef.current
+      if (!editor) return
+      editor.focus()
 
-    if (id === "paste") {
-      void navigator.clipboard.readText().then((text) => {
-        if (!text) return
-        const selection = editor.getSelection()
-        if (!selection) return
-        editor.executeEdits("menu-paste", [{ range: selection, text }])
-      }).catch(() => showToast(t.app.copyError, "error"))
-      return
-    }
+      if (id === "paste") {
+        void navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (!text) return
+            const selection = editor.getSelection()
+            if (!selection) return
+            editor.executeEdits("menu-paste", [{ range: selection, text }])
+          })
+          .catch(() => showToast(t.app.copyError, "error"))
+        return
+      }
 
-    const ACTIONS: Record<Exclude<EditorActionId, "paste">, string> = {
-      undo: "undo",
-      redo: "redo",
-      cut: "editor.action.clipboardCutAction",
-      copy: "editor.action.clipboardCopyAction",
-      selectAll: "editor.action.selectAll",
-      duplicateLine: "editor.action.duplicateSelection",
-      moveLineUp: "editor.action.moveLinesUpAction",
-      moveLineDown: "editor.action.moveLinesDownAction",
-      toggleComment: "editor.action.commentLine",
-    }
-    editor.trigger("menu", ACTIONS[id], null)
-  }, [t])
+      const ACTIONS: Record<Exclude<EditorActionId, "paste">, string> = {
+        undo: "undo",
+        redo: "redo",
+        cut: "editor.action.clipboardCutAction",
+        copy: "editor.action.clipboardCopyAction",
+        selectAll: "editor.action.selectAll",
+        duplicateLine: "editor.action.duplicateSelection",
+        moveLineUp: "editor.action.moveLinesUpAction",
+        moveLineDown: "editor.action.moveLinesDownAction",
+        toggleComment: "editor.action.commentLine",
+      }
+      editor.trigger("menu", ACTIONS[id], null)
+    },
+    [t],
+  )
 
   /**
    * Pad the table under the cursor so every row has the header's column count,
@@ -3133,7 +3716,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     const lines = model.getLinesContent()
     const block = findTableBlock(lines, pos.lineNumber - 1)
-    if (!block) { showToast(t.palette.normalizeTableNone, "info"); return }
+    if (!block) {
+      showToast(t.palette.normalizeTableNone, "info")
+      return
+    }
 
     const normalized = normalizeTableBlock(lines.slice(block.start, block.end + 1))
     const original = lines.slice(block.start, block.end + 1)
@@ -3143,15 +3729,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
     // One executeEdits over the whole block: a single undo step, and the caret
     // stays on the same row even though every line's width changed.
-    editor.executeEdits("normalize-table", [{
-      range: {
-        startLineNumber: block.start + 1,
-        startColumn: 1,
-        endLineNumber: block.end + 1,
-        endColumn: lines[block.end].length + 1,
+    editor.executeEdits("normalize-table", [
+      {
+        range: {
+          startLineNumber: block.start + 1,
+          startColumn: 1,
+          endLineNumber: block.end + 1,
+          endColumn: lines[block.end].length + 1,
+        },
+        text: normalized.join(model.getEOL()),
       },
-      text: normalized.join(model.getEOL()),
-    }])
+    ])
     editor.setPosition({ lineNumber: pos.lineNumber, column: 1 })
     editor.focus()
     showToast(t.palette.normalizeTableDone, "success")
@@ -3177,7 +3765,9 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       if ((target as HTMLElement).closest?.(".menubar-direct-btn, .menubar-focus-clock")) return
       setFocusPopoverOpen(false)
     }
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFocusPopoverOpen(false) }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFocusPopoverOpen(false)
+    }
     document.addEventListener("mousedown", onDown)
     document.addEventListener("keydown", onKey)
     return () => {
@@ -3189,32 +3779,44 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Folder rules ──────────────────────────────────────────────────────────
   const folderRules = useFolderRules(vault.vaultPath)
   /** The open rules editor, with the folder's rules already read from disk. */
-  const [folderRulesEditor, setFolderRulesEditor] = useState<{ dirPath: string; rules: FolderRules | null } | null>(null)
+  const [folderRulesEditor, setFolderRulesEditor] = useState<{
+    dirPath: string
+    rules: FolderRules | null
+  } | null>(null)
   /** Folder preselected as the destination by "New from template" on a folder. */
   const [templateTargetDir, setTemplateTargetDir] = useState<string | undefined>(undefined)
 
   // Read the rules BEFORE opening: the modal seeds its form from them on mount,
   // so handing it a null that fills in later would leave the form blank.
-  const handleEditFolderRules = useCallback(async (dirPath: string) => {
-    const rules = await folderRules.readOwn(dirPath)
-    setFolderRulesEditor({ dirPath, rules })
-  }, [folderRules])
+  const handleEditFolderRules = useCallback(
+    async (dirPath: string) => {
+      const rules = await folderRules.readOwn(dirPath)
+      setFolderRulesEditor({ dirPath, rules })
+    },
+    [folderRules],
+  )
 
   // FileTree is memoised and re-renders with the whole vault; every prop it
   // gets must keep a stable identity or the memo does nothing. This wrapper
   // exists only to drop the promise without creating a new arrow in JSX.
-  const editFolderRules = useCallback((dir: string) => {
-    void handleEditFolderRules(dir)
-  }, [handleEditFolderRules])
+  const editFolderRules = useCallback(
+    (dir: string) => {
+      void handleEditFolderRules(dir)
+    },
+    [handleEditFolderRules],
+  )
 
-  const handleSaveFolderRules = useCallback(async (dirPath: string, rules: FolderRules) => {
-    try {
-      await folderRules.write(dirPath, rules)
-      showToast(t.folderRules.saved, "success")
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    }
-  }, [folderRules, t])
+  const handleSaveFolderRules = useCallback(
+    async (dirPath: string, rules: FolderRules) => {
+      try {
+        await folderRules.write(dirPath, rules)
+        showToast(t.folderRules.saved, "success")
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    },
+    [folderRules, t],
+  )
 
   /**
    * Create a file honouring the destination folder's rules: filename pattern,
@@ -3224,29 +3826,31 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * already resolved which template to use, and the folder's default must not
    * override the user's explicit choice.
    */
-  const createFileWithRules = useCallback(async (
-    name: string,
-    parentDir?: string,
-    explicitContent?: string,
-  ) => {
-    const dir = parentDir ?? vaultRef.current.vaultPath
-    const rules = dir ? await folderRules.resolve(dir) : null
+  const createFileWithRules = useCallback(
+    async (name: string, parentDir?: string, explicitContent?: string) => {
+      const dir = parentDir ?? vaultRef.current.vaultPath
+      const rules = dir ? await folderRules.resolve(dir) : null
 
-    const fileName = applyFilenamePattern(rules, name)
-    let content = explicitContent
-    if (content === undefined) {
-      const templateId = rules?.defaultTemplate
-      const template = templateId
-        ? [...TEMPLATES, ...loadCustomTemplates()].find((tpl) => tpl.id === templateId)
-        : undefined
-      content = template ? processTemplateVariables(template.content, fileName) : ""
-    }
-    await vaultRef.current.createFile(fileName, applyFolderFrontmatter(rules, content), parentDir)
-  }, [folderRules])
+      const fileName = applyFilenamePattern(rules, name)
+      let content = explicitContent
+      if (content === undefined) {
+        const templateId = rules?.defaultTemplate
+        const template = templateId
+          ? [...TEMPLATES, ...loadCustomTemplates()].find((tpl) => tpl.id === templateId)
+          : undefined
+        content = template ? processTemplateVariables(template.content, fileName) : ""
+      }
+      await vaultRef.current.createFile(fileName, applyFolderFrontmatter(rules, content), parentDir)
+    },
+    [folderRules],
+  )
 
-  const handleTreeCreateFile = useCallback((name: string, parentDir?: string) => {
-    void createFileWithRules(name, parentDir)
-  }, [createFileWithRules])
+  const handleTreeCreateFile = useCallback(
+    (name: string, parentDir?: string) => {
+      void createFileWithRules(name, parentDir)
+    },
+    [createFileWithRules],
+  )
 
   const handleTreeCreateFolder = useCallback((name: string, parentDir?: string) => {
     void vaultRef.current.createFolder(name, parentDir)
@@ -3257,10 +3861,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setTemplateOpen(true)
   }, [])
 
-  const handleCreateFromTemplate = useCallback(async (name: string, content: string) => {
-    await createFileWithRules(name, templateTargetDir, content)
-    setTemplateTargetDir(undefined)
-  }, [createFileWithRules, templateTargetDir])
+  const handleCreateFromTemplate = useCallback(
+    async (name: string, content: string) => {
+      await createFileWithRules(name, templateTargetDir, content)
+      setTemplateTargetDir(undefined)
+    },
+    [createFileWithRules, templateTargetDir],
+  )
 
   /**
    * Split the active document at its H2s into sibling files, replacing each
@@ -3283,10 +3890,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
     const dir = pathDirname(file.path)
     const stem = displayBasename(file.path).replace(/\.[^.]+$/, "")
-    const ok = await tauriConfirm(
-      t.splitSections.confirm(sections.length, stem),
-      { title: t.splitSections.title, kind: "warning" },
-    )
+    const ok = await tauriConfirm(t.splitSections.confirm(sections.length, stem), {
+      title: t.splitSections.title,
+      kind: "warning",
+    })
     if (!ok) return
 
     try {
@@ -3322,89 +3929,111 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * normal undo step and never touches the disk directly; the project's
    * standing rule for AI edits.
    */
-  const handleFillGaps = useCallback(async (scope: "cursor" | "all" = "cursor") => {
-    const editor = editorRef.current
-    const model = editor?.getModel()
-    if (!editor || !model) return
-    if (!isAiReady(settingsRef.current)) {
-      showToast(t.ai.cmdk.disabledHint, "info")
-      return
-    }
-
-    const initialText = model.getValue()
-    const cursorGap = gapAtOffset(
-      initialText,
-      model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }),
-    )
-    const remaining = scope === "all" ? findGaps(initialText).length : cursorGap ? 1 : 0
-
-    if (remaining === 0) {
-      showToast(scope === "all" ? t.aiGaps.noneFound : t.aiGaps.noGapAtCursor, "info")
-      return
-    }
-
-    setFillingGaps(true)
-    let filled = 0
-    // Leading gaps the model returned nothing for. A successful fill REMOVES its
-    // marker, so the list shrinks and this index keeps pointing at the next
-    // unprocessed gap; without it, one unanswerable gap was re-sent on every
-    // remaining iteration and the rest were never reached.
-    let skipped = 0
-    try {
-      // Offsets are re-derived from the CURRENT model on every iteration:
-      // filling one gap shifts every later offset, so precomputed ranges would
-      // land in the wrong place.
-      for (let n = 0; n < remaining; n++) {
-        const current = model.getValue()
-        const gap = scope === "all"
-          ? findGaps(current)[skipped]
-          : gapAtOffset(current, model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }))
-        if (!gap) break
-
-        const answer = cleanGapCompletion(await sendInlineEdit(settingsRef.current, {
-          instruction: gap.hint
-            ? `Fill in the gap. The author's hint for what belongs here: ${gap.hint}`
-            : "Fill in the gap with the text that belongs at this position.",
-          selection: "",
-          hasSelection: false,
-          documentContext: gapContext(current, gap),
-        }))
-        if (!answer) { skipped++; continue }
-
-        editor.executeEdits("fill-gap", [{
-          range: monacoRange(model, gap.start, gap.end),
-          text: answer,
-        }])
-        filled++
+  const handleFillGaps = useCallback(
+    async (scope: "cursor" | "all" = "cursor") => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      if (!editor || !model) return
+      if (!isAiReady(settingsRef.current)) {
+        showToast(t.ai.cmdk.disabledHint, "info")
+        return
       }
-      showToast(filled > 0 ? t.aiGaps.filled(filled) : t.aiGaps.nothingGenerated, filled > 0 ? "success" : "info")
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    } finally {
-      setFillingGaps(false)
-    }
-  }, [t])
+
+      const initialText = model.getValue()
+      const cursorGap = gapAtOffset(
+        initialText,
+        model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }),
+      )
+      const remaining = scope === "all" ? findGaps(initialText).length : cursorGap ? 1 : 0
+
+      if (remaining === 0) {
+        showToast(scope === "all" ? t.aiGaps.noneFound : t.aiGaps.noGapAtCursor, "info")
+        return
+      }
+
+      setFillingGaps(true)
+      let filled = 0
+      // Leading gaps the model returned nothing for. A successful fill REMOVES its
+      // marker, so the list shrinks and this index keeps pointing at the next
+      // unprocessed gap; without it, one unanswerable gap was re-sent on every
+      // remaining iteration and the rest were never reached.
+      let skipped = 0
+      try {
+        // Offsets are re-derived from the CURRENT model on every iteration:
+        // filling one gap shifts every later offset, so precomputed ranges would
+        // land in the wrong place.
+        for (let n = 0; n < remaining; n++) {
+          const current = model.getValue()
+          const gap =
+            scope === "all"
+              ? findGaps(current)[skipped]
+              : gapAtOffset(
+                  current,
+                  model.getOffsetAt(editor.getPosition() ?? { lineNumber: 1, column: 1 }),
+                )
+          if (!gap) break
+
+          const answer = cleanGapCompletion(
+            await sendInlineEdit(settingsRef.current, {
+              instruction: gap.hint
+                ? `Fill in the gap. The author's hint for what belongs here: ${gap.hint}`
+                : "Fill in the gap with the text that belongs at this position.",
+              selection: "",
+              hasSelection: false,
+              documentContext: gapContext(current, gap),
+            }),
+          )
+          if (!answer) {
+            skipped++
+            continue
+          }
+
+          editor.executeEdits("fill-gap", [
+            {
+              range: monacoRange(model, gap.start, gap.end),
+              text: answer,
+            },
+          ])
+          filled++
+        }
+        showToast(
+          filled > 0 ? t.aiGaps.filled(filled) : t.aiGaps.nothingGenerated,
+          filled > 0 ? "success" : "info",
+        )
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      } finally {
+        setFillingGaps(false)
+      }
+    },
+    [t],
+  )
 
   /** Turn an existing note into a reusable custom template. */
-  const handleSaveAsTemplate = useCallback(async (node: FileNode) => {
-    try {
-      // Prefer the open tab's buffer: it may hold edits not yet on disk.
-      const openTab = openTabsRef.current.find((tab) => tab.path === node.path)
-      const raw = openTab ? openTab.content : toEditorContent(node.path, await readTextFile(node.path))
-      const suggested = node.name.replace(/\.[^.]+$/, "")
-      const name = window.prompt(t.folderRules.templateNamePrompt, suggested)?.trim()
-      if (!name) return
-      saveCustomTemplate({
-        name,
-        description: t.templateModal.defaultDescription,
-        icon: "◇",
-        content: parameterizeDocument(raw, node.name),
-      })
-      showToast(t.folderRules.savedAsTemplate(name), "success")
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e), "error")
-    }
-  }, [t])
+  const handleSaveAsTemplate = useCallback(
+    async (node: FileNode) => {
+      try {
+        // Prefer the open tab's buffer: it may hold edits not yet on disk.
+        const openTab = openTabsRef.current.find((tab) => tab.path === node.path)
+        const raw = openTab
+          ? openTab.content
+          : toEditorContent(node.path, await readTextFile(node.path))
+        const suggested = node.name.replace(/\.[^.]+$/, "")
+        const name = window.prompt(t.folderRules.templateNamePrompt, suggested)?.trim()
+        if (!name) return
+        saveCustomTemplate({
+          name,
+          description: t.templateModal.defaultDescription,
+          icon: "◇",
+          content: parameterizeDocument(raw, node.name),
+        })
+        showToast(t.folderRules.savedAsTemplate(name), "success")
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : String(e), "error")
+      }
+    },
+    [t],
+  )
 
   /**
    * Rewrite the generated files declared by the folder under the cursor.
@@ -3412,113 +4041,132 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
    * A target that already holds hand-written content is skipped with a toast
    * rather than overwritten: regeneration must never destroy prose.
    */
-  const handleRegenerateFolderFiles = useCallback(async (dirPath?: string) => {
-    const vaultPath = vaultRef.current.vaultPath
-    if (!vaultPath) return
-    const dir = dirPath
-      ?? (activeFilePathRef.current ? pathDirname(activeFilePathRef.current) : vaultPath)
+  const handleRegenerateFolderFiles = useCallback(
+    async (dirPath?: string) => {
+      const vaultPath = vaultRef.current.vaultPath
+      if (!vaultPath) return
+      const dir =
+        dirPath ?? (activeFilePathRef.current ? pathDirname(activeFilePathRef.current) : vaultPath)
 
-    const rules = await folderRules.resolve(dir)
-    if (!rules?.generated || rules.generated.length === 0) {
-      showToast(t.folderRules.regenerateNoRules, "info")
-      return
-    }
-
-    let written = 0
-    for (const rule of rules.generated) {
-      const targetPath = await pathJoin(dir, rule.file)
-      try {
-        if (await exists(targetPath)) {
-          const current = await readTextFile(targetPath)
-          if (!isGeneratedFile(current)) {
-            showToast(t.folderRules.skippedNotGenerated(rule.file), "error")
-            continue
-          }
-        }
-        // The generated file must never feed itself: excluding it keeps a task
-        // list from re-collecting the tasks it just wrote out.
-        const scopeRoot = rule.scope === "vault" ? vaultPath : dir
-        const sources = (await collectSourceFiles(scopeRoot, rule.scope === "vault"))
-          .filter((file) => file.path !== targetPath)
-        await vaultRef.current.writeFileSafe(targetPath, runGenerator(rule.type, sources))
-        written++
-      } catch (e) {
-        showToast(e instanceof Error ? e.message : String(e), "error")
+      const rules = await folderRules.resolve(dir)
+      if (!rules?.generated || rules.generated.length === 0) {
+        showToast(t.folderRules.regenerateNoRules, "info")
+        return
       }
-    }
-    if (written > 0) {
-      await vaultRef.current.refreshTree(vaultPath)
-      showToast(t.folderRules.regenerated(written), "success")
-    }
-  }, [folderRules, t])
+
+      let written = 0
+      for (const rule of rules.generated) {
+        const targetPath = await pathJoin(dir, rule.file)
+        try {
+          if (await exists(targetPath)) {
+            const current = await readTextFile(targetPath)
+            if (!isGeneratedFile(current)) {
+              showToast(t.folderRules.skippedNotGenerated(rule.file), "error")
+              continue
+            }
+          }
+          // The generated file must never feed itself: excluding it keeps a task
+          // list from re-collecting the tasks it just wrote out.
+          const scopeRoot = rule.scope === "vault" ? vaultPath : dir
+          const sources = (await collectSourceFiles(scopeRoot, rule.scope === "vault")).filter(
+            (file) => file.path !== targetPath,
+          )
+          await vaultRef.current.writeFileSafe(targetPath, runGenerator(rule.type, sources))
+          written++
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : String(e), "error")
+        }
+      }
+      if (written > 0) {
+        await vaultRef.current.refreshTree(vaultPath)
+        showToast(t.folderRules.regenerated(written), "success")
+      }
+    },
+    [folderRules, t],
+  )
 
   // ── Rename with wikilink refactor ─────────────────────────────────────────
   // ── Todo panel handlers ────────────────────────────────────────────────────
-  const handleTodoNavigate = useCallback((path: string, line: number) => {
-    const node = findVaultNodeByPath(path)
-    if (node) {
-      pendingJumpRef.current = line
-      handleOpenFileNode(node)
-      setSidebarMode("files")
-    }
-  }, [findVaultNodeByPath, handleOpenFileNode])
-
-  const handleTodoToggle = useCallback((path: string, newContent: string) => {
-    // writeFileSafe masks special blocks (toDiskContent), cancels the pending
-    // per-path autosave so it can't clobber this write, patches the open tab,
-    // and refreshes mtime. Surface failures instead of swallowing them.
-    vault.writeFileSafe(path, newContent).catch((e) => {
-      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
-    })
-  }, [vault, t])
-
-  const handleRenameFile = useCallback(async (oldPath: string, newName: string) => {
-    const oldBasename = displayBasename(oldPath).replace(/\.[^.]+$/, "")
-    const newBasename = newName.replace(/\.[^.]+$/, "")
-
-    // Only offer refactor for .md files where the base name actually changes
-    if (oldBasename !== newBasename && oldPath.endsWith(".md")) {
-      const re = new RegExp(`\\[\\[${oldBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}((?:#[^\\]|]+)?)((?:\\|[^\\]]+)?)\\]\\]`, "g")
-      const markdownFiles = vaultFileNodes
-        .filter((file) => file.path !== oldPath && file.ext === "md")
-      const filesWithLinks: { path: string; content: string }[] = []
-
-      for (const file of markdownFiles) {
-        const openTab = openTabsRef.current.find((tab) => tab.path === file.path)
-        const rawDisk = await readTextFile(file.path).catch(() => "")
-        const source = openTab?.content ?? toEditorContent(file.path, rawDisk)
-        re.lastIndex = 0
-        if (source && re.test(source)) filesWithLinks.push({ path: file.path, content: source })
+  const handleTodoNavigate = useCallback(
+    (path: string, line: number) => {
+      const node = findVaultNodeByPath(path)
+      if (node) {
+        pendingJumpRef.current = line
+        handleOpenFileNode(node)
+        setSidebarMode("files")
       }
+    },
+    [findVaultNodeByPath, handleOpenFileNode],
+  )
 
-      if (filesWithLinks.length > 0) {
-        let refactorCount = 0
-        try {
-          const ok = await tauriConfirm(
-            t.vault.renameRefactorConfirm(oldBasename, newBasename, filesWithLinks.length),
-            { title: "ComdTeX" }
-          )
-          if (ok) {
-            for (const file of filesWithLinks) {
-              re.lastIndex = 0
-              const matches = file.content.match(re)
-              re.lastIndex = 0
-              const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
-              // writeFileSafe masks special blocks, cancels the pending autosave
-              // (lost-update guard), patches the open tab + refreshes mtime.
-              await vault.writeFileSafe(file.path, updated)
-              refactorCount += matches ? matches.length : 0
+  const handleTodoToggle = useCallback(
+    (path: string, newContent: string) => {
+      // writeFileSafe masks special blocks (toDiskContent), cancels the pending
+      // per-path autosave so it can't clobber this write, patches the open tab,
+      // and refreshes mtime. Surface failures instead of swallowing them.
+      vault.writeFileSafe(path, newContent).catch((e) => {
+        showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
+      })
+    },
+    [vault, t],
+  )
+
+  const handleRenameFile = useCallback(
+    async (oldPath: string, newName: string) => {
+      const oldBasename = displayBasename(oldPath).replace(/\.[^.]+$/, "")
+      const newBasename = newName.replace(/\.[^.]+$/, "")
+
+      // Only offer refactor for .md files where the base name actually changes
+      if (oldBasename !== newBasename && oldPath.endsWith(".md")) {
+        const re = new RegExp(
+          `\\[\\[${oldBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}((?:#[^\\]|]+)?)((?:\\|[^\\]]+)?)\\]\\]`,
+          "g",
+        )
+        const markdownFiles = vaultFileNodes.filter(
+          (file) => file.path !== oldPath && file.ext === "md",
+        )
+        const filesWithLinks: { path: string; content: string }[] = []
+
+        for (const file of markdownFiles) {
+          const openTab = openTabsRef.current.find((tab) => tab.path === file.path)
+          const rawDisk = await readTextFile(file.path).catch(() => "")
+          const source = openTab?.content ?? toEditorContent(file.path, rawDisk)
+          re.lastIndex = 0
+          if (source && re.test(source)) filesWithLinks.push({ path: file.path, content: source })
+        }
+
+        if (filesWithLinks.length > 0) {
+          let refactorCount = 0
+          try {
+            const ok = await tauriConfirm(
+              t.vault.renameRefactorConfirm(oldBasename, newBasename, filesWithLinks.length),
+              { title: "ComdTeX" },
+            )
+            if (ok) {
+              for (const file of filesWithLinks) {
+                re.lastIndex = 0
+                const matches = file.content.match(re)
+                re.lastIndex = 0
+                const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
+                // writeFileSafe masks special blocks, cancels the pending autosave
+                // (lost-update guard), patches the open tab + refreshes mtime.
+                await vault.writeFileSafe(file.path, updated)
+                refactorCount += matches ? matches.length : 0
+              }
+              if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
             }
-            if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
+          } catch {
+            /* dialog cancelled */
           }
-        } catch { /* dialog cancelled */ }
+        }
       }
-    }
 
-    await vault.renameFile(oldPath, newName)
-    // Stable deps (open tabs read via ref) so FileTree's React.memo holds while typing.
+      await vault.renameFile(oldPath, newName)
+      // Stable deps (open tabs read via ref) so FileTree's React.memo holds while typing.
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe])
+    [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe],
+  )
 
   const handleOpenBib = useCallback(async () => {
     const vaultPath = vaultRef.current.vaultPath
@@ -3532,7 +4180,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // ── Helpers ───────────────────────────────────────────────────────────────
   /** Elimina componentes de path para evitar traversal (../../../ etc.) */
   const sanitizeFileName = (name: string) =>
-    name.replace(/[/\\]/g, "_").replace(/\.\./g, "__").replace(/[<>:"|?*]/g, "_") || "file"
+    name
+      .replace(/[/\\]/g, "_")
+      .replace(/\.\./g, "__")
+      .replace(/[<>:"|?*]/g, "_") || "file"
 
   /**
    * `name`, or `name-2`, `name-3`… until it does not exist inside `dir`.
@@ -3551,12 +4202,15 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   }, [])
 
   // ── Drag-and-drop images ──────────────────────────────────────────────────
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    const hasFiles = Array.from(e.dataTransfer.items).some((i) => i.kind === "file")
-    if (!hasFiles || !vault.vaultPath) return
-    e.preventDefault()
-    setDragOver(true)
-  }, [vault.vaultPath])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      const hasFiles = Array.from(e.dataTransfer.items).some((i) => i.kind === "file")
+      if (!hasFiles || !vault.vaultPath) return
+      e.preventDefault()
+      setDragOver(true)
+    },
+    [vault.vaultPath],
+  )
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
@@ -3564,53 +4218,58 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     }
   }, [])
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    if (!vault.vaultPath) return
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragOver(false)
+      if (!vault.vaultPath) return
 
-    const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"])
-    const files = Array.from(e.dataTransfer.files)
+      const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"])
+      const files = Array.from(e.dataTransfer.files)
 
-    for (const file of files) {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
-      if (!IMAGE_EXTS.has(ext)) continue
+      for (const file of files) {
+        const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
+        if (!IMAGE_EXTS.has(ext)) continue
 
-      // @ts-expect-error Tauri/Chromium expose real path on File
-      const sourcePath: string | undefined = file.path
-      if (!sourcePath) {
-        showToast(t.app.noFilePath, "error")
-        continue
-      }
-
-      try {
-        const safeFileName = sanitizeFileName(file.name)
-        const assetsDir = await pathJoin(vault.vaultPath, "assets")
-        await mkdir(assetsDir, { recursive: true })
-        const destPath = await pathJoin(assetsDir, safeFileName)
-        await copyFile(sourcePath, destPath)
-        await vault.loadVault()
-
-        const editor = editorRef.current
-        if (editor) {
-          const pos = editor.getPosition()
-          const insertion = `![${safeFileName.replace(/\.[^.]+$/, "")}](assets/${safeFileName})`
-          editor.executeEdits("drag-drop", [{
-            range: {
-              startLineNumber: pos?.lineNumber ?? 1,
-              startColumn: pos?.column ?? 1,
-              endLineNumber: pos?.lineNumber ?? 1,
-              endColumn: pos?.column ?? 1,
-            },
-            text: insertion,
-          }])
+        // @ts-expect-error Tauri/Chromium expose real path on File
+        const sourcePath: string | undefined = file.path
+        if (!sourcePath) {
+          showToast(t.app.noFilePath, "error")
+          continue
         }
-        showToast(t.app.imageAdded(safeFileName), "success")
-      } catch (err) {
-        showToast(t.app.errCopyImage(err instanceof Error ? err.message : String(err)), "error")
+
+        try {
+          const safeFileName = sanitizeFileName(file.name)
+          const assetsDir = await pathJoin(vault.vaultPath, "assets")
+          await mkdir(assetsDir, { recursive: true })
+          const destPath = await pathJoin(assetsDir, safeFileName)
+          await copyFile(sourcePath, destPath)
+          await vault.loadVault()
+
+          const editor = editorRef.current
+          if (editor) {
+            const pos = editor.getPosition()
+            const insertion = `![${safeFileName.replace(/\.[^.]+$/, "")}](assets/${safeFileName})`
+            editor.executeEdits("drag-drop", [
+              {
+                range: {
+                  startLineNumber: pos?.lineNumber ?? 1,
+                  startColumn: pos?.column ?? 1,
+                  endLineNumber: pos?.lineNumber ?? 1,
+                  endColumn: pos?.column ?? 1,
+                },
+                text: insertion,
+              },
+            ])
+          }
+          showToast(t.app.imageAdded(safeFileName), "success")
+        } catch (err) {
+          showToast(t.app.errCopyImage(err instanceof Error ? err.message : String(err)), "error")
+        }
       }
-    }
-  }, [vault, t])
+    },
+    [vault, t],
+  )
 
   // ── Image paste from clipboard (Ctrl+V) ──────────────────────────────────
   useEffect(() => {
@@ -3622,8 +4281,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       e.preventDefault()
 
       const IMAGE_EXTS: Record<string, string> = {
-        "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif",
-        "image/webp": "webp", "image/svg+xml": "svg", "image/bmp": "bmp",
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/gif": "gif",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
+        "image/bmp": "bmp",
       }
 
       for (const file of images) {
@@ -3655,10 +4318,17 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           if (editor) {
             const selection = editor.getSelection()
             const insertion = `![${fileName.replace(/\.[^.]+$/, "")}](assets/${fileName})`
-            editor.executeEdits("paste", [{
-              range: selection ?? { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
-              text: insertion,
-            }])
+            editor.executeEdits("paste", [
+              {
+                range: selection ?? {
+                  startLineNumber: 1,
+                  startColumn: 1,
+                  endLineNumber: 1,
+                  endColumn: 1,
+                },
+                text: insertion,
+              },
+            ])
           }
           showToast(t.app.imagePasted(fileName), "success")
         } catch (err) {
@@ -3675,16 +4345,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     setSidebarWidth((w) => Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, w + dx)))
   }, [])
 
-  const handleEditorResize = useCallback((dx: number) => {
-    const main = mainRef.current; if (!main) return
-    const available = main.clientWidth - sidebarWidth
-    setEditorWidth((w) => Math.max(EDITOR_MIN, Math.min(available * 0.75, (w || available / 2) + dx)))
-  }, [sidebarWidth])
+  const handleEditorResize = useCallback(
+    (dx: number) => {
+      const main = mainRef.current
+      if (!main) return
+      const available = main.clientWidth - sidebarWidth
+      setEditorWidth((w) =>
+        Math.max(EDITOR_MIN, Math.min(available * 0.75, (w || available / 2) + dx)),
+      )
+    },
+    [sidebarWidth],
+  )
 
   // ── Auto-update check ────────────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkForUpdate().then(info => { if (info.available) setUpdateInfo(info) })
+      checkForUpdate().then((info) => {
+        if (info.available) setUpdateInfo(info)
+      })
     }, 3000)
     return () => clearTimeout(timer)
   }, [])
@@ -3699,12 +4377,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         const timer = setTimeout(() => setOnboardingOpen(true), 600)
         return () => clearTimeout(timer)
       }
-    } catch { /* localStorage unavailable */ }
+    } catch {
+      /* localStorage unavailable */
+    }
   }, [vault.vaultPath])
 
   const handleOnboardingClose = useCallback(() => {
     setOnboardingOpen(false)
-    try { localStorage.setItem(STORAGE_KEYS.ONBOARDING_SEEN, "true") } catch { /* ignore */ }
+    try {
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_SEEN, "true")
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   // ── Daily notes ─────────────────────────────────────────────────────────
@@ -3776,51 +4460,158 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   // deletion); all ctx fields are stable callbacks/setters or rarely-changing
   // values, so recomputing the ~130-entry command list on every keystroke would
   // be wasted work.
-  const paletteCommands: PaletteCommand[] = useMemo(() => buildPaletteCommands({
-    t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
-    setTableEditorOpen, handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, setCitationManagerOpen,
-    setFocusMode, typewriterMode, syncScroll, wordWrap, minimapEnabled, spellcheck,
-    updateSettings, handleCopyHtml, handleCopyLatex, handleVaultBackup, openCmdkRef,
-    selectVault: vault.selectVault, setTemplateOpen, handleOpenDailyNote, handleOpenMacros,
-    handleOpenBib, setSettingsOpen, checkForUpdate, setUpdateInfo, handleAddCommentAtCursor,
-    handleToggleCommentAtCursor, setOnboardingOpen, setHelpOpen, goBack, goForward,
-    handleShowInPdf,
-  }), [
-    t, deps, exportActions, handleSave, handleSaveAs, handleFind, openPanel, palInsert,
-    handleNormalizeTable, handleRegenerateFolderFiles, handleSplitIntoSections, handleFillGaps, toggleFocusPopover, handleInsertToc, handleInsertExcalidraw, typewriterMode, syncScroll, wordWrap,
-    minimapEnabled, spellcheck, updateSettings, handleCopyHtml, handleCopyLatex,
-    handleVaultBackup, vault.selectVault, handleOpenDailyNote, handleOpenMacros,
-    handleOpenBib, handleAddCommentAtCursor, handleToggleCommentAtCursor, goBack, goForward,
-    handleShowInPdf,
-  ])
+  const paletteCommands: PaletteCommand[] = useMemo(
+    () =>
+      buildPaletteCommands({
+        t,
+        deps,
+        exportActions,
+        handleSave,
+        handleSaveAs,
+        handleFind,
+        openPanel,
+        palInsert,
+        setTableEditorOpen,
+        handleNormalizeTable,
+        handleRegenerateFolderFiles,
+        handleSplitIntoSections,
+        handleFillGaps,
+        toggleFocusPopover,
+        handleInsertToc,
+        handleInsertExcalidraw,
+        setCitationManagerOpen,
+        setFocusMode,
+        typewriterMode,
+        syncScroll,
+        wordWrap,
+        minimapEnabled,
+        spellcheck,
+        updateSettings,
+        handleCopyHtml,
+        handleCopyLatex,
+        handleVaultBackup,
+        openCmdkRef,
+        selectVault: vault.selectVault,
+        setTemplateOpen,
+        handleOpenDailyNote,
+        handleOpenMacros,
+        handleOpenBib,
+        setSettingsOpen,
+        checkForUpdate,
+        setUpdateInfo,
+        handleAddCommentAtCursor,
+        handleToggleCommentAtCursor,
+        setOnboardingOpen,
+        setHelpOpen,
+        goBack,
+        goForward,
+        handleShowInPdf,
+      }),
+    [
+      t,
+      deps,
+      exportActions,
+      handleSave,
+      handleSaveAs,
+      handleFind,
+      openPanel,
+      palInsert,
+      handleNormalizeTable,
+      handleRegenerateFolderFiles,
+      handleSplitIntoSections,
+      handleFillGaps,
+      toggleFocusPopover,
+      handleInsertToc,
+      handleInsertExcalidraw,
+      typewriterMode,
+      syncScroll,
+      wordWrap,
+      minimapEnabled,
+      spellcheck,
+      updateSettings,
+      handleCopyHtml,
+      handleCopyLatex,
+      handleVaultBackup,
+      vault.selectVault,
+      handleOpenDailyNote,
+      handleOpenMacros,
+      handleOpenBib,
+      handleAddCommentAtCursor,
+      handleToggleCommentAtCursor,
+      goBack,
+      goForward,
+      handleShowInPdf,
+    ],
+  )
 
   // ── Menu ──────────────────────────────────────────────────────────────────
   const hasFile = !!vault.openFile
   const hasVault = !!vault.vaultPath
 
-  const recentEntries: MenuEntry[] = useMemo(() => recentFiles.length > 0
-    ? [
-        { separator: true } as MenuEntry,
-        { label: t.menus.recent, disabled: true, action: () => {} } as MenuEntry,
-        ...recentFiles.map((p) => ({
-          label: displayBasename(p),
-          action: () => handleOpenRecent(p),
-        } as MenuEntry)),
-        { separator: true } as MenuEntry,
-        { label: t.menus.clearRecent, action: clearRecent } as MenuEntry,
-      ]
-    : [], [recentFiles, t, handleOpenRecent, clearRecent])
+  const recentEntries: MenuEntry[] = useMemo(
+    () =>
+      recentFiles.length > 0
+        ? [
+            { separator: true } as MenuEntry,
+            { label: t.menus.recent, disabled: true, action: () => {} } as MenuEntry,
+            ...recentFiles.map(
+              (p) =>
+                ({
+                  label: displayBasename(p),
+                  action: () => handleOpenRecent(p),
+                }) as MenuEntry,
+            ),
+            { separator: true } as MenuEntry,
+            { label: t.menus.clearRecent, action: clearRecent } as MenuEntry,
+          ]
+        : [],
+    [recentFiles, t, handleOpenRecent, clearRecent],
+  )
 
-  const menus: MenuDef[] = useMemo(() => buildMenus({
-    t, hasFile, hasVault, deps, exportActions, selectVault: vault.selectVault, setTemplateOpen,
-    handleSave, handleSaveAs, handleFind, openPanel, setPaletteOpen, setFocusMode,
-    handleOpenMacros, handleOpenBib, setSettingsOpen, setHelpOpen, recentEntries,
-    runEditorAction, handleNormalizeTable, handleRegenerateFolderFiles,
-  }), [
-    t, hasFile, hasVault, deps, exportActions, vault.selectVault, handleSave, handleSaveAs,
-    handleFind, openPanel, handleOpenMacros, handleOpenBib, recentEntries,
-    runEditorAction, handleNormalizeTable, handleRegenerateFolderFiles,
-  ])
+  const menus: MenuDef[] = useMemo(
+    () =>
+      buildMenus({
+        t,
+        hasFile,
+        hasVault,
+        deps,
+        exportActions,
+        selectVault: vault.selectVault,
+        setTemplateOpen,
+        handleSave,
+        handleSaveAs,
+        handleFind,
+        openPanel,
+        setPaletteOpen,
+        setFocusMode,
+        handleOpenMacros,
+        handleOpenBib,
+        setSettingsOpen,
+        setHelpOpen,
+        recentEntries,
+        runEditorAction,
+        handleNormalizeTable,
+        handleRegenerateFolderFiles,
+      }),
+    [
+      t,
+      hasFile,
+      hasVault,
+      deps,
+      exportActions,
+      vault.selectVault,
+      handleSave,
+      handleSaveAs,
+      handleFind,
+      openPanel,
+      handleOpenMacros,
+      handleOpenBib,
+      recentEntries,
+      runEditorAction,
+      handleNormalizeTable,
+      handleRegenerateFolderFiles,
+    ],
+  )
 
   const currentContent = vault.openFile?.content ?? WELCOME
   const editorFlex = editorWidth || undefined
@@ -3842,12 +4633,23 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
   if (showWelcome) {
     return (
       <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
-        <TitleBar filename={undefined} isDirty={false} onClose={handleCloseRequest} onSettingsClick={() => setSettingsOpen(true)} />
+        <TitleBar
+          filename={undefined}
+          isDirty={false}
+          onClose={handleCloseRequest}
+          onSettingsClick={() => setSettingsOpen(true)}
+        />
         <WelcomeScreen
-          onOpenVault={() => { void vault.selectVault() }}
-          onCreateVault={() => { void vault.createVault() }}
+          onOpenVault={() => {
+            void vault.selectVault()
+          }}
+          onCreateVault={() => {
+            void vault.createVault()
+          }}
           recentVaults={vault.recentVaults}
-          onOpenRecent={(path) => { void vault.selectVault(path) }}
+          onOpenRecent={(path) => {
+            void vault.selectVault(path)
+          }}
         />
         <ToastContainer />
         <CommandPalette
@@ -3872,7 +4674,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               setSettingsSection(undefined)
               setGitOpenSignal((n) => n + 1)
             }}
-            onClose={() => { setSettingsOpen(false); setSettingsSection(undefined) }}
+            onClose={() => {
+              setSettingsOpen(false)
+              setSettingsSection(undefined)
+            }}
             onChange={updateSettings}
           />
           <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
@@ -3883,10 +4688,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
   return (
     <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
-      <TitleBar filename={vault.openFile?.name} isDirty={vault.openFile?.isDirty} onClose={handleCloseRequest} onSettingsClick={() => setSettingsOpen(true)} />
-      <MenuBar menus={menus}>
-        {gitBarEl}
-      </MenuBar>
+      <TitleBar
+        filename={vault.openFile?.name}
+        isDirty={vault.openFile?.isDirty}
+        onClose={handleCloseRequest}
+        onSettingsClick={() => setSettingsOpen(true)}
+      />
+      <MenuBar menus={menus}>{gitBarEl}</MenuBar>
       {deps && (!deps.pandoc || !deps.zip) && (
         <DepsWarning
           deps={deps}
@@ -3895,9 +4703,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           onDismiss={dismissDep}
         />
       )}
-      {settings.cloudSyncBannerEnabled && cloudSuggestion && !cloudBannerDismissed && vault.vaultPath && (
-        <CloudSyncBanner provider={cloudSuggestion} onDismiss={dismissCloudBanner} />
-      )}
+      {settings.cloudSyncBannerEnabled &&
+        cloudSuggestion &&
+        !cloudBannerDismissed &&
+        vault.vaultPath && (
+          <CloudSyncBanner provider={cloudSuggestion} onDismiss={dismissCloudBanner} />
+        )}
       <div className="topbar">
         <Toolbar
           editorRef={editorRef}
@@ -3911,7 +4722,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       <div className="main" ref={mainRef}>
         {/* ── Sidebar ── */}
-        <div className="sidebar" style={{ width: sidebarCollapsed ? 0 : sidebarWidth, overflow: sidebarCollapsed ? "hidden" : "auto" }}>
+        <div
+          className="sidebar"
+          style={{
+            width: sidebarCollapsed ? 0 : sidebarWidth,
+            overflow: sidebarCollapsed ? "hidden" : "auto",
+          }}
+        >
           <div className="sidebar-header">
             <button
               className="sidebar-collapse-btn"
@@ -3923,275 +4740,300 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           </div>
           {!sidebarCollapsed && (
             <>
-          <div className="sidebar-content">
-            {sidebarMode === "files" && (
-              <FileTree
-                vaultPath={vault.vaultPath}
-                tree={vault.tree}
-                activePath={vault.openFile?.path ?? null}
-                isLoading={vault.isLoading}
-                onSelectVault={handleSelectVault}
-                onOpenFile={handleOpenFileNode}
-                onCreateFile={handleTreeCreateFile}
-                onCreateFolder={handleTreeCreateFolder}
-                onNewFromTemplate={handleNewFromTemplateIn}
-                onEditFolderRules={editFolderRules}
-                onSaveAsTemplate={handleSaveAsTemplate}
-                onDeleteFile={vault.deleteFile}
-                onRenameFile={handleRenameFile}
-                onMoveFile={vault.moveFile}
-                conflictPaths={cloudConflictPaths}
-                onConflictClick={handleConflictClick}
-              />
-            )}
-            {sidebarMode === "search" && (
-              <SearchPanel
-                onSearch={vault.search}
-                onOpenResult={(path, line) => {
-                  const node = findVaultNodeByPath(path)
-                  if (!node) return
-                  if (line !== undefined) pendingJumpRef.current = line
-                  handleOpenFileNode(node)
-                  setSidebarMode("files")
-                }}
-                onReplaceAll={async (query, replacement, opts) => {
-                  const count = await vault.replaceInVault(query, replacement, opts)
-                  if (count > 0) showToast(t.search.replaced(count), "success")
-                  return count
-                }}
-              />
-            )}
-            {sidebarMode === "searchReplace" && vault.vaultPath && (
-              <LazyRegion region="panel">
-                <SearchReplacePanel
-                  vaultPath={vault.vaultPath}
-                  onOpenFile={(path, line) => {
-                    const node = findVaultNodeByPath(path)
-                    if (!node) return
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }}
-                  onReplaceInFile={handleReplaceInFile}
-                  state={searchReplaceState}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "outline" && (
-              <OutlinePanel content={previewContent} editorRef={editorRef} activeLine={cursorPos.line} onReorder={handleOutlineReorder} />
-            )}
-            {sidebarMode === "backlinks" && (
-              <BacklinksPanel
-                currentFile={vault.openFile}
-                tree={vault.tree}
-                onSearch={vault.search}
-                onOpenFile={(node, line) => {
-                  if (line !== undefined) pendingJumpRef.current = line
-                  handleOpenFileNode(node)
-                  setSidebarMode("files")
-                }}
-              />
-            )}
-            {sidebarMode === "tags" && (
-              <TagPanel
-                files={vaultFiles}
-                onOpenFile={(path, line) => {
-                  const node = findVaultNodeByPath(path)
-                  if (node) {
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }
-                }}
-              />
-            )}
-            {sidebarMode === "labels" && (
-              <LabelsPanel
-                files={vaultFiles}
-                onOpenFile={(path, line) => {
-                  const node = findVaultNodeByPath(path)
-                  if (node) {
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }
-                }}
-              />
-            )}
-            {sidebarMode === "keep" && (
-              <KeepPanel
-                files={vaultFiles}
-                onOpenFile={(path, line) => {
-                  const node = findVaultNodeByPath(path)
-                  if (node) {
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }
-                }}
-              />
-            )}
-            {sidebarMode === "quality" && (
-              <DocumentLabPanel
-                files={vaultFiles}
-                activePath={vault.activeTabPath}
-                activeContent={vault.openFile?.content ?? ""}
-                onOpenFile={(path, line) => {
-                  const node = findVaultNodeByPath(path)
-                  if (node) {
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }
-                }}
-              />
-            )}
-            {sidebarMode === "properties" && (
-              <FrontmatterPanel
-                content={vault.openFile?.content ?? ""}
-                onChange={handleFrontmatterChange}
-              />
-            )}
-            {sidebarMode === "graph" && (
-              <LazyRegion region="panel">
-                <GraphPanel
-                  tree={vault.tree}
-                  openTabs={vault.openTabs}
-                  activePath={vault.activeTabPath}
-                  onOpenFile={(path) => {
-                    const node = findVaultNodeByPath(path)
-                    if (node) handleOpenFileNode(node)
-                  }}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "todo" && (
-              <LazyRegion region="panel">
-                <TodoPanel
-                  openTabs={vault.openTabs}
-                  onNavigate={handleTodoNavigate}
-                  onToggle={handleTodoToggle}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "equations" && (
-              <LazyRegion region="panel">
-                <EquationsPanel content={vault.openFile?.content ?? ""} editorRef={editorRef} />
-              </LazyRegion>
-            )}
-            {sidebarMode === "environments" && (
-              <LazyRegion region="panel">
-                <EnvironmentsPanel
-                  openTabs={vault.openTabs}
-                  editorRef={editorRef}
-                  activeTabPath={vault.activeTabPath}
-                  onOpenFile={(path) => {
-                    const node = findVaultNodeByPath(path)
-                    if (node) handleOpenFileNode(node)
-                  }}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "stats" && (
-              <LazyRegion region="panel">
-                <VaultStatsPanel
-                  tree={vault.tree}
-                  openTabs={vault.openTabs}
-                  wikiNames={wikiNames}
-                  onOpenFile={(path, line) => {
-                    const node = findVaultNodeByPath(path)
-                    if (!node) return
-                    if (line !== undefined) pendingJumpRef.current = line
-                    handleOpenFileNode(node)
-                    setSidebarMode("files")
-                  }}
-                  onCreateNote={async (name) => {
-                    await vault.createFile(`${name}.md`, `# ${name}\n`)
-                  }}
-                  onRemoveLink={async (path, line, link) => {
-                    const openTab = vault.openTabs.find((tab) => tab.path === path)
-                    const content = openTab ? openTab.content : toEditorContent(path, await readTextFile(path))
-                    const lines = content.split("\n")
-                    const idx = line - 1
-                    if (idx < 0 || idx >= lines.length) return
-                    const pattern = `[[${link}]]`
-                    if (!lines[idx].includes(pattern)) return
-                    lines[idx] = lines[idx].split(pattern).join("")
-                    const updated = lines.join("\n")
-                    // writeFileSafe masks special blocks (toDiskContent), cancels
-                    // the pending autosave so it can't clobber this write, patches
-                    // the open tab, and refreshes mtime.
-                    try {
-                      await vault.writeFileSafe(path, updated)
-                    } catch (e) {
-                      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
-                    }
-                  }}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "help" && (
-              <LazyRegion region="panel">
-                <HelpPanel />
-              </LazyRegion>
-            )}
-            {sidebarMode === "symbols" && (
-              <SymbolPickerPanel onInsert={(latex) => {
-                const editor = editorRef.current
-                if (!editor) return
-                editor.focus()
-                editor.trigger("keyboard", "type", { text: latex })
-              }} />
-            )}
-            {sidebarMode === "pdfPreview" && (
-              <LazyRegion region="panel">
-                <PdfPreviewPanel
-                  pdfPath={pdfPath}
-                  onClickSource={handlePdfClickSource}
-                  synctex={syncTex?.synctex ?? null}
-                  focusPage={pdfFocusPage}
-                  invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "cloudSync" && (
-              <CloudSyncPanel
-                conflicts={cloudConflicts}
-                onOpenFile={(path) => {
-                  const node = findVaultNodeByPath(path)
-                  if (node) handleOpenFileNode(node)
-                }}
-                onResolved={() => { if (vault.vaultPath) vault.refreshTree(vault.vaultPath) }}
-              />
-            )}
-            {sidebarMode === "comments" && (
-              <LazyRegion region="panel">
-                <CommentsPanel
-                  comments={comments}
-                  vaultPath={vault.vaultPath}
-                  activeFilePath={vault.openFile?.path ?? null}
-                  onJumpTo={handleJumpToComment}
-                  onAdd={() => { void handleAddCommentAtCursor() }}
-                  onToggleResolved={(id) => { void handleToggleCommentResolved(id) }}
-                  onDelete={(id) => { void handleDeleteComment(id) }}
-                  onEditBody={(id, body) => { void handleEditCommentBody(id, body) }}
-                />
-              </LazyRegion>
-            )}
-            {sidebarMode === "ai" && (
-              <LazyRegion region="panel">
-                <AiPanel
-                  settings={settings}
-                  editor={editorRef.current}
-                  fileContent={vault.openFile?.content ?? null}
-                  fileName={vault.openFile?.name ?? null}
-                  renderHtml={aiRenderHtml}
-                  onOpenSettings={() => { setSettingsSection("ai"); setSettingsOpen(true) }}
-                />
-              </LazyRegion>
-            )}
-          </div>
-          </>
+              <div className="sidebar-content">
+                {sidebarMode === "files" && (
+                  <FileTree
+                    vaultPath={vault.vaultPath}
+                    tree={vault.tree}
+                    activePath={vault.openFile?.path ?? null}
+                    isLoading={vault.isLoading}
+                    onSelectVault={handleSelectVault}
+                    onOpenFile={handleOpenFileNode}
+                    onCreateFile={handleTreeCreateFile}
+                    onCreateFolder={handleTreeCreateFolder}
+                    onNewFromTemplate={handleNewFromTemplateIn}
+                    onEditFolderRules={editFolderRules}
+                    onSaveAsTemplate={handleSaveAsTemplate}
+                    onDeleteFile={vault.deleteFile}
+                    onRenameFile={handleRenameFile}
+                    onMoveFile={vault.moveFile}
+                    conflictPaths={cloudConflictPaths}
+                    onConflictClick={handleConflictClick}
+                  />
+                )}
+                {sidebarMode === "search" && (
+                  <SearchPanel
+                    onSearch={vault.search}
+                    onOpenResult={(path, line) => {
+                      const node = findVaultNodeByPath(path)
+                      if (!node) return
+                      if (line !== undefined) pendingJumpRef.current = line
+                      handleOpenFileNode(node)
+                      setSidebarMode("files")
+                    }}
+                    onReplaceAll={async (query, replacement, opts) => {
+                      const count = await vault.replaceInVault(query, replacement, opts)
+                      if (count > 0) showToast(t.search.replaced(count), "success")
+                      return count
+                    }}
+                  />
+                )}
+                {sidebarMode === "searchReplace" && vault.vaultPath && (
+                  <LazyRegion region="panel">
+                    <SearchReplacePanel
+                      vaultPath={vault.vaultPath}
+                      onOpenFile={(path, line) => {
+                        const node = findVaultNodeByPath(path)
+                        if (!node) return
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }}
+                      onReplaceInFile={handleReplaceInFile}
+                      state={searchReplaceState}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "outline" && (
+                  <OutlinePanel
+                    content={previewContent}
+                    editorRef={editorRef}
+                    activeLine={cursorPos.line}
+                    onReorder={handleOutlineReorder}
+                  />
+                )}
+                {sidebarMode === "backlinks" && (
+                  <BacklinksPanel
+                    currentFile={vault.openFile}
+                    tree={vault.tree}
+                    onSearch={vault.search}
+                    onOpenFile={(node, line) => {
+                      if (line !== undefined) pendingJumpRef.current = line
+                      handleOpenFileNode(node)
+                      setSidebarMode("files")
+                    }}
+                  />
+                )}
+                {sidebarMode === "tags" && (
+                  <TagPanel
+                    files={vaultFiles}
+                    onOpenFile={(path, line) => {
+                      const node = findVaultNodeByPath(path)
+                      if (node) {
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }
+                    }}
+                  />
+                )}
+                {sidebarMode === "labels" && (
+                  <LabelsPanel
+                    files={vaultFiles}
+                    onOpenFile={(path, line) => {
+                      const node = findVaultNodeByPath(path)
+                      if (node) {
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }
+                    }}
+                  />
+                )}
+                {sidebarMode === "keep" && (
+                  <KeepPanel
+                    files={vaultFiles}
+                    onOpenFile={(path, line) => {
+                      const node = findVaultNodeByPath(path)
+                      if (node) {
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }
+                    }}
+                  />
+                )}
+                {sidebarMode === "quality" && (
+                  <DocumentLabPanel
+                    files={vaultFiles}
+                    activePath={vault.activeTabPath}
+                    activeContent={vault.openFile?.content ?? ""}
+                    onOpenFile={(path, line) => {
+                      const node = findVaultNodeByPath(path)
+                      if (node) {
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }
+                    }}
+                  />
+                )}
+                {sidebarMode === "properties" && (
+                  <FrontmatterPanel
+                    content={vault.openFile?.content ?? ""}
+                    onChange={handleFrontmatterChange}
+                  />
+                )}
+                {sidebarMode === "graph" && (
+                  <LazyRegion region="panel">
+                    <GraphPanel
+                      tree={vault.tree}
+                      openTabs={vault.openTabs}
+                      activePath={vault.activeTabPath}
+                      onOpenFile={(path) => {
+                        const node = findVaultNodeByPath(path)
+                        if (node) handleOpenFileNode(node)
+                      }}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "todo" && (
+                  <LazyRegion region="panel">
+                    <TodoPanel
+                      openTabs={vault.openTabs}
+                      onNavigate={handleTodoNavigate}
+                      onToggle={handleTodoToggle}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "equations" && (
+                  <LazyRegion region="panel">
+                    <EquationsPanel content={vault.openFile?.content ?? ""} editorRef={editorRef} />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "environments" && (
+                  <LazyRegion region="panel">
+                    <EnvironmentsPanel
+                      openTabs={vault.openTabs}
+                      editorRef={editorRef}
+                      activeTabPath={vault.activeTabPath}
+                      onOpenFile={(path) => {
+                        const node = findVaultNodeByPath(path)
+                        if (node) handleOpenFileNode(node)
+                      }}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "stats" && (
+                  <LazyRegion region="panel">
+                    <VaultStatsPanel
+                      tree={vault.tree}
+                      openTabs={vault.openTabs}
+                      wikiNames={wikiNames}
+                      onOpenFile={(path, line) => {
+                        const node = findVaultNodeByPath(path)
+                        if (!node) return
+                        if (line !== undefined) pendingJumpRef.current = line
+                        handleOpenFileNode(node)
+                        setSidebarMode("files")
+                      }}
+                      onCreateNote={async (name) => {
+                        await vault.createFile(`${name}.md`, `# ${name}\n`)
+                      }}
+                      onRemoveLink={async (path, line, link) => {
+                        const openTab = vault.openTabs.find((tab) => tab.path === path)
+                        const content = openTab
+                          ? openTab.content
+                          : toEditorContent(path, await readTextFile(path))
+                        const lines = content.split("\n")
+                        const idx = line - 1
+                        if (idx < 0 || idx >= lines.length) return
+                        const pattern = `[[${link}]]`
+                        if (!lines[idx].includes(pattern)) return
+                        lines[idx] = lines[idx].split(pattern).join("")
+                        const updated = lines.join("\n")
+                        // writeFileSafe masks special blocks (toDiskContent), cancels
+                        // the pending autosave so it can't clobber this write, patches
+                        // the open tab, and refreshes mtime.
+                        try {
+                          await vault.writeFileSafe(path, updated)
+                        } catch (e) {
+                          showToast(
+                            t.vault.errorSaving(e instanceof Error ? e.message : String(e)),
+                            "error",
+                          )
+                        }
+                      }}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "help" && (
+                  <LazyRegion region="panel">
+                    <HelpPanel />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "symbols" && (
+                  <SymbolPickerPanel
+                    onInsert={(latex) => {
+                      const editor = editorRef.current
+                      if (!editor) return
+                      editor.focus()
+                      editor.trigger("keyboard", "type", { text: latex })
+                    }}
+                  />
+                )}
+                {sidebarMode === "pdfPreview" && (
+                  <LazyRegion region="panel">
+                    <PdfPreviewPanel
+                      pdfPath={pdfPath}
+                      onClickSource={handlePdfClickSource}
+                      synctex={syncTex?.synctex ?? null}
+                      focusPage={pdfFocusPage}
+                      invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "cloudSync" && (
+                  <CloudSyncPanel
+                    conflicts={cloudConflicts}
+                    onOpenFile={(path) => {
+                      const node = findVaultNodeByPath(path)
+                      if (node) handleOpenFileNode(node)
+                    }}
+                    onResolved={() => {
+                      if (vault.vaultPath) vault.refreshTree(vault.vaultPath)
+                    }}
+                  />
+                )}
+                {sidebarMode === "comments" && (
+                  <LazyRegion region="panel">
+                    <CommentsPanel
+                      comments={comments}
+                      vaultPath={vault.vaultPath}
+                      activeFilePath={vault.openFile?.path ?? null}
+                      onJumpTo={handleJumpToComment}
+                      onAdd={() => {
+                        void handleAddCommentAtCursor()
+                      }}
+                      onToggleResolved={(id) => {
+                        void handleToggleCommentResolved(id)
+                      }}
+                      onDelete={(id) => {
+                        void handleDeleteComment(id)
+                      }}
+                      onEditBody={(id, body) => {
+                        void handleEditCommentBody(id, body)
+                      }}
+                    />
+                  </LazyRegion>
+                )}
+                {sidebarMode === "ai" && (
+                  <LazyRegion region="panel">
+                    <AiPanel
+                      settings={settings}
+                      editor={editorRef.current}
+                      fileContent={vault.openFile?.content ?? null}
+                      fileName={vault.openFile?.name ?? null}
+                      renderHtml={aiRenderHtml}
+                      onOpenSettings={() => {
+                        setSettingsSection("ai")
+                        setSettingsOpen(true)
+                      }}
+                    />
+                  </LazyRegion>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -4239,7 +5081,13 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             <LazyRegion region="editor" fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
               <MonacoEditor
                 key={vault.activeTabPath ?? "welcome"}
-                defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : vault.openFile?.mode === "typ" ? "typst" : "markdown"}
+                defaultLanguage={
+                  vault.openFile?.mode === "tex"
+                    ? "latex"
+                    : vault.openFile?.mode === "typ"
+                      ? "typst"
+                      : "markdown"
+                }
                 defaultValue={currentContent}
                 onChange={handleChange}
                 beforeMount={handleBeforeMount}
@@ -4261,54 +5109,63 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             </LazyRegion>
           )}
           {/* Vim mode status bar */}
-          <div
-            ref={vimStatusRef}
-            className={`vim-statusbar${settings.vimMode ? "" : " hidden"}`}
-          />
+          <div ref={vimStatusRef} className={`vim-statusbar${settings.vimMode ? "" : " hidden"}`} />
         </div>
 
-        {settings.previewVisible && vault.openFile?.mode !== "pdf" && vault.openFile?.mode !== "typ" && <Resizer onDrag={handleEditorResize} />}
+        {settings.previewVisible &&
+          vault.openFile?.mode !== "pdf" &&
+          vault.openFile?.mode !== "typ" && <Resizer onDrag={handleEditorResize} />}
 
         {/* ── Preview (suppressed for PDF tabs, where the PDF viewer takes the
              full pane, and for Typst sources, whose preview is the compiled PDF) ── */}
-        {settings.previewVisible && vault.openFile?.mode !== "pdf" && vault.openFile?.mode !== "typ" && (
-          <ErrorBoundary region="preview">
-          <div
-            className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
-            id="preview-pane"
-            ref={previewPaneRef}
-          >
-            {customCss && <style>{customCss}</style>}
-            <div
-              className="preview-content"
-              style={{ fontSize: settings.previewFontSize }}
-              onClick={handlePreviewClick}
-              onDoubleClick={handlePreviewDblClick}
-              ref={previewContentRef}
-            />
-          </div>
-          </ErrorBoundary>
-        )}
-
-        {/* ── Split view: reference panel ── */}
-        {splitTab && (() => {
-          return (
-            <>
-              <Resizer onDrag={() => {}} />
-              <div className="pane preview-pane split-pane" ref={splitPreviewRef}>
-                <div className="split-pane-header">
-                  <span className="split-pane-title">{splitTab?.name ?? ""}</span>
-                  <button className="split-pane-close" onClick={() => setSplitFile(null)} title={t.app.closeSplitPane} aria-label={t.app.closeSplitPane}>×</button>
-                </div>
+        {settings.previewVisible &&
+          vault.openFile?.mode !== "pdf" &&
+          vault.openFile?.mode !== "typ" && (
+            <ErrorBoundary region="preview">
+              <div
+                className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
+                id="preview-pane"
+                ref={previewPaneRef}
+              >
+                {customCss && <style>{customCss}</style>}
                 <div
                   className="preview-content"
                   style={{ fontSize: settings.previewFontSize }}
-                  ref={splitContentRef}
+                  onClick={handlePreviewClick}
+                  onDoubleClick={handlePreviewDblClick}
+                  ref={previewContentRef}
                 />
               </div>
-            </>
-          )
-        })()}
+            </ErrorBoundary>
+          )}
+
+        {/* ── Split view: reference panel ── */}
+        {splitTab &&
+          (() => {
+            return (
+              <>
+                <Resizer onDrag={() => {}} />
+                <div className="pane preview-pane split-pane" ref={splitPreviewRef}>
+                  <div className="split-pane-header">
+                    <span className="split-pane-title">{splitTab?.name ?? ""}</span>
+                    <button
+                      className="split-pane-close"
+                      onClick={() => setSplitFile(null)}
+                      title={t.app.closeSplitPane}
+                      aria-label={t.app.closeSplitPane}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div
+                    className="preview-content"
+                    style={{ fontSize: settings.previewFontSize }}
+                    ref={splitContentRef}
+                  />
+                </div>
+              </>
+            )
+          })()}
       </div>
 
       <StatusBar
@@ -4365,14 +5222,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       <BookmarksPopup
         open={bookmarksOpen}
-        bookmarks={Object.entries(bookmarks).map(([slot, line]) => ({ slot: parseInt(slot), line }))}
+        bookmarks={Object.entries(bookmarks).map(([slot, line]) => ({
+          slot: parseInt(slot),
+          line,
+        }))}
         onGoTo={(line) => {
           const editor = editorRef.current
           editor?.setPosition({ lineNumber: line, column: 1 })
           editor?.revealLineInCenter(line)
           editor?.focus()
         }}
-        onRemove={(slot) => setBookmarks((prev) => { const next = { ...prev }; delete next[slot]; saveBookmarks(next); return next })}
+        onRemove={(slot) =>
+          setBookmarks((prev) => {
+            const next = { ...prev }
+            delete next[slot]
+            saveBookmarks(next)
+            return next
+          })
+        }
         onClose={() => setBookmarksOpen(false)}
       />
 
@@ -4385,7 +5252,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           settings={settings}
           initialSection={settingsSection}
           cloudProvider={cloudInfo?.provider ?? null}
-          onClose={() => { setSettingsOpen(false); setSettingsSection(undefined) }}
+          onClose={() => {
+            setSettingsOpen(false)
+            setSettingsSection(undefined)
+          }}
           onChange={updateSettings}
         />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
@@ -4404,19 +5274,30 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             panel: starting or resetting a timer is a glance-and-click action,
             and it should not cost the file tree its place on screen. */}
         {focusPopoverOpen && (
-          <div className="focus-popover" ref={focusPopoverRef} role="dialog" aria-label={t.sidebar.focusTimer}>
+          <div
+            className="focus-popover"
+            ref={focusPopoverRef}
+            role="dialog"
+            aria-label={t.sidebar.focusTimer}
+          >
             <LazyRegion region="dialog">
               <FocusTimerPanel
                 content={vault.openFile?.content ?? ""}
                 config={pomodoroConfig}
                 focusTimer={focusTimer}
                 wordGoal={settings.wordGoal}
-                onConfigChange={(patch) => updateSettings({
-                  ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
-                  ...(patch.breakMin !== undefined && { pomodoroBreakMin: patch.breakMin }),
-                  ...(patch.longBreakMin !== undefined && { pomodoroLongBreakMin: patch.longBreakMin }),
-                  ...(patch.cyclesBeforeLongBreak !== undefined && { pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak }),
-                })}
+                onConfigChange={(patch) =>
+                  updateSettings({
+                    ...(patch.workMin !== undefined && { pomodoroWorkMin: patch.workMin }),
+                    ...(patch.breakMin !== undefined && { pomodoroBreakMin: patch.breakMin }),
+                    ...(patch.longBreakMin !== undefined && {
+                      pomodoroLongBreakMin: patch.longBreakMin,
+                    }),
+                    ...(patch.cyclesBeforeLongBreak !== undefined && {
+                      pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak,
+                    }),
+                  })
+                }
               />
             </LazyRegion>
           </div>
@@ -4456,10 +5337,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       )}
 
       {latexDiagnostics && (
-        <LatexErrorModal
-          diagnostics={latexDiagnostics}
-          onClose={() => setLatexDiagnostics(null)}
-        />
+        <LatexErrorModal diagnostics={latexDiagnostics} onClose={() => setLatexDiagnostics(null)} />
       )}
 
       {updateInfo?.available && !updaterDismissed && (

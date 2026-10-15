@@ -63,7 +63,11 @@ export async function writeTextFileAtomic(path: string, content: string): Promis
   try {
     await rename(tmpPath, path)
   } catch (e) {
-    try { await remove(tmpPath) } catch { /* best-effort cleanup */ }
+    try {
+      await remove(tmpPath)
+    } catch {
+      /* best-effort cleanup */
+    }
     throw e
   }
 }

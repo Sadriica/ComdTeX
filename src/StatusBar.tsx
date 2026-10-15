@@ -36,7 +36,24 @@ function charCount(text: string): number {
   return text.length
 }
 
-export default function StatusBar({ mode, line, col, content, isDirty, macroCount, selectedWords, wordGoal, onGoToLine, texEngine, texEngineState, cloudSync, onCloudSyncClick, cloudConflictCount, readingWpm = 200, fillingGaps = false }: StatusBarProps) {
+export default function StatusBar({
+  mode,
+  line,
+  col,
+  content,
+  isDirty,
+  macroCount,
+  selectedWords,
+  wordGoal,
+  onGoToLine,
+  texEngine,
+  texEngineState,
+  cloudSync,
+  onCloudSyncClick,
+  cloudConflictCount,
+  readingWpm = 200,
+  fillingGaps = false,
+}: StatusBarProps) {
   const t = useT()
   // Memoized so the cursor moving (line/col change every keystroke) doesn't
   // re-run these O(n) document scans; they only recompute when `content` (the
@@ -60,13 +77,34 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
       <span
         role="status"
         aria-live="polite"
-        style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+        }}
       >
-        {texEngineState === "compiling" ? t.statusBar.texEngineCompiling : fillingGaps ? t.aiGaps.working : ""}
+        {texEngineState === "compiling"
+          ? t.statusBar.texEngineCompiling
+          : fillingGaps
+            ? t.aiGaps.working
+            : ""}
       </span>
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
-        {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : mode === "typ" ? "Typst" : t.statusBar.modeMarkdown}</span>}
+        {mode && (
+          <span className="status-mode">
+            {mode === "tex"
+              ? t.statusBar.modeTex
+              : mode === "pdf"
+                ? "PDF"
+                : mode === "typ"
+                  ? "Typst"
+                  : t.statusBar.modeMarkdown}
+          </span>
+        )}
         {showTexEngine && (
           <span
             className="status-item status-tex-engine"
@@ -76,27 +114,30 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
             {texEngineLabel}
           </span>
         )}
-        {cloudSync && (() => {
-          const label = providerLabel(cloudSync.provider)
-          const hasConflicts = (cloudConflictCount ?? 0) > 0
-          return (
-            <button
-              className="status-item status-cloud-sync"
-              data-provider={cloudSync.provider}
-              data-conflicts={hasConflicts ? "true" : "false"}
-              title={t.cloudSync.statusBadgeTitle(label, cloudSync.rootPath)}
-              onClick={onCloudSyncClick}
-            >
-              {hasConflicts ? "⚠ " : "☁ "}
-              {t.cloudSync.statusBadge(label)}
-              {hasConflicts && ` (${cloudConflictCount})`}
-            </button>
-          )
-        })()}
+        {cloudSync &&
+          (() => {
+            const label = providerLabel(cloudSync.provider)
+            const hasConflicts = (cloudConflictCount ?? 0) > 0
+            return (
+              <button
+                className="status-item status-cloud-sync"
+                data-provider={cloudSync.provider}
+                data-conflicts={hasConflicts ? "true" : "false"}
+                title={t.cloudSync.statusBadgeTitle(label, cloudSync.rootPath)}
+                onClick={onCloudSyncClick}
+              >
+                {hasConflicts ? "⚠ " : "☁ "}
+                {t.cloudSync.statusBadge(label)}
+                {hasConflicts && ` (${cloudConflictCount})`}
+              </button>
+            )
+          })()}
       </span>
       <span className="status-right">
         {macroCount > 0 && (
-          <span className="status-item" title={t.statusBar.macrosLoaded}>{t.statusBar.macros(macroCount)}</span>
+          <span className="status-item" title={t.statusBar.macrosLoaded}>
+            {t.statusBar.macros(macroCount)}
+          </span>
         )}
         {selectedWords != null && selectedWords > 0 ? (
           <span className="status-item status-selection" title={t.statusBar.selectionTitle}>
@@ -107,7 +148,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
             <span className="status-goal-bar">
               <span
                 className={`status-goal-fill${wc >= wordGoal ? " completed" : ""}`}
-                style={{ width: `${Math.min(100, Math.round(wc / wordGoal * 100))}%` }}
+                style={{ width: `${Math.min(100, Math.round((wc / wordGoal) * 100))}%` }}
               />
             </span>
             {wc}/{wordGoal}
@@ -117,7 +158,10 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
         )}
         {fillingGaps && (
           <span className="status-item status-ai-busy">
-            <span className="status-ai-spinner" aria-hidden="true">⟳</span> {t.aiGaps.working}
+            <span className="status-ai-spinner" aria-hidden="true">
+              ⟳
+            </span>{" "}
+            {t.aiGaps.working}
           </span>
         )}
         <span className="status-item status-readtime" title={t.statusBar.readingTimeTitle}>

@@ -32,7 +32,10 @@ export function findByName(tree: FileNode[], name: string): FileNode | null {
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
       if (n.type === "file" && n.name.replace(/\.[^.]+$/, "").toLowerCase() === lower) return n
-      if (n.children) { const f = search(n.children); if (f) return f }
+      if (n.children) {
+        const f = search(n.children)
+        if (f) return f
+      }
     }
     return null
   }
@@ -49,7 +52,9 @@ export function findByName(tree: FileNode[], name: string): FileNode | null {
 export function matchesVaultRelPath(filePath: string, relPath: string): boolean {
   const norm = (s: string) => s.replace(/\\/g, "/").toLowerCase()
   const file = norm(filePath).replace(/\.[^./]+$/, "")
-  const rel = norm(relPath.trim()).replace(/\.[^./]+$/, "").replace(/^\.?\//, "")
+  const rel = norm(relPath.trim())
+    .replace(/\.[^./]+$/, "")
+    .replace(/^\.?\//, "")
   if (!rel) return false
   return file === rel || file.endsWith(`/${rel}`)
 }
@@ -59,7 +64,10 @@ export function findByVaultRelPath(tree: FileNode[], relPath: string): FileNode 
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
       if (n.type === "file" && matchesVaultRelPath(n.path, relPath)) return n
-      if (n.children) { const f = search(n.children); if (f) return f }
+      if (n.children) {
+        const f = search(n.children)
+        if (f) return f
+      }
     }
     return null
   }
@@ -69,7 +77,11 @@ export function findByVaultRelPath(tree: FileNode[], relPath: string): FileNode 
 const WIKILINK_RE = /\[\[([^\]|#\n]+?)(?:#([^\]|]+?))?(?:\|([^\]\n]+?))?\]\]/g
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 /**

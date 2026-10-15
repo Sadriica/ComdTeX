@@ -136,7 +136,7 @@ describe("parsePlotBlock", () => {
 
   it("parses multiple function lines into multiple entries", () => {
     const spec = parsePlotBlock("", "f(x) = x\ng(x) = x^2\nh(x) = sin(x)")
-    expect(spec.fns.map(f => f.label)).toEqual(["f", "g", "h"])
+    expect(spec.fns.map((f) => f.label)).toEqual(["f", "g", "h"])
   })
 
   it("skips comment lines starting with #", () => {

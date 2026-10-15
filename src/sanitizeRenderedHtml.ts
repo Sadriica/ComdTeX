@@ -95,7 +95,8 @@ function isScopedSvgStyle(node: Element): boolean {
   const id = svg?.getAttribute("id")
   if (!svg || !id || !/^[A-Za-z][\w-]*$/.test(id)) return false
   const css = (node.textContent ?? "").replace(/\/\*[\s\S]*?\*\//g, "")
-  if (/@import|@font-face|@namespace|expression\(|javascript:|<|url\((?!\s*['"]?#)/i.test(css)) return false
+  if (/@import|@font-face|@namespace|expression\(|javascript:|<|url\((?!\s*['"]?#)/i.test(css))
+    return false
   // Walk top-level rules by brace depth.
   let i = 0
   while (i < css.length) {
@@ -131,7 +132,15 @@ function isScopedSvgStyle(node: Element): boolean {
 // class="preview-checkbox" data-line>`), which the preview click handler
 // toggles.
 const FORBIDDEN_FORM_TAGS = new Set([
-  "form", "button", "textarea", "select", "option", "optgroup", "fieldset", "datalist", "output",
+  "form",
+  "button",
+  "textarea",
+  "select",
+  "option",
+  "optgroup",
+  "fieldset",
+  "datalist",
+  "output",
 ])
 const FORM_ATTRS = ["action", "formaction", "formmethod", "formtarget", "form", "name", "method"]
 

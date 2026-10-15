@@ -40,12 +40,26 @@ export function specialBlocksToPandoc(md: string): string {
   while (i < lines.length) {
     // Openers: ":::type", ":::type[Title]", and the ":::code python" language
     // variant (bare word after the type, code blocks only).
-    const open = /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(lines[i])
-    if (!open) { out.push(lines[i]); i++; continue }
+    const open =
+      /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(
+        lines[i],
+      )
+    if (!open) {
+      out.push(lines[i])
+      i++
+      continue
+    }
     const body: string[] = []
     let j = i + 1
-    while (j < lines.length && !/^:::\s*$/.test(lines[j])) { body.push(lines[j]); j++ }
-    if (j >= lines.length) { out.push(lines[i]); i++; continue } // unclosed: leave as-is
+    while (j < lines.length && !/^:::\s*$/.test(lines[j])) {
+      body.push(lines[j])
+      j++
+    }
+    if (j >= lines.length) {
+      out.push(lines[i])
+      i++
+      continue
+    } // unclosed: leave as-is
     const caption = SPECIAL_BLOCK_CAPTIONS[open[1]] + (open[2] ? `: ${open[2]}` : "")
     out.push(`**${caption}**`, "")
     if (open[1] === "excalidraw") {

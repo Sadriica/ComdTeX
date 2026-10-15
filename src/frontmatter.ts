@@ -35,8 +35,7 @@ export interface FrontmatterData {
 /** Strip surrounding single or double quotes, handling escaped quotes inside. */
 function unquote(s: string): string {
   if (s.length >= 2) {
-    if ((s[0] === '"' && s[s.length - 1] === '"') ||
-        (s[0] === "'" && s[s.length - 1] === "'")) {
+    if ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'")) {
       const inner = s.slice(1, -1)
       return s[0] === '"'
         ? inner.replace(/\\"/g, '"').replace(/\\\\/g, "\\")
@@ -56,11 +55,18 @@ function parseInlineArray(s: string): string[] {
   for (let i = 0; i < inner.length; i++) {
     const ch = inner[i]
     if (inStr) {
-      if (ch === "\\" && i + 1 < inner.length) { current += inner[++i]; continue }
-      if (ch === strChar) { inStr = false; continue }
+      if (ch === "\\" && i + 1 < inner.length) {
+        current += inner[++i]
+        continue
+      }
+      if (ch === strChar) {
+        inStr = false
+        continue
+      }
       current += ch
     } else if (ch === '"' || ch === "'") {
-      inStr = true; strChar = ch
+      inStr = true
+      strChar = ch
     } else if (ch === ",") {
       if (current.trim()) items.push(current.trim())
       current = ""
@@ -102,7 +108,7 @@ function parseYaml(text: string): FrontmatterData {
         const nextTrimmed = nextRaw.trim()
         // Stop if next key-value found (unindented, non-empty, contains colon)
         if (nextTrimmed && !nextRaw.startsWith(" ") && !nextRaw.startsWith("\t")) break
-        blockLines.push(fold ? nextTrimmed : (nextRaw.replace(/^\s{0,2}/, "")))
+        blockLines.push(fold ? nextTrimmed : nextRaw.replace(/^\s{0,2}/, ""))
         i++
       }
       data[key] = blockLines.join(fold ? " " : "\n").trim()
@@ -121,7 +127,10 @@ function parseYaml(text: string): FrontmatterData {
           break
         }
       }
-      if (items.length > 0) { data[key] = items; continue }
+      if (items.length > 0) {
+        data[key] = items
+        continue
+      }
       data[key] = ""
       continue
     }
@@ -133,11 +142,20 @@ function parseYaml(text: string): FrontmatterData {
     }
 
     // Boolean
-    if (rest === "true")  { data[key] = true;  continue }
-    if (rest === "false") { data[key] = false; continue }
+    if (rest === "true") {
+      data[key] = true
+      continue
+    }
+    if (rest === "false") {
+      data[key] = false
+      continue
+    }
 
     // Number
-    if (/^-?\d+(\.\d+)?$/.test(rest)) { data[key] = Number(rest); continue }
+    if (/^-?\d+(\.\d+)?$/.test(rest)) {
+      data[key] = Number(rest)
+      continue
+    }
 
     // Plain string (possibly quoted)
     data[key] = unquote(rest)
@@ -146,7 +164,9 @@ function parseYaml(text: string): FrontmatterData {
   return data
 }
 
-export function extractFrontmatter(text: string): { data: FrontmatterData; content: string } | null {
+export function extractFrontmatter(
+  text: string,
+): { data: FrontmatterData; content: string } | null {
   if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) return null
   const end = text.indexOf("\n---", 4)
   if (end === -1) return null
@@ -178,7 +198,11 @@ export function serializeFrontmatter(data: FrontmatterData): string {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 /** Render frontmatter as a styled HTML header (inserted before main content). */
@@ -191,9 +215,15 @@ export function renderFrontmatterHeader(data: FrontmatterData): string {
 
   const meta: string[] = []
   if (data.author) meta.push(`<span class="fm-author">${esc(String(data.author))}</span>`)
-  if (data.date)   meta.push(`<span class="fm-date">${esc(String(data.date))}</span>`)
+  if (data.date) meta.push(`<span class="fm-date">${esc(String(data.date))}</span>`)
   if (data.papersize) {
-    const papersizeDisplay: Record<string, string> = { a4: "A4", letter: "Letter", a5: "A5", a3: "A3", legal: "Legal" }
+    const papersizeDisplay: Record<string, string> = {
+      a4: "A4",
+      letter: "Letter",
+      a5: "A5",
+      a3: "A3",
+      legal: "Legal",
+    }
     const label = papersizeDisplay[String(data.papersize)] ?? String(data.papersize).toUpperCase()
     meta.push(`<span class="fm-papersize">${esc(label)}</span>`)
   }
@@ -207,9 +237,7 @@ export function renderFrontmatterHeader(data: FrontmatterData): string {
   }
 
   if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
-    const pills = data.tags
-      .map((tag) => `<span class="fm-tag">${esc(String(tag))}</span>`)
-      .join("")
+    const pills = data.tags.map((tag) => `<span class="fm-tag">${esc(String(tag))}</span>`).join("")
     parts.push(`<div class="fm-tags">${pills}</div>`)
   }
 
@@ -261,7 +289,12 @@ export function extractDetailedTags(text: string): DetailedTag[] {
   if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
     for (const t of parsed.data.tags) {
       const tag = String(t).toLowerCase()
-      tags.set(`frontmatter:${tag}`, { tag, source: "frontmatter", line: 1, type: classifyTag(tag) })
+      tags.set(`frontmatter:${tag}`, {
+        tag,
+        source: "frontmatter",
+        line: 1,
+        type: classifyTag(tag),
+      })
     }
   }
 
@@ -282,11 +315,14 @@ export function extractDetailedTags(text: string): DetailedTag[] {
       tags.set(`inline:${tag}:${index + 1}`, {
         tag,
         source: "inline",
-        line: index + 1 + (parsed ? text.slice(0, text.indexOf(content)).split("\n").length - 1 : 0),
+        line:
+          index + 1 + (parsed ? text.slice(0, text.indexOf(content)).split("\n").length - 1 : 0),
         type: classifyTag(tag),
       })
     }
   })
 
-  return [...tags.values()].sort((a, b) => a.tag.localeCompare(b.tag) || a.source.localeCompare(b.source))
+  return [...tags.values()].sort(
+    (a, b) => a.tag.localeCompare(b.tag) || a.source.localeCompare(b.source),
+  )
 }

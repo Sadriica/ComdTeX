@@ -16,39 +16,39 @@
  */
 
 export const NUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
-  theorem:     { es: "Teorema",     latex: "theorem" },
-  lemma:       { es: "Lema",        latex: "lemma" },
-  corollary:   { es: "Corolario",   latex: "corollary" },
+  theorem: { es: "Teorema", latex: "theorem" },
+  lemma: { es: "Lema", latex: "lemma" },
+  corollary: { es: "Corolario", latex: "corollary" },
   proposition: { es: "Proposición", latex: "proposition" },
-  definition:  { es: "Definición",  latex: "definition" },
-  example:     { es: "Ejemplo",     latex: "example" },
-  exercise:    { es: "Ejercicio",   latex: "exercise" },
+  definition: { es: "Definición", latex: "definition" },
+  example: { es: "Ejemplo", latex: "example" },
+  exercise: { es: "Ejercicio", latex: "exercise" },
 }
 
 export const UNNUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
-  proof:     { es: "Demostración", latex: "proof" },
-  remark:    { es: "Observación",  latex: "remark" },
-  note:      { es: "Nota",         latex: "note" },
+  proof: { es: "Demostración", latex: "proof" },
+  remark: { es: "Observación", latex: "remark" },
+  note: { es: "Nota", latex: "note" },
   // Callout-style environments (no numbering, themed icon via CSS class)
-  tip:       { es: "Consejo",      latex: "tip" },
-  hint:      { es: "Pista",        latex: "hint" },
-  info:      { es: "Información",  latex: "info" },
-  warning:   { es: "Advertencia",  latex: "warning" },
-  caution:   { es: "Precaución",   latex: "caution" },
-  attention: { es: "Atención",     latex: "attention" },
-  important: { es: "Importante",   latex: "important" },
-  danger:    { es: "Peligro",      latex: "danger" },
-  error:     { es: "Error",        latex: "error" },
-  failure:   { es: "Fallo",        latex: "failure" },
-  success:   { es: "Éxito",        latex: "success" },
-  check:     { es: "Verificado",   latex: "check" },
-  done:      { es: "Hecho",        latex: "done" },
-  question:  { es: "Pregunta",     latex: "question" },
-  help:      { es: "Ayuda",        latex: "help" },
-  faq:       { es: "FAQ",          latex: "faq" },
-  quote:     { es: "Cita",         latex: "quote" },
-  cite:      { es: "Referencia",   latex: "cite" },
-  abstract:  { es: "Resumen",      latex: "abstract" },
+  tip: { es: "Consejo", latex: "tip" },
+  hint: { es: "Pista", latex: "hint" },
+  info: { es: "Información", latex: "info" },
+  warning: { es: "Advertencia", latex: "warning" },
+  caution: { es: "Precaución", latex: "caution" },
+  attention: { es: "Atención", latex: "attention" },
+  important: { es: "Importante", latex: "important" },
+  danger: { es: "Peligro", latex: "danger" },
+  error: { es: "Error", latex: "error" },
+  failure: { es: "Fallo", latex: "failure" },
+  success: { es: "Éxito", latex: "success" },
+  check: { es: "Verificado", latex: "check" },
+  done: { es: "Hecho", latex: "done" },
+  question: { es: "Pregunta", latex: "question" },
+  help: { es: "Ayuda", latex: "help" },
+  faq: { es: "FAQ", latex: "faq" },
+  quote: { es: "Cita", latex: "quote" },
+  cite: { es: "Referencia", latex: "cite" },
+  abstract: { es: "Resumen", latex: "abstract" },
 }
 
 export const FOLDED_ENV: { es: string; latex: string } = { es: "Colapsado", latex: "folded" }
@@ -73,7 +73,8 @@ export function resetEnvCounters() {
 // Matches :::envname[optional title]{#thm:label}\ncontent\n:::
 // Also supports size prefix: :::sm envname[title]{#thm:label}
 // Also supports folded: :::folded[title]\ncontent\n:::
-const ENV_RE = () => /^:::(?:(sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*\n([\s\S]*?)^:::\s*$/gm
+const ENV_RE = () =>
+  /^:::(?:(sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*\n([\s\S]*?)^:::\s*$/gm
 
 // ── HTML rendering ────────────────────────────────────────────────────────────
 
@@ -84,7 +85,11 @@ import { renderPlotHTML } from "./functionPlot"
 import { renderCommDiagSVG } from "./commDiag"
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 // Inline error box for a special block whose renderer throws, so a single
@@ -141,7 +146,13 @@ export function clearExcalidrawSvgCache(): void {
 // is rendered once and reused. The output uses `currentColor`, so it's
 // theme-independent and safe to cache across theme/macros changes.
 const specialRenderCache = new Map<string, string>()
-function memoSpecial(kind: string, title: string, content: string, number: string, render: () => string): string {
+function memoSpecial(
+  kind: string,
+  title: string,
+  content: string,
+  number: string,
+  render: () => string,
+): string {
   const key = `${kind}\x00${number}\x00${title}\x00${content}`
   const hit = specialRenderCache.get(key)
   if (hit !== undefined) return hit
@@ -160,9 +171,7 @@ export function setExcalidrawPlaceholderText(text: string): void {
 }
 
 function buildExcalidrawHTML(title: string, number: string, sceneB64: string): string {
-  const header = title
-    ? `Excalidraw ${number}: ${escHtml(title)}`
-    : `Excalidraw ${number}`
+  const header = title ? `Excalidraw ${number}: ${escHtml(title)}` : `Excalidraw ${number}`
   const safeB64 = escHtml(sceneB64)
   const cachedSvg = sceneB64 ? excalidrawSvgCache.get(sceneB64) : undefined
   const body = cachedSvg
@@ -183,9 +192,10 @@ function buildExcalidrawHTML(title: string, number: string, sceneB64: string): s
 }
 
 function buildPseudocodeHTML(title: string, number: string, content: string): string {
-  const KEYWORDS = /\b(INPUT|OUTPUT|FOR|TO|DOWNTO|DO|END\s+FOR|WHILE|END\s+WHILE|IF|THEN|ELSE\s+IF|ELSE|END\s+IF|RETURN|FUNCTION|END\s+FUNCTION|PROCEDURE|END\s+PROCEDURE|ALGORITHM|REQUIRE|ENSURE|BEGIN|END|SWAP|REPEAT|UNTIL|BREAK|CONTINUE|PRINT|LET|SET)\b/g
+  const KEYWORDS =
+    /\b(INPUT|OUTPUT|FOR|TO|DOWNTO|DO|END\s+FOR|WHILE|END\s+WHILE|IF|THEN|ELSE\s+IF|ELSE|END\s+IF|RETURN|FUNCTION|END\s+FUNCTION|PROCEDURE|END\s+PROCEDURE|ALGORITHM|REQUIRE|ENSURE|BEGIN|END|SWAP|REPEAT|UNTIL|BREAK|CONTINUE|PRINT|LET|SET)\b/g
 
-  const lines = content.split("\n").filter(line => line !== undefined)
+  const lines = content.split("\n").filter((line) => line !== undefined)
   let lineNum = 0
 
   const renderedLines = lines.map((line) => {
@@ -198,9 +208,7 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
     return `<div class="pc-line" style="padding-left:${indentLevel * 1.5}em"><span class="pc-num">${lineNum}</span><span class="pc-content">${withKeywords}</span></div>`
   })
 
-  const header = title
-    ? `Algorithm ${number}: ${escHtml(title)}`
-    : `Algorithm ${number}`
+  const header = title ? `Algorithm ${number}: ${escHtml(title)}` : `Algorithm ${number}`
 
   const mermaidChart = pseudocodeToFlowchart(content)
 
@@ -212,9 +220,8 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
   // emits a `<div class="mermaid-diagram">` (no `language-mermaid`), the
   // effect's "needs mermaid" gate goes false, and the loop terminates.
   const cachedSvg = flowchartSvgCache.get(mermaidChart)
-  const sourceB64 = typeof btoa !== "undefined"
-    ? btoa(unescape(encodeURIComponent(mermaidChart)))
-    : ""
+  const sourceB64 =
+    typeof btoa !== "undefined" ? btoa(unescape(encodeURIComponent(mermaidChart))) : ""
   const flowchartBody = cachedSvg
     ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
     : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
@@ -257,7 +264,9 @@ export function buildEnvHTML(
 
   const isProof = envName === "proof"
   const safeTitle = escHtml(title)
-  const displayLabel = [info.es, number, safeTitle ? `(${safeTitle})` : ""].filter(Boolean).join(" ")
+  const displayLabel = [info.es, number, safeTitle ? `(${safeTitle})` : ""]
+    .filter(Boolean)
+    .join(" ")
   const sizeClass = size ? ` math-env-${size}` : ""
   const idAttr = label ? ` id="env-${escHtml(label)}"` : ""
 
@@ -267,7 +276,9 @@ export function buildEnvHTML(
     `<div class="math-env-body">${innerHTML}</div>`,
     isProof ? `<div class="math-env-qed">□</div>` : "",
     `</div>`,
-  ].filter(Boolean).join("\n")
+  ]
+    .filter(Boolean)
+    .join("\n")
 }
 
 /**
@@ -283,7 +294,7 @@ export function buildEnvHTML(
 export function extractEnvironments(
   text: string,
   renderFn: (inner: string) => string,
-  rawSource?: string
+  rawSource?: string,
 ): { text: string; slots: string[] } {
   const slots: string[] = []
   const labelOccurrences: Record<string, number> = {}
@@ -315,8 +326,7 @@ export function extractEnvironments(
     rawCursor = idx + opening.length
     return newlinesBeforeIdx + 1
   }
-  const lineOfInText = (idx: number): number =>
-    text.slice(0, idx).split("\n").length
+  const lineOfInText = (idx: number): number => text.slice(0, idx).split("\n").length
 
   const wrapWithSourceLine = (html: string, line: number): string =>
     `<div class="env-wrap" data-source-line="${line}">${html}</div>`
@@ -326,155 +336,190 @@ export function extractEnvironments(
   // no markdown formatting). Language goes after a SPACE, e.g. `:::code python`.
   // Supports `:::code` with no language (no class on <code>).
   const CODE_ENV_RE = /^:::code(?:[ \t]+(\S+))?[ \t]*\n([\s\S]*?)^:::[ \t]*$/gm
-  let current = text.replace(CODE_ENV_RE, (_match, lang: string | undefined, body: string, offset: number) => {
-    const opening = lang ? `:::code ${lang}` : `:::code`
-    const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
-    // Body is verbatim: preserve the trailing newline that closes its last line
-    // by NOT trimming. But strip the single trailing newline produced by `\n:::`.
-    const verbatim = body.endsWith("\n") ? body.slice(0, -1) : body
-    const cls = lang ? ` class="language-${escHtml(lang)}"` : ""
-    const html = `<pre><code${cls}>${escHtml(verbatim)}</code></pre>`
-    slots.push(wrapWithSourceLine(html, srcLine))
-    return `\x02ENV${slots.length - 1}\x03`
-  })
+  let current = text.replace(
+    CODE_ENV_RE,
+    (_match, lang: string | undefined, body: string, offset: number) => {
+      const opening = lang ? `:::code ${lang}` : `:::code`
+      const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
+      // Body is verbatim: preserve the trailing newline that closes its last line
+      // by NOT trimming. But strip the single trailing newline produced by `\n:::`.
+      const verbatim = body.endsWith("\n") ? body.slice(0, -1) : body
+      const cls = lang ? ` class="language-${escHtml(lang)}"` : ""
+      const html = `<pre><code${cls}>${escHtml(verbatim)}</code></pre>`
+      slots.push(wrapWithSourceLine(html, srcLine))
+      return `\x02ENV${slots.length - 1}\x03`
+    },
+  )
 
   let changed = true
   while (changed) {
     const before = current
-    current = current.replace(ENV_RE(), (match, size, rawName, title, label, content, offset: number) => {
-      const envName = rawName.toLowerCase()
-      // Build the exact opening as it appears in source: `:::[size ]name[title][{#label}]`
-      const sizeStr = size ? `${size} ` : ""
-      const titleStr = title !== undefined ? `[${title}]` : ""
-      const labelStr = label !== undefined ? `{#${label}}` : ""
-      const opening = `:::${sizeStr}${rawName}${titleStr}${labelStr}`
-      const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
+    current = current.replace(
+      ENV_RE(),
+      (match, size, rawName, title, label, content, offset: number) => {
+        const envName = rawName.toLowerCase()
+        // Build the exact opening as it appears in source: `:::[size ]name[title][{#label}]`
+        const sizeStr = size ? `${size} ` : ""
+        const titleStr = title !== undefined ? `[${title}]` : ""
+        const labelStr = label !== undefined ? `{#${label}}` : ""
+        const opening = `:::${sizeStr}${rawName}${titleStr}${labelStr}`
+        const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
 
-      if (envName === "pseudocode") {
-        counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
-        const pcNumber = String(counters["pseudocode"])
-        let html: string
-        // NOT memoized: buildPseudocodeHTML embeds a Mermaid flowchart and reads
-        // the (async-populated) `flowchartSvgCache`, so its output must be
-        // re-evaluated each render; otherwise the cached "no SVG yet" HTML keeps
-        // re-triggering the mermaid effect in an infinite re-render loop.
-        try { html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim()) }
-        catch (e) { html = specialEnvError("pseudocode", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
+        if (envName === "pseudocode") {
+          counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
+          const pcNumber = String(counters["pseudocode"])
+          let html: string
+          // NOT memoized: buildPseudocodeHTML embeds a Mermaid flowchart and reads
+          // the (async-populated) `flowchartSvgCache`, so its output must be
+          // re-evaluated each render; otherwise the cached "no SVG yet" HTML keeps
+          // re-triggering the mermaid effect in an infinite re-render loop.
+          try {
+            html = buildPseudocodeHTML(title ?? "", pcNumber, content.trim())
+          } catch (e) {
+            html = specialEnvError("pseudocode", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
 
-      if (envName === "flowchart") {
-        counters["flowchart"] = (counters["flowchart"] ?? 0) + 1
-        const fcNumber = String(counters["flowchart"])
-        let html: string
+        if (envName === "flowchart") {
+          counters["flowchart"] = (counters["flowchart"] ?? 0) + 1
+          const fcNumber = String(counters["flowchart"])
+          let html: string
+          try {
+            const mermaidChart = pseudocodeToFlowchart(content.trim())
+            const headerHtml = title
+              ? `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}: ${escHtml(title)}</span></div>`
+              : `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}</span></div>`
+            // Cache hit: embed pre-rendered SVG inline so the next React paint
+            // shows the diagram immediately: no flash of source, no async wait.
+            // The source is base64-encoded into a data attribute so the mermaid
+            // effect can re-render via the toolbar button if the user requests it.
+            const cachedSvg = flowchartSvgCache.get(mermaidChart)
+            const sourceB64 =
+              typeof btoa !== "undefined" ? btoa(unescape(encodeURIComponent(mermaidChart))) : ""
+            const body = cachedSvg
+              ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
+              : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
+            html = [`<div class="flowchart-block">`, headerHtml, body, `</div>`].join("")
+          } catch (e) {
+            html = specialEnvError("flowchart", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "truth") {
+          counters["truth"] = (counters["truth"] ?? 0) + 1
+          const num = String(counters["truth"])
+          const body = content.trim()
+          const t = title ?? ""
+          let html: string
+          try {
+            html = memoSpecial("truth", t, body, num, () => renderTruthTableHTML(t, body, num))
+          } catch (e) {
+            html = specialEnvError("truth", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "graph") {
+          counters["graph"] = (counters["graph"] ?? 0) + 1
+          const num = String(counters["graph"])
+          const body = content.trim()
+          const t = title ?? ""
+          let html: string
+          try {
+            html = memoSpecial("graph", t, body, num, () => renderGraphSVG(t, body, num))
+          } catch (e) {
+            html = specialEnvError("graph", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "plot") {
+          counters["plot"] = (counters["plot"] ?? 0) + 1
+          const num = String(counters["plot"])
+          const body = content.trim()
+          const t = title ?? ""
+          let html: string
+          try {
+            html = memoSpecial("plot", t, body, num, () => renderPlotHTML(t, body, num))
+          } catch (e) {
+            html = specialEnvError("plot", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "excalidraw") {
+          counters["excalidraw"] = (counters["excalidraw"] ?? 0) + 1
+          let html: string
+          try {
+            // Body is a single line of base64 JSON (may be empty for a fresh block).
+            const sceneB64 = content.replace(/\s+/g, "")
+            html = buildExcalidrawHTML(title ?? "", String(counters["excalidraw"]), sceneB64)
+            // Embed the source line so App can replace exactly this block's body.
+            html = html.replace("$LINE$", String(srcLine))
+          } catch (e) {
+            html = specialEnvError("excalidraw", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "commdiag") {
+          counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
+          const num = String(counters["commdiag"])
+          const body = content.trim()
+          const t = title ?? ""
+          let html: string
+          try {
+            html = memoSpecial("commdiag", t, body, num, () => renderCommDiagSVG(t, body, num))
+          } catch (e) {
+            html = specialEnvError("commdiag", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (!ALL_ENVS[envName]) return match
+
+        let number = ""
+        if (NUMBERED_ENVS[envName]) {
+          counters[envName] = (counters[envName] ?? 0) + 1
+          number = String(counters[envName])
+        }
+
+        let innerHTML: string
         try {
-        const mermaidChart = pseudocodeToFlowchart(content.trim())
-        const headerHtml = title
-          ? `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}: ${escHtml(title)}</span></div>`
-          : `<div class="flowchart-header"><span class="flowchart-title">Flowchart ${fcNumber}</span></div>`
-        // Cache hit: embed pre-rendered SVG inline so the next React paint
-        // shows the diagram immediately: no flash of source, no async wait.
-        // The source is base64-encoded into a data attribute so the mermaid
-        // effect can re-render via the toolbar button if the user requests it.
-        const cachedSvg = flowchartSvgCache.get(mermaidChart)
-        const sourceB64 = typeof btoa !== "undefined"
-          ? btoa(unescape(encodeURIComponent(mermaidChart)))
-          : ""
-        const body = cachedSvg
-          ? `<div class="mermaid-diagram" data-mermaid-source-b64="${sourceB64}">${cachedSvg}</div>`
-          : `<pre data-mermaid-source-b64="${sourceB64}"><code class="language-mermaid">${escHtml(mermaidChart)}</code></pre>`
-        html = [
-          `<div class="flowchart-block">`,
-          headerHtml,
-          body,
-          `</div>`,
-        ].join("")
-        } catch (e) { html = specialEnvError("flowchart", e) }
+          innerHTML = renderFn(content.trim())
+        } catch (e) {
+          const msg = String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          innerHTML = `<pre class="math-error">Error in environment: ${msg}</pre>`
+        }
+
+        let renderedLabel: string | undefined = label ?? undefined
+        if (label) {
+          const seen = (labelOccurrences[label] ?? 0) + 1
+          labelOccurrences[label] = seen
+          renderedLabel = seen === 1 ? label : `${label}-${seen}`
+        }
+
+        const html = buildEnvHTML(
+          envName,
+          title ?? "",
+          number,
+          innerHTML,
+          size ?? undefined,
+          renderedLabel,
+        )
         slots.push(wrapWithSourceLine(html, srcLine))
         return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (envName === "truth") {
-        counters["truth"] = (counters["truth"] ?? 0) + 1
-        const num = String(counters["truth"]); const body = content.trim(); const t = title ?? ""
-        let html: string
-        try { html = memoSpecial("truth", t, body, num, () => renderTruthTableHTML(t, body, num)) }
-        catch (e) { html = specialEnvError("truth", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (envName === "graph") {
-        counters["graph"] = (counters["graph"] ?? 0) + 1
-        const num = String(counters["graph"]); const body = content.trim(); const t = title ?? ""
-        let html: string
-        try { html = memoSpecial("graph", t, body, num, () => renderGraphSVG(t, body, num)) }
-        catch (e) { html = specialEnvError("graph", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (envName === "plot") {
-        counters["plot"] = (counters["plot"] ?? 0) + 1
-        const num = String(counters["plot"]); const body = content.trim(); const t = title ?? ""
-        let html: string
-        try { html = memoSpecial("plot", t, body, num, () => renderPlotHTML(t, body, num)) }
-        catch (e) { html = specialEnvError("plot", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (envName === "excalidraw") {
-        counters["excalidraw"] = (counters["excalidraw"] ?? 0) + 1
-        let html: string
-        try {
-          // Body is a single line of base64 JSON (may be empty for a fresh block).
-          const sceneB64 = content.replace(/\s+/g, "")
-          html = buildExcalidrawHTML(title ?? "", String(counters["excalidraw"]), sceneB64)
-          // Embed the source line so App can replace exactly this block's body.
-          html = html.replace("$LINE$", String(srcLine))
-        } catch (e) { html = specialEnvError("excalidraw", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (envName === "commdiag") {
-        counters["commdiag"] = (counters["commdiag"] ?? 0) + 1
-        const num = String(counters["commdiag"]); const body = content.trim(); const t = title ?? ""
-        let html: string
-        try { html = memoSpecial("commdiag", t, body, num, () => renderCommDiagSVG(t, body, num)) }
-        catch (e) { html = specialEnvError("commdiag", e) }
-        slots.push(wrapWithSourceLine(html, srcLine))
-        return `\x02ENV${slots.length - 1}\x03`
-      }
-
-      if (!ALL_ENVS[envName]) return match
-
-      let number = ""
-      if (NUMBERED_ENVS[envName]) {
-        counters[envName] = (counters[envName] ?? 0) + 1
-        number = String(counters[envName])
-      }
-
-      let innerHTML: string
-      try { innerHTML = renderFn(content.trim()) }
-      catch (e) {
-        const msg = String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-        innerHTML = `<pre class="math-error">Error in environment: ${msg}</pre>`
-      }
-
-      let renderedLabel: string | undefined = label ?? undefined
-      if (label) {
-        const seen = (labelOccurrences[label] ?? 0) + 1
-        labelOccurrences[label] = seen
-        renderedLabel = seen === 1 ? label : `${label}-${seen}`
-      }
-
-      const html = buildEnvHTML(envName, title ?? "", number, innerHTML, size ?? undefined, renderedLabel)
-      slots.push(wrapWithSourceLine(html, srcLine))
-      return `\x02ENV${slots.length - 1}\x03`
-    })
+      },
+    )
     changed = current !== before
   }
 
@@ -549,7 +594,8 @@ export type EnvironmentDocResolver = (docPath: string) => string | null
 // A dot may appear INSIDE a label (`thm:1.2`) but a trailing one is sentence
 // punctuation: `[\w.-]+` swallows the period in "ver @thm:main." and leaves the
 // ref unresolved. Same id shape as the `@tbl:` / `@fig:` patterns.
-const ENV_REF_RE = /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w-]+(?:\.\w+)*)|@([a-zA-Z]+):([\w-]+(?:\.\w+)*)/g
+const ENV_REF_RE =
+  /@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w-]+(?:\.\w+)*)|@([a-zA-Z]+):([\w-]+(?:\.\w+)*)/g
 
 // ── Cross-file label cache ───────────────────────────────────────────────────
 // An environment's NUMBER is a property of its file (it is that file's Nth
@@ -581,9 +627,16 @@ export function clearEnvRefCache(): void {
   crossDocPrescans = 0
 }
 
-function labelsForDoc(docPath: string, resolver: EnvironmentDocResolver): Map<string, EnvironmentReference> | null {
+function labelsForDoc(
+  docPath: string,
+  resolver: EnvironmentDocResolver,
+): Map<string, EnvironmentReference> | null {
   let content: string | null
-  try { content = resolver(docPath) } catch { return null }
+  try {
+    content = resolver(docPath)
+  } catch {
+    return null
+  }
   if (content == null) return null
 
   const hit = crossDocCache.get(docPath)
@@ -601,46 +654,54 @@ export function resolveEnvironmentRefs(
   labels: Map<string, EnvironmentReference>,
   resolver?: EnvironmentDocResolver,
 ): string {
-  return text.replace(ENV_REF_RE, (
-    full: string,
-    bracketPath: string | undefined,
-    barePath: string | undefined,
-    crossPrefix: string | undefined,
-    crossId: string | undefined,
-    localPrefix: string | undefined,
-    localId: string | undefined,
-  ) => {
-    // ── Cross-file: `@doc@prefix:id` / `@[doc with spaces]@prefix:id` ────────
-    if (crossPrefix !== undefined && crossId !== undefined) {
-      const kind = ENV_REF_PREFIXES[crossPrefix]
-      if (!kind) return full
-      const docPath = (bracketPath ?? barePath ?? "").trim()
-      const label = `${crossPrefix}:${crossId}`
-      // Missing file and missing label degrade identically to a broken LOCAL
-      // ref: a cross-ref must never throw out of the render pipeline.
-      const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
-      const ref = docLabels?.get(label)
-      if (!ref) return `<span class="env-ref-broken">${kind} (?)</span>`
-      const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
-      const safeDoc = escHtml(docPath)
-      const safeLabel = escHtml(label)
-      return `<a class="env-ref env-ref-cross" data-target="${safeDoc}" data-env-label="${safeLabel}" title="${safeDoc}" href="#env-${safeLabel}">${display}</a>`
-    }
+  return text.replace(
+    ENV_REF_RE,
+    (
+      full: string,
+      bracketPath: string | undefined,
+      barePath: string | undefined,
+      crossPrefix: string | undefined,
+      crossId: string | undefined,
+      localPrefix: string | undefined,
+      localId: string | undefined,
+    ) => {
+      // ── Cross-file: `@doc@prefix:id` / `@[doc with spaces]@prefix:id` ────────
+      if (crossPrefix !== undefined && crossId !== undefined) {
+        const kind = ENV_REF_PREFIXES[crossPrefix]
+        if (!kind) return full
+        const docPath = (bracketPath ?? barePath ?? "").trim()
+        const label = `${crossPrefix}:${crossId}`
+        // Missing file and missing label degrade identically to a broken LOCAL
+        // ref: a cross-ref must never throw out of the render pipeline.
+        const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
+        const ref = docLabels?.get(label)
+        if (!ref) return `<span class="env-ref-broken">${kind} (?)</span>`
+        const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+        const safeDoc = escHtml(docPath)
+        const safeLabel = escHtml(label)
+        return `<a class="env-ref env-ref-cross" data-target="${safeDoc}" data-env-label="${safeLabel}" title="${safeDoc}" href="#env-${safeLabel}">${display}</a>`
+      }
 
-    // ── Local: `@prefix:id` (unchanged behaviour) ────────────────────────────
-    if (localPrefix === undefined || localId === undefined) return full
-    if (!ENV_REF_PREFIXES[localPrefix]) return full
-    const label = `${localPrefix}:${localId}`
-    const ref = labels.get(label)
-    if (!ref) return `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
-    const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
-    return `<a class="env-ref" href="#env-${label}">${display}</a>`
-  })
+      // ── Local: `@prefix:id` (unchanged behaviour) ────────────────────────────
+      if (localPrefix === undefined || localId === undefined) return full
+      if (!ENV_REF_PREFIXES[localPrefix]) return full
+      const label = `${localPrefix}:${localId}`
+      const ref = labels.get(label)
+      if (!ref) return `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
+      const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+      return `<a class="env-ref" href="#env-${label}">${display}</a>`
+    },
+  )
 }
 
 // ── LaTeX export helpers ──────────────────────────────────────────────────────
 
-export function envToLatex(envName: string, title: string, content: string, label?: string): string {
+export function envToLatex(
+  envName: string,
+  title: string,
+  content: string,
+  label?: string,
+): string {
   const info = ALL_ENVS[envName]
   if (!info) return content
 

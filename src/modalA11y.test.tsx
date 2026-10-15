@@ -28,7 +28,15 @@ describe("modal dialog semantics", () => {
     expectLabelledDialog()
   })
   it("BookmarksPopup", () => {
-    render(<BookmarksPopup open bookmarks={[{ slot: 1, line: 3 }]} onGoTo={() => {}} onRemove={() => {}} onClose={() => {}} />)
+    render(
+      <BookmarksPopup
+        open
+        bookmarks={[{ slot: 1, line: 3 }]}
+        onGoTo={() => {}}
+        onRemove={() => {}}
+        onClose={() => {}}
+      />,
+    )
     expectLabelledDialog()
   })
   it("ClosedTabsPopup", () => {
@@ -36,7 +44,9 @@ describe("modal dialog semantics", () => {
     expectLabelledDialog()
   })
   it("QuickSwitcher", () => {
-    render(<QuickSwitcher open files={[]} recentFiles={[]} onSelect={() => {}} onClose={() => {}} />)
+    render(
+      <QuickSwitcher open files={[]} recentFiles={[]} onSelect={() => {}} onClose={() => {}} />,
+    )
     expectLabelledDialog()
   })
   it("OnboardingTour", () => {
@@ -48,7 +58,9 @@ describe("modal dialog semantics", () => {
 describe("toasts", () => {
   it("uses a polite status container and alert role for errors", () => {
     render(<ToastContainer />)
-    act(() => { showToast("boom", "error", 50) })
+    act(() => {
+      showToast("boom", "error", 50)
+    })
     expect(screen.getByRole("status")).toBeTruthy()
     expect(screen.getByRole("alert").textContent).toBe("boom")
   })
@@ -58,11 +70,18 @@ describe("useFocusTrap", () => {
   function Harness({ onClose }: { onClose: () => void }) {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
-    useFocusTrap(ref, open, () => { setOpen(false); onClose() })
+    useFocusTrap(ref, open, () => {
+      setOpen(false)
+      onClose()
+    })
     return (
       <>
         <button onClick={() => setOpen(true)}>opener</button>
-        {open && <div ref={ref}><input aria-label="inside" /></div>}
+        {open && (
+          <div ref={ref}>
+            <input aria-label="inside" />
+          </div>
+        )}
       </>
     )
   }
@@ -86,6 +105,8 @@ afterEach(cleanup)
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "offsetParent", {
     configurable: true,
-    get() { return this.parentNode },
+    get() {
+      return this.parentNode
+    },
   })
 })

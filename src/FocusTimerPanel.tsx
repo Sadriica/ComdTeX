@@ -1,14 +1,17 @@
 import { useState } from "react"
 import { useT } from "./i18n"
-import {
-  type Phase,
-  type PomodoroConfig,
-  formatClock,
-  sessionStats,
-} from "./pomodoro"
+import { type Phase, type PomodoroConfig, formatClock, sessionStats } from "./pomodoro"
 import { type FocusTimer, wordCount } from "./useFocusTimer"
 
-const Row = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
+const Row = ({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string | number
+  accent?: boolean
+}) => (
   <div className={`stats-row${accent ? " stats-accent" : ""}`}>
     <span className="stats-label">{label}</span>
     <span className="stats-value">{value}</span>
@@ -16,7 +19,15 @@ const Row = ({ label, value, accent }: { label: string; value: string | number; 
 )
 
 // Editable number row for a Pomodoro duration (clamped to 1–180).
-const DurRow = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+const DurRow = ({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+}) => (
   <label className="stats-row focus-timer-dur-row">
     <span className="stats-label">{label}</span>
     <input
@@ -47,19 +58,28 @@ interface FocusTimerPanelProps {
   focusTimer: FocusTimer
 }
 
-export default function FocusTimerPanel({ content, config, wordGoal, onConfigChange, focusTimer }: FocusTimerPanelProps) {
+export default function FocusTimerPanel({
+  content,
+  config,
+  wordGoal,
+  onConfigChange,
+  focusTimer,
+}: FocusTimerPanelProps) {
   const t = useT()
   const { timer, session, now, startTimer, pauseTimer, resetTimer } = focusTimer
   const [showSettings, setShowSettings] = useState(false)
 
   const phaseLabel = (phase: Phase): string =>
-    phase === "work" ? t.focusTimer.phaseWork
-      : phase === "break" ? t.focusTimer.phaseBreak
+    phase === "work"
+      ? t.focusTimer.phaseWork
+      : phase === "break"
+        ? t.focusTimer.phaseBreak
         : t.focusTimer.phaseLongBreak
 
   const stats = session ? sessionStats(session, now, wordCount(content)) : null
   const goalWords = stats ? stats.wordsWritten : 0
-  const goalPct = wordGoal > 0 ? Math.min(100, Math.round((Math.max(0, goalWords) / wordGoal) * 100)) : 0
+  const goalPct =
+    wordGoal > 0 ? Math.min(100, Math.round((Math.max(0, goalWords) / wordGoal) * 100)) : 0
 
   return (
     <div className="stats-panel focus-timer-panel">
@@ -68,11 +88,17 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
         <div className="focus-timer-clock">{formatClock(timer.remainingSec)}</div>
         <div className="focus-timer-controls">
           {timer.running ? (
-            <button className="focus-timer-btn" onClick={pauseTimer}>{t.focusTimer.pause}</button>
+            <button className="focus-timer-btn" onClick={pauseTimer}>
+              {t.focusTimer.pause}
+            </button>
           ) : (
-            <button className="focus-timer-btn focus-timer-btn-primary" onClick={startTimer}>{t.focusTimer.start}</button>
+            <button className="focus-timer-btn focus-timer-btn-primary" onClick={startTimer}>
+              {t.focusTimer.start}
+            </button>
           )}
-          <button className="focus-timer-btn" onClick={resetTimer}>{t.focusTimer.reset}</button>
+          <button className="focus-timer-btn" onClick={resetTimer}>
+            {t.focusTimer.reset}
+          </button>
         </div>
         <Row label={t.focusTimer.cycles} value={timer.completedWork} />
         <button
@@ -84,10 +110,26 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
         </button>
         {showSettings && (
           <div className="focus-timer-durations">
-            <DurRow label={t.focusTimer.workMin} value={config.workMin} onChange={(v) => onConfigChange({ workMin: v })} />
-            <DurRow label={t.focusTimer.breakMin} value={config.breakMin} onChange={(v) => onConfigChange({ breakMin: v })} />
-            <DurRow label={t.focusTimer.longBreakMin} value={config.longBreakMin} onChange={(v) => onConfigChange({ longBreakMin: v })} />
-            <DurRow label={t.focusTimer.cyclesLabel} value={config.cyclesBeforeLongBreak} onChange={(v) => onConfigChange({ cyclesBeforeLongBreak: v })} />
+            <DurRow
+              label={t.focusTimer.workMin}
+              value={config.workMin}
+              onChange={(v) => onConfigChange({ workMin: v })}
+            />
+            <DurRow
+              label={t.focusTimer.breakMin}
+              value={config.breakMin}
+              onChange={(v) => onConfigChange({ breakMin: v })}
+            />
+            <DurRow
+              label={t.focusTimer.longBreakMin}
+              value={config.longBreakMin}
+              onChange={(v) => onConfigChange({ longBreakMin: v })}
+            />
+            <DurRow
+              label={t.focusTimer.cyclesLabel}
+              value={config.cyclesBeforeLongBreak}
+              onChange={(v) => onConfigChange({ cyclesBeforeLongBreak: v })}
+            />
           </div>
         )}
       </div>
@@ -126,7 +168,9 @@ export default function FocusTimerPanel({ content, config, wordGoal, onConfigCha
                 style={{ width: `${goalPct}%` }}
               />
             </span>
-            <span className="stats-value">{Math.max(0, goalWords)}/{wordGoal}</span>
+            <span className="stats-value">
+              {Math.max(0, goalWords)}/{wordGoal}
+            </span>
           </div>
         )}
       </div>

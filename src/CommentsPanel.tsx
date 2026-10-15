@@ -104,8 +104,8 @@ export default function CommentsPanel({
           {filter === "all"
             ? t.comments.noComments
             : filter === "resolved"
-            ? t.comments.noResolved
-            : t.comments.noUnresolved}
+              ? t.comments.noResolved
+              : t.comments.noUnresolved}
         </div>
       ) : (
         groups.map(([filePath, items]) => {
@@ -135,7 +135,9 @@ export default function CommentsPanel({
                         type="checkbox"
                         checked={c.resolved}
                         onChange={() => onToggleResolved(c.id)}
-                        aria-label={c.resolved ? t.comments.markUnresolved : t.comments.markResolved}
+                        aria-label={
+                          c.resolved ? t.comments.markUnresolved : t.comments.markResolved
+                        }
                       />
                       <span>{c.resolved ? t.comments.resolved : t.comments.unresolved}</span>
                     </label>

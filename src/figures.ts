@@ -52,10 +52,7 @@ export function prescanFigures(text: string): Map<string, number> {
  * Replace `@fig:label` references in HTML text.
  * `@fig:1` style numeric refs are always resolved to "Figura N".
  */
-export function resolveFigRefs(
-  text: string,
-  labels: Map<string, number>,
-): string {
+export function resolveFigRefs(text: string, labels: Map<string, number>): string {
   return text.replace(/@fig:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     // Direct numeric reference
     if (/^\d+$/.test(ref)) {

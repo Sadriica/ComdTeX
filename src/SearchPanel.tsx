@@ -4,9 +4,16 @@ import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 
 interface SearchPanelProps {
-  onSearch: (query: string, opts?: { regex?: boolean; caseSensitive?: boolean }) => Promise<SearchResult[]>
+  onSearch: (
+    query: string,
+    opts?: { regex?: boolean; caseSensitive?: boolean },
+  ) => Promise<SearchResult[]>
   onOpenResult: (filePath: string, line?: number) => void
-  onReplaceAll?: (query: string, replacement: string, opts?: { regex?: boolean; caseSensitive?: boolean }) => Promise<number>
+  onReplaceAll?: (
+    query: string,
+    replacement: string,
+    opts?: { regex?: boolean; caseSensitive?: boolean },
+  ) => Promise<number>
 }
 
 /** Extract a ±RADIUS character snippet around the first occurrence of `query`. */
@@ -44,22 +51,36 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => {
+      mountedRef.current = false
+    }
   }, [])
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); setSearching(false); return }
+    if (!query.trim()) {
+      setResults([])
+      setSearching(false)
+      return
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
         const found = await onSearch(query, { regex: useRegex, caseSensitive })
-        if (mountedRef.current) { setResults(found); setSearching(false) }
+        if (mountedRef.current) {
+          setResults(found)
+          setSearching(false)
+        }
       } catch {
-        if (mountedRef.current) { setResults([]); setSearching(false) }
+        if (mountedRef.current) {
+          setResults([])
+          setSearching(false)
+        }
       }
     }, 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [query, onSearch, useRegex, caseSensitive])
 
   const toggleExpand = useCallback((filePath: string) => {
@@ -84,7 +105,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
       const count = await onReplaceAll(query, replacement, { regex: useRegex, caseSensitive })
       if (mountedRef.current) {
         const found = await onSearch(query, { regex: useRegex, caseSensitive })
-        if (mountedRef.current) { setResults(found); setSearching(false) }
+        if (mountedRef.current) {
+          setResults(found)
+          setSearching(false)
+        }
       }
       void count
     } finally {
@@ -103,7 +127,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
           onChange={(e) => {
             const val = e.target.value
             setQuery(val)
-            if (!val.trim()) { setResults([]); setSearching(false) }
+            if (!val.trim()) {
+              setResults([])
+              setSearching(false)
+            }
           }}
           aria-label={t.search.ariaLabel}
         />
@@ -112,22 +139,32 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
           onClick={() => setUseRegex((r) => !r)}
           title={t.search.regexTitle}
           aria-pressed={useRegex}
-        >.*</button>
+        >
+          .*
+        </button>
         <button
           className={`search-opt-btn${caseSensitive ? " active" : ""}`}
           onClick={() => setCaseSensitive((c) => !c)}
           title={t.search.caseSensitiveTitle}
           aria-pressed={caseSensitive}
-        >Aa</button>
+        >
+          Aa
+        </button>
         {onReplaceAll && (
           <button
             className={`search-replace-toggle${replaceMode ? " active" : ""}`}
             onClick={() => setReplaceMode((r) => !r)}
             title={t.search.toggleReplace}
             aria-pressed={replaceMode}
-          >⇄</button>
+          >
+            ⇄
+          </button>
         )}
-        {searching && <span className="search-spinner" aria-live="polite" aria-label={t.search.searching}>⟳</span>}
+        {searching && (
+          <span className="search-spinner" aria-live="polite" aria-label={t.search.searching}>
+            ⟳
+          </span>
+        )}
       </div>
       {replaceMode && (
         <div className="search-replace-wrap">
@@ -151,11 +188,15 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
       <div className="search-results" role="list">
         {query && results.length === 0 && !searching && (
-          <div className="search-empty" role="status">{t.search.noResults}</div>
+          <div className="search-empty" role="status">
+            {t.search.noResults}
+          </div>
         )}
         {results.length >= 500 && (
           <div className="search-limit-banner" role="status" aria-live="polite">
-            <span className="search-limit-icon" aria-hidden="true">⚠</span>
+            <span className="search-limit-icon" aria-hidden="true">
+              ⚠
+            </span>
             <span className="search-limit-text">{t.search.limit}</span>
           </div>
         )}
@@ -168,15 +209,20 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
             <div key={filePath} className="search-group" role="listitem">
               <div
                 className="search-file"
-                onClick={() => hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath)}
+                onClick={() => (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))}
                 title={filePath}
                 role="button"
                 aria-expanded={hits.length > 5 ? isExpanded : undefined}
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))
+                }
               >
                 {displayBasename(filePath)}
-                <span className="search-count" aria-label={t.search.count(hits.length)}>{hits.length}</span>
+                <span className="search-count" aria-label={t.search.count(hits.length)}>
+                  {hits.length}
+                </span>
               </div>
               {displayHits.map((hit, i) => {
                 const { before, match, after } = contextSnippet(hit.content, query)

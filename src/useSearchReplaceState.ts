@@ -41,11 +41,17 @@ export function useSearchReplaceState(): SearchReplaceState {
   const [results, setResults] = useState<SearchReplaceResult[]>([])
 
   return {
-    query, setQuery,
-    replacement, setReplacement,
-    caseSensitive, setCaseSensitive,
-    wholeWord, setWholeWord,
-    regexMode, setRegexMode,
-    results, setResults,
+    query,
+    setQuery,
+    replacement,
+    setReplacement,
+    caseSensitive,
+    setCaseSensitive,
+    wholeWord,
+    setWholeWord,
+    regexMode,
+    setRegexMode,
+    results,
+    setResults,
   }
 }

@@ -10,41 +10,15 @@ function lineOf(content: string, headingText: string): number {
 
 describe("reorderSection", () => {
   it("moves a middle section up (before the target)", () => {
-    const content = [
-      "# A",
-      "alpha",
-      "",
-      "# B",
-      "beta",
-      "",
-      "# C",
-      "gamma",
-    ].join("\n")
+    const content = ["# A", "alpha", "", "# B", "beta", "", "# C", "gamma"].join("\n")
 
     // Move C before A.
     const out = reorderSection(content, lineOf(content, "# C"), lineOf(content, "# A"))
-    expect(out).toBe([
-      "# C",
-      "gamma",
-      "# A",
-      "alpha",
-      "",
-      "# B",
-      "beta",
-    ].join("\n"))
+    expect(out).toBe(["# C", "gamma", "# A", "alpha", "", "# B", "beta"].join("\n"))
   })
 
   it("moves a middle section down (before a later target)", () => {
-    const content = [
-      "# A",
-      "alpha",
-      "",
-      "# B",
-      "beta",
-      "",
-      "# C",
-      "gamma",
-    ].join("\n")
+    const content = ["# A", "alpha", "", "# B", "beta", "", "# C", "gamma"].join("\n")
 
     // Move A before C → order B, A, C.
     const out = reorderSection(content, lineOf(content, "# A"), lineOf(content, "# C"))
@@ -72,26 +46,13 @@ describe("reorderSection", () => {
     // Move One (with its two subsections) before Three.
     const out = reorderSection(content, lineOf(content, "# One"), lineOf(content, "# Three"))
     const lines = out.split("\n").filter((l) => /^#{1,6}\s/.test(l))
-    expect(lines).toEqual([
-      "# Two",
-      "# One",
-      "## One-a",
-      "## One-b",
-      "# Three",
-    ])
+    expect(lines).toEqual(["# Two", "# One", "## One-a", "## One-b", "# Three"])
     // Subsection bodies travelled too.
     expect(out).toContain("# One\none body\n## One-a\nsub a\n## One-b\nsub b")
   })
 
   it("does not absorb a sibling of equal level", () => {
-    const content = [
-      "# A",
-      "a body",
-      "## A-sub",
-      "a sub",
-      "# B",
-      "b body",
-    ].join("\n")
+    const content = ["# A", "a body", "## A-sub", "a sub", "# B", "b body"].join("\n")
 
     // Move B before A. B has no subsections; A's sub must stay with A.
     const out = reorderSection(content, lineOf(content, "# B"), lineOf(content, "# A"))
@@ -119,12 +80,7 @@ describe("reorderSection", () => {
   })
 
   it("moves the first section down to before another", () => {
-    const content = [
-      "# First",
-      "first body",
-      "# Second",
-      "second body",
-    ].join("\n")
+    const content = ["# First", "first body", "# Second", "second body"].join("\n")
 
     // from === before the only other; moving First before Second is a no-op
     // structurally (First is already right before Second), but moving First to
@@ -149,16 +105,11 @@ describe("reorderSection", () => {
   })
 
   it("refuses to move a section into its own subtree", () => {
-    const content = [
-      "# Parent",
-      "p body",
-      "## Child",
-      "c body",
-    ].join("\n")
+    const content = ["# Parent", "p body", "## Child", "c body"].join("\n")
     // Target is inside the dragged block → no-op.
-    expect(
-      reorderSection(content, lineOf(content, "# Parent"), lineOf(content, "## Child")),
-    ).toBe(content)
+    expect(reorderSection(content, lineOf(content, "# Parent"), lineOf(content, "## Child"))).toBe(
+      content,
+    )
   })
 
   it("preserves trailing newline state", () => {

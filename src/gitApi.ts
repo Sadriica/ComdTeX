@@ -12,12 +12,20 @@ export interface GitFile {
 }
 
 export interface GitStatus {
-  branch: string; upstream: string
-  ahead: number; behind: number
-  staged: GitFile[]; unstaged: GitFile[]; untracked: GitFile[]
+  branch: string
+  upstream: string
+  ahead: number
+  behind: number
+  staged: GitFile[]
+  unstaged: GitFile[]
+  untracked: GitFile[]
 }
 
-export interface GitResult { code: number; stdout: string; stderr: string }
+export interface GitResult {
+  code: number
+  stdout: string
+  stderr: string
+}
 
 // ── Safe invocation ───────────────────────────────────────────────────────────
 
@@ -33,10 +41,14 @@ function nullDevice(): string {
  */
 export function safeGitConfig(): string[] {
   return [
-    "-c", "core.fsmonitor=false",
-    "-c", `core.hooksPath=${nullDevice()}`,
-    "-c", "protocol.ext.allow=never",
-    "-c", "core.quotepath=false",
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    `core.hooksPath=${nullDevice()}`,
+    "-c",
+    "protocol.ext.allow=never",
+    "-c",
+    "core.quotepath=false",
   ]
 }
 
@@ -58,8 +70,13 @@ export function isNotRepo(r: GitResult): boolean {
 /** Parses the output of `git status --porcelain=v1 -z -b`. */
 export function parseStatusZ(raw: string): GitStatus {
   const records = raw.split("\0")
-  let branch = "", upstream = "", ahead = 0, behind = 0
-  const staged: GitFile[] = [], unstaged: GitFile[] = [], untracked: GitFile[] = []
+  let branch = "",
+    upstream = "",
+    ahead = 0,
+    behind = 0
+  const staged: GitFile[] = [],
+    unstaged: GitFile[] = [],
+    untracked: GitFile[] = []
 
   for (let i = 0; i < records.length; i++) {
     const rec = records[i]
@@ -67,14 +84,20 @@ export function parseStatusZ(raw: string): GitStatus {
     if (rec.startsWith("## ")) {
       const rest = rec.slice(3)
       const parts = rest.split("...")
-      branch = parts[0].replace(/^No commits yet on /, "").replace(/^Initial commit on /, "").trim()
+      branch = parts[0]
+        .replace(/^No commits yet on /, "")
+        .replace(/^Initial commit on /, "")
+        .trim()
       upstream = parts[1]?.split(/\s/)[0] ?? ""
-      const am = /ahead (\d+)/.exec(rest);  if (am) ahead  = parseInt(am[1])
-      const bm = /behind (\d+)/.exec(rest); if (bm) behind = parseInt(bm[1])
+      const am = /ahead (\d+)/.exec(rest)
+      if (am) ahead = parseInt(am[1])
+      const bm = /behind (\d+)/.exec(rest)
+      if (bm) behind = parseInt(bm[1])
       continue
     }
     if (rec.length < 4) continue
-    const x = rec[0], y = rec[1]
+    const x = rec[0],
+      y = rec[1]
     const path = rec.slice(3)
     let orig: string | undefined
     // Renames and copies carry the original path as the next NUL record.

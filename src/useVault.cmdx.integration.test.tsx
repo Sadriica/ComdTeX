@@ -102,7 +102,10 @@ describe("useVault CMDX integration", () => {
 
   it("opens and saves Markdown, LaTeX, and BibTeX through the storage gateway", async () => {
     fsMock.touch(`${VAULT}/note.md`, "> [!note] Title\n> Body")
-    fsMock.touch(`${VAULT}/paper.tex`, "\\begin{theorem}[Named]\\label{thm:named}\nBody\n\\end{theorem}")
+    fsMock.touch(
+      `${VAULT}/paper.tex`,
+      "\\begin{theorem}[Named]\\label{thm:named}\nBody\n\\end{theorem}",
+    )
     fsMock.touch(`${VAULT}/refs.bib`, "@article{knuth84,\n  title = {Literate Programming}\n}")
 
     const { result } = renderHook(() => useVault())
@@ -130,7 +133,9 @@ describe("useVault CMDX integration", () => {
     await act(async () => {
       await result.current.saveFile(`${VAULT}/paper.tex`, "mat(1, 2, 3, 4)")
     })
-    expect(fsMock.files.get(`${VAULT}/paper.tex`)?.content).toBe("\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}")
+    expect(fsMock.files.get(`${VAULT}/paper.tex`)?.content).toBe(
+      "\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}",
+    )
 
     await act(async () => {
       await result.current.openFilePath(`${VAULT}/refs.bib`)
@@ -155,7 +160,10 @@ describe("useVault CMDX integration", () => {
     localStorage.setItem("comdtex_vault", VAULT)
 
     const { result } = renderHook(() => useVault())
-    localStorage.setItem("comdtex_tabs", JSON.stringify([mdPath, texPath, bibPath, "/other/outside.md"]))
+    localStorage.setItem(
+      "comdtex_tabs",
+      JSON.stringify([mdPath, texPath, bibPath, "/other/outside.md"]),
+    )
     localStorage.setItem("comdtex_active", texPath)
 
     await act(async () => {
@@ -167,8 +175,12 @@ describe("useVault CMDX integration", () => {
     expect(result.current.openTabs.find((tab) => tab.path === mdPath)?.content).toBe(
       ":::warning[Careful]\nCheck signs\n:::",
     )
-    expect(result.current.openTabs.find((tab) => tab.path === texPath)?.content).toBe("mat(1, 2, 3, 4)")
-    expect(result.current.openTabs.find((tab) => tab.path === bibPath)?.content).toContain("@book{euclid")
+    expect(result.current.openTabs.find((tab) => tab.path === texPath)?.content).toBe(
+      "mat(1, 2, 3, 4)",
+    )
+    expect(result.current.openTabs.find((tab) => tab.path === bibPath)?.content).toContain(
+      "@book{euclid",
+    )
   })
 
   it("searches and replaces closed files using CMDX editor content", async () => {

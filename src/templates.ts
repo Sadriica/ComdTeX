@@ -14,7 +14,8 @@ export interface Template {
 }
 
 const today = () => new Date().toISOString().split("T")[0]
-const todayFormatted = () => new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
+const todayFormatted = () =>
+  new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 const currentYear = () => new Date().getFullYear().toString()
 const now = () => new Date().toISOString()
 const time = () => new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })

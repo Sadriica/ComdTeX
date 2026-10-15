@@ -10,7 +10,7 @@ export interface Settings {
   typewriterMode: boolean
   previewVisible: boolean
   language: Lang
-  wordGoal: number  // 0 = no goal
+  wordGoal: number // 0 = no goal
   touchpadGestures: boolean
   previewTheme: "dark" | "light" | "same"
   mathPreview: boolean

@@ -7,46 +7,136 @@ import { insertSnippet } from "./editorInsert"
 // ── Symbol groups ─────────────────────────────────────────────────────────────
 
 const GREEK_LOWER = [
-  ["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],["ε","\\epsilon"],
-  ["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],["ι","\\iota"],["κ","\\kappa"],
-  ["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],["π","\\pi"],
-  ["ρ","\\rho"],["σ","\\sigma"],["τ","\\tau"],["υ","\\upsilon"],["φ","\\phi"],
-  ["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],["ϕ","\\varphi"],["ε","\\varepsilon"],
-  ["ϑ","\\vartheta"],["ς","\\varsigma"],
+  ["α", "\\alpha"],
+  ["β", "\\beta"],
+  ["γ", "\\gamma"],
+  ["δ", "\\delta"],
+  ["ε", "\\epsilon"],
+  ["ζ", "\\zeta"],
+  ["η", "\\eta"],
+  ["θ", "\\theta"],
+  ["ι", "\\iota"],
+  ["κ", "\\kappa"],
+  ["λ", "\\lambda"],
+  ["μ", "\\mu"],
+  ["ν", "\\nu"],
+  ["ξ", "\\xi"],
+  ["π", "\\pi"],
+  ["ρ", "\\rho"],
+  ["σ", "\\sigma"],
+  ["τ", "\\tau"],
+  ["υ", "\\upsilon"],
+  ["φ", "\\phi"],
+  ["χ", "\\chi"],
+  ["ψ", "\\psi"],
+  ["ω", "\\omega"],
+  ["ϕ", "\\varphi"],
+  ["ε", "\\varepsilon"],
+  ["ϑ", "\\vartheta"],
+  ["ς", "\\varsigma"],
 ] as const
 
 const GREEK_UPPER = [
-  ["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],["Ξ","\\Xi"],
-  ["Π","\\Pi"],["Σ","\\Sigma"],["Υ","\\Upsilon"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"],
+  ["Γ", "\\Gamma"],
+  ["Δ", "\\Delta"],
+  ["Θ", "\\Theta"],
+  ["Λ", "\\Lambda"],
+  ["Ξ", "\\Xi"],
+  ["Π", "\\Pi"],
+  ["Σ", "\\Sigma"],
+  ["Υ", "\\Upsilon"],
+  ["Φ", "\\Phi"],
+  ["Ψ", "\\Psi"],
+  ["Ω", "\\Omega"],
 ] as const
 
 const OPERATORS = [
-  ["∞","\\infty"],["∂","\\partial"],["∇","\\nabla"],["±","\\pm"],["∓","\\mp"],
-  ["×","\\times"],["÷","\\div"],["⊗","\\otimes"],["⊕","\\oplus"],["·","\\cdot"],
-  ["∘","\\circ"],["≤","\\leq"],["≥","\\geq"],["≠","\\neq"],["≈","\\approx"],
-  ["≡","\\equiv"],["∼","\\sim"],["≃","\\simeq"],["≅","\\cong"],["∝","\\propto"],
-  ["∈","\\in"],["∉","\\notin"],["⊂","\\subset"],["⊃","\\supset"],["⊆","\\subseteq"],
-  ["∩","\\cap"],["∪","\\cup"],["∅","\\emptyset"],["∀","\\forall"],["∃","\\exists"],
-  ["¬","\\neg"],["∧","\\wedge"],["∨","\\vee"],["⊥","\\perp"],["∥","\\parallel"],
-  ["√","\\sqrt{}"],["∑","\\sum"],["∏","\\prod"],["∫","\\int"],
+  ["∞", "\\infty"],
+  ["∂", "\\partial"],
+  ["∇", "\\nabla"],
+  ["±", "\\pm"],
+  ["∓", "\\mp"],
+  ["×", "\\times"],
+  ["÷", "\\div"],
+  ["⊗", "\\otimes"],
+  ["⊕", "\\oplus"],
+  ["·", "\\cdot"],
+  ["∘", "\\circ"],
+  ["≤", "\\leq"],
+  ["≥", "\\geq"],
+  ["≠", "\\neq"],
+  ["≈", "\\approx"],
+  ["≡", "\\equiv"],
+  ["∼", "\\sim"],
+  ["≃", "\\simeq"],
+  ["≅", "\\cong"],
+  ["∝", "\\propto"],
+  ["∈", "\\in"],
+  ["∉", "\\notin"],
+  ["⊂", "\\subset"],
+  ["⊃", "\\supset"],
+  ["⊆", "\\subseteq"],
+  ["∩", "\\cap"],
+  ["∪", "\\cup"],
+  ["∅", "\\emptyset"],
+  ["∀", "\\forall"],
+  ["∃", "\\exists"],
+  ["¬", "\\neg"],
+  ["∧", "\\wedge"],
+  ["∨", "\\vee"],
+  ["⊥", "\\perp"],
+  ["∥", "\\parallel"],
+  ["√", "\\sqrt{}"],
+  ["∑", "\\sum"],
+  ["∏", "\\prod"],
+  ["∫", "\\int"],
 ] as const
 
 const ARROWS = [
-  ["→","\\rightarrow"],["←","\\leftarrow"],["↔","\\leftrightarrow"],
-  ["⇒","\\Rightarrow"],["⇐","\\Leftarrow"],["⇔","\\Leftrightarrow"],
-  ["↑","\\uparrow"],["↓","\\downarrow"],["↕","\\updownarrow"],
-  ["↦","\\mapsto"],["↪","\\hookrightarrow"],["⟹","\\implies"],
-  ["⟺","\\iff"],["⟶","\\longrightarrow"],["⟵","\\longleftarrow"],
-  ["↗","\\nearrow"],["↘","\\searrow"],["↙","\\swarrow"],["↖","\\nwarrow"],
+  ["→", "\\rightarrow"],
+  ["←", "\\leftarrow"],
+  ["↔", "\\leftrightarrow"],
+  ["⇒", "\\Rightarrow"],
+  ["⇐", "\\Leftarrow"],
+  ["⇔", "\\Leftrightarrow"],
+  ["↑", "\\uparrow"],
+  ["↓", "\\downarrow"],
+  ["↕", "\\updownarrow"],
+  ["↦", "\\mapsto"],
+  ["↪", "\\hookrightarrow"],
+  ["⟹", "\\implies"],
+  ["⟺", "\\iff"],
+  ["⟶", "\\longrightarrow"],
+  ["⟵", "\\longleftarrow"],
+  ["↗", "\\nearrow"],
+  ["↘", "\\searrow"],
+  ["↙", "\\swarrow"],
+  ["↖", "\\nwarrow"],
 ] as const
 
 // Panel modes the menu can switch to (mirror of App.tsx SidebarMode subset used here).
 export type PanelMode =
-  | "files" | "search" | "searchReplace" | "backlinks" | "pdfPreview"
-  | "outline" | "tags" | "labels" | "keep" | "properties" | "comments" | "todo"
-  | "equations" | "environments" | "graph"
-  | "stats" | "quality"
-  | "focusTimer" | "ai" | "cloudSync" | "help"
+  | "files"
+  | "search"
+  | "searchReplace"
+  | "backlinks"
+  | "pdfPreview"
+  | "outline"
+  | "tags"
+  | "labels"
+  | "keep"
+  | "properties"
+  | "comments"
+  | "todo"
+  | "equations"
+  | "environments"
+  | "graph"
+  | "stats"
+  | "quality"
+  | "focusTimer"
+  | "ai"
+  | "cloudSync"
+  | "help"
 
 interface ToolbarProps {
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
@@ -81,7 +171,18 @@ interface MenuSection {
 // Monochrome folder icon (inline SVG with currentColor; emoji folder glyphs
 // render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
 const FolderIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    style={{ verticalAlign: "-0.15em" }}
+  >
     <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
   </svg>
 )
@@ -101,8 +202,12 @@ function collectPanelModes(items: MenuItem[]): PanelMode[] {
 
 function getSections(t: T): MenuSection[] {
   const p = (label: string, mode: PanelMode): MenuItem => ({ kind: "panel", label, mode })
-  const a = (label: string, snippet: string, title?: string): MenuItem =>
-    ({ kind: "action", label, snippet, title })
+  const a = (label: string, snippet: string, title?: string): MenuItem => ({
+    kind: "action",
+    label,
+    snippet,
+    title,
+  })
 
   return [
     // 1. Archivos
@@ -135,12 +240,12 @@ function getSections(t: T): MenuSection[] {
           label: t.toolbar.highlight,
           items: [
             a(`🟨 ${t.toolbar.hlDefault}`, "==${1:texto}=="),
-            a(`🟩 ${t.toolbar.hlGreen}`,  '<mark class="hl-green">${1:texto}</mark>'),
-            a(`🟦 ${t.toolbar.hlBlue}`,   '<mark class="hl-blue">${1:texto}</mark>'),
+            a(`🟩 ${t.toolbar.hlGreen}`, '<mark class="hl-green">${1:texto}</mark>'),
+            a(`🟦 ${t.toolbar.hlBlue}`, '<mark class="hl-blue">${1:texto}</mark>'),
             a(`🟪 ${t.toolbar.hlPurple}`, '<mark class="hl-purple">${1:texto}</mark>'),
             a(`🟧 ${t.toolbar.hlOrange}`, '<mark class="hl-orange">${1:texto}</mark>'),
-            a(`🟥 ${t.toolbar.hlRed}`,    '<mark class="hl-red">${1:texto}</mark>'),
-            a(`🌸 ${t.toolbar.hlPink}`,   '<mark class="hl-pink">${1:texto}</mark>'),
+            a(`🟥 ${t.toolbar.hlRed}`, '<mark class="hl-red">${1:texto}</mark>'),
+            a(`🌸 ${t.toolbar.hlPink}`, '<mark class="hl-pink">${1:texto}</mark>'),
           ],
         },
         {
@@ -156,9 +261,9 @@ function getSections(t: T): MenuSection[] {
           kind: "submenu",
           label: t.toolbar.list,
           items: [
-            a(t.toolbar.lbl_list,        "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}"),
+            a(t.toolbar.lbl_list, "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}"),
             a(t.toolbar.lbl_orderedList, "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}"),
-            a(t.toolbar.lbl_taskList,    "- [ ] ${1:tarea}\n- [ ] ${2:tarea}"),
+            a(t.toolbar.lbl_taskList, "- [ ] ${1:tarea}\n- [ ] ${2:tarea}"),
           ],
         },
         a(t.toolbar.quote, "> ${1:cita}", t.toolbar.quote),
@@ -187,24 +292,30 @@ function getSections(t: T): MenuSection[] {
           label: t.toolbar.mathOps,
           items: [
             a(t.toolbar.lbl_superscript, "sup(${1:x}, ${2:n})"),
-            a(t.toolbar.lbl_subscript,   "sub(${1:x}, ${2:n})"),
-            a(t.toolbar.lbl_fraction,    "frac(${1:a}, ${2:b})"),
-            a(t.toolbar.lbl_sqrt,        "sqrt(${1:x})"),
-            a(t.toolbar.lbl_nthRoot,     "root(${1:n}, ${2:x})"),
-            a(t.toolbar.lbl_sum,         "sum(${1:i=0}, ${2:n})"),
-            a(t.toolbar.lbl_integral,    "int(${1:a}, ${2:b})"),
-            a(t.toolbar.lbl_limit,       "lim(${1:x}, ${2:0})"),
-            a(t.toolbar.lbl_partialDer,  "pder(${1:f}, ${2:x})"),
-            a(t.toolbar.lbl_derivative,  "der(${1:f}, ${2:x})"),
-            a(t.toolbar.lbl_gradient,    "\\$\\\\nabla ${1:f}\\$"),
-            a(t.toolbar.lbl_inverse,     "inv(${1:A})"),
-            a(t.toolbar.lbl_transpose,   "trans(${1:A})"),
-            a(t.toolbar.lbl_matAuto,     "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})"),
-            a(t.toolbar.lbl_matFixed,    "matf(${1:2}, ${2:2})"),
-            a(t.toolbar.lbl_matLiteral,  "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
+            a(t.toolbar.lbl_subscript, "sub(${1:x}, ${2:n})"),
+            a(t.toolbar.lbl_fraction, "frac(${1:a}, ${2:b})"),
+            a(t.toolbar.lbl_sqrt, "sqrt(${1:x})"),
+            a(t.toolbar.lbl_nthRoot, "root(${1:n}, ${2:x})"),
+            a(t.toolbar.lbl_sum, "sum(${1:i=0}, ${2:n})"),
+            a(t.toolbar.lbl_integral, "int(${1:a}, ${2:b})"),
+            a(t.toolbar.lbl_limit, "lim(${1:x}, ${2:0})"),
+            a(t.toolbar.lbl_partialDer, "pder(${1:f}, ${2:x})"),
+            a(t.toolbar.lbl_derivative, "der(${1:f}, ${2:x})"),
+            a(t.toolbar.lbl_gradient, "\\$\\\\nabla ${1:f}\\$"),
+            a(t.toolbar.lbl_inverse, "inv(${1:A})"),
+            a(t.toolbar.lbl_transpose, "trans(${1:A})"),
+            a(t.toolbar.lbl_matAuto, "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})"),
+            a(t.toolbar.lbl_matFixed, "matf(${1:2}, ${2:2})"),
+            a(t.toolbar.lbl_matLiteral, "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
             a(t.toolbar.lbl_csv, ":::csv[${1:Título}]\n${2:datos.csv} (${3:A:C}) (${4:1:10})\n:::"),
-            a(t.toolbar.lbl_data, ":::data{#data:${1:datos}}\n${2:datos.csv} (${3:A:D}) (${4:1:20})\n:::"),
-            a(t.toolbar.lbl_dataplot, ":::plot[${1:Título}]\n@data:${2:datos}\nx: ${3:tiempo}\ny: (${4:S1, S2})\nkind: line\n:::"),
+            a(
+              t.toolbar.lbl_data,
+              ":::data{#data:${1:datos}}\n${2:datos.csv} (${3:A:D}) (${4:1:20})\n:::",
+            ),
+            a(
+              t.toolbar.lbl_dataplot,
+              ":::plot[${1:Título}]\n@data:${2:datos}\nx: ${3:tiempo}\ny: (${4:S1, S2})\nkind: line\n:::",
+            ),
           ],
         },
         {
@@ -212,42 +323,38 @@ function getSections(t: T): MenuSection[] {
           label: t.toolbar.science,
           items: [
             a(t.toolbar.lbl_quantity, "si(${1:9.81}, ${2:m/s^2})"),
-            a(t.toolbar.lbl_number,   "num(${1:6.022e23})"),
-            a(t.toolbar.lbl_unit,     "unit(${1:mol/L})"),
-            a(t.toolbar.lbl_chem,     "ce(${1:H2O})"),
+            a(t.toolbar.lbl_number, "num(${1:6.022e23})"),
+            a(t.toolbar.lbl_unit, "unit(${1:mol/L})"),
+            a(t.toolbar.lbl_chem, "ce(${1:H2O})"),
           ],
         },
         {
           kind: "submenu",
           label: t.toolbar.decorators,
           items: [
-            a("x̂  hat",   "hat(${1:x})"),
-            a("x̄  bar",   "bar(${1:x})"),
+            a("x̂  hat", "hat(${1:x})"),
+            a("x̄  bar", "bar(${1:x})"),
             a("x̃  tilde", "tilde(${1:x})"),
-            a("ẍ  ddot",  "ddot(${1:x})"),
-            a("v⃗  vec",   "vec(${1:v})"),
+            a("ẍ  ddot", "ddot(${1:x})"),
+            a("v⃗  vec", "vec(${1:v})"),
           ],
         },
         {
           kind: "submenu",
           label: t.toolbar.mathFonts,
-          items: [
-            a("𝐱  bf",  "bf(${1:x})"),
-            a("𝒜  cal", "cal(${1:A})"),
-            a("ℝ  bb",  "bb(${1:R})"),
-          ],
+          items: [a("𝐱  bf", "bf(${1:x})"), a("𝒜  cal", "cal(${1:A})"), a("ℝ  bb", "bb(${1:R})")],
         },
         {
           kind: "submenu",
           label: t.toolbar.environments,
           items: [
-            a(t.toolbar.lbl_theorem,     ":::theorem[${1:título}]\n${2:enunciado}\n:::"),
-            a(t.toolbar.lbl_lemma,       ":::lemma[${1:título}]\n${2:enunciado}\n:::"),
-            a(t.toolbar.lbl_corollary,   ":::corollary\n${1:enunciado}\n:::"),
+            a(t.toolbar.lbl_theorem, ":::theorem[${1:título}]\n${2:enunciado}\n:::"),
+            a(t.toolbar.lbl_lemma, ":::lemma[${1:título}]\n${2:enunciado}\n:::"),
+            a(t.toolbar.lbl_corollary, ":::corollary\n${1:enunciado}\n:::"),
             a(t.toolbar.lbl_proposition, ":::proposition\n${1:enunciado}\n:::"),
-            a(t.toolbar.lbl_definition,  ":::definition\n${1:definición}\n:::"),
-            a(t.toolbar.lbl_example,     ":::example\n${1:ejemplo}\n:::"),
-            a(t.toolbar.lbl_proof,       ":::proof\n${1:demostración}\n:::"),
+            a(t.toolbar.lbl_definition, ":::definition\n${1:definición}\n:::"),
+            a(t.toolbar.lbl_example, ":::example\n${1:ejemplo}\n:::"),
+            a(t.toolbar.lbl_proof, ":::proof\n${1:demostración}\n:::"),
           ],
         },
         { kind: "sep" },
@@ -278,7 +385,18 @@ function getDirectButtons(t: T): { mode: PanelMode; icon: ReactNode; label: stri
       mode: "ai",
       // Monochrome sparkle SVG: the ✦/✨ glyphs render coloured in WebKitGTK.
       icon: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-0.15em" }}>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          style={{ verticalAlign: "-0.15em" }}
+        >
           <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
         </svg>
       ),
@@ -297,8 +415,7 @@ function SymbolGrid({ onInsert }: { onInsert: (s: string) => void }) {
   const t = useT()
   const [tab, setTab] = useState<SymbolTab>("greek")
   const symbols =
-    tab === "greek"     ? [...GREEK_LOWER, ...GREEK_UPPER] :
-    tab === "operators" ? OPERATORS : ARROWS
+    tab === "greek" ? [...GREEK_LOWER, ...GREEK_UPPER] : tab === "operators" ? OPERATORS : ARROWS
 
   return (
     <div className="symbol-panel-inline">
@@ -308,8 +425,17 @@ function SymbolGrid({ onInsert }: { onInsert: (s: string) => void }) {
             key={tb}
             type="button"
             className={`symbol-tab${tab === tb ? " active" : ""}`}
-            title={tb === "greek" ? t.toolbar.greekLetters : tb === "operators" ? t.toolbar.operators : t.toolbar.arrows}
-            onMouseDown={(e) => { e.preventDefault(); setTab(tb) }}
+            title={
+              tb === "greek"
+                ? t.toolbar.greekLetters
+                : tb === "operators"
+                  ? t.toolbar.operators
+                  : t.toolbar.arrows
+            }
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setTab(tb)
+            }}
           >
             {tb === "greek" ? "αβ" : tb === "operators" ? "∑∫" : "→⇒"}
           </button>
@@ -322,7 +448,10 @@ function SymbolGrid({ onInsert }: { onInsert: (s: string) => void }) {
             type="button"
             className="symbol-btn"
             title={cmd}
-            onMouseDown={(e) => { e.preventDefault(); onInsert(`$${cmd}$`) }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              onInsert(`$${cmd}$`)
+            }}
           >
             {glyph}
           </button>
@@ -367,7 +496,10 @@ function MenuList({
           return (
             <SymbolGrid
               key={i}
-              onInsert={(s) => { onAction(s); closeAll() }}
+              onInsert={(s) => {
+                onAction(s)
+                closeAll()
+              }}
             />
           )
         }
@@ -379,7 +511,11 @@ function MenuList({
               role="menuitem"
               className="menu-list-item"
               title={item.title}
-              onMouseDown={(e) => { e.preventDefault(); onAction(item.snippet); closeAll() }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onAction(item.snippet)
+                closeAll()
+              }}
             >
               {item.label}
             </button>
@@ -393,7 +529,11 @@ function MenuList({
               type="button"
               role="menuitem"
               className={`menu-list-item menu-list-panel${active ? " active" : ""}`}
-              onMouseDown={(e) => { e.preventDefault(); onPanel(item.mode); closeAll() }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onPanel(item.mode)
+                closeAll()
+              }}
             >
               {item.label}
             </button>
@@ -479,7 +619,10 @@ function SectionMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         title={section.label}
-        onMouseDown={(e) => { e.preventDefault(); toggle() }}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          toggle()
+        }}
       >
         <span className="menubar-section-icon">{section.icon}</span>
         <span className="menubar-section-label">{section.label}</span>
@@ -506,7 +649,14 @@ function SectionMenu({
 
 // ── Toolbar (unified menu bar) ───────────────────────────────────────────────
 
-function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen, onToggleFocus }: ToolbarProps) {
+function Toolbar({
+  editorRef,
+  sidebarMode,
+  setSidebarMode,
+  focusClock,
+  focusOpen,
+  onToggleFocus,
+}: ToolbarProps) {
   const t = useT()
   const sections = getSections(t)
   const directButtons = getDirectButtons(t)
@@ -525,7 +675,9 @@ function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen
       for (const el of popups) if (el.contains(target)) return
       setOpenId(null)
     }
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenId(null) }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenId(null)
+    }
     document.addEventListener("mousedown", onDown)
     document.addEventListener("keydown", onKey)
     return () => {
@@ -534,9 +686,12 @@ function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen
     }
   }, [openId])
 
-  const insert = useCallback((snippet: string) => {
-    insertSnippet(editorRef.current, snippet)
-  }, [editorRef])
+  const insert = useCallback(
+    (snippet: string) => {
+      insertSnippet(editorRef.current, snippet)
+    },
+    [editorRef],
+  )
 
   const onPanel = useCallback((mode: PanelMode) => setSidebarMode(mode), [setSidebarMode])
 
@@ -583,9 +738,14 @@ function Toolbar({ editorRef, sidebarMode, setSidebarMode, focusClock, focusOpen
           type="button"
           className={`menubar-focus-clock${focusClock.running ? " running" : " paused"}`}
           title={`${t.focusTimer.barTitle} (${focusClock.phase})`}
-          onMouseDown={(e) => { e.preventDefault(); onToggleFocus?.() }}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onToggleFocus?.()
+          }}
         >
-          <span className="menubar-focus-dot" aria-hidden="true">●</span>
+          <span className="menubar-focus-dot" aria-hidden="true">
+            ●
+          </span>
           <span className="menubar-focus-time">{focusClock.clock}</span>
         </button>
       )}

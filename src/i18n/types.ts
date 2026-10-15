@@ -4,85 +4,186 @@ export type Lang = "en" | "es"
 
 export interface T {
   toolbar: {
-    bold: string; italic: string; strikethrough: string; inlineCode: string
+    bold: string
+    italic: string
+    strikethrough: string
+    inlineCode: string
     underline: string
-    highlight: string; hlDefault: string; hlGreen: string; hlBlue: string
-    hlPurple: string; hlOrange: string; hlRed: string; hlPink: string
-    headings: string; heading1: string; heading2: string; heading3: string
-    insert: string; quote: string; separator: string; list: string; insertToc: string
-    taskList: string; link: string; codeBlock: string
-    mathInline: string; mathBlock: string
-    mathOps: string; superscript: string; subscript: string
-    science: string; lbl_quantity: string; lbl_number: string; lbl_unit: string; lbl_chem: string
-    fraction: string; sqrt: string; nthRoot: string; sum: string
-    integral: string; limit: string; partialDer: string; derivative: string
-    gradient: string; inverse: string; transpose: string
+    highlight: string
+    hlDefault: string
+    hlGreen: string
+    hlBlue: string
+    hlPurple: string
+    hlOrange: string
+    hlRed: string
+    hlPink: string
+    headings: string
+    heading1: string
+    heading2: string
+    heading3: string
+    insert: string
+    quote: string
+    separator: string
+    list: string
+    insertToc: string
+    taskList: string
+    link: string
+    codeBlock: string
+    mathInline: string
+    mathBlock: string
+    mathOps: string
+    superscript: string
+    subscript: string
+    science: string
+    lbl_quantity: string
+    lbl_number: string
+    lbl_unit: string
+    lbl_chem: string
+    fraction: string
+    sqrt: string
+    nthRoot: string
+    sum: string
+    integral: string
+    limit: string
+    partialDer: string
+    derivative: string
+    gradient: string
+    inverse: string
+    transpose: string
     decorators: string
     mathFonts: string
     greekLetters: string
     operators: string
     arrows: string
     environments: string
-    theorem: string; lemma: string; corollary: string; proposition: string
-    definition: string; example: string; exercise: string
-    proof: string; remark: string; note: string
-    table: string; matAuto: string; matFixed: string; matLiteral: string
-    lbl_csv: string; lbl_data: string; lbl_dataplot: string
+    theorem: string
+    lemma: string
+    corollary: string
+    proposition: string
+    definition: string
+    example: string
+    exercise: string
+    proof: string
+    remark: string
+    note: string
+    table: string
+    matAuto: string
+    matFixed: string
+    matLiteral: string
+    lbl_csv: string
+    lbl_data: string
+    lbl_dataplot: string
     more: string
     math: string
     togglePreview: string
     symbolPicker: string
     // labels inside dropdowns
-    lbl_heading1: string; lbl_heading2: string; lbl_heading3: string
-    lbl_separator: string; lbl_list: string
-    lbl_orderedList: string; lbl_taskList: string; lbl_link: string; lbl_codeBlock: string
-    lbl_superscript: string; lbl_subscript: string; lbl_fraction: string
-    lbl_sqrt: string; lbl_nthRoot: string; lbl_sum: string; lbl_integral: string
-    lbl_limit: string; lbl_partialDer: string; lbl_derivative: string
-    lbl_gradient: string; lbl_inverse: string; lbl_transpose: string
-    lbl_theorem: string; lbl_lemma: string; lbl_corollary: string
-    lbl_proposition: string; lbl_definition: string; lbl_example: string
-    lbl_exercise: string; lbl_proof: string; lbl_remark: string; lbl_note: string
-    lbl_matAuto: string; lbl_matFixed: string; lbl_matLiteral: string
+    lbl_heading1: string
+    lbl_heading2: string
+    lbl_heading3: string
+    lbl_separator: string
+    lbl_list: string
+    lbl_orderedList: string
+    lbl_taskList: string
+    lbl_link: string
+    lbl_codeBlock: string
+    lbl_superscript: string
+    lbl_subscript: string
+    lbl_fraction: string
+    lbl_sqrt: string
+    lbl_nthRoot: string
+    lbl_sum: string
+    lbl_integral: string
+    lbl_limit: string
+    lbl_partialDer: string
+    lbl_derivative: string
+    lbl_gradient: string
+    lbl_inverse: string
+    lbl_transpose: string
+    lbl_theorem: string
+    lbl_lemma: string
+    lbl_corollary: string
+    lbl_proposition: string
+    lbl_definition: string
+    lbl_example: string
+    lbl_exercise: string
+    lbl_proof: string
+    lbl_remark: string
+    lbl_note: string
+    lbl_matAuto: string
+    lbl_matFixed: string
+    lbl_matLiteral: string
     // trig / math functions
-    sin: string; cos: string; tan: string; cot: string; sec: string; csc: string
-    exp: string; ln: string; log: string
+    sin: string
+    cos: string
+    tan: string
+    cot: string
+    sec: string
+    csc: string
+    exp: string
+    ln: string
+    log: string
     // unified menu bar section titles
-    secFiles: string; secTexts: string; secMath: string; secViews: string
+    secFiles: string
+    secTexts: string
+    secMath: string
+    secViews: string
     symbols: string
   }
 
   fileTree: {
-    noVault: string; openFolder: string
-    newFile: string; newFolder: string; changeVault: string
-    loading: string; noFiles: string
-    filenamePlaceholder: string; folderPlaceholder: string
-    open: string; rename: string; delete: string; deleteFolder: string
+    noVault: string
+    openFolder: string
+    newFile: string
+    newFolder: string
+    changeVault: string
+    loading: string
+    noFiles: string
+    filenamePlaceholder: string
+    folderPlaceholder: string
+    open: string
+    rename: string
+    delete: string
+    deleteFolder: string
     confirmDelete: (name: string) => string
     confirmDeleteTitle: string
     vaultFiles: string
-    newFileLabel: string; newFolderLabel: string
+    newFileLabel: string
+    newFolderLabel: string
     renamingLabel: (name: string) => string
     folderLabel: (name: string) => string
-    sortAZ: string; sortZA: string
+    sortAZ: string
+    sortZA: string
     filterPlaceholder: string
     clearFilter: string
-    newFileHere: string; newFolderHere: string; newFromTemplateHere: string
-    folderRules: string; saveAsTemplate: string
+    newFileHere: string
+    newFolderHere: string
+    newFromTemplateHere: string
+    folderRules: string
+    saveAsTemplate: string
     creatingIn: (folder: string) => string
   }
 
   search: {
-    placeholder: string; ariaLabel: string; searching: string
-    noResults: string; limit: string
+    placeholder: string
+    ariaLabel: string
+    searching: string
+    noResults: string
+    limit: string
     count: (n: number) => string
     lineAriaLabel: (line: number, content: string) => string
-    showLess: string; more: (n: number) => string
-    toggleReplace: string; replacePlaceholder: string; replaceAll: string
+    showLess: string
+    more: (n: number) => string
+    toggleReplace: string
+    replacePlaceholder: string
+    replaceAll: string
     replaced: (n: number) => string
-    regexTitle: string; caseSensitiveTitle: string
-    errorPattern: string; errorSearching: string
-    searchPlaceholder: string; replaceWithPlaceholder: string
+    regexTitle: string
+    caseSensitiveTitle: string
+    errorPattern: string
+    errorSearching: string
+    searchPlaceholder: string
+    replaceWithPlaceholder: string
   }
 
   outline: {
@@ -94,32 +195,61 @@ export interface T {
   }
 
   backlinks: {
-    noFile: string; searching: string
+    noFile: string
+    searching: string
     links: (n: number) => string
   }
 
   settings: {
-    title: string; language: string; editorFont: string; previewFont: string
-    autosave: string; theme: string; vimMode: string; typewriterMode: string
-    touchpadGestures: string; mathPreview: string; previewTheme: string; previewThemeSame: string
-    dark: string; light: string; highContrast: string
-    wordGoal: string; wordGoalOff: string; words: string
-    wordWrap: string; minimap: string; spellcheck: string; syncScroll: string; previewVisible: string
-    listContinuation: string; listContinuationDesc: string
-    autoFoldExcalidraw: string; autoFoldExcalidrawDesc: string
-    readingWpm: string; readingWpmDesc: string
+    title: string
+    language: string
+    editorFont: string
+    previewFont: string
+    autosave: string
+    theme: string
+    vimMode: string
+    typewriterMode: string
+    touchpadGestures: string
+    mathPreview: string
+    previewTheme: string
+    previewThemeSame: string
+    dark: string
+    light: string
+    highContrast: string
+    wordGoal: string
+    wordGoalOff: string
+    words: string
+    wordWrap: string
+    minimap: string
+    spellcheck: string
+    syncScroll: string
+    previewVisible: string
+    listContinuation: string
+    listContinuationDesc: string
+    autoFoldExcalidraw: string
+    autoFoldExcalidrawDesc: string
+    readingWpm: string
+    readingWpmDesc: string
     closeAriaLabel: string
-    adsToken: string; adsTokenPlaceholder: string; adsTokenNote: string
-    sectionPreview: string; sectionGeneral: string
+    adsToken: string
+    adsTokenPlaceholder: string
+    adsTokenNote: string
+    sectionPreview: string
+    sectionGeneral: string
     dailyNotesEnabled: string
     dailyNotesFolder: string
     dailyNotesFolderPlaceholder: string
     dailyNotesTemplate: string
     dailyNotesTemplateHint: string
-    useWasmTex: string; useWasmTexDesc: string
-    texliveUrl: string; texliveUrlDesc: string
-    autoRebuildPdf: string; autoRebuildPdfDesc: string
-    wasmTexInitializing: string; wasmTexCompiling: string; wasmTexFallback: string
+    useWasmTex: string
+    useWasmTexDesc: string
+    texliveUrl: string
+    texliveUrlDesc: string
+    autoRebuildPdf: string
+    autoRebuildPdfDesc: string
+    wasmTexInitializing: string
+    wasmTexCompiling: string
+    wasmTexFallback: string
     wasmTexUnavailable: string
     searchPlaceholder: string
     searchNoResults: string
@@ -157,18 +287,41 @@ export interface T {
 
   help: {
     title: string
-    file: string; edit: string; view: string; editor: string; math: string
-    save: string; saveAs: string; commandPalette: string; quickSwitcher: string
-    findInFile: string; searchVault: string
-    undo: string; redo: string; selectNextOccurrence: string
-    focusMode: string; exitFocus: string; togglePreview: string; thisHelp: string
-    zoomInOut: string; resetZoom: string; nextTab: string; prevTab: string; closeTab: string
-    expandShorthand: string; navigatePlaceholders: string; autocompleteWikilink: string
-    autoMatrix: string; fixedMatrix: string; markdownTable: string
+    file: string
+    edit: string
+    view: string
+    editor: string
+    math: string
+    save: string
+    saveAs: string
+    commandPalette: string
+    quickSwitcher: string
+    findInFile: string
+    searchVault: string
+    undo: string
+    redo: string
+    selectNextOccurrence: string
+    focusMode: string
+    exitFocus: string
+    togglePreview: string
+    thisHelp: string
+    zoomInOut: string
+    resetZoom: string
+    nextTab: string
+    prevTab: string
+    closeTab: string
+    expandShorthand: string
+    navigatePlaceholders: string
+    autocompleteWikilink: string
+    autoMatrix: string
+    fixedMatrix: string
+    markdownTable: string
     searchPlaceholder: string
     noMatches: string
     dailyNote: string
-    openAiAssistant: string; insertTocShortcut: string; toggleOutline: string
+    openAiAssistant: string
+    insertTocShortcut: string
+    toggleOutline: string
   }
 
   onboarding: {
@@ -178,27 +331,43 @@ export interface T {
     next: string
     back: string
     done: string
-    step1Title: string; step1Text: string
-    step2Title: string; step2Text: string
-    step3Title: string; step3Text: string
-    step4Title: string; step4Text: string
+    step1Title: string
+    step1Text: string
+    step2Title: string
+    step2Text: string
+    step3Title: string
+    step3Text: string
+    step4Title: string
+    step4Text: string
   }
 
   emptyStates: {
-    todoIcon: string; todoMessage: string
-    backlinksIcon: string; backlinksMessage: string
-    equationsIcon: string; equationsMessage: string
-    environmentsIcon: string; environmentsMessage: string
-    labelsIcon: string; labelsMessage: string
-    tagsIcon: string; tagsMessage: string
-    outlineIcon: string; outlineMessage: string
-    bookmarksIcon: string; bookmarksMessage: string
-    closedTabsIcon: string; closedTabsMessage: string
+    todoIcon: string
+    todoMessage: string
+    backlinksIcon: string
+    backlinksMessage: string
+    equationsIcon: string
+    equationsMessage: string
+    environmentsIcon: string
+    environmentsMessage: string
+    labelsIcon: string
+    labelsMessage: string
+    tagsIcon: string
+    tagsMessage: string
+    outlineIcon: string
+    outlineMessage: string
+    bookmarksIcon: string
+    bookmarksMessage: string
+    closedTabsIcon: string
+    closedTabsMessage: string
   }
 
   aiGaps: {
-    fillAtCursor: string; fillAll: string
-    noGapAtCursor: string; noneFound: string; nothingGenerated: string
+    fillAtCursor: string
+    fillAll: string
+    noGapAtCursor: string
+    noneFound: string
+    nothingGenerated: string
     filled: (n: number) => string
     working: string
     insertGap: string
@@ -214,21 +383,35 @@ export interface T {
   }
 
   panelSearch: {
-    placeholder: string; helpPlaceholder: string; clear: string
+    placeholder: string
+    helpPlaceholder: string
+    clear: string
     count: (shown: number, total: number) => string
   }
 
   folderRules: {
     title: (folder: string) => string
-    close: string; intro: string
-    defaultTemplate: string; noTemplate: string
-    filenamePattern: string; filenameHint: string
-    frontmatter: string; frontmatterHint: string
-    generatedFiles: string; generatedHint: string; addGenerated: string; removeGenerated: string
-    generatedFileName: string; generatedType: string; generatedScope: string
-    scopeFolder: string; scopeVault: string
+    close: string
+    intro: string
+    defaultTemplate: string
+    noTemplate: string
+    filenamePattern: string
+    filenameHint: string
+    frontmatter: string
+    frontmatterHint: string
+    generatedFiles: string
+    generatedHint: string
+    addGenerated: string
+    removeGenerated: string
+    generatedFileName: string
+    generatedType: string
+    generatedScope: string
+    scopeFolder: string
+    scopeVault: string
     generatorNames: { tasks: string; calendar: string; index: string }
-    save: string; cancel: string; saved: string
+    save: string
+    cancel: string
+    saved: string
     regenerate: string
     regenerated: (n: number) => string
     regenerateNoRules: string
@@ -238,11 +421,17 @@ export interface T {
   }
 
   templateModal: {
-    title: string; filenameLabel: string; filenamePlaceholder: string
-    cancel: string; create: string
-    useTemplates: string; createTemplate: string
-    namePlaceholder: string; descriptionPlaceholder: string
-    saveTemplate: string; defaultDescription: string
+    title: string
+    filenameLabel: string
+    filenamePlaceholder: string
+    cancel: string
+    create: string
+    useTemplates: string
+    createTemplate: string
+    namePlaceholder: string
+    descriptionPlaceholder: string
+    saveTemplate: string
+    defaultDescription: string
     customBadge: string
     variablesHint: string
     closeAriaLabel: string
@@ -251,7 +440,10 @@ export interface T {
   }
 
   titleBar: {
-    minimize: string; maximize: string; close: string; settings: string
+    minimize: string
+    maximize: string
+    close: string
+    settings: string
   }
 
   statusBar: {
@@ -262,30 +454,61 @@ export interface T {
     selectedWords: (n: number) => string
     selectionTitle: string
     readingTimeTitle: string
-    modeMarkdown: string; modeTex: string
-    ln: string; col: string; goToLineTitle: string
+    modeMarkdown: string
+    modeTex: string
+    ln: string
+    col: string
+    goToLineTitle: string
     wordGoalTitle: (current: number, goal: number) => string
-    texEngineWasm: string; texEngineLocal: string
+    texEngineWasm: string
+    texEngineLocal: string
     texEngineCompiling: string
     texEngineTitle: string
   }
 
   palette: {
-    placeholder: string; noResults: string
-    save: string; saveAs: string; exportTex: string; exportPdf: string; exportHtml: string
-    findInFile: string; searchVault: string; focusMode: string; newFromTemplate: string
-    editMacros: string; editBib: string; settings: string; shortcuts: string
-    openVault: string; viewOutline: string; viewBacklinks: string
-    viewProperties: string; viewGraph: string
-    viewEquations: string; viewStats: string
-    insertToc: string; typewriterMode: string; syncScroll: string
-    wordWrap: string; minimap: string; exportDocx: string
-    spellcheck: string; exportBeamer: string
-    goBack: string; goForward: string
+    placeholder: string
+    noResults: string
+    save: string
+    saveAs: string
+    exportTex: string
+    exportPdf: string
+    exportHtml: string
+    findInFile: string
+    searchVault: string
+    focusMode: string
+    newFromTemplate: string
+    editMacros: string
+    editBib: string
+    settings: string
+    shortcuts: string
+    openVault: string
+    viewOutline: string
+    viewBacklinks: string
+    viewProperties: string
+    viewGraph: string
+    viewEquations: string
+    viewStats: string
+    insertToc: string
+    typewriterMode: string
+    syncScroll: string
+    wordWrap: string
+    minimap: string
+    exportDocx: string
+    spellcheck: string
+    exportBeamer: string
+    goBack: string
+    goForward: string
     citationManager: string
-    vaultBackup: string; copyHtml: string; copyLatex: string
-    searchReplace: string; tableEditor: string; exportReveal: string
-    normalizeTable: string; normalizeTableNone: string; normalizeTableDone: string
+    vaultBackup: string
+    copyHtml: string
+    copyLatex: string
+    searchReplace: string
+    tableEditor: string
+    exportReveal: string
+    normalizeTable: string
+    normalizeTableNone: string
+    normalizeTableDone: string
     checkUpdates: string
     exportAnkiCards: string
     symbolPicker: string
@@ -304,9 +527,14 @@ export interface T {
     exportTypstPdf: string
     compileTypstFilePdf: string
     insertExcalidraw: string
-    insertWikilink: string; insertTransclusion: string; insertFootnote: string
-    insertCallout: string; insertCitation: string; insertFigure: string
-    insertFrontmatter: string; insertEnvRef: string
+    insertWikilink: string
+    insertTransclusion: string
+    insertFootnote: string
+    insertCallout: string
+    insertCitation: string
+    insertFigure: string
+    insertFrontmatter: string
+    insertEnvRef: string
     back: string
     openPanel: (name: string) => string
     insertCodeBlock: string
@@ -343,15 +571,29 @@ export interface T {
   }
 
   quickSwitcher: {
-    placeholder: string; noResults: string
-    navigate: string; open: string; close: string
+    placeholder: string
+    noResults: string
+    navigate: string
+    open: string
+    close: string
   }
 
   sidebar: {
-    files: string; search: string; outline: string; backlinks: string; help: string
-    tags: string; properties: string; graph: string
-    todo: string; equations: string; stats: string; environments: string
-    searchReplace: string; collapse: string; expand: string
+    files: string
+    search: string
+    outline: string
+    backlinks: string
+    help: string
+    tags: string
+    properties: string
+    graph: string
+    todo: string
+    equations: string
+    stats: string
+    environments: string
+    searchReplace: string
+    collapse: string
+    expand: string
     symbols: string
     labels: string
     quality: string
@@ -411,13 +653,20 @@ export interface T {
     errGeneric: (msg: string) => string
     // Slash quick-actions: label + the instruction sent to the model.
     actions: {
-      proofread: string;     proofreadInstr: string
-      shorten: string;       shortenInstr: string
-      latexify: string;      latexifyInstr: string
-      explain: string;       explainInstr: string
-      counterexample: string; counterexampleInstr: string
-      translate: string;     translateInstr: string
-      summarize: string;     summarizeInstr: string
+      proofread: string
+      proofreadInstr: string
+      shorten: string
+      shortenInstr: string
+      latexify: string
+      latexifyInstr: string
+      explain: string
+      explainInstr: string
+      counterexample: string
+      counterexampleInstr: string
+      translate: string
+      translateInstr: string
+      summarize: string
+      summarizeInstr: string
     }
     // Ctrl/Cmd+K inline AI edit widget.
     cmdk: {
@@ -466,9 +715,13 @@ export interface T {
   }
 
   todo: {
-    empty: string; all: string; pending: string; done: string
+    empty: string
+    all: string
+    pending: string
+    done: string
     summary: (done: number, total: number) => string
-    markDone: string; markPending: string
+    markDone: string
+    markPending: string
   }
 
   equations: { empty: string; count: (n: number) => string; lineTitle: (n: number) => string }
@@ -481,22 +734,42 @@ export interface T {
   }
 
   stats: {
-    vault: string; content: string
-    files: string; open: string; words: string; tags: string
-    equations: string; figures: string; citations: string; wikilinks: string
+    vault: string
+    content: string
+    files: string
+    open: string
+    words: string
+    tags: string
+    equations: string
+    figures: string
+    citations: string
+    wikilinks: string
     broken: (n: number) => string
   }
 
   focusTimer: {
     title: string
-    phaseWork: string; phaseBreak: string; phaseLongBreak: string
-    start: string; pause: string; reset: string
+    phaseWork: string
+    phaseBreak: string
+    phaseLongBreak: string
+    start: string
+    pause: string
+    reset: string
     cycles: string
-    durations: string; workMin: string; breakMin: string; longBreakMin: string; cyclesLabel: string
+    durations: string
+    workMin: string
+    breakMin: string
+    longBreakMin: string
+    cyclesLabel: string
     session: string
     wordsThisSession: string
-    peakWords: string; activeTime: string; pausedTime: string; activeWpm: string
-    pomodorosDone: string; wordsPerPomodoro: string; filesTouched: string
+    peakWords: string
+    activeTime: string
+    pausedTime: string
+    activeWpm: string
+    pomodorosDone: string
+    wordsPerPomodoro: string
+    filesTouched: string
     barTitle: string
     elapsed: string
     wpm: string
@@ -559,18 +832,28 @@ export interface T {
     stashError: (msg: string) => string
     // panel
     // remotes section
-    remotes: string; reloadRemotes: string; noRemotes: string
-    editRemoteUrl: string; removeRemote: string; addRemote: string
-    remoteNamePlaceholder: string; remoteUrlPlaceholder: string
-    remoteUpdated: (name: string) => string; remoteAdded: (name: string) => string
-    remoteRemoved: (name: string) => string; confirmRemoveRemote: (name: string) => string
+    remotes: string
+    reloadRemotes: string
+    noRemotes: string
+    editRemoteUrl: string
+    removeRemote: string
+    addRemote: string
+    remoteNamePlaceholder: string
+    remoteUrlPlaceholder: string
+    remoteUpdated: (name: string) => string
+    remoteAdded: (name: string) => string
+    remoteRemoved: (name: string) => string
+    confirmRemoveRemote: (name: string) => string
     remoteError: (msg: string) => string
     // config section
-    configSection: string; configSaved: string; saveLocal: string
+    configSection: string
+    configSaved: string
+    saveLocal: string
     // commits
     loadCommits: string
     // init state
-    initGitRepo: string; recheckRepo: string
+    initGitRepo: string
+    recheckRepo: string
     // Guided collaboration (plain language over git)
     collabTitle: string
     collabNoRemoteIntro: string
@@ -605,40 +888,90 @@ export interface T {
   }
 
   menus: {
-    file: string; edit: string; view: string; vault: string
-    openVault: string; newFromTemplate: string; save: string; saveAs: string
-    exportMd: string; exportTex: string; exportPdf: string; exportDocx: string; exportBeamer: string
-    exportReveal: string; importDoc: string
-    exportTypst: string; exportTypstPdf: string
-    recent: string; clearRecent: string
-    findInFile: string; searchVault: string; commandPalette: string
-    undo: string; redo: string; cut: string; copy: string; paste: string; selectAll: string
-    duplicateLine: string; moveLineUp: string; moveLineDown: string; toggleComment: string
-    focusMode: string; files: string; search: string; outline: string
-    editMacros: string; editBib: string; settings: string; shortcuts: string
+    file: string
+    edit: string
+    view: string
+    vault: string
+    openVault: string
+    newFromTemplate: string
+    save: string
+    saveAs: string
+    exportMd: string
+    exportTex: string
+    exportPdf: string
+    exportDocx: string
+    exportBeamer: string
+    exportReveal: string
+    importDoc: string
+    exportTypst: string
+    exportTypstPdf: string
+    recent: string
+    clearRecent: string
+    findInFile: string
+    searchVault: string
+    commandPalette: string
+    undo: string
+    redo: string
+    cut: string
+    copy: string
+    paste: string
+    selectAll: string
+    duplicateLine: string
+    moveLineUp: string
+    moveLineDown: string
+    toggleComment: string
+    focusMode: string
+    files: string
+    search: string
+    outline: string
+    editMacros: string
+    editBib: string
+    settings: string
+    shortcuts: string
   }
 
   app: {
-    openFolder: string; dropImage: string
-    f2: string; f3: string; f4: string; f5: string
-    pandocMissing: string; generatingPdf: string; pdfDone: string
+    openFolder: string
+    dropImage: string
+    f2: string
+    f3: string
+    f4: string
+    f5: string
+    pandocMissing: string
+    generatingPdf: string
+    pdfDone: string
     pandocError: (e: string) => string
     unsavedChanges: (names: string) => string
-    imageAdded: (f: string) => string; imagePasted: (f: string) => string
-    errCopyImage: (e: string) => string; errPasteImage: (e: string) => string
+    imageAdded: (f: string) => string
+    imagePasted: (f: string) => string
+    errCopyImage: (e: string) => string
+    errPasteImage: (e: string) => string
     noFilePath: string
     fileNotInVault: (name: string) => string
     dialogExportMd: string
-    dialogExportTex: string; dialogExportPdf: string
-    exportDocxSuccess: string; exportDocxError: string
-    exportBeamerSuccess: string; exportBeamerError: string
-    backupSuccess: string; backupError: string
+    dialogExportTex: string
+    dialogExportPdf: string
+    exportDocxSuccess: string
+    exportDocxError: string
+    exportBeamerSuccess: string
+    exportBeamerError: string
+    backupSuccess: string
+    backupError: string
     exportLossWarning: (items: string) => string
-    copiedHtml: string; copiedLatex: string; copyError: string; bibSaved: string
-    revealExportSuccess: string; revealExportError: string
-    focusModeOn: string; focusModeOff: string
+    copiedHtml: string
+    copiedLatex: string
+    copyError: string
+    bibSaved: string
+    revealExportSuccess: string
+    revealExportError: string
+    focusModeOn: string
+    focusModeOff: string
     upToDate: string
-    bookmarks: string; noBookmarks: string; line: string; removeBookmark: string; bookmarkToggled: string
+    bookmarks: string
+    noBookmarks: string
+    line: string
+    removeBookmark: string
+    bookmarkToggled: string
     noMainDocument: string
     pdfCompiledLocal: string
     compilationFailed: (err: string) => string
@@ -679,16 +1012,24 @@ export interface T {
     features: string
     recents: string
     hint: string
-    featureMath: string; featureMathDesc: string
-    featureBib: string; featureBibDesc: string
-    featureEnv: string; featureEnvDesc: string
-    featureExport: string; featureExportDesc: string
-    featureWasmTex: string; featureWasmTexDesc: string
+    featureMath: string
+    featureMathDesc: string
+    featureBib: string
+    featureBibDesc: string
+    featureEnv: string
+    featureEnvDesc: string
+    featureExport: string
+    featureExportDesc: string
+    featureWasmTex: string
+    featureWasmTexDesc: string
   }
 
   vault: {
-    nameEmpty: string; nameTooLong: string; nameInvalidChars: string
-    nameStartsDot: string; nameReserved: string
+    nameEmpty: string
+    nameTooLong: string
+    nameInvalidChars: string
+    nameStartsDot: string
+    nameReserved: string
     errorReading: (e: string) => string
     errorCreatingReadme: (e: string) => string
     binaryFile: (name: string) => string
@@ -701,11 +1042,18 @@ export interface T {
     errorSaving: (e: string) => string
     fileChangedExternally: (name: string) => string
     conflictDiff: (added: number, removed: number) => string
-    conflictReload: string; conflictKeepMine: string; conflictCancel: string
-    conflictReloadHint: string; conflictKeepHint: string; conflictCancelHint: string
+    conflictReload: string
+    conflictKeepMine: string
+    conflictCancel: string
+    conflictReloadHint: string
+    conflictKeepHint: string
+    conflictCancelHint: string
     recentlyClosed: string
     copiedLatex: string
-    bookmarkToggled: string; bookmarks: string; noBookmarks: string; removeBookmark: string
+    bookmarkToggled: string
+    bookmarks: string
+    noBookmarks: string
+    removeBookmark: string
     line: string
     renameRefactorConfirm: (old: string, newName: string, count: number) => string
     renameRefactorDone: (count: number) => string
@@ -722,173 +1070,351 @@ export interface T {
 
   helpPanel: {
     docsLink: string
-    environments: string; shorthands: string; equations: string
-    macros: string; bibtex: string; frontmatter: string; wikilinks: string
-    tplFromFile: string; tplFromFileDesc: string
-    folderRules: string; folderRulesDesc: string
-    frOpen: string; frOpenDesc: string
-    frTemplate: string; frTemplateDesc: string
-    frPattern: string; frPatternDesc: string
-    frFrontmatter: string; frFrontmatterDesc: string
-    frGeneratedLabel: string; frGeneratedDesc: string
-    frTasks: string; frTasksDesc: string
-    frCalendar: string; frCalendarDesc: string
-    frIndex: string; frIndexDesc: string
-    frRegenerate: string; frRegenerateDesc: string
-    frMarker: string; frMarkerDesc: string
-    longDocs: string; longDocsDesc: string
-    ldFold: string; ldFoldDesc: string
-    ldSplit: string; ldSplitDesc: string
-    ldEnter: string; ldEnterDesc: string
-    ldNormalizeTable: string; ldNormalizeTableDesc: string
-    templates: string; greekLetters: string; operators: string
+    environments: string
+    shorthands: string
+    equations: string
+    macros: string
+    bibtex: string
+    frontmatter: string
+    wikilinks: string
+    tplFromFile: string
+    tplFromFileDesc: string
+    folderRules: string
+    folderRulesDesc: string
+    frOpen: string
+    frOpenDesc: string
+    frTemplate: string
+    frTemplateDesc: string
+    frPattern: string
+    frPatternDesc: string
+    frFrontmatter: string
+    frFrontmatterDesc: string
+    frGeneratedLabel: string
+    frGeneratedDesc: string
+    frTasks: string
+    frTasksDesc: string
+    frCalendar: string
+    frCalendarDesc: string
+    frIndex: string
+    frIndexDesc: string
+    frRegenerate: string
+    frRegenerateDesc: string
+    frMarker: string
+    frMarkerDesc: string
+    longDocs: string
+    longDocsDesc: string
+    ldFold: string
+    ldFoldDesc: string
+    ldSplit: string
+    ldSplitDesc: string
+    ldEnter: string
+    ldEnterDesc: string
+    ldNormalizeTable: string
+    ldNormalizeTableDesc: string
+    templates: string
+    greekLetters: string
+    operators: string
     // markdown formatting section
-    formatting: string; formattingIntro: string
-    fmtBoldDesc: string; fmtItalicDesc: string; fmtStrikeDesc: string
-    fmtUnderlineDesc: string; fmtHighlightDesc: string; fmtHighlightColorDesc: string
-    fmtInlineCodeDesc: string; fmtCommentDesc: string; fmtAnnotationDesc: string
+    formatting: string
+    formattingIntro: string
+    fmtBoldDesc: string
+    fmtItalicDesc: string
+    fmtStrikeDesc: string
+    fmtUnderlineDesc: string
+    fmtHighlightDesc: string
+    fmtHighlightColorDesc: string
+    fmtInlineCodeDesc: string
+    fmtCommentDesc: string
+    fmtAnnotationDesc: string
     fmtTocDesc: string
     // environment card labels
-    theorem1: string; lemma1: string; corollary1: string; proposition1: string
-    definition1: string; example1: string; exercise1: string
-    proofLabel: string; remarkLabel: string; noteLabel: string
+    theorem1: string
+    lemma1: string
+    corollary1: string
+    proposition1: string
+    definition1: string
+    example1: string
+    exercise1: string
+    proofLabel: string
+    remarkLabel: string
+    noteLabel: string
     // environment card bodies
-    thmBody: string; lemBody: string; corBody: string; propBody: string
-    defBody: string; exBody: string; exerBody: string
-    proofBody: string; remarkBody: string; noteBody: string
+    thmBody: string
+    lemBody: string
+    corBody: string
+    propBody: string
+    defBody: string
+    exBody: string
+    exerBody: string
+    proofBody: string
+    remarkBody: string
+    noteBody: string
     // sizes
-    compact: string; normal: string; large: string
-    numbered: string; unnumbered: string
+    compact: string
+    normal: string
+    large: string
+    numbered: string
+    unnumbered: string
     // shorthand section
-    intro1: string; intro2: string; intro3: string
+    intro1: string
+    intro2: string
+    intro3: string
     // operation groups
-    operations: string; fraction: string; sqrt: string; nthRoot: string
-    abs: string; norm: string; ceil: string; floor: string
-    superSub: string; superscript: string; subscript: string; inverse: string; transpose: string
-    decorators: string; hat: string; bar: string; tilde: string; dot: string; ddot: string; vector: string
-    mathFonts: string; bold: string; calligraphic: string; blackboard: string
-    sumsLimits: string; sum: string; integral: string; limit: string; derivative: string; partialDer: string
-    matrices: string; matAuto: string; matFixed: string; matTable: string; matLiteral: string
+    operations: string
+    fraction: string
+    sqrt: string
+    nthRoot: string
+    abs: string
+    norm: string
+    ceil: string
+    floor: string
+    superSub: string
+    superscript: string
+    subscript: string
+    inverse: string
+    transpose: string
+    decorators: string
+    hat: string
+    bar: string
+    tilde: string
+    dot: string
+    ddot: string
+    vector: string
+    mathFonts: string
+    bold: string
+    calligraphic: string
+    blackboard: string
+    sumsLimits: string
+    sum: string
+    integral: string
+    limit: string
+    derivative: string
+    partialDer: string
+    matrices: string
+    matAuto: string
+    matFixed: string
+    matTable: string
+    matLiteral: string
     nesting: string
     // trig / math functions
     trigFunctions: string
-    hpSin: string; hpCos: string; hpTan: string; hpCot: string; hpSec: string; hpCsc: string
-    hpExp: string; hpLn: string; hpLog: string
+    hpSin: string
+    hpCos: string
+    hpTan: string
+    hpCot: string
+    hpSec: string
+    hpCsc: string
+    hpExp: string
+    hpLn: string
+    hpLog: string
     // equations section
-    numberedEq: string; numberedNoLabel: string; refLabel: string; directRef: string
+    numberedEq: string
+    numberedNoLabel: string
+    refLabel: string
+    directRef: string
     inlineNumberedDesc: string
-    structuralLabels: string; structuralLabelsDesc: string
-    sectionLabelDesc: string; tableLabelDesc: string; envLabelDesc: string
-    labelsPanelDesc: string; labelAutocompleteDesc: string
-    qualityWorkflow: string; qualityWorkflowDesc: string
-    projectMainDesc: string; projectTransclusionDesc: string
-    projectExportDesc: string; localLatexCompileDesc: string; mathBacklinksDesc: string
+    structuralLabels: string
+    structuralLabelsDesc: string
+    sectionLabelDesc: string
+    tableLabelDesc: string
+    envLabelDesc: string
+    labelsPanelDesc: string
+    labelAutocompleteDesc: string
+    qualityWorkflow: string
+    qualityWorkflowDesc: string
+    projectMainDesc: string
+    projectTransclusionDesc: string
+    projectExportDesc: string
+    localLatexCompileDesc: string
+    mathBacklinksDesc: string
     // macros
-    macrosDesc: string; noArgs: string; withArgs: string
+    macrosDesc: string
+    noArgs: string
+    withArgs: string
     // bibtex
-    bibtexDesc: string; cite: string; citeNote: string
+    bibtexDesc: string
+    cite: string
+    citeNote: string
     // frontmatter
-    fmTitle: string; fmAuthor: string; fmDate: string; fmTags: string
+    fmTitle: string
+    fmAuthor: string
+    fmDate: string
+    fmTags: string
     // wikilinks
-    wikilinkRow: string; wikilinkDesc: string
-    transclusionFile: string; transclusionFileDesc: string
-    transclusionHeading: string; transclusionHeadingDesc: string
-    transclusionBlock: string; transclusionBlockDesc: string
-    blockIdRow: string; blockIdDesc: string
+    wikilinkRow: string
+    wikilinkDesc: string
+    transclusionFile: string
+    transclusionFileDesc: string
+    transclusionHeading: string
+    transclusionHeadingDesc: string
+    transclusionBlock: string
+    transclusionBlockDesc: string
+    blockIdRow: string
+    blockIdDesc: string
     wikilinkHoverDesc: string
     // templates
     templatesDesc: string
-    tplArticle: string; tplArticleDesc: string
-    tplNotes: string; tplNotesDesc: string
-    tplHomework: string; tplHomeworkDesc: string
-    tplTheorems: string; tplTheoremsDesc: string
-    tplResearch: string; tplResearchDesc: string
+    tplArticle: string
+    tplArticleDesc: string
+    tplNotes: string
+    tplNotesDesc: string
+    tplHomework: string
+    tplHomeworkDesc: string
+    tplTheorems: string
+    tplTheoremsDesc: string
+    tplResearch: string
+    tplResearchDesc: string
     // misc
-    headingsNote: string; headingsPurpose: string
+    headingsNote: string
+    headingsPurpose: string
     // env intro
-    envSyntaxCode: string; envSyntaxMid: string; envCapabilities: string
-    envRefs: string; envRefLabelDesc: string; envRefLocalDesc: string
-    envRefCrossDesc: string; envRefSpacesDesc: string
+    envSyntaxCode: string
+    envSyntaxMid: string
+    envCapabilities: string
+    envRefs: string
+    envRefLabelDesc: string
+    envRefLocalDesc: string
+    envRefCrossDesc: string
+    envRefSpacesDesc: string
     // eq code block
     eqCodeBlock: string
     // env card syntax titles
-    syntaxPythagoras: string; syntaxUniqueness: string
-    syntaxContinuity: string; syntaxEvenFunction: string
+    syntaxPythagoras: string
+    syntaxUniqueness: string
+    syntaxContinuity: string
+    syntaxEvenFunction: string
     // inline example
     inlineExample: string
     // example title in environment card
     exampleTitle: string
     // mermaid diagrams section
-    mermaid: string; mermaidDesc: string
-    mermaidFlow: string; mermaidSeq: string; mermaidGantt: string
+    mermaid: string
+    mermaidDesc: string
+    mermaidFlow: string
+    mermaidSeq: string
+    mermaidGantt: string
     // callouts section
-    callouts: string; calloutsDesc: string
-    calloutNote: string; calloutNoteDesc: string
-    calloutWarning: string; calloutWarningDesc: string
-    calloutTip: string; calloutTipDesc: string
-    calloutImportant: string; calloutImportantDesc: string
+    callouts: string
+    calloutsDesc: string
+    calloutNote: string
+    calloutNoteDesc: string
+    calloutWarning: string
+    calloutWarningDesc: string
+    calloutTip: string
+    calloutTipDesc: string
+    calloutImportant: string
+    calloutImportantDesc: string
     // footnotes section
-    footnotes: string; footnotesDesc: string
-    footnoteInline: string; footnoteInlineDesc: string
-    footnoteDef: string; footnoteDefDesc: string
+    footnotes: string
+    footnotesDesc: string
+    footnoteInline: string
+    footnoteInlineDesc: string
+    footnoteDef: string
+    footnoteDefDesc: string
     // checkboxes section
-    checkboxes: string; checkboxesDesc: string
-    checkboxUnchecked: string; checkboxUncheckedDesc: string
-    checkboxChecked: string; checkboxCheckedDesc: string
+    checkboxes: string
+    checkboxesDesc: string
+    checkboxUnchecked: string
+    checkboxUncheckedDesc: string
+    checkboxChecked: string
+    checkboxCheckedDesc: string
     // figures section
-    figures: string; figuresDesc: string
-    figureLabel: string; figureLabelDesc: string
-    figureRef: string; figureRefDesc: string
+    figures: string
+    figuresDesc: string
+    figureLabel: string
+    figureLabelDesc: string
+    figureRef: string
+    figureRefDesc: string
     // user snippets section
-    userSnippets: string; userSnippetsDesc: string
-    userSnippetFormat: string; userSnippetFormatDesc: string
-    userSnippetExample: string; userSnippetExampleDesc: string
+    userSnippets: string
+    userSnippetsDesc: string
+    userSnippetFormat: string
+    userSnippetFormatDesc: string
+    userSnippetExample: string
+    userSnippetExampleDesc: string
     // html & media section
     htmlMedia: string
     htmlMediaDesc: string
-    htmlImg: string; htmlImgDesc: string
-    htmlVideo: string; htmlVideoDesc: string
-    htmlYoutube: string; htmlYoutubeDesc: string
-    htmlDetails: string; htmlDetailsDesc: string
-    htmlMark: string; htmlMarkDesc: string
-    htmlAllowed: string; htmlBlocked: string
+    htmlImg: string
+    htmlImgDesc: string
+    htmlVideo: string
+    htmlVideoDesc: string
+    htmlYoutube: string
+    htmlYoutubeDesc: string
+    htmlDetails: string
+    htmlDetailsDesc: string
+    htmlMark: string
+    htmlMarkDesc: string
+    htmlAllowed: string
+    htmlBlocked: string
     specialBlocksNote: string
     blockAutocompleteNote: string
     // pseudocode section
-    pseudocode: string; pseudocodeDesc: string
-    pseudocodeExample: string; pseudocodeKeywords: string
-    pseudocodeSyntax: string; pseudocodeSyntaxAlt: string
+    pseudocode: string
+    pseudocodeDesc: string
+    pseudocodeExample: string
+    pseudocodeKeywords: string
+    pseudocodeSyntax: string
+    pseudocodeSyntaxAlt: string
     // truth table section
-    truthTable: string; truthTableDesc: string; truthTableExample: string
+    truthTable: string
+    truthTableDesc: string
+    truthTableExample: string
     // graph visualizer section
-    graphViz: string; graphVizDesc: string; graphVizExample: string
+    graphViz: string
+    graphVizDesc: string
+    graphVizExample: string
     // function plotter section
-    functionPlot: string; functionPlotDesc: string; functionPlotExample: string
+    functionPlot: string
+    functionPlotDesc: string
+    functionPlotExample: string
     // commutative diagram section
-    commDiag: string; commDiagDesc: string; commDiagExample: string
+    commDiag: string
+    commDiagDesc: string
+    commDiagExample: string
     // flowchart section
-    flowchart: string; flowchartDesc: string; flowchartExample: string
+    flowchart: string
+    flowchartDesc: string
+    flowchartExample: string
     // excalidraw section
-    excalidraw: string; excalidrawDesc: string; excalidrawExample: string
+    excalidraw: string
+    excalidrawDesc: string
+    excalidrawExample: string
     // AI assistant section
-    aiAssistant: string; aiAssistantDesc: string
-    aiPanelRow: string; aiPanelRowDesc: string
-    aiGapRow: string; aiGapRowDesc: string
-    aiInlineRow: string; aiInlineRowDesc: string
+    aiAssistant: string
+    aiAssistantDesc: string
+    aiPanelRow: string
+    aiPanelRowDesc: string
+    aiGapRow: string
+    aiGapRowDesc: string
+    aiInlineRow: string
+    aiInlineRowDesc: string
     // symbol picker / math preview section
-    symbolPickerHelp: string; symbolPickerDesc: string
-    mathPreviewHelp: string; mathPreviewDesc: string
+    symbolPickerHelp: string
+    symbolPickerDesc: string
+    mathPreviewHelp: string
+    mathPreviewDesc: string
     // editor toggles & sidebar panels section
-    editorToggles: string; editorTogglesIntro: string
-    sidebarPanels: string; sidebarPanelsIntro: string
-    toggleTypewriter: string; toggleTypewriterDesc: string
-    toggleSyncScroll: string; toggleSyncScrollDesc: string
-    toggleWordWrap: string; toggleWordWrapDesc: string
-    toggleMinimap: string; toggleMinimapDesc: string
-    toggleSpellcheck: string; toggleSpellcheckDesc: string
-    panelEnvironments: string; panelEnvironmentsDesc: string
-    panelLabels: string; panelLabelsDesc: string
-    panelQuality: string; panelQualityDesc: string
+    editorToggles: string
+    editorTogglesIntro: string
+    sidebarPanels: string
+    sidebarPanelsIntro: string
+    toggleTypewriter: string
+    toggleTypewriterDesc: string
+    toggleSyncScroll: string
+    toggleSyncScrollDesc: string
+    toggleWordWrap: string
+    toggleWordWrapDesc: string
+    toggleMinimap: string
+    toggleMinimapDesc: string
+    toggleSpellcheck: string
+    toggleSpellcheckDesc: string
+    panelEnvironments: string
+    panelEnvironmentsDesc: string
+    panelLabels: string
+    panelLabelsDesc: string
+    panelQuality: string
+    panelQualityDesc: string
   }
 
   labelsPanel: {
@@ -979,7 +1505,9 @@ export interface T {
     orientation: string
     portrait: string
     landscape: string
-    left: string; center: string; right: string
+    left: string
+    center: string
+    right: string
   }
 
   tagPanel: {

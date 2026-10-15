@@ -41,21 +41,47 @@ class Boundary extends Component<Props, State> {
           role="alert"
           data-error-region={region}
           style={{
-            display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-            margin: 8, padding: "8px 12px", boxSizing: "border-box",
-            background: "rgba(244,71,71,0.08)", border: "1px solid rgba(244,71,71,0.4)",
-            borderRadius: 4, fontSize: 12, color: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            margin: 8,
+            padding: "8px 12px",
+            boxSizing: "border-box",
+            background: "rgba(244,71,71,0.08)",
+            border: "1px solid rgba(244,71,71,0.4)",
+            borderRadius: 4,
+            fontSize: 12,
+            color: "inherit",
           }}
         >
-          <span style={{ fontWeight: 600 }}>{strings.regionFailed(strings.regions[region as keyof T["errorBoundary"]["regions"]] ?? region)}</span>
-          <span style={{ opacity: 0.7, flex: "1 1 120px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ fontWeight: 600 }}>
+            {strings.regionFailed(
+              strings.regions[region as keyof T["errorBoundary"]["regions"]] ?? region,
+            )}
+          </span>
+          <span
+            style={{
+              opacity: 0.7,
+              flex: "1 1 120px",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {error.message}
           </span>
           <button
             onClick={this.reset}
             style={{
-              padding: "3px 12px", background: "#0e639c", border: "none",
-              borderRadius: 3, color: "#fff", cursor: "pointer", fontSize: 12,
+              padding: "3px 12px",
+              background: "#0e639c",
+              border: "none",
+              borderRadius: 3,
+              color: "#fff",
+              cursor: "pointer",
+              fontSize: 12,
             }}
           >
             {strings.retry}
@@ -65,25 +91,47 @@ class Boundary extends Component<Props, State> {
     }
 
     return (
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", height: "100vh", gap: 16,
-        fontFamily: "monospace", background: "#1e1e1e", color: "#d4d4d4",
-        padding: 32, boxSizing: "border-box",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          gap: 16,
+          fontFamily: "monospace",
+          background: "#1e1e1e",
+          color: "#d4d4d4",
+          padding: 32,
+          boxSizing: "border-box",
+        }}
+      >
         <h2 style={{ color: "#f44747", margin: 0 }}>{strings.title}</h2>
-        <pre style={{
-          maxWidth: 600, overflowX: "auto", whiteSpace: "pre-wrap",
-          background: "#252526", padding: 16, borderRadius: 4,
-          fontSize: 13, color: "#ce9178", border: "1px solid #3c3c3c",
-        }}>
+        <pre
+          style={{
+            maxWidth: 600,
+            overflowX: "auto",
+            whiteSpace: "pre-wrap",
+            background: "#252526",
+            padding: 16,
+            borderRadius: 4,
+            fontSize: 13,
+            color: "#ce9178",
+            border: "1px solid #3c3c3c",
+          }}
+        >
           {error.message}
         </pre>
         <button
           onClick={this.reset}
           style={{
-            padding: "6px 18px", background: "#0e639c", border: "none",
-            borderRadius: 3, color: "#fff", cursor: "pointer", fontSize: 13,
+            padding: "6px 18px",
+            background: "#0e639c",
+            border: "none",
+            borderRadius: 3,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: 13,
           }}
         >
           {strings.retry}
@@ -101,9 +149,19 @@ class Boundary extends Component<Props, State> {
  * Strings come from LanguageContext. If a boundary is ever mounted outside the
  * provider the context holds its Spanish default, which is acceptable.
  */
-export default function ErrorBoundary({ children, region }: { children: ReactNode; region?: string }) {
+export default function ErrorBoundary({
+  children,
+  region,
+}: {
+  children: ReactNode
+  region?: string
+}) {
   const t = useT()
-  return <Boundary region={region} strings={t.errorBoundary}>{children}</Boundary>
+  return (
+    <Boundary region={region} strings={t.errorBoundary}>
+      {children}
+    </Boundary>
+  )
 }
 
 /**
@@ -111,8 +169,14 @@ export default function ErrorBoundary({ children, region }: { children: ReactNod
  * panels and modals so a failed chunk or a render crash stays local.
  */
 export function LazyRegion({
-  region, fallback = null, children,
-}: { region: string; fallback?: ReactNode; children: ReactNode }) {
+  region,
+  fallback = null,
+  children,
+}: {
+  region: string
+  fallback?: ReactNode
+  children: ReactNode
+}) {
   return (
     <ErrorBoundary region={region}>
       <Suspense fallback={fallback}>{children}</Suspense>

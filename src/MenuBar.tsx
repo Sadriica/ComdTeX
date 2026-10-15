@@ -8,7 +8,9 @@ export interface MenuAction {
   action: () => void
 }
 
-export interface MenuSeparatorItem { separator: true }
+export interface MenuSeparatorItem {
+  separator: true
+}
 
 export type MenuEntry = MenuAction | MenuSeparatorItem
 
@@ -38,7 +40,10 @@ function MenuDropdown({ label, entries }: MenuDef) {
     <div className="menu-item" ref={ref}>
       <button
         className={`menu-btn${open ? " open" : ""}`}
-        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o) }}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          setOpen((o) => !o)
+        }}
       >
         {label}
       </button>
@@ -54,13 +59,16 @@ function MenuDropdown({ label, entries }: MenuDef) {
                 disabled={entry.disabled}
                 onMouseDown={(e) => {
                   e.preventDefault()
-                  if (!entry.disabled) { entry.action(); setOpen(false) }
+                  if (!entry.disabled) {
+                    entry.action()
+                    setOpen(false)
+                  }
                 }}
               >
                 <span className="menu-entry-label">{entry.label}</span>
                 {entry.shortcut && <span className="menu-shortcut">{entry.shortcut}</span>}
               </button>
-            )
+            ),
           )}
         </div>
       )}
@@ -71,7 +79,9 @@ function MenuDropdown({ label, entries }: MenuDef) {
 function MenuBar({ menus, children }: { menus: MenuDef[]; children?: React.ReactNode }) {
   return (
     <div className="menu-bar">
-      {menus.map((m) => <MenuDropdown key={m.label} {...m} />)}
+      {menus.map((m) => (
+        <MenuDropdown key={m.label} {...m} />
+      ))}
       {children}
     </div>
   )

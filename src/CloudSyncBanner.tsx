@@ -31,7 +31,9 @@ export default function CloudSyncBanner({ provider, onDismiss }: CloudSyncBanner
 
   return (
     <div className="cloud-sync-banner" role="status">
-      <span className="cloud-sync-banner-icon" aria-hidden="true">☁</span>
+      <span className="cloud-sync-banner-icon" aria-hidden="true">
+        ☁
+      </span>
       <span className="cloud-sync-banner-text">
         <strong>{t.cloudSync.bannerTitle(label)}</strong>: {t.cloudSync.bannerBody}
       </span>

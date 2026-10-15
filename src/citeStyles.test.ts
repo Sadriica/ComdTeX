@@ -61,7 +61,9 @@ describe("Vancouver", () => {
 
   it("collapses more than six authors into et al", () => {
     const many = Array.from({ length: 8 }, (_, i) => `Last${i}, First${i}`).join(" and ")
-    expect(s.reference({ ...article, fields: { ...article.fields, author: many } })).toContain("et al")
+    expect(s.reference({ ...article, fields: { ...article.fields, author: many } })).toContain(
+      "et al",
+    )
   })
 
   it("maps to numeric natbib on export", () => {
@@ -74,8 +76,9 @@ describe("APA 7", () => {
 
   it("cites author and year in text", () => {
     expect(s.inText(article)).toBe("(Rudin & Smith, 1976)")
-    expect(s.inText({ ...article, fields: { ...article.fields, author: "A, X and B, Y and C, Z" } }))
-      .toBe("(A et al., 1976)")
+    expect(
+      s.inText({ ...article, fields: { ...article.fields, author: "A, X and B, Y and C, Z" } }),
+    ).toBe("(A et al., 1976)")
   })
 
   it("uses ampersand and spaced initials in the reference", () => {

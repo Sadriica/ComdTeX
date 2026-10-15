@@ -38,15 +38,19 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
   // Match on the number, the label and the rendered preview; a long document's
   // equation list is otherwise only navigable by scrolling.
   const visible = useMemo(
-    () => equations.filter((eq) =>
-      matchesQuery(`(${eq.number}) ${eq.label ?? ""} ${eq.preview}`, query)),
+    () =>
+      equations.filter((eq) =>
+        matchesQuery(`(${eq.number}) ${eq.label ?? ""} ${eq.preview}`, query),
+      ),
     [equations, query],
   )
 
   if (equations.length === 0) {
     return (
       <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.equationsIcon}</div>
+        <div className="panel-empty-icon" aria-hidden="true">
+          {t.emptyStates.equationsIcon}
+        </div>
         <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.equationsMessage)}</p>
       </div>
     )

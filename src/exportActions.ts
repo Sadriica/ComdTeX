@@ -1,5 +1,14 @@
 import { open, save } from "@tauri-apps/plugin-dialog"
-import { copyFile, exists, mkdir, readFile, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
+import {
+  copyFile,
+  exists,
+  mkdir,
+  readFile,
+  readTextFile,
+  remove,
+  writeFile,
+  writeTextFile,
+} from "@tauri-apps/plugin-fs"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { Command } from "@tauri-apps/plugin-shell"
 import { extractAnkiCards, exportAnkiTsv } from "./ankiExport"
@@ -66,7 +75,11 @@ export interface ExportMessages {
  * hidden `.comdtex/tmp` dir is; callers still delete the file in `finally`.
  * Returns an absolute path. Without a vault it falls back to `fallbackDir`.
  */
-export async function exportTempPath(vaultPath: string | null | undefined, fallbackDir: string, name: string): Promise<string> {
+export async function exportTempPath(
+  vaultPath: string | null | undefined,
+  fallbackDir: string,
+  name: string,
+): Promise<string> {
   let dir = fallbackDir
   if (vaultPath) {
     dir = await pathJoin(vaultPath, ".comdtex", "tmp")
@@ -189,7 +202,7 @@ async function readMacros(vaultPath: string | null): Promise<string> {
   if (!vaultPath) return ""
   try {
     const macrosPath = await pathJoin(vaultPath, MACROS_FILENAME)
-    return await exists(macrosPath) ? await readTextFile(macrosPath) : ""
+    return (await exists(macrosPath)) ? await readTextFile(macrosPath) : ""
   } catch {
     return ""
   }
@@ -277,7 +290,9 @@ async function buildLatex(
   )
 }
 
-export async function saveCurrentFileAs(ctx: Pick<ExportActionsContext, "activeFile" | "dialogs" | "readEditorContent" | "reloadVault">) {
+export async function saveCurrentFileAs(
+  ctx: Pick<ExportActionsContext, "activeFile" | "dialogs" | "readEditorContent" | "reloadVault">,
+) {
   const content = ctx.readEditorContent()
   if (content === null) return
   const path = await save({
@@ -318,7 +333,9 @@ export async function exportLatex(ctx: ExportActionsContext) {
   let content = rawContent
   if (hasRasterBlocks(rawContent)) {
     const outDir = pathDirname(outPathEarly) || "."
-    const outBase = pathBasename(outPathEarly).replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9-]+/g, "-")
+    const outBase = pathBasename(outPathEarly)
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^A-Za-z0-9-]+/g, "-")
     try {
       const replaced = await replaceDiagramsForExport(rawContent, async (i, _block, png) => {
         const file = `${outBase}-diag-${i}.png`
@@ -337,7 +354,12 @@ export async function exportLatex(ctx: ExportActionsContext) {
   // journal submission, Overleaf) instead of only on this machine.
   const resolvedContent = resolveDocumentContent(content, ctx.resolveTransclusion)
   const outDir = pathDirname(outPathEarly) || "."
-  const { tex: bundledTex, copied } = await bundleTexAssets(resolvedContent, tex, outDir, ctx.vaultPath)
+  const { tex: bundledTex, copied } = await bundleTexAssets(
+    resolvedContent,
+    tex,
+    outDir,
+    ctx.vaultPath,
+  )
   await writeTextFile(outPathEarly, bundledTex)
   if (copied > 0 && ctx.messages.texAssetsCopied) {
     ctx.toast(ctx.messages.texAssetsCopied(copied), "success")
@@ -444,7 +466,12 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     }
   }
 
-  const tex = await buildLatex(content, currentFile.name.replace(/\.[^.]+$/, ""), ctx.vaultPath, ctx.resolveTransclusion)
+  const tex = await buildLatex(
+    content,
+    currentFile.name.replace(/\.[^.]+$/, ""),
+    ctx.vaultPath,
+    ctx.resolveTransclusion,
+  )
   const outPath = await save({
     title: ctx.dialogs.exportPdf,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
@@ -470,7 +497,9 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
       // instead of landing via a map that describes an older PDF.
       ctx.onSyncTex?.(null)
       ctx.onPdfSaved?.(outPath)
-      await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+      await openPath(outPath).catch(() => {
+        /* file saved; opener failure is non-fatal */
+      })
       ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
       return
     }
@@ -493,22 +522,30 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   // which is what powers click-to-source in the preview.
   const attempts: Array<[string, string[]]> = [
     ["tectonic", ["--synctex", tmpTex, "--outdir", dir]],
-    ["xelatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
-    ["pdflatex", ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex]],
+    [
+      "xelatex",
+      ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex],
+    ],
+    [
+      "pdflatex",
+      ["-interaction=nonstopmode", "-halt-on-error", "-synctex=1", `-jobname=${jobname}`, tmpTex],
+    ],
   ]
   let lastError = ""
   try {
     for (const [cmdName, args] of attempts) {
       try {
         const result = await Command.create(cmdName, args, { cwd: dir }).execute()
-        if (result.code === 0 && await exists(tmpPdf)) {
+        if (result.code === 0 && (await exists(tmpPdf))) {
           await copyFile(tmpPdf, outPath)
           // The line map anchors against the EDITOR's content (rawContent):
           // diagram replacements shift line numbers in `content`, and jumps
           // must land where the user actually is.
           ctx.onSyncTex?.(await collectSyncTex(dir, jobname, rawContent, tex))
           ctx.onPdfSaved?.(outPath)
-          await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+          await openPath(outPath).catch(() => {
+            /* file saved; opener failure is non-fatal */
+          })
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
           return
         }
@@ -520,13 +557,20 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
     // Local engines failed. When diagrams deferred the WASM engine, give it
     // its honest chance now with the ORIGINAL content (no disk images).
     if (ctx.useWasmTex !== false && diagramCount > 0) {
-      const texNoDiagrams = await buildLatex(rawContent, currentFile.name.replace(/\.[^.]+$/, ""), ctx.vaultPath, ctx.resolveTransclusion)
+      const texNoDiagrams = await buildLatex(
+        rawContent,
+        currentFile.name.replace(/\.[^.]+$/, ""),
+        ctx.vaultPath,
+        ctx.resolveTransclusion,
+      )
       const wasm = await tryCompileWithWasm(texNoDiagrams, ctx)
       if (wasm && wasm.status === "ok" && wasm.pdf) {
         await writeFile(outPath, wasm.pdf)
         ctx.onSyncTex?.(null)
         ctx.onPdfSaved?.(outPath)
-        await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+        await openPath(outPath).catch(() => {
+          /* file saved; opener failure is non-fatal */
+        })
         ctx.toast(ctx.messages.pdfCompiledWasm ?? ctx.messages.pdfCompiledLocal, "success")
         return
       }
@@ -577,8 +621,12 @@ export async function exportPdf(ctx: ExportActionsContext) {
 
   // Build fancyhdr preamble if any header/footer fields are set
   const hdrFields = [
-    fm.headerLeft, fm.headerCenter, fm.headerRight,
-    fm.footerLeft, fm.footerCenter, fm.footerRight,
+    fm.headerLeft,
+    fm.headerCenter,
+    fm.headerRight,
+    fm.footerLeft,
+    fm.footerCenter,
+    fm.footerRight,
   ]
   const hasHeaderFooter = hdrFields.some((v) => v && String(v).trim() !== "")
 
@@ -627,11 +675,15 @@ export async function exportPdf(ctx: ExportActionsContext) {
       tempInputPath,
       "--pdf-engine=xelatex",
       "--standalone",
-      "-V", `papersize=${papersize}`,
-      "-V", `geometry:margin=2.5cm${orientation === "landscape" ? ",landscape" : ""}`,
-      "-V", "fontsize=11pt",
+      "-V",
+      `papersize=${papersize}`,
+      "-V",
+      `geometry:margin=2.5cm${orientation === "landscape" ? ",landscape" : ""}`,
+      "-V",
+      "fontsize=11pt",
       "--mathjax",
-      "-o", outPath,
+      "-o",
+      outPath,
     ]
 
     if (hasHeaderFooter) {
@@ -658,10 +710,15 @@ export async function exportPdf(ctx: ExportActionsContext) {
     let result: { code: number | null; stderr: string; stdout: string } | null = null
     let firstFailure: { code: number | null; stderr: string; stdout: string } | null = null
     for (const engine of ["tectonic", "xelatex", "pdflatex"]) {
-      const args = pandocArgs.map((a) => (a === "--pdf-engine=xelatex" ? `--pdf-engine=${engine}` : a))
+      const args = pandocArgs.map((a) =>
+        a === "--pdf-engine=xelatex" ? `--pdf-engine=${engine}` : a,
+      )
       try {
         const attempt = await Command.create("pandoc", args, { cwd: pandocDir }).execute()
-        if (attempt.code === 0) { result = attempt; break }
+        if (attempt.code === 0) {
+          result = attempt
+          break
+        }
         if (!firstFailure) firstFailure = attempt
       } catch {
         // pandoc itself unavailable/denied: try the next engine anyway
@@ -685,7 +742,9 @@ export async function exportPdf(ctx: ExportActionsContext) {
     }
     ctx.toast(ctx.messages.pdfDone, "success")
     ctx.onPdfSaved?.(outPath)
-    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+    await openPath(outPath).catch(() => {
+      /* file saved; opener failure is non-fatal */
+    })
   } catch (err) {
     await remove(`${currentFile.path}.comdtex-export.tmp.md`).catch(() => {})
     for (const f of pandocDiagFiles) await remove(f).catch(() => {})
@@ -707,10 +766,14 @@ export async function backupVault(ctx: ExportActionsContext) {
     // `zip -r` ADDS to an existing archive; the save dialog already confirmed the
     // overwrite, so start from nothing or stale entries survive in the backup.
     if (await exists(outPath).catch(() => false)) await remove(outPath)
-    const result = await Command.create("zip", ["-r", outPath, vaultName], { cwd: ctx.vaultPath + "/.." }).execute()
+    const result = await Command.create("zip", ["-r", outPath, vaultName], {
+      cwd: ctx.vaultPath + "/..",
+    }).execute()
     if (result.code !== 0) throw new Error(result.stderr)
     ctx.toast(ctx.messages.backupSuccess, "success")
-    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+    await openPath(outPath).catch(() => {
+      /* file saved; opener failure is non-fatal */
+    })
   } catch (e) {
     ctx.toast(ctx.messages.backupError, "error")
     console.error(e)
@@ -721,7 +784,12 @@ export async function copyLatex(ctx: ExportActionsContext) {
   const file = ctx.activeFile
   if (!file) return
   try {
-    const tex = await buildLatex(file.content, file.name.replace(/\.[^.]+$/, ""), ctx.vaultPath, ctx.resolveTransclusion)
+    const tex = await buildLatex(
+      file.content,
+      file.name.replace(/\.[^.]+$/, ""),
+      ctx.vaultPath,
+      ctx.resolveTransclusion,
+    )
     await ctx.writeClipboard(tex)
     ctx.toast(ctx.messages.copiedLatex, "success")
   } catch {
@@ -798,7 +866,24 @@ export async function importDocument(ctx: ImportActionsContext) {
     title: ctx.dialogTitle,
     multiple: false,
     directory: false,
-    filters: [{ name: "Documentos", extensions: ["docx", "odt", "tex", "html", "htm", "epub", "rtf", "md", "markdown", "rst", "org"] }],
+    filters: [
+      {
+        name: "Documentos",
+        extensions: [
+          "docx",
+          "odt",
+          "tex",
+          "html",
+          "htm",
+          "epub",
+          "rtf",
+          "md",
+          "markdown",
+          "rst",
+          "org",
+        ],
+      },
+    ],
   })
   if (!source || typeof source !== "string") return
 
@@ -885,7 +970,13 @@ export async function compileTypstFilePdf(ctx: TypstExportContext) {
   try {
     ctx.toast(ctx.messages.generating, "info")
     await writeTextFile(tmpTyp, content)
-    const typst = await Command.create("typst", ["compile", "--root", dir, tmpTyp, outPath]).execute()
+    const typst = await Command.create("typst", [
+      "compile",
+      "--root",
+      dir,
+      tmpTyp,
+      outPath,
+    ]).execute()
     if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
     ctx.toast(ctx.messages.typstPdfSuccess, "success")
     ctx.onPdfSaved?.(outPath)
@@ -923,7 +1014,14 @@ export async function exportTypst(ctx: TypstExportContext) {
   try {
     ctx.toast(ctx.messages.generating, "info")
     await writeTextFile(tmpPath, toPandocMarkdownInput(content))
-    const result = await Command.create("pandoc", [tmpPath, "-t", "typst", "--standalone", "-o", outPath]).execute()
+    const result = await Command.create("pandoc", [
+      tmpPath,
+      "-t",
+      "typst",
+      "--standalone",
+      "-o",
+      outPath,
+    ]).execute()
     if (result.code !== 0) throw new Error(result.stderr || result.stdout || "pandoc failed")
     ctx.toast(ctx.messages.typstSuccess, "success")
   } catch (e) {
@@ -961,12 +1059,21 @@ export async function exportTypstPdf(ctx: TypstExportContext) {
   try {
     ctx.toast(ctx.messages.generating, "info")
     await writeTextFile(tmpMd, toPandocMarkdownInput(content))
-    const pandoc = await Command.create("pandoc", [tmpMd, "-t", "typst", "--standalone", "-o", tmpTyp]).execute()
+    const pandoc = await Command.create("pandoc", [
+      tmpMd,
+      "-t",
+      "typst",
+      "--standalone",
+      "-o",
+      tmpTyp,
+    ]).execute()
     if (pandoc.code !== 0) throw new Error(pandoc.stderr || pandoc.stdout || "pandoc failed")
     const typst = await Command.create("typst", ["compile", tmpTyp, outPath]).execute()
     if (typst.code !== 0) throw new Error(typst.stderr || typst.stdout || "typst failed")
     ctx.toast(ctx.messages.typstPdfSuccess, "success")
-    await openPath(outPath).catch(() => { /* file saved; opener failure is non-fatal */ })
+    await openPath(outPath).catch(() => {
+      /* file saved; opener failure is non-fatal */
+    })
   } catch (e) {
     ctx.toast(ctx.messages.typstPdfError(e instanceof Error ? e.message : String(e)), "error", 8000)
     console.error(e)

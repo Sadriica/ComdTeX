@@ -21,23 +21,39 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <span id={titleId}>{t.vault.recentlyClosed}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>
+            ✕
+          </button>
         </div>
         <div className="modal-body" style={{ maxHeight: "300px", overflowY: "auto" }}>
           {paths.length === 0 ? (
             <div className="panel-empty-rich">
-              <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.closedTabsIcon}</div>
-              <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.closedTabsMessage)}</p>
+              <div className="panel-empty-icon" aria-hidden="true">
+                {t.emptyStates.closedTabsIcon}
+              </div>
+              <p className="panel-empty-message">
+                {renderEmptyMessage(t.emptyStates.closedTabsMessage)}
+              </p>
             </div>
           ) : (
             paths.map((path) => (
               <button
                 key={path}
                 className="closed-tab-item"
-                onClick={() => { onSelect(path); onClose() }}
+                onClick={() => {
+                  onSelect(path)
+                  onClose()
+                }}
               >
                 <span className="closed-tab-icon">📄</span>
                 <span className="closed-tab-name">{displayBasename(path)}</span>

@@ -12,7 +12,12 @@ interface BacklinksPanelProps {
   onSearch: (query: string) => Promise<SearchResult[]>
 }
 
-export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch }: BacklinksPanelProps) {
+export default function BacklinksPanel({
+  currentFile,
+  onOpenFile,
+  tree,
+  onSearch,
+}: BacklinksPanelProps) {
   const t = useT()
   const [backlinks, setBacklinks] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -23,7 +28,10 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch
   // every file switch (what this did before) duplicated that work and scaled
   // with the vault, not with the answer.
   useEffect(() => {
-    if (!currentFile) { setBacklinks([]); return }
+    if (!currentFile) {
+      setBacklinks([])
+      return
+    }
     const baseName = currentFile.name.replace(/\.[^.]+$/, "")
     let cancelled = false
     setLoading(true)
@@ -38,7 +46,9 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch
         console.error("Backlinks scan failed", err)
         setLoading(false)
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [currentFile, onSearch])
 
   if (!currentFile) {
@@ -52,15 +62,22 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch
       </div>
       {backlinks.length === 0 && !loading && (
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.backlinksIcon}</div>
-          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.backlinksMessage)}</p>
+          <div className="panel-empty-icon" aria-hidden="true">
+            {t.emptyStates.backlinksIcon}
+          </div>
+          <p className="panel-empty-message">
+            {renderEmptyMessage(t.emptyStates.backlinksMessage)}
+          </p>
         </div>
       )}
       {Object.entries(
-        backlinks.reduce((acc, b) => {
-          ;(acc[b.filePath] ??= []).push(b)
-          return acc
-        }, {} as Record<string, SearchResult[]>)
+        backlinks.reduce(
+          (acc, b) => {
+            ;(acc[b.filePath] ??= []).push(b)
+            return acc
+          },
+          {} as Record<string, SearchResult[]>,
+        ),
       ).map(([filePath, hits]) => {
         const node = flatFiles(tree).find((f) => f.path === filePath)
         if (!node) return null

@@ -119,10 +119,17 @@ async function init(engineUrl: string | null): Promise<void> {
 // falling back to treating the bytes as already-plain text on any failure.
 async function decodeSyncTex(bytes: Uint8Array): Promise<string> {
   const isGzip = bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
-  if (isGzip && typeof (globalThis as { DecompressionStream?: unknown }).DecompressionStream === "function") {
+  if (
+    isGzip &&
+    typeof (globalThis as { DecompressionStream?: unknown }).DecompressionStream === "function"
+  ) {
     try {
-      const DS = (globalThis as unknown as { DecompressionStream: new (f: string) => GenericTransformStream }).DecompressionStream
-      const stream = new Response(new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip")))
+      const DS = (
+        globalThis as unknown as { DecompressionStream: new (f: string) => GenericTransformStream }
+      ).DecompressionStream
+      const stream = new Response(
+        new Blob([bytes as BlobPart]).stream().pipeThrough(new DS("gzip")),
+      )
       return await stream.text()
     } catch {
       // fall through to plain decode
@@ -176,7 +183,11 @@ async function compile(msg: CompileMessage): Promise<void> {
   }
   try {
     if (msg.texliveUrl && typeof engine.setTexliveEndpoint === "function") {
-      try { engine.setTexliveEndpoint(msg.texliveUrl) } catch { /* keep default */ }
+      try {
+        engine.setTexliveEndpoint(msg.texliveUrl)
+      } catch {
+        /* keep default */
+      }
     }
     post({ type: "progress", id, message: "Writing source files" })
     const mainFile = msg.mainFile ?? "main.tex"
@@ -195,14 +206,17 @@ async function compile(msg: CompileMessage): Promise<void> {
       const synctex = await extractSyncTex(engine, result, mainFile)
       // Transfer the underlying buffer to avoid copying.
       const buf = result.pdf.buffer
-      post({
-        type: "result",
-        id,
-        status: "ok",
-        pdf: result.pdf,
-        log: result.log ?? "",
-        synctex,
-      }, [buf as ArrayBuffer])
+      post(
+        {
+          type: "result",
+          id,
+          status: "ok",
+          pdf: result.pdf,
+          log: result.log ?? "",
+          synctex,
+        },
+        [buf as ArrayBuffer],
+      )
     } else {
       post({
         type: "result",
@@ -238,7 +252,9 @@ self.addEventListener("message", (ev: MessageEvent<IncomingMessage>) => {
   if (msg.type === "dispose") {
     try {
       engine?.closeWorker?.()
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     engine = null
     self.close()
     return

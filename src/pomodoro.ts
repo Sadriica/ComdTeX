@@ -29,9 +29,12 @@ export interface PomodoroState {
 /** Duration of a phase, in seconds, for the given config. */
 export function phaseDurationSec(phase: Phase, config: PomodoroConfig): number {
   switch (phase) {
-    case "work":      return config.workMin * 60
-    case "break":     return config.breakMin * 60
-    case "longBreak": return config.longBreakMin * 60
+    case "work":
+      return config.workMin * 60
+    case "break":
+      return config.breakMin * 60
+    case "longBreak":
+      return config.longBreakMin * 60
   }
 }
 
@@ -216,16 +219,19 @@ export function recordPeak(session: WritingSession, currentWords: number): Writi
  * `wpm` is rounded; it is 0 until at least one full second has elapsed to avoid
  * a divide-by-tiny spike at the very start of a session.
  */
-export function sessionStats(session: WritingSession, now: number, currentWords: number): SessionStats {
+export function sessionStats(
+  session: WritingSession,
+  now: number,
+  currentWords: number,
+): SessionStats {
   const wordsWritten = currentWords - session.baselineWords
   const elapsedSec = Math.max(0, Math.floor((now - session.startedAt) / 1000))
   const wpm = elapsedSec >= 1 ? Math.round((wordsWritten / elapsedSec) * 60) : 0
 
   // Include the in-flight run so the number advances live rather than only
   // jumping when the user pauses.
-  const inFlight = session.runningSince !== null
-    ? Math.max(0, Math.floor((now - session.runningSince) / 1000))
-    : 0
+  const inFlight =
+    session.runningSince !== null ? Math.max(0, Math.floor((now - session.runningSince) / 1000)) : 0
   const activeSec = session.activeSec + inFlight
 
   return {
@@ -236,9 +242,8 @@ export function sessionStats(session: WritingSession, now: number, currentWords:
     pausedSec: Math.max(0, elapsedSec - activeSec),
     activeWpm: activeSec >= 1 ? Math.round((wordsWritten / activeSec) * 60) : 0,
     pomodorosCompleted: session.pomodorosCompleted,
-    wordsPerPomodoro: session.pomodorosCompleted > 0
-      ? Math.round(wordsWritten / session.pomodorosCompleted)
-      : 0,
+    wordsPerPomodoro:
+      session.pomodorosCompleted > 0 ? Math.round(wordsWritten / session.pomodorosCompleted) : 0,
     filesTouched: session.filesTouched.length,
     peakWordsWritten: Math.max(session.peakWordsWritten, wordsWritten),
   }

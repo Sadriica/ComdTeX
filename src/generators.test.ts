@@ -120,10 +120,7 @@ describe("generateCalendar", () => {
 
 describe("generateIndex", () => {
   it("lists notes alphabetically with their title", () => {
-    const out = generateIndex([
-      file("/v/zeta.md", "# Última"),
-      file("/v/alfa.md", "# Primera"),
-    ])
+    const out = generateIndex([file("/v/zeta.md", "# Última"), file("/v/alfa.md", "# Primera")])
     expect(out.indexOf("[[alfa]]")).toBeLessThan(out.indexOf("[[zeta]]"))
     expect(out).toContain("[[alfa]]: Primera")
   })

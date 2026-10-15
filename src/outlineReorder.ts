@@ -109,11 +109,7 @@ export function reorderSection(content: string, fromLine: number, toLine: number
     insertIdx = found
   }
 
-  const result = [
-    ...remaining.slice(0, insertIdx),
-    ...block,
-    ...remaining.slice(insertIdx),
-  ]
+  const result = [...remaining.slice(0, insertIdx), ...block, ...remaining.slice(insertIdx)]
 
   let out = result.join("\n")
   // Normalize: collapse any 3+ consecutive blank lines created by the move down

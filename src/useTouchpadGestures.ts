@@ -51,91 +51,107 @@ export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled =
     }, GESTURE_TIMEOUT_MS)
   }, [clearGestureTimeout])
 
-  const handlePointerDown = useCallback((e: PointerEvent) => {
-    if (!enabled || inGestureOptOut(e.target)) return
+  const handlePointerDown = useCallback(
+    (e: PointerEvent) => {
+      if (!enabled || inGestureOptOut(e.target)) return
 
-    if (!state.current) {
-      state.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        startTime: Date.now(),
-        pointers: new Map(),
+      if (!state.current) {
+        state.current = {
+          startX: e.clientX,
+          startY: e.clientY,
+          startTime: Date.now(),
+          pointers: new Map(),
+        }
+        scheduleGestureTimeout()
       }
-      scheduleGestureTimeout()
-    }
 
-    state.current.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
-  }, [enabled, scheduleGestureTimeout])
+      state.current.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    },
+    [enabled, scheduleGestureTimeout],
+  )
 
   // Pinch-zoom: works when 2+ pointers are tracked. Compares distance frame-to-frame
   // as a partial-reliability fallback alongside Ctrl+wheel.
-  const handlePointerMove = useCallback((e: PointerEvent) => {
-    if (!enabled || !state.current) return
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
+      if (!enabled || !state.current) return
 
-    const pointers = state.current.pointers
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const pointers = state.current.pointers
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-    if (pointers.size >= 2) {
-      const points = Array.from(pointers.values())
-      const dx = points[1].x - points[0].x
-      const dy = points[1].y - points[0].y
-      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (pointers.size >= 2) {
+        const points = Array.from(pointers.values())
+        const dx = points[1].x - points[0].x
+        const dy = points[1].y - points[0].y
+        const dist = Math.sqrt(dx * dx + dy * dy)
 
-      if (lastPinchDist.current !== null && lastPinchDist.current > 0) {
-        const diff = dist - lastPinchDist.current
-        const normalized = diff / lastPinchDist.current
-        if (Math.abs(normalized) > PINCH_ZOOM_THRESHOLD) {
-          e.preventDefault()
-          if (normalized > 0) handlers.zoomIn()
-          else handlers.zoomOut()
+        if (lastPinchDist.current !== null && lastPinchDist.current > 0) {
+          const diff = dist - lastPinchDist.current
+          const normalized = diff / lastPinchDist.current
+          if (Math.abs(normalized) > PINCH_ZOOM_THRESHOLD) {
+            e.preventDefault()
+            if (normalized > 0) handlers.zoomIn()
+            else handlers.zoomOut()
+            lastPinchDist.current = dist
+          }
+        } else {
           lastPinchDist.current = dist
         }
-      } else {
-        lastPinchDist.current = dist
       }
-    }
-  }, [enabled, handlers])
+    },
+    [enabled, handlers],
+  )
 
-  const handlePointerUp = useCallback((e: PointerEvent) => {
-    if (!enabled || !state.current) return
+  const handlePointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (!enabled || !state.current) return
 
-    const { startX, pointers } = state.current
-    pointers.delete(e.pointerId)
+      const { startX, pointers } = state.current
+      pointers.delete(e.pointerId)
 
-    if (pointers.size === 0) {
-      const dx = e.clientX - startX
-      const dist = Math.abs(dx)
+      if (pointers.size === 0) {
+        const dx = e.clientX - startX
+        const dist = Math.abs(dx)
 
-      // Edge swipe: 1-finger drag from screen edge → tab nav.
-      if (startX < EDGE_SWIPE_THRESHOLD && dist > SWIPE_THRESHOLD && dx > 0) {
-        e.preventDefault()
-        handlers.prevTab()
-      } else if (startX > window.innerWidth - EDGE_SWIPE_THRESHOLD && dist > SWIPE_THRESHOLD && dx < 0) {
-        e.preventDefault()
-        handlers.nextTab()
+        // Edge swipe: 1-finger drag from screen edge → tab nav.
+        if (startX < EDGE_SWIPE_THRESHOLD && dist > SWIPE_THRESHOLD && dx > 0) {
+          e.preventDefault()
+          handlers.prevTab()
+        } else if (
+          startX > window.innerWidth - EDGE_SWIPE_THRESHOLD &&
+          dist > SWIPE_THRESHOLD &&
+          dx < 0
+        ) {
+          e.preventDefault()
+          handlers.nextTab()
+        }
+
+        state.current = null
+        lastPinchDist.current = null
+        clearGestureTimeout()
       }
-
-      state.current = null
-      lastPinchDist.current = null
-      clearGestureTimeout()
-    }
-  }, [enabled, handlers, clearGestureTimeout])
+    },
+    [enabled, handlers, clearGestureTimeout],
+  )
 
   // Ctrl/Cmd + wheel → zoom (universally reliable).
-  const handleWheel = useCallback((e: WheelEvent) => {
-    // No preventDefault in the opt-out case: the surface underneath (e.g.
-    // Excalidraw) consumes the event with its own zoom handling.
-    if (!enabled || inGestureOptOut(e.target)) return
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      // No preventDefault in the opt-out case: the surface underneath (e.g.
+      // Excalidraw) consumes the event with its own zoom handling.
+      if (!enabled || inGestureOptOut(e.target)) return
 
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault()
-      if (e.deltaY < 0) {
-        handlers.zoomIn()
-      } else {
-        handlers.zoomOut()
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        if (e.deltaY < 0) {
+          handlers.zoomIn()
+        } else {
+          handlers.zoomOut()
+        }
       }
-    }
-  }, [enabled, handlers])
+    },
+    [enabled, handlers],
+  )
 
   useEffect(() => {
     if (!enabled) return
@@ -152,5 +168,12 @@ export function useTouchpadGestures(handlers: TouchpadGestureHandlers, enabled =
       window.removeEventListener("wheel", handleWheel)
       clearGestureTimeout()
     }
-  }, [enabled, handlePointerDown, handlePointerMove, handlePointerUp, handleWheel, clearGestureTimeout])
+  }, [
+    enabled,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleWheel,
+    clearGestureTimeout,
+  ])
 }

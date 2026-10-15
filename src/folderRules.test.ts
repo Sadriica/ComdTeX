@@ -13,13 +13,15 @@ import {
 
 describe("parseFolderRules", () => {
   it("parses a full config", () => {
-    const rules = parseFolderRules(JSON.stringify({
-      version: 1,
-      defaultTemplate: "clase",
-      filenamePattern: "{{date:YYYY-MM-DD}}-{{title}}",
-      frontmatter: { materia: "Álgebra II", tags: ["algebra"] },
-      generated: [{ file: "_tareas.md", type: "tasks", scope: "folder" }],
-    }))
+    const rules = parseFolderRules(
+      JSON.stringify({
+        version: 1,
+        defaultTemplate: "clase",
+        filenamePattern: "{{date:YYYY-MM-DD}}-{{title}}",
+        frontmatter: { materia: "Álgebra II", tags: ["algebra"] },
+        generated: [{ file: "_tareas.md", type: "tasks", scope: "folder" }],
+      }),
+    )
     expect(rules).toEqual({
       version: 1,
       defaultTemplate: "clase",
@@ -36,22 +38,29 @@ describe("parseFolderRules", () => {
   })
 
   it("keeps the good rules when one entry is broken", () => {
-    const rules = parseFolderRules(JSON.stringify({
-      defaultTemplate: "clase",
-      generated: [{ file: "_ok.md", type: "tasks" }, { file: "_bad.md", type: "inventado" }],
-    }))
+    const rules = parseFolderRules(
+      JSON.stringify({
+        defaultTemplate: "clase",
+        generated: [
+          { file: "_ok.md", type: "tasks" },
+          { file: "_bad.md", type: "inventado" },
+        ],
+      }),
+    )
     expect(rules?.defaultTemplate).toBe("clase")
     expect(rules?.generated).toEqual([{ file: "_ok.md", type: "tasks", scope: "folder" }])
   })
 
   it("refuses a generated file that escapes its folder", () => {
-    const rules = parseFolderRules(JSON.stringify({
-      generated: [
-        { file: "../fuera.md", type: "tasks" },
-        { file: "sub/dentro.md", type: "tasks" },
-        { file: "ok.md", type: "tasks" },
-      ],
-    }))
+    const rules = parseFolderRules(
+      JSON.stringify({
+        generated: [
+          { file: "../fuera.md", type: "tasks" },
+          { file: "sub/dentro.md", type: "tasks" },
+          { file: "ok.md", type: "tasks" },
+        ],
+      }),
+    )
     expect(rules?.generated).toEqual([{ file: "ok.md", type: "tasks", scope: "folder" }])
   })
 
@@ -74,8 +83,11 @@ describe("parseFolderRules", () => {
 
 describe("ancestorChain", () => {
   it("lists root first, target last", () => {
-    expect(ancestorChain("/vault/mate/algebra", "/vault"))
-      .toEqual(["/vault", "/vault/mate", "/vault/mate/algebra"])
+    expect(ancestorChain("/vault/mate/algebra", "/vault")).toEqual([
+      "/vault",
+      "/vault/mate",
+      "/vault/mate/algebra",
+    ])
   })
 
   it("returns just the root for the root itself", () => {
@@ -94,7 +106,10 @@ describe("ancestorChain", () => {
 describe("resolveRulesForDir", () => {
   const map = new Map<string, FolderRules>([
     ["/v", { version: 1, defaultTemplate: "base", frontmatter: { autor: "Ana" } }],
-    ["/v/mate", { version: 1, filenamePattern: "{{date}}-{{title}}", frontmatter: { materia: "Mate" } }],
+    [
+      "/v/mate",
+      { version: 1, filenamePattern: "{{date}}-{{title}}", frontmatter: { materia: "Mate" } },
+    ],
   ])
 
   it("inherits from the parent what the child does not define", () => {

@@ -12,7 +12,7 @@
 import type { T } from "./i18n"
 
 export type SettingsSectionId =
-  | "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "sync" | "ai"
+  "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "sync" | "ai"
 
 export interface SettingsEntry {
   /** The settings key the row edits; also its `data-setting` anchor. */
@@ -52,8 +52,16 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "texliveUrl", section: "pdf", label: (t) => t.settings.texliveUrl },
   { id: "autoRebuildPdf", section: "pdf", label: (t) => t.settings.autoRebuildPdf },
 
-  { id: "cloudSyncBannerEnabled", section: "sync", label: (t) => t.cloudSync.settings.bannerEnabled },
-  { id: "cloudSyncDetectEnabled", section: "sync", label: (t) => t.cloudSync.settings.detectEnabled },
+  {
+    id: "cloudSyncBannerEnabled",
+    section: "sync",
+    label: (t) => t.cloudSync.settings.bannerEnabled,
+  },
+  {
+    id: "cloudSyncDetectEnabled",
+    section: "sync",
+    label: (t) => t.cloudSync.settings.detectEnabled,
+  },
 
   { id: "aiEnabled", section: "ai", label: (t) => t.aiSettings.enabled },
   { id: "aiProviderId", section: "ai", label: (t) => t.aiSettings.provider },

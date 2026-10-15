@@ -162,7 +162,12 @@ describe("selectCsv and rendering", () => {
   })
 
   it("escapes pipes so a cell cannot break the table", () => {
-    const out = renderCsvSelection('a,b\n"x|y",2', { file: "x", cols: null, rows: null, caption: "" })
+    const out = renderCsvSelection('a,b\n"x|y",2', {
+      file: "x",
+      cols: null,
+      rows: null,
+      caption: "",
+    })
     expect(out).toContain("x\\|y")
   })
 

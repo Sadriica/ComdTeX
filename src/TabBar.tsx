@@ -14,7 +14,16 @@ interface TabBarProps {
   onReorder?: (from: number, to: number) => void
 }
 
-function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPaths, onTogglePin, onReorder }: TabBarProps) {
+function TabBar({
+  tabs,
+  activeTabPath,
+  onSwitch,
+  onClose,
+  lintCounts,
+  pinnedPaths,
+  onTogglePin,
+  onReorder,
+}: TabBarProps) {
   const t = useT()
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
@@ -37,9 +46,19 @@ function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPath
             onClick={() => onSwitch(tab.path)}
             title={tab.path}
             draggable
-            onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragIdx(idx) }}
-            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }}
-            onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) onReorder?.(dragIdx, idx); setDragIdx(null) }}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move"
+              setDragIdx(idx)
+            }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (dragIdx !== null && dragIdx !== idx) onReorder?.(dragIdx, idx)
+              setDragIdx(null)
+            }}
             onDragEnd={() => setDragIdx(null)}
           >
             <span className="tab-name">{tab.name}</span>
@@ -57,7 +76,10 @@ function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPath
             <button
               className={`tab-pin${isPinned ? " tab-pinned" : ""}`}
               title={isPinned ? t.tabBar.unpin : t.tabBar.pin}
-              onClick={(e) => { e.stopPropagation(); onTogglePin?.(tab.path) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin?.(tab.path)
+              }}
               aria-label={isPinned ? t.tabBar.unpinAriaLabel : t.tabBar.pinAriaLabel}
             >
               {isPinned ? "📌" : "·"}
@@ -66,8 +88,13 @@ function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPath
               <button
                 className="tab-close"
                 title={t.titleBar.close}
-                onClick={(e) => { e.stopPropagation(); onClose(tab.path) }}
-              >×</button>
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose(tab.path)
+                }}
+              >
+                ×
+              </button>
             )}
           </div>
         )
@@ -103,13 +130,15 @@ function samePinnedPaths(a?: Set<string>, b?: Set<string>): boolean {
   return true
 }
 
-export default memo(TabBar, (prev, next) =>
-  prev.activeTabPath === next.activeTabPath &&
-  prev.onSwitch === next.onSwitch &&
-  prev.onClose === next.onClose &&
-  prev.onTogglePin === next.onTogglePin &&
-  prev.onReorder === next.onReorder &&
-  prev.lintCounts === next.lintCounts &&
-  samePinnedPaths(prev.pinnedPaths, next.pinnedPaths) &&
-  sameTabsForDisplay(prev.tabs, next.tabs)
+export default memo(
+  TabBar,
+  (prev, next) =>
+    prev.activeTabPath === next.activeTabPath &&
+    prev.onSwitch === next.onSwitch &&
+    prev.onClose === next.onClose &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onReorder === next.onReorder &&
+    prev.lintCounts === next.lintCounts &&
+    samePinnedPaths(prev.pinnedPaths, next.pinnedPaths) &&
+    sameTabsForDisplay(prev.tabs, next.tabs),
 )

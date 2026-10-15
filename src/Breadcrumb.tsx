@@ -12,7 +12,16 @@ interface BreadcrumbProps {
   onGoForward?: () => void
 }
 
-export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHeading, canGoBack, canGoForward, onGoBack, onGoForward }: BreadcrumbProps) {
+export default function Breadcrumb({
+  vaultPath,
+  filePath,
+  onNavigate,
+  currentHeading,
+  canGoBack,
+  canGoForward,
+  onGoBack,
+  onGoForward,
+}: BreadcrumbProps) {
   const t = useT()
   if (!vaultPath || !filePath) return null
 
@@ -26,9 +35,7 @@ export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHea
   if (parts.length === 0) return null
 
   // Build cumulative paths for each segment
-  const segments: { label: string; path: string }[] = [
-    { label: vaultName, path: vaultPath },
-  ]
+  const segments: { label: string; path: string }[] = [{ label: vaultName, path: vaultPath }]
   let cumPath = vaultPath
   for (const part of parts) {
     cumPath = `${cumPath}/${part}`
@@ -43,14 +50,18 @@ export default function Breadcrumb({ vaultPath, filePath, onNavigate, currentHea
         disabled={!canGoBack}
         title={t.breadcrumb.backTitle}
         aria-label={t.breadcrumb.back}
-      >‹</button>
+      >
+        ‹
+      </button>
       <button
         className="breadcrumb-nav-btn"
         onClick={onGoForward}
         disabled={!canGoForward}
         title={t.breadcrumb.forwardTitle}
         aria-label={t.breadcrumb.forward}
-      >›</button>
+      >
+        ›
+      </button>
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1
         return (

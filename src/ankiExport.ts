@@ -96,9 +96,7 @@ export function extractAnkiCards(rawMarkdown: string): AnkiCard[] {
     }
 
     const labelEs = ALL_ENVS[kind].es
-    const front = title
-      ? `${labelEs}: ${title}`
-      : labelEs
+    const front = title ? `${labelEs}: ${title}` : labelEs
 
     cards.push({ type, kind, title, front, back: body })
   }

@@ -97,7 +97,12 @@ const STORAGE_CORPUS: { name: string; md: string; keep: string[] }[] = [
   {
     name: "obsidian types with no exact env",
     md: "> [!info] Hi\n> a\n\n> [!important]+ Ho\n> b\n\n> [!question] Why\n> c\n\n> [!success]- Yes\n> d",
-    keep: ["[!info] Hi", "[!important]+ Remark: Ho", "[!question] Exercise: Why", "[!success]- Proof: Yes"],
+    keep: [
+      "[!info] Hi",
+      "[!important]+ Remark: Ho",
+      "[!question] Exercise: Why",
+      "[!success]- Proof: Yes",
+    ],
   },
   {
     name: "type named like a special block",
@@ -189,12 +194,16 @@ describe("cmdxFormat round-trip invariants", () => {
   })
 
   it("keeps fold marker and unknown callout types", () => {
-    expect(toStorageMd(toCmdxMd("> [!warning]- Cuidado\n> b"))).toBe("> [!warning]- Warning: Cuidado\n> b")
+    expect(toStorageMd(toCmdxMd("> [!warning]- Cuidado\n> b"))).toBe(
+      "> [!warning]- Warning: Cuidado\n> b",
+    )
     expect(toStorageMd(toCmdxMd("> [!danger] D\n> b"))).toBe("> [!danger] D\n> b")
     expect(toStorageMd(":::foo\nx\n:::")).toBe("> [!foo]\n> x")
   })
 
   it("can drop env labels for user-facing exports", () => {
-    expect(toStorageMd(":::theorem {#thm:a}\nx\n:::", { envLabels: false })).toBe("> [!abstract] Theorem\n> x")
+    expect(toStorageMd(":::theorem {#thm:a}\nx\n:::", { envLabels: false })).toBe(
+      "> [!abstract] Theorem\n> x",
+    )
   })
 })

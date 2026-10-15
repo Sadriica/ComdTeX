@@ -44,9 +44,11 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
     return entries.filter((entry) => {
       if (category !== "all" && (entry.category ?? UNCATEGORIZED) !== category) return false
       if (!needle) return true
-      return entry.text.toLowerCase().includes(needle) ||
+      return (
+        entry.text.toLowerCase().includes(needle) ||
         (entry.category ?? "").toLowerCase().includes(needle) ||
         entry.fileName.toLowerCase().includes(needle)
+      )
     })
   }, [entries, filter, category])
 
@@ -60,10 +62,13 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
       defaultPath: "glosario.md",
     })
     if (!path) return
-    await writeTextFileAtomic(path, formatGlossary(entries, {
-      title: kp.glossaryTitle,
-      uncategorized: kp.uncategorized,
-    }))
+    await writeTextFileAtomic(
+      path,
+      formatGlossary(entries, {
+        title: kp.glossaryTitle,
+        uncategorized: kp.uncategorized,
+      }),
+    )
     showToast(kp.exported, "success")
   }, [entries, kp])
 
@@ -75,7 +80,9 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
           <span className="panel-header-actions">0</span>
         </div>
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{kp.emptyIcon}</div>
+          <div className="panel-empty-icon" aria-hidden="true">
+            {kp.emptyIcon}
+          </div>
           <p className="panel-empty-message">{renderEmptyMessage(kp.emptyMessage)}</p>
         </div>
       </div>
@@ -104,7 +111,9 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
         >
           <option value="all">{kp.allCategories}</option>
           {categories.map((key) => (
-            <option key={key} value={key}>{categoryLabel(key)}</option>
+            <option key={key} value={key}>
+              {categoryLabel(key)}
+            </option>
           ))}
         </select>
       </div>
@@ -129,7 +138,9 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
                 title={`${displayBasename(entry.filePath)}:${entry.line}`}
               >
                 <span className="keep-item-text">{entry.text}</span>
-                <span className="keep-item-file">{displayBasename(entry.filePath)}:{entry.line}</span>
+                <span className="keep-item-file">
+                  {displayBasename(entry.filePath)}:{entry.line}
+                </span>
               </button>
             ))}
           </div>

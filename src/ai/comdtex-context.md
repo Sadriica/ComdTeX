@@ -27,19 +27,19 @@ Function-like shorthands expand to LaTeX before KaTeX. **Outside** math they
 auto-wrap in `$...$`; **inside** `$...$`/`$$...$$` they emit raw LaTeX (no wrap).
 They **nest**: `frac(sqrt(abs(x)), 1 + norm(vec(x)))`.
 
-| Shorthand | Result | Shorthand | Result |
-|---|---|---|---|
-| `frac(a,b)` | `\frac{a}{b}` | `sqrt(x)` | `\sqrt{x}` |
-| `root(n,x)` | `\sqrt[n]{x}` | `abs(x)` | `\left|x\right|` |
-| `norm(v)` | `\|v\|` | `ceil(x)`/`floor(x)` | `\lceil`/`\lfloor` |
-| `sup(x,n)`/`sub(x,n)` | `x^{n}` / `x_{n}` | `inv(A)`/`trans(A)` | `A^{-1}` / `A^{\top}` |
-| `hat/bar/tilde/dot/ddot(x)` | accents | `vec(v)` | `\vec{v}` |
-| `bf(x)`/`cal(A)`/`bb(R)` | `\mathbf`/`\mathcal`/`\mathbb` | `sum(i=0,n)` | `\sum_{i=0}^{n}` |
-| `int(a,b)` | `\int_a^b` | `lim(x,0)` | `\lim_{x\to 0}` |
-| `der(f,x)` | `\frac{df}{dx}` | `pder(f,x)` | `\frac{\partial f}{\partial x}` |
-| `sin/cos/tan/cot/sec/csc(x)` | trig | `exp/ln/log(x)` | logs/exp |
-| `mat(1,0,0,1)` | auto-sized matrix | `matf(2,3, a,b,c, d,e,f)` | fixed r×c matrix |
-| `table(Col1,Col2)` | aligned table | `[[1,2],[3,4]]` | matrix literal |
+| Shorthand                    | Result                         | Shorthand                 | Result                          |
+| ---------------------------- | ------------------------------ | ------------------------- | ------------------------------- |
+| `frac(a,b)`                  | `\frac{a}{b}`                  | `sqrt(x)`                 | `\sqrt{x}`                      |
+| `root(n,x)`                  | `\sqrt[n]{x}`                  | `abs(x)`                  | `\left                          | x\right | `   |
+| `norm(v)`                    | `\|v\|`                        | `ceil(x)`/`floor(x)`      | `\lceil`/`\lfloor`              |
+| `sup(x,n)`/`sub(x,n)`        | `x^{n}` / `x_{n}`              | `inv(A)`/`trans(A)`       | `A^{-1}` / `A^{\top}`           |
+| `hat/bar/tilde/dot/ddot(x)`  | accents                        | `vec(v)`                  | `\vec{v}`                       |
+| `bf(x)`/`cal(A)`/`bb(R)`     | `\mathbf`/`\mathcal`/`\mathbb` | `sum(i=0,n)`              | `\sum_{i=0}^{n}`                |
+| `int(a,b)`                   | `\int_a^b`                     | `lim(x,0)`                | `\lim_{x\to 0}`                 |
+| `der(f,x)`                   | `\frac{df}{dx}`                | `pder(f,x)`               | `\frac{\partial f}{\partial x}` |
+| `sin/cos/tan/cot/sec/csc(x)` | trig                           | `exp/ln/log(x)`           | logs/exp                        |
+| `mat(1,0,0,1)`               | auto-sized matrix              | `matf(2,3, a,b,c, d,e,f)` | fixed r×c matrix                |
+| `table(Col1,Col2)`           | aligned table                  | `[[1,2],[3,4]]`           | matrix literal                  |
 
 ## Environments
 

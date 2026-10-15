@@ -43,13 +43,24 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
 
   return (
     <div className="modal-overlay" onMouseDown={handleClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="onboarding-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="onboarding-modal"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="onboarding-header">
-          <span id={titleId} className="onboarding-title">{t.onboarding.title}</span>
+          <span id={titleId} className="onboarding-title">
+            {t.onboarding.title}
+          </span>
           <span className="onboarding-step-counter">{t.onboarding.step(step + 1, total)}</span>
         </div>
         <div className="onboarding-body">
-          <div className="onboarding-step-icon" aria-hidden="true">{current.icon}</div>
+          <div className="onboarding-step-icon" aria-hidden="true">
+            {current.icon}
+          </div>
           <div className="onboarding-step-title">{current.title}</div>
           <div className="onboarding-step-text">{current.text}</div>
         </div>

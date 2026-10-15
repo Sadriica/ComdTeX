@@ -111,7 +111,10 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 
   const pending = items.filter((i) => !i.done)
   const done = items.filter((i) => i.done)
-  lines.push(`**${pending.length} pendiente${pending.length === 1 ? "" : "s"}** · ${done.length} completada${done.length === 1 ? "" : "s"}`, "")
+  lines.push(
+    `**${pending.length} pendiente${pending.length === 1 ? "" : "s"}** · ${done.length} completada${done.length === 1 ? "" : "s"}`,
+    "",
+  )
 
   const byFile = new Map<string, TaskItem[]>()
   for (const item of items) {
@@ -135,7 +138,9 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 export function generateCalendar(files: SourceFile[], title = "Calendario"): string {
   const lines = header(title)
   const dated = files.map((f) => ({ file: f, date: documentDate(f) }))
-  const withDate = dated.filter((d) => d.date !== null).sort((a, b) => b.date!.localeCompare(a.date!))
+  const withDate = dated
+    .filter((d) => d.date !== null)
+    .sort((a, b) => b.date!.localeCompare(a.date!))
   const withoutDate = dated.filter((d) => d.date === null)
 
   if (withDate.length === 0 && withoutDate.length === 0) {
@@ -182,8 +187,11 @@ export function generateIndex(files: SourceFile[], title = "Índice"): string {
 /** Dispatch to the generator named by a `.comdtex-folder.json` rule. */
 export function runGenerator(type: GeneratorType, files: SourceFile[], title?: string): string {
   switch (type) {
-    case "tasks":    return generateTasks(files, title)
-    case "calendar": return generateCalendar(files, title)
-    case "index":    return generateIndex(files, title)
+    case "tasks":
+      return generateTasks(files, title)
+    case "calendar":
+      return generateCalendar(files, title)
+    case "index":
+      return generateIndex(files, title)
   }
 }

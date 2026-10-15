@@ -60,7 +60,8 @@ describe("gapAtOffset", () => {
 })
 
 describe("gapContext", () => {
-  const doc = Array.from({ length: 40 }, (_, i) => `línea ${i + 1}`).join("\n")
+  const doc = Array.from({ length: 40 }, (_, i) => `línea ${i + 1}`)
+    .join("\n")
     .replace("línea 20", "línea 20 {{?}}")
 
   it("includes the gap's own line", () => {

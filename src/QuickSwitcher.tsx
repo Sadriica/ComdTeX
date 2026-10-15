@@ -11,7 +11,13 @@ interface QuickSwitcherProps {
   onClose: () => void
 }
 
-export default function QuickSwitcher({ open, files, recentFiles, onSelect, onClose }: QuickSwitcherProps) {
+export default function QuickSwitcher({
+  open,
+  files,
+  recentFiles,
+  onSelect,
+  onClose,
+}: QuickSwitcherProps) {
   const t = useT()
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState(0)
@@ -36,23 +42,26 @@ export default function QuickSwitcher({ open, files, recentFiles, onSelect, onCl
 
   const effectiveSelected = Math.min(selected, Math.max(0, filteredFiles.length - 1))
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setSelected((s) => Math.min(s + 1, filteredFiles.length - 1))
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setSelected((s) => Math.max(s - 1, 0))
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      if (filteredFiles[effectiveSelected]) {
-        onSelect(filteredFiles[effectiveSelected].path)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setSelected((s) => Math.min(s + 1, filteredFiles.length - 1))
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setSelected((s) => Math.max(s - 1, 0))
+      } else if (e.key === "Enter") {
+        e.preventDefault()
+        if (filteredFiles[effectiveSelected]) {
+          onSelect(filteredFiles[effectiveSelected].path)
+          onClose()
+        }
+      } else if (e.key === "Escape") {
         onClose()
       }
-    } else if (e.key === "Escape") {
-      onClose()
-    }
-  }, [filteredFiles, effectiveSelected, onSelect, onClose])
+    },
+    [filteredFiles, effectiveSelected, onSelect, onClose],
+  )
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
@@ -63,7 +72,14 @@ export default function QuickSwitcher({ open, files, recentFiles, onSelect, onCl
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="quick-switcher" ref={dialogRef} role="dialog" aria-modal="true" aria-label={t.quickSwitcher.placeholder} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="quick-switcher"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.quickSwitcher.placeholder}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <input
           key={inputKey}
           ref={inputRef}
@@ -83,7 +99,10 @@ export default function QuickSwitcher({ open, files, recentFiles, onSelect, onCl
             <div
               key={file.path}
               className={`quick-switcher-item${i === effectiveSelected ? " selected" : ""}`}
-              onClick={() => { onSelect(file.path); onClose() }}
+              onClick={() => {
+                onSelect(file.path)
+                onClose()
+              }}
               onMouseEnter={() => setSelected(i)}
             >
               <span className="quick-switcher-icon">📄</span>

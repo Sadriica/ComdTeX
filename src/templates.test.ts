@@ -3,7 +3,10 @@ import { parameterizeDocument, processTemplateVariables } from "./templates"
 
 describe("parameterizeDocument", () => {
   it("templates the frontmatter title and date", () => {
-    const out = parameterizeDocument("---\ntitle: Derivadas\ndate: 2026-03-04\n---\n\ntexto\n", "derivadas.md")
+    const out = parameterizeDocument(
+      "---\ntitle: Derivadas\ndate: 2026-03-04\n---\n\ntexto\n",
+      "derivadas.md",
+    )
     expect(out).toContain("title: {{title}}")
     expect(out).toContain("date: {{date}}")
     expect(out).toContain("texto")
@@ -20,7 +23,10 @@ describe("parameterizeDocument", () => {
   })
 
   it("leaves an H1 that is a real heading alone", () => {
-    const out = parameterizeDocument("---\ntitle: Clase 3\n---\n\n# Teorema fundamental\n", "clase-3.md")
+    const out = parameterizeDocument(
+      "---\ntitle: Clase 3\n---\n\n# Teorema fundamental\n",
+      "clase-3.md",
+    )
     expect(out).toContain("# Teorema fundamental")
     expect(out).not.toContain("# {{title}}")
   })
@@ -38,7 +44,10 @@ describe("parameterizeDocument", () => {
   })
 
   it("produces a template that rehydrates through processTemplateVariables", () => {
-    const template = parameterizeDocument("---\ntitle: Vieja\n---\n\n# Vieja\n\ncuerpo\n", "vieja.md")
+    const template = parameterizeDocument(
+      "---\ntitle: Vieja\n---\n\n# Vieja\n\ncuerpo\n",
+      "vieja.md",
+    )
     const rendered = processTemplateVariables(template, "nueva.md")
     expect(rendered).toContain("title: nueva")
     expect(rendered).toContain("# nueva")

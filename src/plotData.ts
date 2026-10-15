@@ -60,24 +60,42 @@ export function parsePlotData(body: string): PlotDataSpec | null {
     if (!line) continue
 
     const ref = /^(?:data\s*:\s*)?(@data:[\w:.-]+)\s*$/.exec(line)
-    if (ref) { source = ref[1]; continue }
+    if (ref) {
+      source = ref[1]
+      continue
+    }
 
     const dataFile = /^data\s*:\s*(\S+\.csv)\s*$/i.exec(line)
-    if (dataFile) { source = dataFile[1]; continue }
+    if (dataFile) {
+      source = dataFile[1]
+      continue
+    }
 
     // `x:` only counts as a column selector when a dataset is in play;
     // otherwise it is the existing range syntax (`x: [-2, 5]`).
     const x = /^x\s*:\s*(.+)$/i.exec(line)
-    if (x && !x[1].trim().startsWith("[")) { xSel = x[1].trim(); continue }
+    if (x && !x[1].trim().startsWith("[")) {
+      xSel = x[1].trim()
+      continue
+    }
 
     const y = /^y\s*:\s*(.+)$/i.exec(line)
-    if (y) { ySel = atoms(y[1]); continue }
+    if (y) {
+      ySel = atoms(y[1])
+      continue
+    }
 
     const err = /^(?:error|err)\s*:\s*(.+)$/i.exec(line)
-    if (err) { errSel = err[1].trim(); continue }
+    if (err) {
+      errSel = err[1].trim()
+      continue
+    }
 
     const k = /^kind\s*:\s*(.+)$/i.exec(line)
-    if (k) { kind = k[1].trim(); continue }
+    if (k) {
+      kind = k[1].trim()
+      continue
+    }
 
     rest.push(rawLine)
   }

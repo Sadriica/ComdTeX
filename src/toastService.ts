@@ -33,7 +33,10 @@ export function showToast(message: string, type: ToastType = "info", durationMs?
 
 export function dismissToast(id: number) {
   const timer = timers.get(id)
-  if (timer) { clearTimeout(timer); timers.delete(id) }
+  if (timer) {
+    clearTimeout(timer)
+    timers.delete(id)
+  }
   current = current.filter((t) => t.id !== id)
   notify()
 }

@@ -131,7 +131,14 @@ const CATEGORY_RE = /^([\p{L}\p{N}_-]+):\s+([\s\S]+)$/u
 
 /** ComdTeX-only blocks whose bodies are raw DSL/code; mirrors cmdxFormat.ts. */
 const SPECIAL_ENVS = new Set([
-  "pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw",
+  "pseudocode",
+  "flowchart",
+  "truth",
+  "graph",
+  "plot",
+  "commdiag",
+  "code",
+  "excalidraw",
 ])
 
 const SPECIAL_START_RE = /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[[^\]]*\])?(?:\s*\{#[\w:.-]+\})?\s*$/
@@ -186,7 +193,10 @@ function blankIndentedCode(text: string): string {
       continue
     }
     if (!prevBlank) continue
-    if (/^(?: {4}|\t)\s*(?:[-*+]|\d+[.)])\s/.test(lines[i])) { prevBlank = false; continue }
+    if (/^(?: {4}|\t)\s*(?:[-*+]|\d+[.)])\s/.test(lines[i])) {
+      prevBlank = false
+      continue
+    }
     // Blank the whole run of indented/blank lines up to the next flush line.
     let j = i
     for (; j < lines.length; j++) {

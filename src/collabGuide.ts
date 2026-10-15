@@ -6,7 +6,11 @@
 // screens to show from plain `git status --porcelain -b` data, so it stays
 // unit-testable without a repo.
 
-export interface CollabFile { x: string; y: string; path: string }
+export interface CollabFile {
+  x: string
+  y: string
+  path: string
+}
 
 export interface CollabStatusInput {
   branch: string
@@ -19,12 +23,12 @@ export interface CollabStatusInput {
 }
 
 export type CollabState =
-  | "no-remote"   // repo exists but has nowhere shared to sync with
-  | "conflicted"  // a merge stopped on conflicts; they must be resolved
-  | "dirty"       // local edits not yet recorded in history
-  | "behind"      // clean, but the coauthor sent changes we do not have
-  | "ahead"       // clean, with recorded changes not yet sent
-  | "synced"      // clean and level with the shared copy
+  | "no-remote" // repo exists but has nowhere shared to sync with
+  | "conflicted" // a merge stopped on conflicts; they must be resolved
+  | "dirty" // local edits not yet recorded in history
+  | "behind" // clean, but the coauthor sent changes we do not have
+  | "ahead" // clean, with recorded changes not yet sent
+  | "synced" // clean and level with the shared copy
 
 /** Files stopped in a merge conflict (either side unmerged). */
 export function unmergedFiles(status: CollabStatusInput): CollabFile[] {

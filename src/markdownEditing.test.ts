@@ -75,7 +75,10 @@ describe("resolveEnterOverride, blockquotes", () => {
 describe("resolveEnterOverride, tables", () => {
   it("adds a row with the same column count", () => {
     expect(resolveEnterOverride("| a | b |")).toEqual({ kind: "insertLine", text: "|   |   |" })
-    expect(resolveEnterOverride("| a | b | c |")).toEqual({ kind: "insertLine", text: "|   |   |   |" })
+    expect(resolveEnterOverride("| a | b | c |")).toEqual({
+      kind: "insertLine",
+      text: "|   |   |   |",
+    })
   })
 
   it("continues from the delimiter row into a body row", () => {
@@ -92,17 +95,12 @@ describe("resolveEnterOverride, tables", () => {
 })
 
 describe("resolveEnterOverride, leaves ordinary text alone", () => {
-  it.each([
-    "texto normal",
-    "",
-    "# Encabezado",
-    "---",
-    "$$ x = 1 $$",
-    ":::theorem",
-    "A -> B [f]",
-  ])("returns null for %j", (line) => {
-    expect(resolveEnterOverride(line)).toBeNull()
-  })
+  it.each(["texto normal", "", "# Encabezado", "---", "$$ x = 1 $$", ":::theorem", "A -> B [f]"])(
+    "returns null for %j",
+    (line) => {
+      expect(resolveEnterOverride(line)).toBeNull()
+    },
+  )
 })
 
 describe("splitTableRow", () => {

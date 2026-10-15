@@ -19,7 +19,10 @@ function sectionIdMarker(id: string): string {
   return `\x02SECID:${id}\x03`
 }
 
-export function numberHeadings(content: string): { content: string; sections: Map<string, SectionReference> } {
+export function numberHeadings(content: string): {
+  content: string
+  sections: Map<string, SectionReference>
+} {
   const counters = [0, 0, 0]
   const sections = new Map<string, SectionReference>()
   const lines = content.split("\n").map((line) => {
@@ -50,14 +53,21 @@ export function numberHeadings(content: string): { content: string; sections: Ma
   for (const entry of extractTocEntries(content, 3)) {
     if (entry.label) continue
     if (!sections.has(entry.slug)) {
-      sections.set(entry.slug, { id: headingAnchorId(null, entry.text), number: "", title: entry.text })
+      sections.set(entry.slug, {
+        id: headingAnchorId(null, entry.text),
+        number: "",
+        title: entry.text,
+      })
     }
   }
 
   return { content: lines.join("\n"), sections }
 }
 
-export function resolveSectionRefs(content: string, sections: Map<string, SectionReference>): string {
+export function resolveSectionRefs(
+  content: string,
+  sections: Map<string, SectionReference>,
+): string {
   // Same shape as the `@tbl:` / `@fig:` ref patterns: dots are allowed *inside*
   // a label (`sec:1.2`) but a trailing one is sentence punctuation, not part of
   // the label; `[\w:.-]+` would swallow the period in "ver @sec:intro."

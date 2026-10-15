@@ -9,8 +9,8 @@
 
 type Expr =
   | { t: "num"; v: number }
-  | { t: "var" }                             // x
-  | { t: "const"; v: number }               // e, pi
+  | { t: "var" } // x
+  | { t: "const"; v: number } // e, pi
   | { t: "unary"; op: "-"; child: Expr }
   | { t: "binary"; op: "+" | "-" | "*" | "/" | "^"; left: Expr; right: Expr }
   | { t: "call"; name: string; arg: Expr }
@@ -18,7 +18,10 @@ type Expr =
 // ── Tokenizer ─────────────────────────────────────────────────────────────────
 
 type TokKind = "NUM" | "ID" | "OP" | "LPAREN" | "RPAREN" | "EOF"
-interface Tok { kind: TokKind; value: string }
+interface Tok {
+  kind: TokKind
+  value: string
+}
 
 function tokenize(src: string): Tok[] {
   const tokens: Tok[] = []
@@ -26,15 +29,36 @@ function tokenize(src: string): Tok[] {
   const ops = new Set(["+", "-", "*", "/", "^"])
   while (i < src.length) {
     const ch = src[i]
-    if (/\s/.test(ch)) { i++; continue }
-    if (ch === "(") { tokens.push({ kind: "LPAREN", value: "(" }); i++; continue }
-    if (ch === ")") { tokens.push({ kind: "RPAREN", value: ")" }); i++; continue }
-    if (ch === "*" && src[i + 1] === "*") {
-      tokens.push({ kind: "OP", value: "^" }); i += 2; continue
+    if (/\s/.test(ch)) {
+      i++
+      continue
     }
-    if (ops.has(ch)) { tokens.push({ kind: "OP", value: ch }); i++; continue }
+    if (ch === "(") {
+      tokens.push({ kind: "LPAREN", value: "(" })
+      i++
+      continue
+    }
+    if (ch === ")") {
+      tokens.push({ kind: "RPAREN", value: ")" })
+      i++
+      continue
+    }
+    if (ch === "*" && src[i + 1] === "*") {
+      tokens.push({ kind: "OP", value: "^" })
+      i += 2
+      continue
+    }
+    if (ops.has(ch)) {
+      tokens.push({ kind: "OP", value: ch })
+      i++
+      continue
+    }
     // π unicode
-    if (ch === "π") { tokens.push({ kind: "ID", value: "pi" }); i++; continue }
+    if (ch === "π") {
+      tokens.push({ kind: "ID", value: "pi" })
+      i++
+      continue
+    }
     // number
     if (/[0-9.]/.test(ch)) {
       let num = ""
@@ -77,8 +101,12 @@ class Parser {
     this.tokens = tokens
   }
 
-  private peek(): Tok { return this.tokens[this.pos] }
-  private consume(): Tok { return this.tokens[this.pos++] }
+  private peek(): Tok {
+    return this.tokens[this.pos]
+  }
+  private consume(): Tok {
+    return this.tokens[this.pos++]
+  }
 
   private expect(kind: TokKind): Tok {
     const tok = this.consume()
@@ -160,10 +188,10 @@ class Parser {
 
       // constants
       if (name === "pi") return { t: "const", v: Math.PI }
-      if (name === "e")  return { t: "const", v: Math.E }
+      if (name === "e") return { t: "const", v: Math.E }
 
       // variable
-      if (name === "x")  return { t: "var" }
+      if (name === "x") return { t: "var" }
 
       // function call: name(arg)
       if (this.peek().kind === "LPAREN") {
@@ -183,42 +211,51 @@ class Parser {
 // ── Evaluator ─────────────────────────────────────────────────────────────────
 
 const FUNCTIONS: Record<string, (v: number) => number> = {
-  sin:   Math.sin,
-  cos:   Math.cos,
-  tan:   Math.tan,
-  asin:  Math.asin,
-  acos:  Math.acos,
-  atan:  Math.atan,
-  sinh:  Math.sinh,
-  cosh:  Math.cosh,
-  tanh:  Math.tanh,
-  exp:   Math.exp,
-  log:   Math.log,
-  log2:  Math.log2,
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  asin: Math.asin,
+  acos: Math.acos,
+  atan: Math.atan,
+  sinh: Math.sinh,
+  cosh: Math.cosh,
+  tanh: Math.tanh,
+  exp: Math.exp,
+  log: Math.log,
+  log2: Math.log2,
   log10: Math.log10,
-  sqrt:  Math.sqrt,
-  abs:   Math.abs,
-  ceil:  Math.ceil,
+  sqrt: Math.sqrt,
+  abs: Math.abs,
+  ceil: Math.ceil,
   floor: Math.floor,
   round: Math.round,
-  sign:  Math.sign,
+  sign: Math.sign,
 }
 
 function evalExpr(node: Expr, x: number): number {
   switch (node.t) {
-    case "num":    return node.v
-    case "const":  return node.v
-    case "var":    return x
-    case "unary":  return -evalExpr(node.child, x)
+    case "num":
+      return node.v
+    case "const":
+      return node.v
+    case "var":
+      return x
+    case "unary":
+      return -evalExpr(node.child, x)
     case "binary": {
       const l = evalExpr(node.left, x)
       const r = evalExpr(node.right, x)
       switch (node.op) {
-        case "+": return l + r
-        case "-": return l - r
-        case "*": return l * r
-        case "/": return r === 0 ? NaN : l / r
-        case "^": return Math.pow(l, r)
+        case "+":
+          return l + r
+        case "-":
+          return l - r
+        case "*":
+          return l * r
+        case "/":
+          return r === 0 ? NaN : l / r
+        case "^":
+          return Math.pow(l, r)
       }
     }
     case "call": {
@@ -283,7 +320,7 @@ export interface PlotSpec {
  */
 export function parsePlotBlock(title: string, content: string): PlotSpec {
   const DEFAULT_XMIN = -Math.PI * 2
-  const DEFAULT_XMAX =  Math.PI * 2
+  const DEFAULT_XMAX = Math.PI * 2
   let xMin = DEFAULT_XMIN
   let xMax = DEFAULT_XMAX
   const fns: PlotFn[] = []
@@ -316,7 +353,10 @@ export function parsePlotBlock(title: string, content: string): PlotSpec {
     // categories: a | b | c   (a non-numeric x axis)
     const catMatch = line.match(/^categories\s*:\s*(.+)$/i)
     if (catMatch) {
-      categories = catMatch[1].split("|").map((c) => c.trim()).filter(Boolean)
+      categories = catMatch[1]
+        .split("|")
+        .map((c) => c.trim())
+        .filter(Boolean)
       continue
     }
 
@@ -360,7 +400,7 @@ export function parsePlotBlock(title: string, content: string): PlotSpec {
     const namedMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*x\s*\)\s*=\s*(.+)$/)
     if (namedMatch) {
       const label = namedMatch[1]
-      const expr  = namedMatch[2].trim()
+      const expr = namedMatch[2].trim()
       const fn = parseExpr(expr)
       fns.push({ label, fn, expr })
       continue
@@ -392,11 +432,23 @@ export function parsePlotBlock(title: string, content: string): PlotSpec {
 
 // ── SVG rendering helpers ─────────────────────────────────────────────────────
 
-function toSvgX(x: number, xMin: number, xMax: number, plotLeft: number, plotWidth: number): number {
+function toSvgX(
+  x: number,
+  xMin: number,
+  xMax: number,
+  plotLeft: number,
+  plotWidth: number,
+): number {
   return plotLeft + ((x - xMin) / (xMax - xMin)) * plotWidth
 }
 
-function toSvgY(y: number, yMin: number, yMax: number, plotTop: number, plotHeight: number): number {
+function toSvgY(
+  y: number,
+  yMin: number,
+  yMax: number,
+  plotTop: number,
+  plotHeight: number,
+): number {
   return plotTop + plotHeight - ((y - yMin) / (yMax - yMin)) * plotHeight
 }
 
@@ -405,15 +457,19 @@ function niceStep(range: number, targetSteps = 6): number {
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)))
   const normalized = rawStep / mag
   let nice: number
-  if (normalized < 1.5)      nice = 1
+  if (normalized < 1.5) nice = 1
   else if (normalized < 3.5) nice = 2
   else if (normalized < 7.5) nice = 5
-  else                       nice = 10
+  else nice = 10
   return nice * mag
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 // ── Y-range auto-detection ────────────────────────────────────────────────────
@@ -435,7 +491,9 @@ function autoYRange(
     if (s.kind === "bars") hasBars = true
     for (const p of s.points) {
       const e = p.err ?? 0
-      if (isFinite(p.y)) { values.push(p.y + e, p.y - e) }
+      if (isFinite(p.y)) {
+        values.push(p.y + e, p.y - e)
+      }
     }
   }
 
@@ -462,9 +520,9 @@ function autoYRange(
   }
 
   values.sort((a, b) => a - b)
-  const p5  = values[Math.floor(values.length * 0.05)]
+  const p5 = values[Math.floor(values.length * 0.05)]
   const p95 = values[Math.floor(values.length * 0.95)]
-  const pad = (p95 - p5) * 0.10 || 1
+  const pad = (p95 - p5) * 0.1 || 1
   return [p5 - pad, p95 + pad]
 }
 
@@ -499,13 +557,13 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
   // Layout constants
   const SVG_W = 500
   const SVG_H = 320
-  const marginTop    = 20
-  const marginRight  = 20
+  const marginTop = 20
+  const marginRight = 20
   const marginBottom = 40
-  const marginLeft   = 50
-  const plotLeft   = marginLeft
-  const plotTop    = marginTop
-  const plotWidth  = SVG_W - marginLeft - marginRight
+  const marginLeft = 50
+  const plotLeft = marginLeft
+  const plotTop = marginTop
+  const plotWidth = SVG_W - marginLeft - marginRight
   const plotHeight = SVG_H - marginTop - marginBottom
 
   // Y range
@@ -523,38 +581,64 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
   const svgLines: string[] = []
 
   // Background
-  svgLines.push(`<rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" fill="var(--surface2, #1a1a1a)" rx="2"/>`)
+  svgLines.push(
+    `<rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" fill="var(--surface2, #1a1a1a)" rx="2"/>`,
+  )
 
   // Clip rect for curves
-  svgLines.push(`<clipPath id="plot-clip"><rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}"/></clipPath>`)
+  svgLines.push(
+    `<clipPath id="plot-clip"><rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}"/></clipPath>`,
+  )
 
   // Vertical grid lines + x labels
   for (let xv = xStart; xv <= xMax + xStep * 0.001; xv += xStep) {
     const sx = toSvgX(xv, xMin, xMax, plotLeft, plotWidth)
     if (sx < plotLeft - 0.5 || sx > plotLeft + plotWidth + 0.5) continue
-    svgLines.push(`<line x1="${sx.toFixed(1)}" y1="${plotTop}" x2="${sx.toFixed(1)}" y2="${plotTop + plotHeight}" stroke="#333" stroke-width="0.5"/>`)
+    svgLines.push(
+      `<line x1="${sx.toFixed(1)}" y1="${plotTop}" x2="${sx.toFixed(1)}" y2="${plotTop + plotHeight}" stroke="#333" stroke-width="0.5"/>`,
+    )
     // Tick label: format nicely
-    const label = Math.abs(xv) < 1e-9 ? "0" : (Math.abs(xv) >= 1000 || Math.abs(xv) < 0.01) ? xv.toExponential(1) : parseFloat(xv.toPrecision(4)).toString()
-    svgLines.push(`<text x="${sx.toFixed(1)}" y="${(plotTop + plotHeight + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#888">${escHtml(label)}</text>`)
+    const label =
+      Math.abs(xv) < 1e-9
+        ? "0"
+        : Math.abs(xv) >= 1000 || Math.abs(xv) < 0.01
+          ? xv.toExponential(1)
+          : parseFloat(xv.toPrecision(4)).toString()
+    svgLines.push(
+      `<text x="${sx.toFixed(1)}" y="${(plotTop + plotHeight + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#888">${escHtml(label)}</text>`,
+    )
   }
 
   // Horizontal grid lines + y labels
   for (let yv = yStart; yv <= yMax + yStep * 0.001; yv += yStep) {
     const sy = toSvgY(yv, yMin, yMax, plotTop, plotHeight)
     if (sy < plotTop - 0.5 || sy > plotTop + plotHeight + 0.5) continue
-    svgLines.push(`<line x1="${plotLeft}" y1="${sy.toFixed(1)}" x2="${plotLeft + plotWidth}" y2="${sy.toFixed(1)}" stroke="#333" stroke-width="0.5"/>`)
-    const label = Math.abs(yv) < 1e-9 ? "0" : (Math.abs(yv) >= 1000 || Math.abs(yv) < 0.01) ? yv.toExponential(1) : parseFloat(yv.toPrecision(4)).toString()
-    svgLines.push(`<text x="${(plotLeft - 5).toFixed(1)}" y="${(sy + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#888">${escHtml(label)}</text>`)
+    svgLines.push(
+      `<line x1="${plotLeft}" y1="${sy.toFixed(1)}" x2="${plotLeft + plotWidth}" y2="${sy.toFixed(1)}" stroke="#333" stroke-width="0.5"/>`,
+    )
+    const label =
+      Math.abs(yv) < 1e-9
+        ? "0"
+        : Math.abs(yv) >= 1000 || Math.abs(yv) < 0.01
+          ? yv.toExponential(1)
+          : parseFloat(yv.toPrecision(4)).toString()
+    svgLines.push(
+      `<text x="${(plotLeft - 5).toFixed(1)}" y="${(sy + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#888">${escHtml(label)}</text>`,
+    )
   }
 
   // Axes
   if (xMin <= 0 && 0 <= xMax) {
     const sx = toSvgX(0, xMin, xMax, plotLeft, plotWidth)
-    svgLines.push(`<line x1="${sx.toFixed(1)}" y1="${plotTop}" x2="${sx.toFixed(1)}" y2="${plotTop + plotHeight}" stroke="#555" stroke-width="1"/>`)
+    svgLines.push(
+      `<line x1="${sx.toFixed(1)}" y1="${plotTop}" x2="${sx.toFixed(1)}" y2="${plotTop + plotHeight}" stroke="#555" stroke-width="1"/>`,
+    )
   }
   if (yMin <= 0 && 0 <= yMax) {
     const sy = toSvgY(0, yMin, yMax, plotTop, plotHeight)
-    svgLines.push(`<line x1="${plotLeft}" y1="${sy.toFixed(1)}" x2="${plotLeft + plotWidth}" y2="${sy.toFixed(1)}" stroke="#555" stroke-width="1"/>`)
+    svgLines.push(
+      `<line x1="${plotLeft}" y1="${sy.toFixed(1)}" x2="${plotLeft + plotWidth}" y2="${sy.toFixed(1)}" stroke="#555" stroke-width="1"/>`,
+    )
   }
 
   // Function curves
@@ -569,7 +653,9 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
 
     const flushRun = () => {
       if (currentRun.length >= 2) {
-        svgLines.push(`<polyline points="${currentRun.join(" ")}" stroke="${color}" stroke-width="1.5" fill="none" clip-path="url(#plot-clip)"/>`)
+        svgLines.push(
+          `<polyline points="${currentRun.join(" ")}" stroke="${color}" stroke-width="1.5" fill="none" clip-path="url(#plot-clip)"/>`,
+        )
       }
       currentRun = []
     }
@@ -577,7 +663,11 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
     for (let i = 0; i <= NSAMPLES; i++) {
       const x = xMin + (i / NSAMPLES) * xRange
       let y: number
-      try { y = fn(x) } catch { y = NaN }
+      try {
+        y = fn(x)
+      } catch {
+        y = NaN
+      }
 
       if (!isFinite(y) || isNaN(y) || Math.abs(y) > 1e6) {
         flushRun()
@@ -595,9 +685,8 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
   // Colours continue the function palette so a plot mixing a fitted curve
   // with its measurements never reuses one colour for both.
   const barSeries = series.filter((s) => s.kind === "bars")
-  const barGroupWidth = barSeries.length > 0
-    ? (plotWidth / Math.max(1, maxPointsIn(barSeries))) * 0.7
-    : 0
+  const barGroupWidth =
+    barSeries.length > 0 ? (plotWidth / Math.max(1, maxPointsIn(barSeries))) * 0.7 : 0
   const barWidth = barSeries.length > 0 ? barGroupWidth / barSeries.length : 0
   const yZero = toSvgY(Math.max(yMin, Math.min(0, yMax)), yMin, yMax, plotTop, plotHeight)
 
@@ -644,9 +733,10 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
       if (p.err === undefined || !isFinite(p.err) || p.err === 0) continue
       const top = toSvgY(p.y + Math.abs(p.err), yMin, yMax, plotTop, plotHeight)
       const bottom = toSvgY(p.y - Math.abs(p.err), yMin, yMax, plotTop, plotHeight)
-      const capX = s.kind === "bars"
-        ? sx - barGroupWidth / 2 + barSeries.indexOf(s) * barWidth + barWidth / 2
-        : sx
+      const capX =
+        s.kind === "bars"
+          ? sx - barGroupWidth / 2 + barSeries.indexOf(s) * barWidth + barWidth / 2
+          : sx
       void sy
       svgLines.push(
         `<line x1="${capX.toFixed(2)}" y1="${top.toFixed(2)}" x2="${capX.toFixed(2)}" y2="${bottom.toFixed(2)}" stroke="${color}" stroke-width="1" clip-path="url(#plot-clip)"/>`,
@@ -683,16 +773,20 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
     const { color, label } = legendEntries[fi]
     const ly = legendY + fi * 16
     const displayLabel = label.length > 22 ? label.slice(0, 20) + "…" : label
-    svgLines.push(`<rect x="${(legendX - 18).toFixed(1)}" y="${(ly - 7).toFixed(1)}" width="10" height="3" fill="${color}" rx="1"/>`)
-    svgLines.push(`<text x="${(legendX - 5).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="9" fill="#ccc">${escHtml(displayLabel)}</text>`)
+    svgLines.push(
+      `<rect x="${(legendX - 18).toFixed(1)}" y="${(ly - 7).toFixed(1)}" width="10" height="3" fill="${color}" rx="1"/>`,
+    )
+    svgLines.push(
+      `<text x="${(legendX - 5).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="9" fill="#ccc">${escHtml(displayLabel)}</text>`,
+    )
   }
 
   // Border around plot area
-  svgLines.push(`<rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" fill="none" stroke="#444" stroke-width="0.5"/>`)
+  svgLines.push(
+    `<rect x="${plotLeft}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" fill="none" stroke="#444" stroke-width="0.5"/>`,
+  )
 
-  const headerText = spec.title
-    ? `Plot ${number}: ${escHtml(spec.title)}`
-    : `Plot ${number}`
+  const headerText = spec.title ? `Plot ${number}: ${escHtml(spec.title)}` : `Plot ${number}`
   const titleHtml = `<div class="plot-title">${headerText}</div>`
 
   const svgContent = `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" style="max-width:600px;cursor:crosshair" xmlns="http://www.w3.org/2000/svg">

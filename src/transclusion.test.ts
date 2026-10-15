@@ -5,12 +5,12 @@ import { resolveTransclusions, processBlockIds, attachBlockIds } from "./transcl
 describe("resolveTransclusions", () => {
   it("embeds full notes and strips frontmatter", () => {
     const result = resolveTransclusions("Antes\n![[Nota]]", (target) =>
-      target === "Nota" ? "---\ntitle: Nota\n---\n# Nota\nContenido" : null
+      target === "Nota" ? "---\ntitle: Nota\n---\n# Nota\nContenido" : null,
     )
 
     expect(result).toContain("# Nota\nContenido")
     expect(result).not.toContain("title: Nota")
-    expect(result).toContain("class=\"transclusion\"")
+    expect(result).toContain('class="transclusion"')
   })
 
   it("emits a transclusion-header showing the source", () => {

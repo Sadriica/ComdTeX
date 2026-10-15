@@ -28,7 +28,10 @@ export interface ShortcutContext {
 }
 
 export function handleGlobalShortcut(
-  event: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault">,
+  event: Pick<
+    KeyboardEvent,
+    "key" | "code" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault"
+  >,
   context: ShortcutContext,
   handlers: ShortcutActionHandlers,
 ) {

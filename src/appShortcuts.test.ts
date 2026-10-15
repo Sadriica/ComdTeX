@@ -49,7 +49,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+Shift+S to saveAs", () => {
     const handlers = makeHandlers()
     const event = makeEvent("S", { ctrlKey: true, shiftKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.saveAs).toHaveBeenCalledTimes(1)
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
@@ -58,7 +62,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+O to openVault", () => {
     const handlers = makeHandlers()
     const event = makeEvent("o", { ctrlKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.openVault).toHaveBeenCalledTimes(1)
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
@@ -67,7 +75,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+; to quick switcher", () => {
     const handlers = makeHandlers()
     const event = makeEvent(";", { ctrlKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.openQuickSwitcher).toHaveBeenCalledTimes(1)
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
@@ -76,7 +88,11 @@ describe("handleGlobalShortcut", () => {
   it("does not open help from text inputs", () => {
     const handlers = makeHandlers()
     const event = makeEvent("?")
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: true }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: true },
+      handlers,
+    )
     expect(handled).toBe(false)
     expect(handlers.openHelp).not.toHaveBeenCalled()
   })
@@ -84,7 +100,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+Shift+B to showBookmarks", () => {
     const handlers = makeHandlers()
     const event = makeEvent("B", { ctrlKey: true, shiftKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.showBookmarks).toHaveBeenCalledTimes(1)
   })
@@ -92,7 +112,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+Shift+3 to toggleBookmark(3)", () => {
     const handlers = makeHandlers()
     const event = makeEvent("3", { ctrlKey: true, shiftKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.toggleBookmark).toHaveBeenCalledWith(3)
     expect(handlers.goToBookmark).not.toHaveBeenCalled()
@@ -102,7 +126,11 @@ describe("handleGlobalShortcut", () => {
     // US-QWERTY: Shift+3 produces key '#', but code is still 'Digit3'.
     const handlers = makeHandlers()
     const event = makeEvent("#", { ctrlKey: true, shiftKey: true, code: "Digit3" })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.toggleBookmark).toHaveBeenCalledWith(3)
   })
@@ -110,7 +138,11 @@ describe("handleGlobalShortcut", () => {
   it("maps Ctrl+Alt+3 to goToBookmark(3)", () => {
     const handlers = makeHandlers()
     const event = makeEvent("3", { ctrlKey: true, altKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(true)
     expect(handlers.goToBookmark).toHaveBeenCalledWith(3)
     expect(handlers.toggleBookmark).not.toHaveBeenCalled()
@@ -119,7 +151,11 @@ describe("handleGlobalShortcut", () => {
   it("does NOT fire bookmarks on bare Ctrl/Cmd+3 (reserved for macOS tab nav)", () => {
     const handlers = makeHandlers()
     const event = makeEvent("3", { metaKey: true })
-    const handled = handleGlobalShortcut(event, { focusMode: false, isTextInputTarget: false }, handlers)
+    const handled = handleGlobalShortcut(
+      event,
+      { focusMode: false, isTextInputTarget: false },
+      handlers,
+    )
     expect(handled).toBe(false)
     expect(handlers.goToBookmark).not.toHaveBeenCalled()
     expect(handlers.toggleBookmark).not.toHaveBeenCalled()

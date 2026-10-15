@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { exportToTex, exportReveal, escTex, escHref, listingsLanguage, codeBlockToTex, splitSlides } from "./exporter"
+import {
+  exportToTex,
+  exportReveal,
+  escTex,
+  escHref,
+  listingsLanguage,
+  codeBlockToTex,
+  splitSlides,
+} from "./exporter"
 import { lossyExportWarnings } from "./exportCompatibility"
 
 describe("escTex", () => {
@@ -8,13 +16,17 @@ describe("escTex", () => {
     expect(escTex("\\{x}")).toBe("\\textbackslash{}\\{x\\}")
   })
   it("escapes the other specials", () => {
-    expect(escTex("& % $ # _ ~ ^")).toBe("\\& \\% \\$ \\# \\_ \\textasciitilde{} \\textasciicircum{}")
+    expect(escTex("& % $ # _ ~ ^")).toBe(
+      "\\& \\% \\$ \\# \\_ \\textasciitilde{} \\textasciicircum{}",
+    )
   })
 })
 
 describe("href escaping", () => {
   it("escapes characters hyperref chokes on", () => {
-    expect(escHref("https://a.b/c?x=1&y=2#frag_1~u%20")).toBe("https://a.b/c?x=1\\&y=2\\#frag\\_1\\~u\\%20")
+    expect(escHref("https://a.b/c?x=1&y=2#frag_1~u%20")).toBe(
+      "https://a.b/c?x=1\\&y=2\\#frag\\_1\\~u\\%20",
+    )
   })
   it("percent-encodes braces and backslashes so a url cannot inject", () => {
     expect(escHref("x}\\input{/etc/passwd}")).toBe("x\\%7D\\%5Cinput\\%7B/etc/passwd\\%7D")

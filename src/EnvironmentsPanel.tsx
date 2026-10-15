@@ -5,7 +5,15 @@ import PanelSearch, { matchesQuery } from "./PanelSearch"
 import type { OpenFile } from "./types"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
-const NUMBERED_TYPES = ["theorem", "lemma", "corollary", "proposition", "definition", "example", "exercise"]
+const NUMBERED_TYPES = [
+  "theorem",
+  "lemma",
+  "corollary",
+  "proposition",
+  "definition",
+  "example",
+  "exercise",
+]
 const ALL_TYPES = [...NUMBERED_TYPES, "proof", "remark", "note"]
 
 interface EnvItem {
@@ -61,23 +69,29 @@ export default function EnvironmentsPanel({
   const typeLabels = t.environments.types as Record<string, string>
   // Declared before the filter memo below, which runs during render and would
   // otherwise hit the temporal dead zone.
-  const typeLabel = useCallback(
-    (type: string): string => typeLabels[type] ?? type,
-    [typeLabels],
-  )
+  const typeLabel = useCallback((type: string): string => typeLabels[type] ?? type, [typeLabels])
   const [query, setQuery] = useState("")
   // Matches the translated label too, so searching "teorema" finds :::theorem.
   const visible = useMemo(
-    () => items.filter((item) =>
-      matchesQuery(`${typeLabel(item.type)} ${item.type} ${item.title ?? ""} ${item.fileName}`, query)),
+    () =>
+      items.filter((item) =>
+        matchesQuery(
+          `${typeLabel(item.type)} ${item.type} ${item.title ?? ""} ${item.fileName}`,
+          query,
+        ),
+      ),
     [items, query, typeLabel],
   )
 
   if (items.length === 0) {
     return (
       <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.environmentsIcon}</div>
-        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.environmentsMessage)}</p>
+        <div className="panel-empty-icon" aria-hidden="true">
+          {t.emptyStates.environmentsIcon}
+        </div>
+        <p className="panel-empty-message">
+          {renderEmptyMessage(t.emptyStates.environmentsMessage)}
+        </p>
       </div>
     )
   }
@@ -117,14 +131,12 @@ export default function EnvironmentsPanel({
         >
           <div className="env-list-row1">
             <span className={`env-badge env-badge-${item.type}`}>{typeLabel(item.type)}</span>
-            {item.number !== null && (
-              <span className="env-list-num">{item.number}</span>
-            )}
-            {item.title && (
-              <span className="env-list-title">{item.title}</span>
-            )}
+            {item.number !== null && <span className="env-list-num">{item.number}</span>}
+            {item.title && <span className="env-list-title">{item.title}</span>}
           </div>
-          <div className="env-list-file">{item.fileName}:{item.line}</div>
+          <div className="env-list-file">
+            {item.fileName}:{item.line}
+          </div>
         </div>
       ))}
     </div>

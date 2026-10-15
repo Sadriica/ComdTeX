@@ -2,7 +2,8 @@
 // dataset is declared to be used (like a macro), never cited as "Data 3".
 // It rides here so the Labels panel reports duplicate declarations, broken
 // `@data:` references and unused datasets exactly as it does for the rest.
-export type StructuralLabelKind = "sec" | "eq" | "fig" | "tbl" | "thm" | "lem" | "cor" | "prop" | "def" | "ex" | "exc" | "data"
+export type StructuralLabelKind =
+  "sec" | "eq" | "fig" | "tbl" | "thm" | "lem" | "cor" | "prop" | "def" | "ex" | "exc" | "data"
 
 export interface StructuralLabel {
   id: string
@@ -71,15 +72,32 @@ function normalizeKind(kind: string): StructuralLabelKind | null {
   return KIND_ALIASES[kind] ?? null
 }
 
-function pushLabel(labels: StructuralLabel[], rawId: string, filePath: string, fileName: string, line: number, context: string) {
+function pushLabel(
+  labels: StructuralLabel[],
+  rawId: string,
+  filePath: string,
+  fileName: string,
+  line: number,
+  context: string,
+) {
   const [prefix, ...rest] = rawId.split(":")
   const kind = normalizeKind(prefix)
   const name = rest.join(":")
   if (!kind || !name) return
-  labels.push({ id: `${kind}:${name}`, kind, name, filePath, fileName, line, context: context.trim() })
+  labels.push({
+    id: `${kind}:${name}`,
+    kind,
+    name,
+    filePath,
+    fileName,
+    line,
+    context: context.trim(),
+  })
 }
 
-export function scanStructuralLabels(files: { path: string; name: string; content: string }[]): StructuralLabelIndex {
+export function scanStructuralLabels(
+  files: { path: string; name: string; content: string }[],
+): StructuralLabelIndex {
   const labels: StructuralLabel[] = []
   const references: StructuralReference[] = []
 
@@ -99,7 +117,14 @@ export function scanStructuralLabels(files: { path: string; name: string; conten
         const kind = normalizeKind(refMatch[1])
         if (!kind) continue
         const id = `${kind}:${refMatch[2]}`
-        references.push({ id, kind, filePath: file.path, fileName: file.name, line: lineNumber, context: line.trim() })
+        references.push({
+          id,
+          kind,
+          filePath: file.path,
+          fileName: file.name,
+          line: lineNumber,
+          context: line.trim(),
+        })
       }
     })
   }

@@ -14,7 +14,9 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface CDNode { id: string }
+interface CDNode {
+  id: string
+}
 
 interface CDEdge {
   from: string
@@ -23,7 +25,10 @@ interface CDEdge {
   style: "->" | "<-" | "<->" | "->>" | ">->" | "==>"
 }
 
-interface CDGraph { nodes: CDNode[]; edges: CDEdge[] }
+interface CDGraph {
+  nodes: CDNode[]
+  edges: CDEdge[]
+}
 
 type EdgeStyle = "->" | "<-" | "<->" | "->>" | ">->" | "==>"
 
@@ -61,10 +66,13 @@ export function parseCommDiag(content: string): CDGraph {
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 
-interface Point { x: number; y: number }
+interface Point {
+  x: number
+  y: number
+}
 
 export function layoutDAG(graph: CDGraph): Map<string, Point> {
-  const nodeIds = graph.nodes.map(n => n.id)
+  const nodeIds = graph.nodes.map((n) => n.id)
   const n = nodeIds.length
 
   if (n === 0) return new Map()
@@ -170,7 +178,7 @@ export function layoutDAG(graph: CDGraph): Map<string, Point> {
   }
 
   const maxLayer = Math.max(...Array.from(layer.values()))
-  const maxNodesInLayer = Math.max(...Array.from(layerGroups.values()).map(g => g.length))
+  const maxNodesInLayer = Math.max(...Array.from(layerGroups.values()).map((g) => g.length))
 
   const width = Math.max(300, (maxLayer + 1) * 120 + 60)
   const height = Math.max(200, maxNodesInLayer * 80 + 60)
@@ -204,7 +212,11 @@ export function layoutDAG(graph: CDGraph): Map<string, Point> {
 let diagCounter = 0
 
 function escSvg(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 export function renderCommDiagSVG(title: string, content: string, number = ""): string {
@@ -267,8 +279,10 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
   const SHORTEN = 24 // px to shorten each end
 
   function shortenLine(
-    x1: number, y1: number,
-    x2: number, y2: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
     amount: number,
   ): [number, number, number, number] {
     const dx = x2 - x1
@@ -277,12 +291,7 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
     if (len < 1) return [x1, y1, x2, y2]
     const ux = dx / len
     const uy = dy / len
-    return [
-      x1 + ux * amount,
-      y1 + uy * amount,
-      x2 - ux * amount,
-      y2 - uy * amount,
-    ]
+    return [x1 + ux * amount, y1 + uy * amount, x2 - ux * amount, y2 - uy * amount]
   }
 
   // ── Edges ─────────────────────────────────────────────────────────────────
@@ -303,9 +312,13 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
       const cx = fromPt.x + NODE_RX + 20
       const cy = fromPt.y - NODE_RY - 20
       const path = `M ${fromPt.x + 10} ${fromPt.y - NODE_RY} Q ${cx} ${cy} ${fromPt.x + NODE_RX} ${fromPt.y - 5}`
-      edgeSvg.push(`<path d="${path}" fill="none" stroke="${markerColor}" stroke-width="1.5" marker-end="url(#cd-arr-${uid})"/>`)
+      edgeSvg.push(
+        `<path d="${path}" fill="none" stroke="${markerColor}" stroke-width="1.5" marker-end="url(#cd-arr-${uid})"/>`,
+      )
       if (e.label) {
-        labelSvg.push(`<text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#b0c8e0" font-style="italic" font-family="serif">${escSvg(e.label)}</text>`)
+        labelSvg.push(
+          `<text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#b0c8e0" font-style="italic" font-family="serif">${escSvg(e.label)}</text>`,
+        )
       }
       continue
     }
@@ -364,8 +377,8 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
         my = (fromPt.y + toPt.y) / 2
       }
 
-      const dx = (e.style === "<-" ? fromPt.x - toPt.x : toPt.x - fromPt.x)
-      const dy = (e.style === "<-" ? fromPt.y - toPt.y : toPt.y - fromPt.y)
+      const dx = e.style === "<-" ? fromPt.x - toPt.x : toPt.x - fromPt.x
+      const dy = e.style === "<-" ? fromPt.y - toPt.y : toPt.y - fromPt.y
       const len = Math.sqrt(dx * dx + dy * dy) || 1
       // Perpendicular unit vector
       const px = -dy / len
@@ -381,10 +394,12 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
       const textW = labelText.length * charW + 6
       const textH = 14
 
-      labelSvg.push([
-        `<rect x="${(lx - textW / 2).toFixed(1)}" y="${(ly - textH / 2 - 1).toFixed(1)}" width="${textW.toFixed(1)}" height="${textH}" rx="2" fill="var(--surface2, #1a1a1a)" opacity="0.85"/>`,
-        `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#b0c8e0" font-style="italic" font-family="serif">${labelText}</text>`,
-      ].join("\n"))
+      labelSvg.push(
+        [
+          `<rect x="${(lx - textW / 2).toFixed(1)}" y="${(ly - textH / 2 - 1).toFixed(1)}" width="${textW.toFixed(1)}" height="${textH}" rx="2" fill="var(--surface2, #1a1a1a)" opacity="0.85"/>`,
+          `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#b0c8e0" font-style="italic" font-family="serif">${labelText}</text>`,
+        ].join("\n"),
+      )
     }
   }
 
@@ -394,10 +409,12 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
   for (const node of graph.nodes) {
     const pt = positions.get(node.id)
     if (!pt) continue
-    nodeSvg.push([
-      `<ellipse cx="${pt.x}" cy="${pt.y}" rx="${NODE_RX}" ry="${NODE_RY}" fill="#1e2a3a" stroke="${markerColor}" stroke-width="1.5"/>`,
-      `<text x="${pt.x}" y="${pt.y}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e0e0e0" font-style="italic" font-family="serif">${escSvg(node.id)}</text>`,
-    ].join("\n"))
+    nodeSvg.push(
+      [
+        `<ellipse cx="${pt.x}" cy="${pt.y}" rx="${NODE_RX}" ry="${NODE_RY}" fill="#1e2a3a" stroke="${markerColor}" stroke-width="1.5"/>`,
+        `<text x="${pt.x}" y="${pt.y}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e0e0e0" font-style="italic" font-family="serif">${escSvg(node.id)}</text>`,
+      ].join("\n"),
+    )
   }
 
   // ── Assemble SVG ──────────────────────────────────────────────────────────
@@ -413,9 +430,7 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
     `</svg>`,
   ].join("\n")
 
-  const headerText = title
-    ? `Diagram ${number}: ${escSvg(title)}`
-    : `Diagram ${number}`
+  const headerText = title ? `Diagram ${number}: ${escSvg(title)}` : `Diagram ${number}`
   const titleHtml = `<div class="commdiag-title">${headerText}</div>`
 
   return [
@@ -423,5 +438,7 @@ export function renderCommDiagSVG(title: string, content: string, number = ""): 
     titleHtml,
     `<div class="commdiag-svg-wrap">${svg}</div>`,
     `</div>`,
-  ].filter(Boolean).join("\n")
+  ]
+    .filter(Boolean)
+    .join("\n")
 }

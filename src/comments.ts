@@ -110,7 +110,8 @@ function parseCommentsFile(raw: string): Comment[] {
       typeof c.filePath !== "string" ||
       typeof c.line !== "number" ||
       typeof c.body !== "string"
-    ) continue
+    )
+      continue
     out.push({
       id: c.id,
       filePath: c.filePath,
@@ -171,7 +172,10 @@ export async function updateComment(
 
 export async function deleteComment(vaultPath: string, id: string): Promise<void> {
   const current = await loadComments(vaultPath)
-  await saveComments(vaultPath, current.filter((c) => c.id !== id))
+  await saveComments(
+    vaultPath,
+    current.filter((c) => c.id !== id),
+  )
 }
 
 export async function resolveComment(vaultPath: string, id: string): Promise<void> {

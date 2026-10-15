@@ -76,14 +76,9 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
           <span key={item.name} className="deps-warning-item">
             <strong>{item.label}</strong>: {item.feature}
             {item.name === "zip" && (
-              <span style={{ color: "#bb9900", fontSize: 10 }}>
-                {" "}({getOsHint("zip")})
-              </span>
+              <span style={{ color: "#bb9900", fontSize: 10 }}> ({getOsHint("zip")})</span>
             )}
-            <button
-              className="deps-warning-btn"
-              onClick={() => handleInstall(item)}
-            >
+            <button className="deps-warning-btn" onClick={() => handleInstall(item)}>
               {t.deps.install}
             </button>
             <button
@@ -100,7 +95,9 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
           is a page rather than a banner. */}
       <button
         className="deps-warning-docs"
-        onClick={() => { void openUrl(docsUrl("troubleshooting")).catch(() => {}) }}
+        onClick={() => {
+          void openUrl(docsUrl("troubleshooting")).catch(() => {})
+        }}
       >
         {t.deps.troubleshooting} ↗
       </button>

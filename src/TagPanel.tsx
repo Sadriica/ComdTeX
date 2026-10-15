@@ -27,7 +27,9 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
       const tags = extractDetailedTags(file.content)
       for (const entry of tags) {
         if (!map.has(entry.tag)) map.set(entry.tag, { tag: entry.tag, type: entry.type, files: [] })
-        map.get(entry.tag)!.files.push({ path: file.path, name: file.name, line: entry.line, source: entry.source })
+        map
+          .get(entry.tag)!
+          .files.push({ path: file.path, name: file.name, line: entry.line, source: entry.source })
       }
     }
     return map
@@ -48,7 +50,9 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
   if (files.length === 0) {
     return (
       <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.tagsIcon}</div>
+        <div className="panel-empty-icon" aria-hidden="true">
+          {t.emptyStates.tagsIcon}
+        </div>
         <p className="panel-empty-message">{t.tagPanel.noFiles}</p>
       </div>
     )
@@ -58,7 +62,9 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
     return (
       <div className="tag-panel">
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.tagsIcon}</div>
+          <div className="panel-empty-icon" aria-hidden="true">
+            {t.emptyStates.tagsIcon}
+          </div>
           <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.tagsMessage)}</p>
         </div>
       </div>
@@ -79,16 +85,24 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
           className="tag-filter"
           placeholder={t.tagPanel.filterPlaceholder}
           value={filter}
-          onChange={(e) => { setFilter(e.target.value); setSelected(null) }}
+          onChange={(e) => {
+            setFilter(e.target.value)
+            setSelected(null)
+          }}
         />
         <select
           className="tag-filter tag-type-filter"
           value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value); setSelected(null) }}
+          onChange={(e) => {
+            setTypeFilter(e.target.value)
+            setSelected(null)
+          }}
           aria-label={t.tagPanel.typeAriaLabel}
         >
           {tagTypes.map((type) => (
-            <option key={type} value={type}>{type === "all" ? t.tagPanel.allTypes : type}</option>
+            <option key={type} value={type}>
+              {type === "all" ? t.tagPanel.allTypes : type}
+            </option>
           ))}
         </select>
       </div>
@@ -107,7 +121,9 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
                 title={f.path}
               >
                 <span>{displayBasename(f.path)}</span>
-                <span className={`tag-source tag-source-${f.source}`}>{f.source === "frontmatter" ? "YAML" : `L${f.line}`}</span>
+                <span className={`tag-source tag-source-${f.source}`}>
+                  {f.source === "frontmatter" ? "YAML" : `L${f.line}`}
+                </span>
               </button>
             ))}
           </div>

@@ -13,9 +13,18 @@ const SPECIAL_CASES: { name: string; src: string }[] = [
     src: ":::truth[Equivalencia: contrapositiva]\n(p -> q) <-> (~q -> ~p)\n:::",
   },
   { name: "graph", src: ":::graph[Camino mínimo]\nA -- B : 4\nA -- C : 2\n:::" },
-  { name: "plot (body has function shorthands that must NOT expand)", src: ":::plot[Densidad]\nf(x) = exp(-x^2/2) / sqrt(2*pi)\nxmin = -4\nxmax = 4\n:::" },
-  { name: "flowchart", src: ":::flowchart[Búsqueda binaria]\nWHILE lo <= hi\n  mid <- (lo + hi) / 2\n:::" },
-  { name: "pseudocode", src: ":::pseudocode[Búsqueda binaria]\nALGORITHM BinarySearch(A, target)\nRETURN mid\n:::" },
+  {
+    name: "plot (body has function shorthands that must NOT expand)",
+    src: ":::plot[Densidad]\nf(x) = exp(-x^2/2) / sqrt(2*pi)\nxmin = -4\nxmax = 4\n:::",
+  },
+  {
+    name: "flowchart",
+    src: ":::flowchart[Búsqueda binaria]\nWHILE lo <= hi\n  mid <- (lo + hi) / 2\n:::",
+  },
+  {
+    name: "pseudocode",
+    src: ":::pseudocode[Búsqueda binaria]\nALGORITHM BinarySearch(A, target)\nRETURN mid\n:::",
+  },
   { name: "commdiag", src: ":::commdiag[Cuadrado]\nA -> B\nA -> C\n:::" },
   { name: "code", src: ":::code python\nx = 1\nprint(x)\n:::" },
 ]
@@ -86,11 +95,17 @@ describe("special-block CMDX round-trip (lossless)", () => {
 describe("recovery of files corrupted by older versions", () => {
   it("restores a mangled `[!note] Truth: …` md callout back to :::truth", () => {
     const corrupted = "> [!note] Truth: Equivalencia: contrapositiva\n> (p -> q) <-> (~q -> ~p)"
-    expect(toCmdx(corrupted, "md")).toBe(":::truth[Equivalencia: contrapositiva]\n(p -> q) <-> (~q -> ~p)\n:::")
+    expect(toCmdx(corrupted, "md")).toBe(
+      ":::truth[Equivalencia: contrapositiva]\n(p -> q) <-> (~q -> ~p)\n:::",
+    )
   })
 
   it("always restores unambiguous types regardless of body (md)", () => {
-    for (const [prefix, env] of [["Flowchart", "flowchart"], ["Pseudocode", "pseudocode"], ["Commdiag", "commdiag"]]) {
+    for (const [prefix, env] of [
+      ["Flowchart", "flowchart"],
+      ["Pseudocode", "pseudocode"],
+      ["Commdiag", "commdiag"],
+    ]) {
       expect(toCmdx(`> [!note] ${prefix}: T\n> body`, "md")).toBe(`:::${env}[T]\nbody\n:::`)
     }
   })
@@ -98,16 +113,22 @@ describe("recovery of files corrupted by older versions", () => {
   it("restores ambiguous types (graph/plot/code) only when the body matches the DSL (md)", () => {
     // Body looks like the block → recovered.
     expect(toCmdx("> [!note] Graph: G\n> A -- B : 4", "md")).toBe(":::graph[G]\nA -- B : 4\n:::")
-    expect(toCmdx("> [!note] Plot: P\n> f(x) = sin(x)", "md")).toBe(":::plot[P]\nf(x) = sin(x)\n:::")
-    expect(toCmdx("> [!note] Code: c\n> def f(): return 1", "md")).toBe(":::code[c]\ndef f(): return 1\n:::")
+    expect(toCmdx("> [!note] Plot: P\n> f(x) = sin(x)", "md")).toBe(
+      ":::plot[P]\nf(x) = sin(x)\n:::",
+    )
+    expect(toCmdx("> [!note] Code: c\n> def f(): return 1", "md")).toBe(
+      ":::code[c]\ndef f(): return 1\n:::",
+    )
   })
 
   it("does NOT recover an ambiguous type when the body is plain prose (no false positive)", () => {
     // A genuine note that happens to start "Graph:"/"Plot:" stays a note.
-    expect(toCmdx("> [!note] Graph: my thoughts on graph theory\n> just prose here", "md"))
-      .toBe(":::note[Graph: my thoughts on graph theory]\njust prose here\n:::")
-    expect(toCmdx("> [!note] Plot: outline of my story\n> chapter one happens", "md"))
-      .toBe(":::note[Plot: outline of my story]\nchapter one happens\n:::")
+    expect(toCmdx("> [!note] Graph: my thoughts on graph theory\n> just prose here", "md")).toBe(
+      ":::note[Graph: my thoughts on graph theory]\njust prose here\n:::",
+    )
+    expect(toCmdx("> [!note] Plot: outline of my story\n> chapter one happens", "md")).toBe(
+      ":::note[Plot: outline of my story]\nchapter one happens\n:::",
+    )
   })
 
   it("heals fully: recovered block re-saves verbatim (no re-corruption)", () => {

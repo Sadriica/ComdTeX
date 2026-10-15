@@ -16,7 +16,12 @@ interface PanelSearchProps {
  * every panel that grew long enough to need searching gets the control the user
  * already knows rather than a new one per panel.
  */
-export default function PanelSearch({ value, onChange, placeholder, resultCount }: PanelSearchProps) {
+export default function PanelSearch({
+  value,
+  onChange,
+  placeholder,
+  resultCount,
+}: PanelSearchProps) {
   const t = useT()
   const label = placeholder ?? t.panelSearch.placeholder
   return (
@@ -41,7 +46,9 @@ export default function PanelSearch({ value, onChange, placeholder, resultCount 
             onClick={() => onChange("")}
             title={t.panelSearch.clear}
             aria-label={t.panelSearch.clear}
-          >×</button>
+          >
+            ×
+          </button>
         </>
       )}
     </div>
@@ -60,14 +67,16 @@ export function matchesQuery(haystack: string, query: string): boolean {
 }
 
 function fold(s: string): string {
-  return s
-    .toLowerCase()
-    // NFD would decompose ñ into "n" + combining tilde and the strip below
-    // would turn it into a plain "n". In Spanish ñ is its own letter, not an
-    // accented n, so it is parked on a private-use code point across the fold and
-    // restored afterwards. Accented vowels DO fold: "indice" finds "índice".
-    .replace(/\u00f1/g, "\ue000")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\ue000/g, "\u00f1")
+  return (
+    s
+      .toLowerCase()
+      // NFD would decompose ñ into "n" + combining tilde and the strip below
+      // would turn it into a plain "n". In Spanish ñ is its own letter, not an
+      // accented n, so it is parked on a private-use code point across the fold and
+      // restored afterwards. Accented vowels DO fold: "indice" finds "índice".
+      .replace(/\u00f1/g, "\ue000")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\ue000/g, "\u00f1")
+  )
 }

@@ -115,7 +115,7 @@ export default function CitationManager({
       year: form.year,
       [venueField]: form.venue,
     }
-    setEntries(prev => new Map(prev).set(key, { type: form.type, key, fields }))
+    setEntries((prev) => new Map(prev).set(key, { type: form.type, key, fields }))
     setForm(DEFAULT_FORM)
     setError(null)
   }
@@ -134,7 +134,10 @@ export default function CitationManager({
       let bibtex: string
       if (isAdsBibcode(query)) {
         const token = await getSecret("ads_token")
-        if (!token) { showToast(t.citationManager.adsTokenMissing, "error", 8000); return }
+        if (!token) {
+          showToast(t.citationManager.adsTokenMissing, "error", 8000)
+          return
+        }
         bibtex = await fetchBibtexFromAds(query, token)
       } else {
         const inspire = parseInspireInput(query)
@@ -148,9 +151,15 @@ export default function CitationManager({
       }
       // Validate it parses with the existing BibTeX parser.
       const parsed = parseBibtex(bibtex)
-      if (parsed.size === 0) { showToast(t.citationManager.doiError, "error"); return }
+      if (parsed.size === 0) {
+        showToast(t.citationManager.doiError, "error")
+        return
+      }
       const [key, entry] = [...parsed.entries()][0]
-      if (entries.has(key)) { showToast(t.citationManager.doiExists(key), "info"); return }
+      if (entries.has(key)) {
+        showToast(t.citationManager.doiExists(key), "info")
+        return
+      }
       const next = new Map(entries).set(key, entry)
       setEntries(next)
       setDoi("")
@@ -192,13 +201,19 @@ export default function CitationManager({
     try {
       const bibtex = await fetchZoteroBibtex(citekeys)
       const parsed = parseBibtex(bibtex)
-      if (parsed.size === 0) { showToast(t.citationManager.zoteroUnavailable, "error"); return }
+      if (parsed.size === 0) {
+        showToast(t.citationManager.zoteroUnavailable, "error")
+        return
+      }
       // Dedupe by key, mirroring the "Add by DOI" path.
       let next = new Map(entries)
       let added = 0
       let lastDup: string | null = null
       for (const [key, entry] of parsed) {
-        if (next.has(key)) { lastDup = key; continue }
+        if (next.has(key)) {
+          lastDup = key
+          continue
+        }
         next = new Map(next).set(key, entry)
         added++
       }
@@ -219,7 +234,7 @@ export default function CitationManager({
 
   const handleDelete = (key: string) => {
     if (deleteConfirm === key) {
-      setEntries(prev => {
+      setEntries((prev) => {
         const next = new Map(prev)
         next.delete(key)
         return next
@@ -236,20 +251,24 @@ export default function CitationManager({
   }
 
   const updateForm = (field: keyof FormState, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm((prev) => ({ ...prev, [field]: value }))
     if (error) setError(null)
   }
 
   return (
     <div
       className="cit-manager-overlay"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div className="cit-manager">
         {/* Header */}
         <div className="cit-manager-header">
           <span className="cit-manager-title">{t.citationManager.title}</span>
-          <button className="cit-manager-close" onClick={onClose} title={t.citationManager.close}>×</button>
+          <button className="cit-manager-close" onClick={onClose} title={t.citationManager.close}>
+            ×
+          </button>
         </div>
 
         {/* Body */}
@@ -279,7 +298,11 @@ export default function CitationManager({
                   </div>
                   <button
                     className="cit-delete-btn"
-                    title={deleteConfirm === key ? t.citationManager.confirmDelete : t.citationManager.deleteEntry}
+                    title={
+                      deleteConfirm === key
+                        ? t.citationManager.confirmDelete
+                        : t.citationManager.deleteEntry
+                    }
                     onClick={() => handleDelete(key)}
                     style={deleteConfirm === key ? { color: "#f48771" } : undefined}
                   >
@@ -291,13 +314,18 @@ export default function CitationManager({
           </div>
 
           {/* Add by DOI / arXiv (on-demand network fetch) */}
-          <div className="cit-add-form" style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}>
+          <div
+            className="cit-add-form"
+            style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}
+          >
             <div className="cit-add-form-row">
               <input
                 placeholder={t.citationManager.doiPlaceholder}
                 value={doi}
-                onChange={e => setDoi(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleFetchDoi() }}
+                onChange={(e) => setDoi(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleFetchDoi()
+                }}
                 disabled={fetching}
                 style={{ flex: 1 }}
               />
@@ -313,7 +341,10 @@ export default function CitationManager({
           </div>
 
           {/* Import from Zotero (on-demand local HTTP API; requires Zotero running) */}
-          <div className="cit-add-form" style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}>
+          <div
+            className="cit-add-form"
+            style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}
+          >
             <div style={{ fontSize: 11, color: "#888", marginBottom: 2, fontWeight: 600 }}>
               {t.citationManager.zoteroHeading}
             </div>
@@ -321,8 +352,10 @@ export default function CitationManager({
               <input
                 placeholder={t.citationManager.zoteroPlaceholder}
                 value={zoteroQuery}
-                onChange={e => setZoteroQuery(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleZoteroSearch() }}
+                onChange={(e) => setZoteroQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleZoteroSearch()
+                }}
                 disabled={zoteroSearching || zoteroFetching}
                 style={{ flex: 1 }}
               />
@@ -332,7 +365,9 @@ export default function CitationManager({
                 disabled={zoteroSearching || zoteroFetching || !zoteroQuery.trim()}
                 style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
               >
-                {zoteroSearching ? t.citationManager.zoteroSearching : t.citationManager.zoteroSearch}
+                {zoteroSearching
+                  ? t.citationManager.zoteroSearching
+                  : t.citationManager.zoteroSearch}
               </button>
             </div>
 
@@ -347,22 +382,28 @@ export default function CitationManager({
                 <div className="cit-add-form-row" style={{ justifyContent: "flex-end" }}>
                   <button
                     className="cit-add-btn"
-                    onClick={() => importZoteroKeys(zoteroResults.map(r => r.citekey))}
+                    onClick={() => importZoteroKeys(zoteroResults.map((r) => r.citekey))}
                     disabled={zoteroFetching}
                     style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
                   >
-                    {zoteroFetching ? t.citationManager.zoteroFetching : t.citationManager.zoteroImportAll}
+                    {zoteroFetching
+                      ? t.citationManager.zoteroFetching
+                      : t.citationManager.zoteroImportAll}
                   </button>
                 </div>
                 <div className="cit-list" style={{ maxHeight: 160, overflowY: "auto" }}>
-                  {zoteroResults.map(r => (
+                  {zoteroResults.map((r) => (
                     <div key={r.citekey} className="cit-item">
                       <div className="cit-item-info">
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <div
+                          style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}
+                        >
                           <span className="cit-item-key">{r.citekey}</span>
                         </div>
                         <div className="cit-item-title" title={r.title}>
-                          {r.title || <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>}
+                          {r.title || (
+                            <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>
+                          )}
                         </div>
                         <div className="cit-item-meta">
                           {[r.author, r.year].filter(Boolean).join(" · ")}
@@ -392,25 +433,31 @@ export default function CitationManager({
             <div className="cit-add-form-row">
               <select
                 value={form.type}
-                onChange={e => updateForm("type", e.target.value)}
+                onChange={(e) => updateForm("type", e.target.value)}
                 style={{ flex: "0 0 auto", minWidth: 110 }}
               >
-                {ENTRY_TYPES.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                {ENTRY_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
               <input
                 placeholder={t.citationManager.keyPlaceholder}
                 value={form.key}
-                onChange={e => updateForm("key", e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
+                onChange={(e) => updateForm("key", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                }}
                 style={{ flex: "0 0 auto", minWidth: 100, maxWidth: 140 }}
               />
               <input
                 placeholder={t.citationManager.yearPlaceholder}
                 value={form.year}
-                onChange={e => updateForm("year", e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
+                onChange={(e) => updateForm("year", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                }}
                 style={{ flex: "0 0 auto", minWidth: 60, maxWidth: 80 }}
               />
             </div>
@@ -418,31 +465,33 @@ export default function CitationManager({
               <input
                 placeholder={t.citationManager.titlePlaceholder}
                 value={form.title}
-                onChange={e => updateForm("title", e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
+                onChange={(e) => updateForm("title", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                }}
               />
             </div>
             <div className="cit-add-form-row">
               <input
                 placeholder={t.citationManager.authorPlaceholder}
                 value={form.author}
-                onChange={e => updateForm("author", e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
+                onChange={(e) => updateForm("author", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                }}
               />
               <input
                 placeholder={venueLabel(form.type)}
                 value={form.venue}
-                onChange={e => updateForm("venue", e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleAdd() }}
+                onChange={(e) => updateForm("venue", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                }}
               />
             </div>
             <div className="cit-add-form-row">
               {error && <span className="cit-error">{error}</span>}
-              <button
-                className="cit-add-btn"
-                onClick={handleAdd}
-                style={{ marginLeft: "auto" }}
-              >
+              <button className="cit-add-btn" onClick={handleAdd} style={{ marginLeft: "auto" }}>
                 {t.citationManager.add}
               </button>
             </div>
@@ -451,8 +500,12 @@ export default function CitationManager({
 
         {/* Footer */}
         <div className="cit-manager-footer">
-          <button className="cit-cancel-btn" onClick={onClose}>{t.citationManager.cancel}</button>
-          <button className="cit-save-btn" onClick={handleSave}>{t.citationManager.save}</button>
+          <button className="cit-cancel-btn" onClick={onClose}>
+            {t.citationManager.cancel}
+          </button>
+          <button className="cit-save-btn" onClick={handleSave}>
+            {t.citationManager.save}
+          </button>
         </div>
       </div>
     </div>

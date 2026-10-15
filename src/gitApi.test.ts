@@ -10,16 +10,18 @@ describe("parseStatusZ", () => {
   })
 
   it("keeps spaces and accented names unquoted", () => {
-    const s = parseStatusZ(z("## main", " M notas de clase/Cálculo é.md", "A  año nuevo.md", "?? sin título.md"))
-    expect(s.unstaged.map(f => f.path)).toEqual(["notas de clase/Cálculo é.md"])
-    expect(s.staged.map(f => f.path)).toEqual(["año nuevo.md"])
-    expect(s.untracked.map(f => f.path)).toEqual(["sin título.md"])
+    const s = parseStatusZ(
+      z("## main", " M notas de clase/Cálculo é.md", "A  año nuevo.md", "?? sin título.md"),
+    )
+    expect(s.unstaged.map((f) => f.path)).toEqual(["notas de clase/Cálculo é.md"])
+    expect(s.staged.map((f) => f.path)).toEqual(["año nuevo.md"])
+    expect(s.untracked.map((f) => f.path)).toEqual(["sin título.md"])
   })
 
   it("uses the new path for renames and consumes the original record", () => {
     const s = parseStatusZ(z("## main", "R  nuevo nombre.md", "viejo nombre.md", " M otro.md"))
     expect(s.staged).toEqual([{ x: "R", y: " ", path: "nuevo nombre.md", orig: "viejo nombre.md" }])
-    expect(s.unstaged.map(f => f.path)).toEqual(["otro.md"])
+    expect(s.unstaged.map((f) => f.path)).toEqual(["otro.md"])
   })
 
   it("handles rename with worktree modification", () => {
@@ -48,7 +50,13 @@ describe("git helpers", () => {
   })
 
   it("recognises the not-a-repo exit", () => {
-    expect(isNotRepo({ code: 128, stdout: "", stderr: "fatal: not a git repository (or any of the parent directories): .git" })).toBe(true)
+    expect(
+      isNotRepo({
+        code: 128,
+        stdout: "",
+        stderr: "fatal: not a git repository (or any of the parent directories): .git",
+      }),
+    ).toBe(true)
     expect(isNotRepo({ code: 128, stdout: "", stderr: "fatal: other" })).toBe(false)
   })
 })

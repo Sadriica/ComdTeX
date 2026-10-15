@@ -17,10 +17,7 @@ async function loadPdfJs(): Promise<PdfJsModule> {
         // Vite-friendly worker path. new URL(...) works in both Vite dev and
         // production builds and is how the upstream pdfjs-dist docs recommend
         // wiring the worker for ESM bundlers.
-        const workerUrl = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString()
+        const workerUrl = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
         mod.GlobalWorkerOptions.workerSrc = workerUrl
       } catch {
         // If the URL constructor fails (very old browsers / test env) we
@@ -85,7 +82,13 @@ const ZOOM_STEP = 0.2
  * PDF preview pane. Renders the document page-by-page on canvases, virtualised
  * via IntersectionObserver so memory stays bounded for large PDFs.
  */
-export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focusPage, invert = false }: PdfPreviewPanelProps) {
+export default function PdfPreviewPanel({
+  pdfPath,
+  onClickSource,
+  synctex,
+  focusPage,
+  invert = false,
+}: PdfPreviewPanelProps) {
   const t = useT()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
@@ -187,54 +190,60 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
 
   // Compute the effective scale for a page: either fit-to-width (using the
   // container's clientWidth) or the manual zoom.
-  const computeScale = useCallback((page: RenderedPage): number => {
-    if (fitWidth && containerRef.current) {
-      const available = Math.max(200, containerRef.current.clientWidth - 32)
-      return available / page.width
-    }
-    return zoom
-  }, [fitWidth, zoom])
+  const computeScale = useCallback(
+    (page: RenderedPage): number => {
+      if (fitWidth && containerRef.current) {
+        const available = Math.max(200, containerRef.current.clientWidth - 32)
+        return available / page.width
+      }
+      return zoom
+    },
+    [fitWidth, zoom],
+  )
 
   // Render a single page into the canvas with the data-page attribute matching.
-  const renderPage = useCallback(async (pageNum: number) => {
-    const doc = docRef.current
-    if (!doc) return
-    const canvas = containerRef.current?.querySelector<HTMLCanvasElement>(
-      `canvas[data-page="${pageNum}"]`,
-    )
-    if (!canvas) return
-    const pageInfo = pages.find((p) => p.pageNum === pageNum)
-    if (!pageInfo) return
+  const renderPage = useCallback(
+    async (pageNum: number) => {
+      const doc = docRef.current
+      if (!doc) return
+      const canvas = containerRef.current?.querySelector<HTMLCanvasElement>(
+        `canvas[data-page="${pageNum}"]`,
+      )
+      if (!canvas) return
+      const pageInfo = pages.find((p) => p.pageNum === pageNum)
+      if (!pageInfo) return
 
-    // Cancel any in-flight render for this page.
-    const prev = renderTasksRef.current.get(pageNum)
-    if (prev) prev.cancel()
+      // Cancel any in-flight render for this page.
+      const prev = renderTasksRef.current.get(pageNum)
+      if (prev) prev.cancel()
 
-    try {
-      const page = await doc.getPage(pageNum)
-      const scale = computeScale(pageInfo)
-      const viewport = page.getViewport({ scale })
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = Math.floor(viewport.width * dpr)
-      canvas.height = Math.floor(viewport.height * dpr)
-      canvas.style.width = `${Math.floor(viewport.width)}px`
-      canvas.style.height = `${Math.floor(viewport.height)}px`
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      const task = page.render({ canvasContext: ctx, viewport, canvas })
-      renderTasksRef.current.set(pageNum, task)
-      await task.promise
-      renderedRef.current.add(pageNum)
-    } catch (err) {
-      // RenderingCancelledException is expected when scrolling fast or
-      // resizing: don't surface those.
-      const msg = err instanceof Error ? err.name : ""
-      if (msg !== "RenderingCancelledException") {
-        console.warn("pdfjs render failed", err)
+      try {
+        const page = await doc.getPage(pageNum)
+        const scale = computeScale(pageInfo)
+        const viewport = page.getViewport({ scale })
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        const dpr = window.devicePixelRatio || 1
+        canvas.width = Math.floor(viewport.width * dpr)
+        canvas.height = Math.floor(viewport.height * dpr)
+        canvas.style.width = `${Math.floor(viewport.width)}px`
+        canvas.style.height = `${Math.floor(viewport.height)}px`
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        const task = page.render({ canvasContext: ctx, viewport, canvas })
+        renderTasksRef.current.set(pageNum, task)
+        await task.promise
+        renderedRef.current.add(pageNum)
+      } catch (err) {
+        // RenderingCancelledException is expected when scrolling fast or
+        // resizing: don't surface those.
+        const msg = err instanceof Error ? err.name : ""
+        if (msg !== "RenderingCancelledException") {
+          console.warn("pdfjs render failed", err)
+        }
       }
-    }
-  }, [pages, computeScale])
+    },
+    [pages, computeScale],
+  )
 
   // Lazy render visible (and ±1) pages via IntersectionObserver.
   useEffect(() => {
@@ -242,33 +251,36 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
     if (!container || pages.length === 0) return
 
     const visible = new Set<number>()
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const pageAttr = entry.target.getAttribute("data-page")
-        const pageNum = pageAttr ? Number(pageAttr) : NaN
-        if (!Number.isFinite(pageNum)) continue
-        if (entry.isIntersecting) {
-          visible.add(pageNum)
-        } else {
-          visible.delete(pageNum)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const pageAttr = entry.target.getAttribute("data-page")
+          const pageNum = pageAttr ? Number(pageAttr) : NaN
+          if (!Number.isFinite(pageNum)) continue
+          if (entry.isIntersecting) {
+            visible.add(pageNum)
+          } else {
+            visible.delete(pageNum)
+          }
         }
-      }
-      // Pages to render: all visible plus ±1 neighbours.
-      const toRender = new Set<number>()
-      for (const p of visible) {
-        toRender.add(p)
-        if (p > 1) toRender.add(p - 1)
-        if (p < pages.length) toRender.add(p + 1)
-      }
-      for (const p of toRender) {
-        if (!renderedRef.current.has(p)) renderPage(p)
-      }
-      // Update current page indicator: pick the smallest visible.
-      if (visible.size > 0) {
-        const next = Math.min(...visible)
-        setCurrentPage(next)
-      }
-    }, { root: container, rootMargin: "200px", threshold: 0.01 })
+        // Pages to render: all visible plus ±1 neighbours.
+        const toRender = new Set<number>()
+        for (const p of visible) {
+          toRender.add(p)
+          if (p > 1) toRender.add(p - 1)
+          if (p < pages.length) toRender.add(p + 1)
+        }
+        for (const p of toRender) {
+          if (!renderedRef.current.has(p)) renderPage(p)
+        }
+        // Update current page indicator: pick the smallest visible.
+        if (visible.size > 0) {
+          const next = Math.min(...visible)
+          setCurrentPage(next)
+        }
+      },
+      { root: container, rootMargin: "200px", threshold: 0.01 },
+    )
 
     const placeholders = container.querySelectorAll<HTMLDivElement>(".pdf-page")
     placeholders.forEach((el) => observer.observe(el))
@@ -342,66 +354,73 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
 
   // Handle a click on a page canvas: derive PDF coordinates and the nearest
   // text (heading-style synctex shim).
-  const handlePageClick = useCallback(async (pageNum: number, e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!onClickSource) return
-    const doc = docRef.current
-    if (!doc) return
-    try {
-      const canvas = e.currentTarget
-      const rect = canvas.getBoundingClientRect()
-      const localX = e.clientX - rect.left
-      const localY = e.clientY - rect.top
-      const page = await doc.getPage(pageNum)
-      const pageInfo = pages.find((p) => p.pageNum === pageNum)
-      if (!pageInfo) return
-      const scale = computeScale(pageInfo)
-      const viewport = page.getViewport({ scale })
-      // pdfjs provides convertToPdfPoint for canvas->user-space conversion.
-      const [pdfX, pdfY] = viewport.convertToPdfPoint(localX, localY)
-      // Find nearest text item (small rectangle around click).
-      let nearestText = ""
+  const handlePageClick = useCallback(
+    async (pageNum: number, e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!onClickSource) return
+      const doc = docRef.current
+      if (!doc) return
       try {
-        const tc = await page.getTextContent()
-        let bestDist = Infinity
-        for (const item of tc.items) {
-          if (!("transform" in item) || !("str" in item)) continue
-          const anyItem = item as { transform: number[]; str: string }
-          const tx = anyItem.transform[4]
-          const ty = anyItem.transform[5]
-          const dx = tx - pdfX
-          const dy = ty - pdfY
-          const d = dx * dx + dy * dy
-          if (d < bestDist && anyItem.str.trim().length > 0) {
-            bestDist = d
-            nearestText = anyItem.str.trim()
+        const canvas = e.currentTarget
+        const rect = canvas.getBoundingClientRect()
+        const localX = e.clientX - rect.left
+        const localY = e.clientY - rect.top
+        const page = await doc.getPage(pageNum)
+        const pageInfo = pages.find((p) => p.pageNum === pageNum)
+        if (!pageInfo) return
+        const scale = computeScale(pageInfo)
+        const viewport = page.getViewport({ scale })
+        // pdfjs provides convertToPdfPoint for canvas->user-space conversion.
+        const [pdfX, pdfY] = viewport.convertToPdfPoint(localX, localY)
+        // Find nearest text item (small rectangle around click).
+        let nearestText = ""
+        try {
+          const tc = await page.getTextContent()
+          let bestDist = Infinity
+          for (const item of tc.items) {
+            if (!("transform" in item) || !("str" in item)) continue
+            const anyItem = item as { transform: number[]; str: string }
+            const tx = anyItem.transform[4]
+            const ty = anyItem.transform[5]
+            const dx = tx - pdfX
+            const dy = ty - pdfY
+            const d = dx * dx + dy * dy
+            if (d < bestDist && anyItem.str.trim().length > 0) {
+              bestDist = d
+              nearestText = anyItem.str.trim()
+            }
           }
+        } catch {
+          // ignore text-extraction errors
         }
+        // Real SyncTeX inverse sync, when data is present. pdfjs gives user-space
+        // coords (origin bottom-left); our parser stores top-left coords, so flip
+        // Y against the page height (in points, at scale 1 = pageInfo.height).
+        let sync: { file: string; line: number } | undefined
+        if (syncData) {
+          const topLeftY = pageInfo.height - pdfY
+          const hit = inverseSync(syncData, pageNum, pdfX, topLeftY)
+          if (hit) sync = { file: hit.file, line: hit.line }
+        }
+        onClickSource(pageNum, pdfX, pdfY, nearestText, sync)
       } catch {
-        // ignore text-extraction errors
+        // ignore
       }
-      // Real SyncTeX inverse sync, when data is present. pdfjs gives user-space
-      // coords (origin bottom-left); our parser stores top-left coords, so flip
-      // Y against the page height (in points, at scale 1 = pageInfo.height).
-      let sync: { file: string; line: number } | undefined
-      if (syncData) {
-        const topLeftY = pageInfo.height - pdfY
-        const hit = inverseSync(syncData, pageNum, pdfX, topLeftY)
-        if (hit) sync = { file: hit.file, line: hit.line }
-      }
-      onClickSource(pageNum, pdfX, pdfY, nearestText, sync)
-    } catch {
-      // ignore
-    }
-  }, [onClickSource, pages, computeScale, syncData])
+    },
+    [onClickSource, pages, computeScale, syncData],
+  )
 
   const totalPages = pages.length
 
   // Compute placeholder dimensions so the layout is stable before render
   // completes (keeps virtualisation predictable).
-  const placeholders = useMemo(() => pages.map((p) => {
-    const scale = computeScale(p)
-    return { ...p, displayWidth: p.width * scale, displayHeight: p.height * scale }
-  }), [pages, computeScale])
+  const placeholders = useMemo(
+    () =>
+      pages.map((p) => {
+        const scale = computeScale(p)
+        return { ...p, displayWidth: p.width * scale, displayHeight: p.height * scale }
+      }),
+    [pages, computeScale],
+  )
 
   return (
     <div className={`pdf-preview-panel${invert ? " inverted" : ""}`}>
@@ -462,12 +481,8 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
         </button>
       </div>
       <div className="pdf-pages" ref={containerRef}>
-        {!pdfPath && (
-          <div className="pdf-empty">{t.pdfPreview.noPdf}</div>
-        )}
-        {pdfPath && loading && (
-          <div className="pdf-empty">{t.pdfPreview.loading}</div>
-        )}
+        {!pdfPath && <div className="pdf-empty">{t.pdfPreview.noPdf}</div>}
+        {pdfPath && loading && <div className="pdf-empty">{t.pdfPreview.loading}</div>}
         {pdfPath && error && (
           <div className="pdf-error">
             {t.pdfPreview.error}: {error}
@@ -480,10 +495,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
             data-page={p.pageNum}
             style={{ width: p.displayWidth, height: p.displayHeight }}
           >
-            <canvas
-              data-page={p.pageNum}
-              onClick={(e) => handlePageClick(p.pageNum, e)}
-            />
+            <canvas data-page={p.pageNum} onClick={(e) => handlePageClick(p.pageNum, e)} />
             <div className="pdf-page-label">
               {t.pdfPreview.page} {p.pageNum}
             </div>

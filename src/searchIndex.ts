@@ -54,9 +54,15 @@ export interface ParsedSearchQuery {
 export function parseSearchQuery(query: string): ParsedSearchQuery {
   const terms = query.trim().split(/\s+/)
   const filters: SearchFilters = {
-    tags: terms.filter((term) => term.startsWith("tag:")).map((term) => term.slice(4).toLowerCase()),
-    paths: terms.filter((term) => term.startsWith("path:")).map((term) => term.slice(5).toLowerCase()),
-    exts: terms.filter((term) => term.startsWith("ext:")).map((term) => term.slice(4).replace(/^\./, "").toLowerCase()),
+    tags: terms
+      .filter((term) => term.startsWith("tag:"))
+      .map((term) => term.slice(4).toLowerCase()),
+    paths: terms
+      .filter((term) => term.startsWith("path:"))
+      .map((term) => term.slice(5).toLowerCase()),
+    exts: terms
+      .filter((term) => term.startsWith("ext:"))
+      .map((term) => term.slice(4).replace(/^\./, "").toLowerCase()),
     frontmatter: terms
       .filter((term) => term.startsWith("fm:"))
       .map((term) => term.slice(3))
@@ -66,9 +72,7 @@ export function parseSearchQuery(query: string): ParsedSearchQuery {
       })
       .filter((item) => item.key),
   }
-  const textQuery = terms
-    .filter((term) => !/^(tag|path|ext|fm):/.test(term))
-    .join(" ")
+  const textQuery = terms.filter((term) => !/^(tag|path|ext|fm):/.test(term)).join(" ")
   return { filters, textQuery }
 }
 
@@ -84,7 +88,10 @@ export function buildSearchRegex(
   try {
     return opts.regex
       ? new RegExp(textQuery || ".*", opts.caseSensitive ? "g" : "gi")
-      : new RegExp((textQuery || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
+      : new RegExp(
+          (textQuery || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+          opts.caseSensitive ? "g" : "gi",
+        )
   } catch {
     return null
   }
@@ -126,7 +133,11 @@ export class VaultSearchIndex {
    * (Re)read + re-parse `path` only if it is absent from the cache or its
    * mtime differs from the cached value. Returns the cached-or-fresh entry.
    */
-  async syncFile(path: string, mtimeMs: number, readContent: () => Promise<string>): Promise<SearchIndexEntry> {
+  async syncFile(
+    path: string,
+    mtimeMs: number,
+    readContent: () => Promise<string>,
+  ): Promise<SearchIndexEntry> {
     const existing = this.cache.get(path)
     if (existing && existing.mtimeMs === mtimeMs) return existing
     const raw = await readContent()
@@ -167,7 +178,10 @@ export class VaultSearchIndex {
 
   rename(oldPath: string, newPath: string): void {
     const entry = this.cache.get(oldPath)
-    if (!entry) { this.cache.delete(newPath); return }
+    if (!entry) {
+      this.cache.delete(newPath)
+      return
+    }
     this.cache.delete(oldPath)
     this.cache.set(newPath, entry)
   }
@@ -199,7 +213,11 @@ export class VaultSearchIndex {
       if (opts.isCancelled?.() || results.length >= cap) break
 
       if (filters.exts.length > 0 && !filters.exts.includes(candidate.ext.toLowerCase())) continue
-      if (filters.paths.length > 0 && !filters.paths.some((p) => candidate.path.toLowerCase().includes(p))) continue
+      if (
+        filters.paths.length > 0 &&
+        !filters.paths.some((p) => candidate.path.toLowerCase().includes(p))
+      )
+        continue
 
       let entry: SearchIndexEntry
       try {
@@ -210,7 +228,8 @@ export class VaultSearchIndex {
         continue
       }
 
-      if (filters.tags.length > 0 && !filters.tags.every((tag) => entry.tags.includes(tag))) continue
+      if (filters.tags.length > 0 && !filters.tags.every((tag) => entry.tags.includes(tag)))
+        continue
 
       if (filters.frontmatter.length > 0) {
         const data = entry.frontmatterData
@@ -231,7 +250,12 @@ export class VaultSearchIndex {
       entry.content.split("\n").forEach((line, i) => {
         searchRe.lastIndex = 0
         if (results.length < cap && (!textQuery || searchRe.test(line)))
-          results.push({ filePath: candidate.path, fileName: candidate.name, line: i + 1, content: line.trim().slice(0, 200) })
+          results.push({
+            filePath: candidate.path,
+            fileName: candidate.name,
+            line: i + 1,
+            content: line.trim().slice(0, 200),
+          })
       })
     }
 

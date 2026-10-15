@@ -82,12 +82,17 @@ export const HANDLERS: Record<string, Handler> = {
     const n = args.length
     if (n === 0) return "\\text{mat: sin valores}"
     // Auto-detect dimensions: factor closest to sqrt(n)
-    let r = 1, c = n
+    let r = 1,
+      c = n
     for (let i = Math.floor(Math.sqrt(n)); i >= 1; i--) {
-      if (n % i === 0) { r = i; c = n / i; break }
+      if (n % i === 0) {
+        r = i
+        c = n / i
+        break
+      }
     }
     const rowStrs = Array.from({ length: r }, (_, i) =>
-      Array.from({ length: c }, (_, j) => args[i * c + j] ?? `a_{${i + 1}${j + 1}}`).join(" & ")
+      Array.from({ length: c }, (_, j) => args[i * c + j] ?? `a_{${i + 1}${j + 1}}`).join(" & "),
     )
     return `\\begin{bmatrix}${rowStrs.join(" \\\\ ")}\\end{bmatrix}`
   },
@@ -97,58 +102,58 @@ export const HANDLERS: Record<string, Handler> = {
     if (isNaN(r) || isNaN(c) || r < 1 || c < 1) return "\\text{matf: dimensiones inválidas}"
     const values = args.slice(2)
     const rowStrs = Array.from({ length: r }, (_, i) =>
-      Array.from({ length: c }, (_, j) => values[i * c + j] ?? `a_{${i + 1}${j + 1}}`).join(" & ")
+      Array.from({ length: c }, (_, j) => values[i * c + j] ?? `a_{${i + 1}${j + 1}}`).join(" & "),
     )
     return `\\begin{bmatrix}${rowStrs.join(" \\\\ ")}\\end{bmatrix}`
   },
-  frac:  ([a, b])     => `\\frac{${a}}{${b ?? "?"}}`,
+  frac: ([a, b]) => `\\frac{${a}}{${b ?? "?"}}`,
   // Units and quantities (siunitx on export, upright math in the preview).
-  si:    ([v, u], target) => quantity(v ?? "", u ?? "", target),
-  num:   ([v], target) =>
+  si: ([v, u], target) => quantity(v ?? "", u ?? "", target),
+  num: ([v], target) =>
     target === "tex" ? `\\num{${(v ?? "").trim()}}` : numberForPreview(v ?? ""),
-  unit:  ([u], target) =>
+  unit: ([u], target) =>
     target === "tex" ? `\\unit{${unitsToSiunitx(u ?? "")}}` : unitsToMath(u ?? ""),
   // Chemistry: KaTeX ships the mhchem extension, so \ce renders in both.
-  ce:    ([f]) => `\\ce{${(f ?? "").trim()}}`,
-  sqrt:  ([x])        => `\\sqrt{${x}}`,
-  root:  ([n, x])     => `\\sqrt[${n}]{${x ?? "?"}}`,
-  sum:   ([from, to]) => `\\sum_{${from}}^{${to ?? "n"}}`,
-  int:   ([a, b])     => `\\int_{${a}}^{${b ?? "b"}}`,
-  lim:   ([x, a])     => `\\lim_{${x ?? "x"} \\to ${a ?? "\\infty"}}`,
-  vec:   ([x])        => `\\vec{${x}}`,
-  abs:   ([x])        => `\\left|${x}\\right|`,
-  norm:  ([x])        => `\\left\\|${x}\\right\\|`,
-  ceil:  ([x])        => `\\left\\lceil ${x} \\right\\rceil`,
-  floor: ([x])        => `\\left\\lfloor ${x} \\right\\rfloor`,
+  ce: ([f]) => `\\ce{${(f ?? "").trim()}}`,
+  sqrt: ([x]) => `\\sqrt{${x}}`,
+  root: ([n, x]) => `\\sqrt[${n}]{${x ?? "?"}}`,
+  sum: ([from, to]) => `\\sum_{${from}}^{${to ?? "n"}}`,
+  int: ([a, b]) => `\\int_{${a}}^{${b ?? "b"}}`,
+  lim: ([x, a]) => `\\lim_{${x ?? "x"} \\to ${a ?? "\\infty"}}`,
+  vec: ([x]) => `\\vec{${x}}`,
+  abs: ([x]) => `\\left|${x}\\right|`,
+  norm: ([x]) => `\\left\\|${x}\\right\\|`,
+  ceil: ([x]) => `\\left\\lceil ${x} \\right\\rceil`,
+  floor: ([x]) => `\\left\\lfloor ${x} \\right\\rfloor`,
   // Superscript / subscript
-  sup:   ([x, n])     => `${x}^{${n ?? "n"}}`,
-  sub:   ([x, n])     => `${x}_{${n ?? "n"}}`,
+  sup: ([x, n]) => `${x}^{${n ?? "n"}}`,
+  sub: ([x, n]) => `${x}_{${n ?? "n"}}`,
   // Decorators
-  hat:   ([x])        => `\\hat{${x}}`,
-  bar:   ([x])        => `\\overline{${x}}`,
-  tilde: ([x])        => `\\tilde{${x}}`,
-  dot:   ([x])        => `\\dot{${x}}`,
-  ddot:  ([x])        => `\\ddot{${x}}`,
+  hat: ([x]) => `\\hat{${x}}`,
+  bar: ([x]) => `\\overline{${x}}`,
+  tilde: ([x]) => `\\tilde{${x}}`,
+  dot: ([x]) => `\\dot{${x}}`,
+  ddot: ([x]) => `\\ddot{${x}}`,
   // Math fonts
-  bf:    ([x])        => `\\mathbf{${x}}`,
-  cal:   ([x])        => `\\mathcal{${x}}`,
-  bb:    ([x])        => `\\mathbb{${x}}`,
+  bf: ([x]) => `\\mathbf{${x}}`,
+  cal: ([x]) => `\\mathcal{${x}}`,
+  bb: ([x]) => `\\mathbb{${x}}`,
   // Derivatives
-  pder:  ([f, x])     => `\\frac{\\partial ${f}}{\\partial ${x ?? "x"}}`,
-  der:   ([f, x])     => `\\frac{d${f}}{d${x ?? "x"}}`,
+  pder: ([f, x]) => `\\frac{\\partial ${f}}{\\partial ${x ?? "x"}}`,
+  der: ([f, x]) => `\\frac{d${f}}{d${x ?? "x"}}`,
   // Linear algebra
-  inv:   ([x])        => `${x}^{-1}`,
-  trans: ([x])        => `${x}^{\\top}`,
+  inv: ([x]) => `${x}^{-1}`,
+  trans: ([x]) => `${x}^{\\top}`,
   // Trig / math functions
-  sin:   ([x])        => `\\sin(${x})`,
-  cos:   ([x])        => `\\cos(${x})`,
-  tan:   ([x])        => `\\tan(${x})`,
-  cot:   ([x])        => `\\cot(${x})`,
-  sec:   ([x])        => `\\sec(${x})`,
-  csc:   ([x])        => `\\csc(${x})`,
-  exp:   ([x])        => `\\exp(${x})`,
-  ln:    ([x])        => `\\ln(${x})`,
-  log:   ([x])        => `\\log(${x})`,
+  sin: ([x]) => `\\sin(${x})`,
+  cos: ([x]) => `\\cos(${x})`,
+  tan: ([x]) => `\\tan(${x})`,
+  cot: ([x]) => `\\cot(${x})`,
+  sec: ([x]) => `\\sec(${x})`,
+  csc: ([x]) => `\\csc(${x})`,
+  exp: ([x]) => `\\exp(${x})`,
+  ln: ([x]) => `\\ln(${x})`,
+  log: ([x]) => `\\log(${x})`,
 }
 
 const NAMES = Object.keys(HANDLERS).join("|")
@@ -211,10 +216,7 @@ function applyTableShorthand(text: string): string {
     const headers = splitArgs(balanced.content).filter(Boolean)
     if (headers.length === 0) headers.push("Col1", "Col2")
     const sep = headers.map(() => "---")
-    const table = [
-      `| ${headers.join(" | ")} |`,
-      `| ${sep.join(" | ")} |`,
-    ].join("\n")
+    const table = [`| ${headers.join(" | ")} |`, `| ${sep.join(" | ")} |`].join("\n")
 
     result += text.slice(cursor, match.index) + table
     cursor = balanced.end
@@ -237,8 +239,11 @@ const MATRIX_RE = /\[\[[\d\s,\[\].-]+\]\]/g
 
 function applyMatrixShorthand(text: string): string {
   return text.replace(MATRIX_RE, (match) => {
-    try { return `$${matrixToLatex(match)}$` }
-    catch { return match }
+    try {
+      return `$${matrixToLatex(match)}$`
+    } catch {
+      return match
+    }
   })
 }
 
@@ -263,7 +268,8 @@ const INLINE_CODE_RE = /(`+)(?!`)([\s\S]+?)\1(?!`)/g
 // have `exp(...)` and `sqrt(...)` expanded + auto-wrapped in `$...$`, then the
 // plot parser chokes on the literal `$`. Same hazard for graph/truth/commdiag/
 // pseudocode/flowchart blocks.
-const SPECIAL_ENV_RE = /^:::(plot|graph|truth|commdiag|pseudocode|flowchart|code)(?:\[[^\]]*\]|\s+\S+)?\s*\n[\s\S]*?^:::\s*$/gm
+const SPECIAL_ENV_RE =
+  /^:::(plot|graph|truth|commdiag|pseudocode|flowchart|code)(?:\[[^\]]*\]|\s+\S+)?\s*\n[\s\S]*?^:::\s*$/gm
 
 function maskCode(text: string): { masked: string; slots: string[] } {
   const slots: string[] = []
@@ -309,7 +315,9 @@ export function preprocess(text: string, target: ShorthandTarget = "preview"): s
   while ((m = mathRe.exec(masked)) !== null) {
     // Text region before the math block → shorthands are auto-wrapped
     const before = masked.slice(cursor, m.index)
-    parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true, target))))
+    parts.push(
+      applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true, target))),
+    )
 
     // Dentro del bloque math → shorthands sin wrap
     if (m[1] !== undefined) {
@@ -326,7 +334,9 @@ export function preprocess(text: string, target: ShorthandTarget = "preview"): s
 
   // Texto restante
   const tail = masked.slice(cursor)
-  parts.push(applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(tail, true, target))))
+  parts.push(
+    applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(tail, true, target))),
+  )
 
   return unmaskCode(parts.join(""), codeSlots)
 }

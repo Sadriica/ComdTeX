@@ -20,28 +20,34 @@ export default function TodoPanel({ openTabs, onNavigate, onToggle }: TodoPanelP
   // never disagree about what counts as a task.
   const items = useMemo(() => parseTasks(openTabs), [openTabs])
 
-  const handleToggle = useCallback((item: TodoItem) => {
-    const tab = openTabs.find((t) => t.path === item.filePath)
-    if (!tab) return
-    const lines = tab.content.split("\n")
-    const ln = lines[item.line - 1]
-    lines[item.line - 1] = item.done
-      ? ln.replace(/\[[ xX]\]/, "[ ]")
-      : ln.replace(/\[[ xX]\]/, "[x]")
-    onToggle(item.filePath, lines.join("\n"))
-  }, [openTabs, onToggle])
+  const handleToggle = useCallback(
+    (item: TodoItem) => {
+      const tab = openTabs.find((t) => t.path === item.filePath)
+      if (!tab) return
+      const lines = tab.content.split("\n")
+      const ln = lines[item.line - 1]
+      lines[item.line - 1] = item.done
+        ? ln.replace(/\[[ xX]\]/, "[ ]")
+        : ln.replace(/\[[ xX]\]/, "[x]")
+      onToggle(item.filePath, lines.join("\n"))
+    },
+    [openTabs, onToggle],
+  )
 
   const done = items.filter((i) => i.done).length
   const visible = items.filter((i) =>
-    filter === "all" ? true : filter === "done" ? i.done : !i.done
+    filter === "all" ? true : filter === "done" ? i.done : !i.done,
   )
 
-  if (items.length === 0) return (
-    <div className="panel-empty-rich">
-      <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.todoIcon}</div>
-      <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.todoMessage)}</p>
-    </div>
-  )
+  if (items.length === 0)
+    return (
+      <div className="panel-empty-rich">
+        <div className="panel-empty-icon" aria-hidden="true">
+          {t.emptyStates.todoIcon}
+        </div>
+        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.todoMessage)}</p>
+      </div>
+    )
 
   const byFile = visible.reduce<Record<string, TodoItem[]>>((acc, item) => {
     if (!acc[item.filePath]) acc[item.filePath] = []

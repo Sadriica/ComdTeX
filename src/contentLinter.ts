@@ -63,7 +63,8 @@ function buildLineIndex(text: string): number[] {
 
 /** Binary-search lineIndex for 1-based line + 1-based column. */
 function offsetToPos(lineIdx: number[], offset: number): { lineNumber: number; column: number } {
-  let lo = 0, hi = lineIdx.length - 1
+  let lo = 0,
+    hi = lineIdx.length - 1
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1
     if (lineIdx[mid] <= offset) lo = mid
@@ -169,7 +170,9 @@ function lintEnvironments(
       if (stack.length > 0) {
         stack.pop()
       } else {
-        markers.push(mkMarker(lineIdx, offset, offset + 3, "Cierre ::: sin entorno abierto", Severity.Warning))
+        markers.push(
+          mkMarker(lineIdx, offset, offset + 3, "Cierre ::: sin entorno abierto", Severity.Warning),
+        )
       }
     }
 
@@ -177,8 +180,15 @@ function lintEnvironments(
   }
 
   for (const open of stack) {
-    markers.push(mkMarker(lineIdx, open.offset, open.offset + 3 + open.name.length,
-      `Entorno :::${open.name} sin cerrar`, Severity.Error))
+    markers.push(
+      mkMarker(
+        lineIdx,
+        open.offset,
+        open.offset + 3 + open.name.length,
+        `Entorno :::${open.name} sin cerrar`,
+        Severity.Error,
+      ),
+    )
   }
 
   return markers
@@ -207,8 +217,15 @@ function lintEqRefs(
     if (/^\d+$/.test(ref)) continue
     // Labels are stored with the full "eq:" prefix (e.g. {#eq:foo} → "eq:foo")
     if (!defined.has(`eq:${ref}`)) {
-      markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
-        `Referencia @eq:${ref} no definida en el documento`, Severity.Warning))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Referencia @eq:${ref} no definida en el documento`,
+          Severity.Warning,
+        ),
+      )
     }
   }
 
@@ -233,8 +250,15 @@ function lintWikilinks(
     const target = m[1].trim().toLowerCase()
     if (target === "toc") continue // `[[toc]]` is the auto-TOC marker, not a wikilink
     if (!vaultFileNames.has(target)) {
-      markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
-        `Wikilink [[${m[1].trim()}]] no encontrado en el vault`, Severity.Warning))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Wikilink [[${m[1].trim()}]] no encontrado en el vault`,
+          Severity.Warning,
+        ),
+      )
     }
   }
   return markers
@@ -257,8 +281,15 @@ function lintCitations(
   while ((m = re.exec(text)) !== null) {
     const key = m[1]
     if (!bibKeys.has(key)) {
-      markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
-        `Cita [@${key}] no encontrada en references.bib`, Severity.Warning))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Cita [@${key}] no encontrada en references.bib`,
+          Severity.Warning,
+        ),
+      )
     }
   }
   return markers
@@ -285,7 +316,11 @@ function splitArgs(s: string): string[] {
   for (const ch of s) {
     if (ch === "(" || ch === "[") depth++
     else if (ch === ")" || ch === "]") depth--
-    else if (ch === "," && depth === 0) { args.push(current.trim()); current = ""; continue }
+    else if (ch === "," && depth === 0) {
+      args.push(current.trim())
+      current = ""
+      continue
+    }
     current += ch
   }
   if (current.trim()) args.push(current.trim())
@@ -294,13 +329,34 @@ function splitArgs(s: string): string[] {
 
 /** Expected argument count per shorthand. null = variadic (no count check). */
 const EXPECTED_ARGS: Record<string, number | null> = {
-  mat: null, matf: null, table: null,
-  frac: 2, sqrt: 1, root: 2, sum: 2, int: 2, lim: 2,
-  vec: 1, abs: 1, norm: 1, ceil: 1, floor: 1,
-  sup: 2, sub: 2,
-  hat: 1, bar: 1, tilde: 1, dot: 1, ddot: 1,
-  bf: 1, cal: 1, bb: 1,
-  pder: 2, der: 2, inv: 1, trans: 1,
+  mat: null,
+  matf: null,
+  table: null,
+  frac: 2,
+  sqrt: 1,
+  root: 2,
+  sum: 2,
+  int: 2,
+  lim: 2,
+  vec: 1,
+  abs: 1,
+  norm: 1,
+  ceil: 1,
+  floor: 1,
+  sup: 2,
+  sub: 2,
+  hat: 1,
+  bar: 1,
+  tilde: 1,
+  dot: 1,
+  ddot: 1,
+  bf: 1,
+  cal: 1,
+  bb: 1,
+  pder: 2,
+  der: 2,
+  inv: 1,
+  trans: 1,
 }
 
 const SHORTHAND_NAMES = Object.keys(EXPECTED_ARGS).join("|")
@@ -322,8 +378,15 @@ function lintShorthands(
     const balanced = extractBalanced(text, parenStart)
 
     if (!balanced) {
-      markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
-        `Paréntesis sin cerrar en ${name}(...)`, Severity.Error))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Paréntesis sin cerrar en ${name}(...)`,
+          Severity.Error,
+        ),
+      )
       continue
     }
 
@@ -331,9 +394,15 @@ function lintShorthands(
     if (expected !== null) {
       const args = splitArgs(balanced.content).filter((a) => a.length > 0)
       if (args.length > 0 && args.length !== expected) {
-        markers.push(mkMarker(lineIdx, m.index, balanced.end,
-          `${name}() espera ${expected} argumento${expected === 1 ? "" : "s"}, recibió ${args.length}`,
-          Severity.Warning))
+        markers.push(
+          mkMarker(
+            lineIdx,
+            m.index,
+            balanced.end,
+            `${name}() espera ${expected} argumento${expected === 1 ? "" : "s"}, recibió ${args.length}`,
+            Severity.Warning,
+          ),
+        )
       }
     }
   }
@@ -344,27 +413,38 @@ function lintShorthands(
 // ── BibTeX linter ─────────────────────────────────────────────────────────────
 
 const BIBTEX_KNOWN_TYPES = new Set([
-  "article", "book", "booklet", "conference", "inbook", "incollection",
-  "inproceedings", "manual", "mastersthesis", "misc", "phdthesis",
-  "proceedings", "techreport", "unpublished",
+  "article",
+  "book",
+  "booklet",
+  "conference",
+  "inbook",
+  "incollection",
+  "inproceedings",
+  "manual",
+  "mastersthesis",
+  "misc",
+  "phdthesis",
+  "proceedings",
+  "techreport",
+  "unpublished",
 ])
 const BIBTEX_SKIP_TYPES = new Set(["string", "preamble", "comment"])
 
 // Each inner array is an OR group; at least one field from the group must be present.
 const BIBTEX_REQUIRED: Record<string, string[][]> = {
-  article:       [["author"], ["title"], ["journal"], ["year"]],
-  book:          [["author", "editor"], ["title"], ["publisher"], ["year"]],
-  booklet:       [["title"]],
-  conference:    [["author"], ["title"], ["booktitle"], ["year"]],
-  inbook:        [["author", "editor"], ["title"], ["chapter", "pages"], ["publisher"], ["year"]],
-  incollection:  [["author"], ["title"], ["booktitle"], ["publisher"], ["year"]],
+  article: [["author"], ["title"], ["journal"], ["year"]],
+  book: [["author", "editor"], ["title"], ["publisher"], ["year"]],
+  booklet: [["title"]],
+  conference: [["author"], ["title"], ["booktitle"], ["year"]],
+  inbook: [["author", "editor"], ["title"], ["chapter", "pages"], ["publisher"], ["year"]],
+  incollection: [["author"], ["title"], ["booktitle"], ["publisher"], ["year"]],
   inproceedings: [["author"], ["title"], ["booktitle"], ["year"]],
-  manual:        [["title"]],
+  manual: [["title"]],
   mastersthesis: [["author"], ["title"], ["school"], ["year"]],
-  phdthesis:     [["author"], ["title"], ["school"], ["year"]],
-  proceedings:   [["title"], ["year"]],
-  techreport:    [["author"], ["title"], ["institution"], ["year"]],
-  unpublished:   [["author"], ["title"], ["note"]],
+  phdthesis: [["author"], ["title"], ["school"], ["year"]],
+  proceedings: [["title"], ["year"]],
+  techreport: [["author"], ["title"], ["institution"], ["year"]],
+  unpublished: [["author"], ["title"], ["note"]],
 }
 
 function lintBibtex(
@@ -398,8 +478,15 @@ function lintBibtex(
     }
 
     if (depth !== 0) {
-      markers.push(mkMarker(lineIdx, entryStart, entryStart + m[0].length,
-        `Entrada @${type} sin cerrar (falta '${closeChar}')`, Severity.Error))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          entryStart,
+          entryStart + m[0].length,
+          `Entrada @${type} sin cerrar (falta '${closeChar}')`,
+          Severity.Error,
+        ),
+      )
       continue
     }
 
@@ -407,16 +494,30 @@ function lintBibtex(
 
     // Unknown entry type
     if (!BIBTEX_KNOWN_TYPES.has(type)) {
-      markers.push(mkMarker(lineIdx, entryStart, entryStart + m[0].length,
-        `Tipo de entrada desconocido: @${type}`, Severity.Warning))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          entryStart,
+          entryStart + m[0].length,
+          `Tipo de entrada desconocido: @${type}`,
+          Severity.Warning,
+        ),
+      )
       continue
     }
 
     // Extract citation key (first identifier before the first comma)
     const keyMatch = /^\s*([\w:._-]+)/.exec(entryBody)
     if (!keyMatch) {
-      markers.push(mkMarker(lineIdx, entryStart, entryStart + m[0].length,
-        `Entrada @${type} sin clave de citación`, Severity.Error))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          entryStart,
+          entryStart + m[0].length,
+          `Entrada @${type} sin clave de citación`,
+          Severity.Error,
+        ),
+      )
       continue
     }
     const key = keyMatch[1]
@@ -424,8 +525,15 @@ function lintBibtex(
 
     // Duplicate key check
     if (seenKeys.has(keyLower)) {
-      markers.push(mkMarker(lineIdx, entryStart, entryStart + m[0].length,
-        `Clave duplicada: "${key}" (ya definida antes)`, Severity.Error))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          entryStart,
+          entryStart + m[0].length,
+          `Clave duplicada: "${key}" (ya definida antes)`,
+          Severity.Error,
+        ),
+      )
     } else {
       seenKeys.set(keyLower, entryStart)
     }
@@ -438,21 +546,41 @@ function lintBibtex(
     let fi = 0
     while (fi < fieldsText.length) {
       // Skip whitespace and commas
-      if (fieldsText[fi] === "," || fieldsText[fi] === " " || fieldsText[fi] === "\n" ||
-          fieldsText[fi] === "\r" || fieldsText[fi] === "\t") { fi++; continue }
+      if (
+        fieldsText[fi] === "," ||
+        fieldsText[fi] === " " ||
+        fieldsText[fi] === "\n" ||
+        fieldsText[fi] === "\r" ||
+        fieldsText[fi] === "\t"
+      ) {
+        fi++
+        continue
+      }
       // Try to match a field name followed by =
       const fieldMatch = /^(\w+)\s*=/.exec(fieldsText.slice(fi))
       if (fieldMatch) {
         presentFields.add(fieldMatch[1].toLowerCase())
         fi += fieldMatch[0].length
         // Skip the value (could be {}, "", or a number)
-        while (fi < fieldsText.length && fieldsText[fi] !== "{" && fieldsText[fi] !== '"' &&
-               !/\d/.test(fieldsText[fi]) && fieldsText[fi] !== ",") fi++
+        while (
+          fi < fieldsText.length &&
+          fieldsText[fi] !== "{" &&
+          fieldsText[fi] !== '"' &&
+          !/\d/.test(fieldsText[fi]) &&
+          fieldsText[fi] !== ","
+        )
+          fi++
         if (fi < fieldsText.length && fieldsText[fi] === "{") {
           let bd = 0
           while (fi < fieldsText.length) {
             if (fieldsText[fi] === "{") bd++
-            else if (fieldsText[fi] === "}") { bd--; if (bd === 0) { fi++; break } }
+            else if (fieldsText[fi] === "}") {
+              bd--
+              if (bd === 0) {
+                fi++
+                break
+              }
+            }
             fi++
           }
         } else if (fi < fieldsText.length && fieldsText[fi] === '"') {
@@ -474,8 +602,15 @@ function lintBibtex(
       for (const group of required) {
         if (!group.some((f) => presentFields.has(f))) {
           const label = group.length === 1 ? group[0] : group.join(" o ")
-          markers.push(mkMarker(lineIdx, entryStart, entryStart + m[0].length,
-            `@${type} {${key}}: campo requerido faltante: ${label}`, Severity.Warning))
+          markers.push(
+            mkMarker(
+              lineIdx,
+              entryStart,
+              entryStart + m[0].length,
+              `@${type} {${key}}: campo requerido faltante: ${label}`,
+              Severity.Warning,
+            ),
+          )
         }
       }
     }
@@ -500,8 +635,15 @@ function lintMacros(
   while ((m = ncRe.exec(text)) !== null) {
     const name = m[1]
     if (seenCommands.has(name)) {
-      markers.push(mkMarker(lineIdx, m.index, m.index + m[0].length,
-        `Comando duplicado: ${name} (ya definido antes)`, Severity.Error))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Comando duplicado: ${name} (ya definido antes)`,
+          Severity.Error,
+        ),
+      )
     } else {
       seenCommands.set(name, m.index)
     }
@@ -511,8 +653,10 @@ function lintMacros(
   let depth = 0
   let lastUnmatched = -1
   for (let i = 0; i < text.length; i++) {
-    if (text[i] === "{") { depth++; lastUnmatched = i }
-    else if (text[i] === "}") {
+    if (text[i] === "{") {
+      depth++
+      lastUnmatched = i
+    } else if (text[i] === "}") {
       if (depth === 0) {
         markers.push(mkMarker(lineIdx, i, i + 1, "Llave de cierre } sin abrir", Severity.Error))
       } else {
@@ -522,8 +666,15 @@ function lintMacros(
     }
   }
   if (depth > 0 && lastUnmatched >= 0) {
-    markers.push(mkMarker(lineIdx, lastUnmatched, lastUnmatched + 1,
-      "Llave { sin cerrar en macros.md", Severity.Error))
+    markers.push(
+      mkMarker(
+        lineIdx,
+        lastUnmatched,
+        lastUnmatched + 1,
+        "Llave { sin cerrar en macros.md",
+        Severity.Error,
+      ),
+    )
   }
 
   // Warn about lines that are neither blank, comments, nor \newcommand
@@ -532,9 +683,15 @@ function lintMacros(
   for (const line of lines) {
     const trimmed = line.trim()
     if (trimmed !== "" && !trimmed.startsWith("%") && !trimmed.startsWith("\\")) {
-      markers.push(mkMarker(lineIdx, offset, offset + line.length,
-        "Línea no reconocida en macros.md (se esperaba \\newcommand o comentario %)",
-        Severity.Warning))
+      markers.push(
+        mkMarker(
+          lineIdx,
+          offset,
+          offset + line.length,
+          "Línea no reconocida en macros.md (se esperaba \\newcommand o comentario %)",
+          Severity.Warning,
+        ),
+      )
     }
     offset += line.length + 1
   }
@@ -665,7 +822,13 @@ function lintDataRefs(
     const id = m[1]
     if (declared.has(id)) {
       markers.push(
-        mkMarker(lineIdx, m.index, m.index + m[0].length, `Dataset duplicado: ${id}`, Severity.Warning),
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Dataset duplicado: ${id}`,
+          Severity.Warning,
+        ),
       )
     } else {
       declared.set(id, m.index)
@@ -676,7 +839,13 @@ function lintDataRefs(
   while ((m = refRe.exec(text)) !== null) {
     if (!declared.has(m[1])) {
       markers.push(
-        mkMarker(lineIdx, m.index, m.index + m[0].length, `Dataset no declarado: @${m[1]}`, Severity.Warning),
+        mkMarker(
+          lineIdx,
+          m.index,
+          m.index + m[0].length,
+          `Dataset no declarado: @${m[1]}`,
+          Severity.Warning,
+        ),
       )
     }
   }
@@ -735,11 +904,7 @@ export function lintFile(
  * Lightweight summary for background linting: does NOT require Monaco at runtime.
  * Uses numeric severity constants that match Monaco's MarkerSeverity enum values.
  */
-export function lintFileSummary(
-  text: string,
-  filename: string,
-  context: LintContext,
-): LintSummary {
+export function lintFileSummary(text: string, filename: string, context: LintContext): LintSummary {
   const markers = lintFile(
     text,
     filename,

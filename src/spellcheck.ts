@@ -137,18 +137,18 @@ function maskNonProse(text: string): string {
   }
 
   apply(/^```[^\n]*\n[\s\S]*?^```[ \t]*$/gm) // fenced code blocks
-  apply(/`[^`\n]+`/g)                        // inline code
-  apply(/\$\$[\s\S]*?\$\$/g)                 // display math
-  apply(/\$[^$\n]+\$/g)                      // inline math
-  apply(/!?\[\[[^\]\n]*\]\]/g)               // wikilinks + transclusions
-  apply(/\[@[^\]\n]*\]/g)                    // citations
-  apply(/@(?:eq|fig|sec|tbl):[\w:.-]+/g)     // cross-references
-  apply(/https?:\/\/\S+/g)                   // bare URLs
-  apply(/\]\([^)\n]*\)/g)                    // markdown link/image targets
-  apply(/\{#[\w:.-]+\}/g)                    // label definitions
-  apply(/^:::\w[^\n]*/gm)                    // :::env opening markers
-  apply(/\\[a-zA-Z@]+\*?/g)                  // LaTeX commands
-  apply(/#\w[\w-]*/g)                        // inline #tags
+  apply(/`[^`\n]+`/g) // inline code
+  apply(/\$\$[\s\S]*?\$\$/g) // display math
+  apply(/\$[^$\n]+\$/g) // inline math
+  apply(/!?\[\[[^\]\n]*\]\]/g) // wikilinks + transclusions
+  apply(/\[@[^\]\n]*\]/g) // citations
+  apply(/@(?:eq|fig|sec|tbl):[\w:.-]+/g) // cross-references
+  apply(/https?:\/\/\S+/g) // bare URLs
+  apply(/\]\([^)\n]*\)/g) // markdown link/image targets
+  apply(/\{#[\w:.-]+\}/g) // label definitions
+  apply(/^:::\w[^\n]*/gm) // :::env opening markers
+  apply(/\\[a-zA-Z@]+\*?/g) // LaTeX commands
+  apply(/#\w[\w-]*/g) // inline #tags
 
   return buf.join("")
 }

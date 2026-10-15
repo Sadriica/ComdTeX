@@ -24,7 +24,9 @@ export function useFocusTrap(
   // restores focus to the pre-open element, yanking focus out of the field
   // being typed in. Re-arm the trap only when `isOpen` changes.
   const onCloseRef = useRef(onClose)
-  useEffect(() => { onCloseRef.current = onClose })
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!isOpen) return
@@ -91,8 +93,16 @@ export function useFocusTrap(
 
     return () => {
       container.removeEventListener("keydown", onKeyDown)
-      if (previouslyFocused && previouslyFocused.isConnected && typeof previouslyFocused.focus === "function") {
-        try { previouslyFocused.focus() } catch { /* element gone */ }
+      if (
+        previouslyFocused &&
+        previouslyFocused.isConnected &&
+        typeof previouslyFocused.focus === "function"
+      ) {
+        try {
+          previouslyFocused.focus()
+        } catch {
+          /* element gone */
+        }
       }
     }
   }, [ref, isOpen])

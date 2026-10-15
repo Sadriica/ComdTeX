@@ -43,7 +43,9 @@ function candidate(
 
 describe("parseSearchQuery", () => {
   it("splits tag:/path:/ext:/fm: filters from the free-text query", () => {
-    const { filters, textQuery } = parseSearchQuery("hello tag:math ext:.md path:notes fm:author=Jane world")
+    const { filters, textQuery } = parseSearchQuery(
+      "hello tag:math ext:.md path:notes fm:author=Jane world",
+    )
     expect(textQuery).toBe("hello world")
     expect(filters.tags).toEqual(["math"])
     expect(filters.exts).toEqual(["md"])
@@ -166,7 +168,12 @@ describe("VaultSearchIndex.search", () => {
     const re = buildSearchRegex(textQuery)!
     const results = await idx.search(candidates, filters, textQuery, re)
     expect(results).toHaveLength(1)
-    expect(results[0]).toEqual({ filePath: "/vault/a.md", fileName: "a.md", line: 2, content: "findme here" })
+    expect(results[0]).toEqual({
+      filePath: "/vault/a.md",
+      fileName: "a.md",
+      line: 2,
+      content: "findme here",
+    })
   })
 
   it("only re-reads a file whose content changed (mtime bump) between two searches", async () => {
@@ -224,7 +231,9 @@ describe("VaultSearchIndex.search", () => {
   it("caps results at the configured limit (default 500)", async () => {
     const idx = new VaultSearchIndex()
     const manyLines = Array.from({ length: 10 }, () => "hit line").join("\n")
-    const candidates = Array.from({ length: 100 }, (_, i) => candidate(`/vault/f${i}.md`, manyLines, 1))
+    const candidates = Array.from({ length: 100 }, (_, i) =>
+      candidate(`/vault/f${i}.md`, manyLines, 1),
+    )
     const { filters, textQuery } = parseSearchQuery("hit")
     const re = buildSearchRegex(textQuery)!
     const results = await idx.search(candidates, filters, textQuery, re, { cap: 25 })
@@ -236,14 +245,22 @@ describe("VaultSearchIndex.search", () => {
     const idx = new VaultSearchIndex()
     const reads: string[] = []
     const candidates = Array.from({ length: 5 }, (_, i) =>
-      candidate(`/vault/f${i}.md`, "hit", 1, async () => { reads.push(`f${i}`); return "hit" }))
+      candidate(`/vault/f${i}.md`, "hit", 1, async () => {
+        reads.push(`f${i}`)
+        return "hit"
+      }),
+    )
     let cancelled = false
     const { filters, textQuery } = parseSearchQuery("hit")
     const re = buildSearchRegex(textQuery)!
     // Cancel after the very first candidate is processed by wrapping isCancelled
     // to flip true once we've seen one read.
     const results = await idx.search(candidates, filters, textQuery, re, {
-      isCancelled: () => { const c = cancelled; if (reads.length >= 1) cancelled = true; return c },
+      isCancelled: () => {
+        const c = cancelled
+        if (reads.length >= 1) cancelled = true
+        return c
+      },
     })
     expect(reads.length).toBeLessThan(5)
     expect(results.length).toBeGreaterThan(0)

@@ -17,7 +17,9 @@ const dialogMock = vi.hoisted(() => ({ choice: "Cancel" }))
 function createLocalStorage(): Storage {
   const values = new Map<string, string>()
   return {
-    get length() { return values.size },
+    get length() {
+      return values.size
+    },
     clear: vi.fn(() => values.clear()),
     getItem: vi.fn((key: string) => values.get(key) ?? null),
     key: vi.fn((index: number) => Array.from(values.keys())[index] ?? null),
@@ -40,7 +42,8 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
     const file = fsMock.files.get(path)
     if (file) return { mtime: new Date(file.mtime) }
     // A directory exists when some file lives under it.
-    for (const key of fsMock.files.keys()) if (key.startsWith(`${path}/`)) return { mtime: new Date(1) }
+    for (const key of fsMock.files.keys())
+      if (key.startsWith(`${path}/`)) return { mtime: new Date(1) }
     throw new Error(`missing: ${path}`)
   }),
   readDir: vi.fn(async (dirPath: string) => {
@@ -57,7 +60,9 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
     })
   }),
   mkdir: vi.fn(),
-  remove: vi.fn(async (path: string) => { fsMock.files.delete(path) }),
+  remove: vi.fn(async (path: string) => {
+    fsMock.files.delete(path)
+  }),
   rename: vi.fn(async (from: string, to: string) => {
     const file = fsMock.files.get(from)
     if (file) {
@@ -96,10 +101,18 @@ import { showToast } from "./toastService"
 const VAULT = "/vault"
 const disk = (path: string) => fsMock.files.get(path)?.content
 
-async function openAndType(result: { current: ReturnType<typeof useVault> }, path: string, text: string) {
-  await act(async () => { await result.current.openFilePath(path) })
+async function openAndType(
+  result: { current: ReturnType<typeof useVault> },
+  path: string,
+  text: string,
+) {
+  await act(async () => {
+    await result.current.openFilePath(path)
+  })
   await waitFor(() => expect(result.current.activeTabPath).toBe(path))
-  act(() => { result.current.updateContent(text) })
+  act(() => {
+    result.current.updateContent(text)
+  })
 }
 
 describe("useVault data-loss guards", () => {
@@ -120,13 +133,17 @@ describe("useVault data-loss guards", () => {
       await openAndType(result, `${VAULT}/a.md`, "new edits")
 
       fsMock.failWrites = true
-      await act(async () => { await result.current.closeTab(`${VAULT}/a.md`) })
+      await act(async () => {
+        await result.current.closeTab(`${VAULT}/a.md`)
+      })
       expect(result.current.openTabs.map((tb) => tb.path)).toEqual([`${VAULT}/a.md`])
       expect(result.current.hasPendingSave(`${VAULT}/a.md`)).toBe(true)
       expect(showToast).toHaveBeenCalledWith(expect.any(String), "error")
 
       fsMock.failWrites = false
-      await act(async () => { await result.current.closeTab(`${VAULT}/a.md`) })
+      await act(async () => {
+        await result.current.closeTab(`${VAULT}/a.md`)
+      })
       expect(result.current.openTabs).toEqual([])
       expect(disk(`${VAULT}/a.md`)).toBe("new edits")
     })
@@ -138,12 +155,16 @@ describe("useVault data-loss guards", () => {
 
       fsMock.touch(`${VAULT}/a.md`, "changed elsewhere")
       dialogMock.choice = "Cancel"
-      await act(async () => { await result.current.closeTab(`${VAULT}/a.md`) })
+      await act(async () => {
+        await result.current.closeTab(`${VAULT}/a.md`)
+      })
       expect(result.current.openTabs).toHaveLength(1)
       expect(disk(`${VAULT}/a.md`)).toBe("changed elsewhere")
 
       // Already conflicted: a second close must not slip through either.
-      await act(async () => { await result.current.closeTab(`${VAULT}/a.md`) })
+      await act(async () => {
+        await result.current.closeTab(`${VAULT}/a.md`)
+      })
       expect(result.current.openTabs).toHaveLength(1)
     })
   })
@@ -152,8 +173,12 @@ describe("useVault data-loss guards", () => {
     it("refuses to create over an existing file", async () => {
       fsMock.touch(`${VAULT}/a.md`, "precious")
       const { result } = renderHook(() => useVault())
-      await act(async () => { await result.current.selectVault(VAULT) })
-      await act(async () => { await result.current.createFile("a", "clobber") })
+      await act(async () => {
+        await result.current.selectVault(VAULT)
+      })
+      await act(async () => {
+        await result.current.createFile("a", "clobber")
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("precious")
       expect(showToast).toHaveBeenCalledWith(expect.stringContaining("a.md"), "error")
     })
@@ -164,11 +189,15 @@ describe("useVault data-loss guards", () => {
       fsMock.touch(`${VAULT}/sub/b.md`, "SUB-B")
       const { result } = renderHook(() => useVault())
 
-      await act(async () => { await result.current.renameFile(`${VAULT}/a.md`, "b.md") })
+      await act(async () => {
+        await result.current.renameFile(`${VAULT}/a.md`, "b.md")
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("A")
       expect(disk(`${VAULT}/b.md`)).toBe("B")
 
-      await act(async () => { await result.current.moveFile(`${VAULT}/b.md`, `${VAULT}/sub`) })
+      await act(async () => {
+        await result.current.moveFile(`${VAULT}/b.md`, `${VAULT}/sub`)
+      })
       expect(disk(`${VAULT}/b.md`)).toBe("B")
       expect(disk(`${VAULT}/sub/b.md`)).toBe("SUB-B")
     })
@@ -178,12 +207,16 @@ describe("useVault data-loss guards", () => {
       const { result } = renderHook(() => useVault(60_000))
       await openAndType(result, `${VAULT}/dir/a.md`, "typed before rename")
 
-      await act(async () => { await result.current.renameFile(`${VAULT}/dir`, "dir2") })
+      await act(async () => {
+        await result.current.renameFile(`${VAULT}/dir`, "dir2")
+      })
       expect(result.current.openTabs.map((tb) => tb.path)).toEqual([`${VAULT}/dir2/a.md`])
       expect(result.current.activeTabPath).toBe(`${VAULT}/dir2/a.md`)
       expect(result.current.openTabs[0].content).toBe("typed before rename")
 
-      await act(async () => { await result.current.flushPending() })
+      await act(async () => {
+        await result.current.flushPending()
+      })
       expect(disk(`${VAULT}/dir2/a.md`)).toBe("typed before rename")
       expect(fsMock.files.has(`${VAULT}/dir/a.md`)).toBe(false)
     })
@@ -194,9 +227,13 @@ describe("useVault data-loss guards", () => {
       const { result } = renderHook(() => useVault(60_000))
       await openAndType(result, `${VAULT}/dir/a.md`, "edit")
 
-      await act(async () => { await result.current.moveFile(`${VAULT}/dir`, `${VAULT}/target`) })
+      await act(async () => {
+        await result.current.moveFile(`${VAULT}/dir`, `${VAULT}/target`)
+      })
       expect(result.current.openTabs.map((tb) => tb.path)).toEqual([`${VAULT}/target/dir/a.md`])
-      await act(async () => { await result.current.flushPending() })
+      await act(async () => {
+        await result.current.flushPending()
+      })
       expect(disk(`${VAULT}/target/dir/a.md`)).toBe("edit")
     })
   })
@@ -207,7 +244,9 @@ describe("useVault data-loss guards", () => {
       const { result } = renderHook(() => useVault(60_000))
       await openAndType(result, `${VAULT}/a.md`, "unsaved before switch")
 
-      await act(async () => { await result.current.selectVault("/other-vault") })
+      await act(async () => {
+        await result.current.selectVault("/other-vault")
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("unsaved before switch")
     })
   })
@@ -216,11 +255,15 @@ describe("useVault data-loss guards", () => {
     it("inserts a literal replacement without expanding dollar patterns", async () => {
       fsMock.touch(`${VAULT}/a.md`, "price: cost")
       const { result } = renderHook(() => useVault())
-      await act(async () => { await result.current.selectVault(VAULT) })
+      await act(async () => {
+        await result.current.selectVault(VAULT)
+      })
       await waitFor(() => expect(result.current.tree.length).toBeGreaterThan(0))
 
       let count = 0
-      await act(async () => { count = await result.current.replaceInVault("cost", "$$5 and $& and $1") })
+      await act(async () => {
+        count = await result.current.replaceInVault("cost", "$$5 and $& and $1")
+      })
       expect(count).toBe(1)
       expect(disk(`${VAULT}/a.md`)).toBe("price: $$5 and $& and $1")
     })
@@ -228,20 +271,28 @@ describe("useVault data-loss guards", () => {
     it("still expands group references in regex mode", async () => {
       fsMock.touch(`${VAULT}/a.md`, "ab")
       const { result } = renderHook(() => useVault())
-      await act(async () => { await result.current.selectVault(VAULT) })
+      await act(async () => {
+        await result.current.selectVault(VAULT)
+      })
       await waitFor(() => expect(result.current.tree.length).toBeGreaterThan(0))
-      await act(async () => { await result.current.replaceInVault("(a)(b)", "$2$1", { regex: true }) })
+      await act(async () => {
+        await result.current.replaceInVault("(a)(b)", "$2$1", { regex: true })
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("ba")
     })
 
     it("applies the replacement to unsaved edits instead of discarding them", async () => {
       fsMock.touch(`${VAULT}/a.md`, "foo on disk")
       const { result } = renderHook(() => useVault(60_000))
-      await act(async () => { await result.current.selectVault(VAULT) })
+      await act(async () => {
+        await result.current.selectVault(VAULT)
+      })
       await waitFor(() => expect(result.current.tree.length).toBeGreaterThan(0))
       await openAndType(result, `${VAULT}/a.md`, "foo typed but unsaved, plus new words")
 
-      await act(async () => { await result.current.replaceInVault("foo", "bar") })
+      await act(async () => {
+        await result.current.replaceInVault("foo", "bar")
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("bar typed but unsaved, plus new words")
       expect(result.current.openFile?.content).toBe("bar typed but unsaved, plus new words")
     })
@@ -253,16 +304,21 @@ describe("useVault data-loss guards", () => {
       const mtime = fsMock.files.get(`${VAULT}/a.md`)!.mtime
       localStorage.setItem("comdtex_vault", VAULT)
       localStorage.setItem("comdtex_tabs", JSON.stringify([`${VAULT}/a.md`]))
-      localStorage.setItem("comdtex_drafts", JSON.stringify([
-        { path: `${VAULT}/a.md`, content: "draft text", savedAt: draftSavedAt(mtime) },
-      ]))
+      localStorage.setItem(
+        "comdtex_drafts",
+        JSON.stringify([
+          { path: `${VAULT}/a.md`, content: "draft text", savedAt: draftSavedAt(mtime) },
+        ]),
+      )
       resetDraftsCache()
     }
 
     it("restores a newer draft as pending content that reaches disk", async () => {
       seed((mtime) => mtime + 500)
       const { result } = renderHook(() => useVault(60_000))
-      await act(async () => { await result.current.loadVault() })
+      await act(async () => {
+        await result.current.loadVault()
+      })
       await waitFor(() => expect(result.current.openFile?.content).toBe("draft text"))
       expect(result.current.openFile?.isDirty).toBe(true)
       expect(result.current.hasPendingSave(`${VAULT}/a.md`)).toBe(true)
@@ -270,14 +326,18 @@ describe("useVault data-loss guards", () => {
       // after this point is still detected.
       expect(result.current.openFile?.cachedMtime).toBe(fsMock.files.get(`${VAULT}/a.md`)!.mtime)
 
-      await act(async () => { await result.current.flushPending() })
+      await act(async () => {
+        await result.current.flushPending()
+      })
       expect(disk(`${VAULT}/a.md`)).toBe("draft text")
     })
 
     it("discards a draft older than the file on disk", async () => {
       seed((mtime) => mtime - 500)
       const { result } = renderHook(() => useVault(60_000))
-      await act(async () => { await result.current.loadVault() })
+      await act(async () => {
+        await result.current.loadVault()
+      })
       await waitFor(() => expect(result.current.openFile?.content).toBe("disk text"))
       expect(result.current.openFile?.isDirty).toBe(false)
       expect(result.current.hasPendingSave(`${VAULT}/a.md`)).toBe(false)
@@ -290,7 +350,9 @@ describe("useVault data-loss guards", () => {
       fsMock.touch(`${VAULT}/a.md`, "old")
       const { result } = renderHook(() => useVault(60_000))
       await openAndType(result, `${VAULT}/a.md`, "first")
-      act(() => { result.current.updateContent("second") })
+      act(() => {
+        result.current.updateContent("second")
+      })
       expect(result.current.getLiveContent(`${VAULT}/a.md`)).toBe("second")
     })
   })

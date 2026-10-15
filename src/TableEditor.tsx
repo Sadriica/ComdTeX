@@ -11,13 +11,20 @@ interface TableEditorProps {
 type Alignment = "left" | "center" | "right"
 
 function parseMarkdownTable(md: string): { rows: string[][]; alignments: Alignment[] } | null {
-  const lines = md.trim().split("\n").filter(l => l.trim().startsWith("|"))
+  const lines = md
+    .trim()
+    .split("\n")
+    .filter((l) => l.trim().startsWith("|"))
   if (lines.length < 2) return null
   const parseRow = (line: string) =>
-    line.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim())
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((c) => c.trim())
   const header = parseRow(lines[0])
   const sepCells = parseRow(lines[1])
-  const alignments: Alignment[] = sepCells.map(cell => {
+  const alignments: Alignment[] = sepCells.map((cell) => {
     const s = cell.trim()
     if (s.startsWith(":") && s.endsWith(":")) return "center"
     if (s.endsWith(":")) return "right"
@@ -43,28 +50,30 @@ function alignmentToLatex(a: Alignment): string {
 
 function generateMarkdown(rows: string[][], alignments: Alignment[]): string {
   if (rows.length === 0) return ""
-  const cols = Math.max(...rows.map(r => r.length))
+  const cols = Math.max(...rows.map((r) => r.length))
   const pad = (r: string[]) => [...r, ...Array(cols - r.length).fill("")]
 
   const header = pad(rows[0])
-  const paddedAligns = [...alignments, ...Array(Math.max(0, cols - alignments.length)).fill("left" as Alignment)]
+  const paddedAligns = [
+    ...alignments,
+    ...Array(Math.max(0, cols - alignments.length)).fill("left" as Alignment),
+  ]
   const sep = paddedAligns.map(alignmentToSep)
   const dataRows = rows.slice(1).map(pad)
 
   const renderRow = (cells: string[]) => `| ${cells.join(" | ")} |`
 
-  return [
-    renderRow(header),
-    renderRow(sep),
-    ...dataRows.map(renderRow),
-  ].join("\n")
+  return [renderRow(header), renderRow(sep), ...dataRows.map(renderRow)].join("\n")
 }
 
 function generateLatex(rows: string[][], alignments: Alignment[]): string {
   if (rows.length === 0) return ""
-  const cols = Math.max(...rows.map(r => r.length))
+  const cols = Math.max(...rows.map((r) => r.length))
   const pad = (r: string[]) => [...r, ...Array(cols - r.length).fill("")]
-  const paddedAligns = [...alignments, ...Array(Math.max(0, cols - alignments.length)).fill("left" as Alignment)]
+  const paddedAligns = [
+    ...alignments,
+    ...Array(Math.max(0, cols - alignments.length)).fill("left" as Alignment),
+  ]
 
   const colSpec = paddedAligns.map(alignmentToLatex).join("")
 
@@ -75,7 +84,7 @@ function generateLatex(rows: string[][], alignments: Alignment[]): string {
     "\\hline",
     renderRow(rows[0]),
     "\\hline",
-    ...rows.slice(1).map(r => renderRow(r)),
+    ...rows.slice(1).map((r) => renderRow(r)),
     "\\hline",
     "\\end{tabular}",
   ]
@@ -105,7 +114,12 @@ const ALIGN_LABEL: Record<Alignment, string> = {
   right: "R",
 }
 
-export default function TableEditor({ open, onClose, initialMarkdown, onInsert }: TableEditorProps) {
+export default function TableEditor({
+  open,
+  onClose,
+  initialMarkdown,
+  onInsert,
+}: TableEditorProps) {
   const t = useT()
   const [rows, setRows] = useState<string[][]>(() => makeEmpty(DEFAULT_ROWS, DEFAULT_COLS))
   const [alignments, setAlignments] = useState<Alignment[]>(() => makeAlignments(DEFAULT_COLS))
@@ -134,37 +148,37 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
   const preview = useMemo(() => generateMarkdown(rows, alignments), [rows, alignments])
 
   const updateCell = (r: number, c: number, val: string) => {
-    setRows(prev => {
-      const next = prev.map(row => [...row])
+    setRows((prev) => {
+      const next = prev.map((row) => [...row])
       next[r][c] = val
       return next
     })
   }
 
   const cycleAlignment = (c: number) => {
-    setAlignments(prev => {
+    setAlignments((prev) => {
       const next = [...prev]
       next[c] = ALIGN_CYCLE[next[c] ?? "left"]
       return next
     })
   }
 
-  const addRow = () => setRows(prev => [...prev, Array(cols).fill("")])
+  const addRow = () => setRows((prev) => [...prev, Array(cols).fill("")])
 
   const removeRow = () => {
     if (rows.length <= 1) return
-    setRows(prev => prev.slice(0, -1))
+    setRows((prev) => prev.slice(0, -1))
   }
 
   const addCol = () => {
-    setRows(prev => prev.map(row => [...row, ""]))
-    setAlignments(prev => [...prev, "left"])
+    setRows((prev) => prev.map((row) => [...row, ""]))
+    setAlignments((prev) => [...prev, "left"])
   }
 
   const removeCol = () => {
     if (cols <= 1) return
-    setRows(prev => prev.map(row => row.slice(0, -1)))
-    setAlignments(prev => prev.slice(0, -1))
+    setRows((prev) => prev.map((row) => row.slice(0, -1)))
+    setAlignments((prev) => prev.slice(0, -1))
   }
 
   const handleInsert = () => {
@@ -174,18 +188,21 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
 
   const handleCopyLatex = () => {
     const latex = generateLatex(rows, alignments)
-    navigator.clipboard.writeText(latex).then(() => {
-      setLatexCopied(true)
-      setTimeout(() => setLatexCopied(false), 1500)
-    }).catch(err => {
-      console.error("Failed to copy LaTeX:", err)
-    })
+    navigator.clipboard
+      .writeText(latex)
+      .then(() => {
+        setLatexCopied(true)
+        setTimeout(() => setLatexCopied(false), 1500)
+      })
+      .catch((err) => {
+        console.error("Failed to copy LaTeX:", err)
+      })
   }
 
   if (!open) return null
 
   return (
-    <div className="table-editor-modal" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="table-editor-modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="table-editor-dialog">
         <h3>{t.palette.tableEditor}</h3>
 
@@ -198,9 +215,11 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
                 className="table-editor-align-btn"
                 onClick={() => cycleAlignment(c)}
                 title={
-                  (alignments[c] ?? "left") === "left" ? t.tableEditor.alignLeft :
-                  (alignments[c] ?? "left") === "center" ? t.tableEditor.alignCenter :
-                  t.tableEditor.alignRight
+                  (alignments[c] ?? "left") === "left"
+                    ? t.tableEditor.alignLeft
+                    : (alignments[c] ?? "left") === "center"
+                      ? t.tableEditor.alignCenter
+                      : t.tableEditor.alignRight
                 }
               >
                 {ALIGN_LABEL[alignments[c] ?? "left"]}
@@ -216,8 +235,10 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
                   className="table-editor-cell"
                   value={cell}
                   placeholder={r === 0 ? `Col ${c + 1}` : ""}
-                  onChange={e => updateCell(r, c, e.target.value)}
-                  aria-label={r === 0 ? `Encabezado columna ${c + 1}` : `Fila ${r} columna ${c + 1}`}
+                  onChange={(e) => updateCell(r, c, e.target.value)}
+                  aria-label={
+                    r === 0 ? `Encabezado columna ${c + 1}` : `Fila ${r} columna ${c + 1}`
+                  }
                 />
               ))}
             </div>
@@ -226,13 +247,19 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
 
         <div className="table-editor-actions">
           <button onClick={addRow}>{t.tableEditor.addRow}</button>
-          <button onClick={removeRow} disabled={rows.length <= 1}>{t.tableEditor.removeRow}</button>
+          <button onClick={removeRow} disabled={rows.length <= 1}>
+            {t.tableEditor.removeRow}
+          </button>
           <button onClick={addCol}>{t.tableEditor.addColumn}</button>
-          <button onClick={removeCol} disabled={cols <= 1}>{t.tableEditor.removeColumn}</button>
+          <button onClick={removeCol} disabled={cols <= 1}>
+            {t.tableEditor.removeColumn}
+          </button>
         </div>
 
         <div>
-          <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>{t.tableEditor.preview}</div>
+          <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>
+            {t.tableEditor.preview}
+          </div>
           <div className="table-editor-preview">{preview}</div>
         </div>
 
@@ -240,8 +267,12 @@ export default function TableEditor({ open, onClose, initialMarkdown, onInsert }
           <button className="btn-copy-latex" onClick={handleCopyLatex}>
             {latexCopied ? t.tableEditor.latexCopied : t.tableEditor.copyLatex}
           </button>
-          <button className="btn-cancel" onClick={onClose}>{t.tableEditor.cancel}</button>
-          <button className="btn-insert" onClick={handleInsert}>{t.tableEditor.insert}</button>
+          <button className="btn-cancel" onClick={onClose}>
+            {t.tableEditor.cancel}
+          </button>
+          <button className="btn-insert" onClick={handleInsert}>
+            {t.tableEditor.insert}
+          </button>
         </div>
       </div>
     </div>

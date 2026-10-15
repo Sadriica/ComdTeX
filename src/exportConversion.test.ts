@@ -3,7 +3,9 @@ import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversi
 
 describe("exportConversion", () => {
   it("makes user-facing markdown export Obsidian-clean", () => {
-    const output = toExportMarkdownContent("# Intro {#sec:intro}\n\n:::theorem[Main] {#thm:main}\nBody\n:::\n\nVer @sec:intro")
+    const output = toExportMarkdownContent(
+      "# Intro {#sec:intro}\n\n:::theorem[Main] {#thm:main}\nBody\n:::\n\nVer @sec:intro",
+    )
 
     expect(output).toContain("# Intro")
     expect(output).toContain("> [!abstract] Theorem: Main")

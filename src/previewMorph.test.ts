@@ -22,18 +22,28 @@ describe("morphPreviewContent", () => {
     const el = container(`<p data-source-line="1">a</p><div class="diagram"><svg></svg></div>`)
     const svgBlock = el.children[1]
     // Re-render where only the first paragraph changed.
-    morphPreviewContent(el, fragment(`<p data-source-line="1">EDITED</p><div class="diagram"><svg></svg></div>`))
+    morphPreviewContent(
+      el,
+      fragment(`<p data-source-line="1">EDITED</p><div class="diagram"><svg></svg></div>`),
+    )
     // The diagram block is the SAME node instance: never torn down or re-parsed.
     expect(el.children[1]).toBe(svgBlock)
     expect(el.children[0].textContent).toBe("EDITED")
   })
 
   it("keeps the node when ONLY data-source-line shifted (line inserted above)", () => {
-    const el = container(`<p data-source-line="3">para</p><div class="diagram" data-source-line="5"><svg></svg></div>`)
+    const el = container(
+      `<p data-source-line="3">para</p><div class="diagram" data-source-line="5"><svg></svg></div>`,
+    )
     const para = el.children[0]
     const diagram = el.children[1]
     // A line inserted above bumps every following block's source line by 1.
-    morphPreviewContent(el, fragment(`<p data-source-line="4">para</p><div class="diagram" data-source-line="6"><svg></svg></div>`))
+    morphPreviewContent(
+      el,
+      fragment(
+        `<p data-source-line="4">para</p><div class="diagram" data-source-line="6"><svg></svg></div>`,
+      ),
+    )
     expect(el.children[0]).toBe(para)
     expect(el.children[1]).toBe(diagram) // diagram NOT re-created
     // The bookkeeping attribute is updated in place.

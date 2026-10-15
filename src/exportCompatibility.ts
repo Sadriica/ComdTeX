@@ -16,7 +16,11 @@ function lineOf(text: string, index: number): number {
   return text.slice(0, index).split("\n").length
 }
 
-function collect(text: string, target: "latex" | "obsidian", rules: Array<[RegExp, "warning" | "info", string]>): CompatibilityIssue[] {
+function collect(
+  text: string,
+  target: "latex" | "obsidian",
+  rules: Array<[RegExp, "warning" | "info", string]>,
+): CompatibilityIssue[] {
   const issues: CompatibilityIssue[] = []
   for (const [re, severity, message] of rules) {
     let match: RegExpExecArray | null
@@ -36,18 +40,50 @@ function score(issues: CompatibilityIssue[]): number {
 
 export function analyzeExportCompatibility(markdown: string): CompatibilityReport {
   const latexIssues = collect(markdown, "latex", [
-    [/<(iframe|video|audio|canvas|script|style)\b/i, "warning", "HTML embebido no tiene equivalente LaTeX directo"],
-    [/```mermaid\b/i, "warning", "Mermaid debe exportarse como imagen para máxima compatibilidad Overleaf"],
-    [/>\s*\[![A-Z]+\]/, "info", "Callouts se exportan como contenido degradado, no como entorno LaTeX nativo"],
-    [/\[\[[^\]]+\]\]/, "info", "Wikilinks no existen en LaTeX; se exportan como texto/enlaces planos"],
-    [/\{#(?!sec:|eq:|fig:|tbl:|thm:|lem:|cor:|prop:|def:|ex:|exc:)[\w:.-]+\}/, "warning", "Label con prefijo no reconocido por el exportador LaTeX"],
+    [
+      /<(iframe|video|audio|canvas|script|style)\b/i,
+      "warning",
+      "HTML embebido no tiene equivalente LaTeX directo",
+    ],
+    [
+      /```mermaid\b/i,
+      "warning",
+      "Mermaid debe exportarse como imagen para máxima compatibilidad Overleaf",
+    ],
+    [
+      />\s*\[![A-Z]+\]/,
+      "info",
+      "Callouts se exportan como contenido degradado, no como entorno LaTeX nativo",
+    ],
+    [
+      /\[\[[^\]]+\]\]/,
+      "info",
+      "Wikilinks no existen en LaTeX; se exportan como texto/enlaces planos",
+    ],
+    [
+      /\{#(?!sec:|eq:|fig:|tbl:|thm:|lem:|cor:|prop:|def:|ex:|exc:)[\w:.-]+\}/,
+      "warning",
+      "Label con prefijo no reconocido por el exportador LaTeX",
+    ],
   ])
 
   const obsidianIssues = collect(markdown, "obsidian", [
-    [/@(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+/, "info", "Referencia estructural se conserva como texto/código, no como referencia dinámica Obsidian"],
-    [/\{#(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+\}/, "info", "Labels estructurales se ocultan o eliminan en Markdown Obsidian"],
+    [
+      /@(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+/,
+      "info",
+      "Referencia estructural se conserva como texto/código, no como referencia dinámica Obsidian",
+    ],
+    [
+      /\{#(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+\}/,
+      "info",
+      "Labels estructurales se ocultan o eliminan en Markdown Obsidian",
+    ],
     [/\[@[A-Za-z0-9:_-]+(?:[,\]])/, "info", "Citas BibTeX requieren plugin externo en Obsidian"],
-    [/\\newcommand\b/, "warning", "Macros LaTeX globales requieren MathJax/KaTeX configurado en Obsidian"],
+    [
+      /\\newcommand\b/,
+      "warning",
+      "Macros LaTeX globales requieren MathJax/KaTeX configurado en Obsidian",
+    ],
   ])
 
   return {
@@ -67,5 +103,9 @@ export function analyzeExportCompatibility(markdown: string): CompatibilityRepor
 export function lossyExportWarnings(markdown: string, target: "latex" | "obsidian"): string[] {
   const report = analyzeExportCompatibility(markdown)
   const issues = target === "latex" ? report.latexIssues : report.obsidianIssues
-  return [...new Set(issues.filter((issue) => issue.severity === "warning").map((issue) => issue.message))]
+  return [
+    ...new Set(
+      issues.filter((issue) => issue.severity === "warning").map((issue) => issue.message),
+    ),
+  ]
 }

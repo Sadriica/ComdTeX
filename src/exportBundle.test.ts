@@ -30,7 +30,9 @@ describe("collectLocalImagePaths", () => {
   })
 
   it("handles paths with spaces", () => {
-    expect(collectLocalImagePaths("![Cap](my figures/plot one.png)")).toEqual(["my figures/plot one.png"])
+    expect(collectLocalImagePaths("![Cap](my figures/plot one.png)")).toEqual([
+      "my figures/plot one.png",
+    ])
   })
 
   it("returns an empty list when the document has no images", () => {

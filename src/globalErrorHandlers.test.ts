@@ -5,8 +5,12 @@ import { subscribeToasts, dismissToast, type Toast } from "./toastService"
 function fakeTarget() {
   const handlers = new Map<string, (e: unknown) => void>()
   return {
-    addEventListener: (type: string, fn: (e: unknown) => void) => { handlers.set(type, fn) },
-    removeEventListener: (type: string) => { handlers.delete(type) },
+    addEventListener: (type: string, fn: (e: unknown) => void) => {
+      handlers.set(type, fn)
+    },
+    removeEventListener: (type: string) => {
+      handlers.delete(type)
+    },
     fire: (type: string, e: unknown) => handlers.get(type)?.(e),
     count: () => handlers.size,
   }
@@ -17,7 +21,9 @@ describe("installGlobalErrorHandlers", () => {
   let unsub: () => void
   beforeEach(() => {
     toasts = []
-    unsub = subscribeToasts((t) => { toasts = t })
+    unsub = subscribeToasts((t) => {
+      toasts = t
+    })
     vi.spyOn(console, "error").mockImplementation(() => {})
   })
   afterEach(() => {

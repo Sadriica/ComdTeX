@@ -1,5 +1,10 @@
 import { useRef, useState, useId } from "react"
-import { loadCustomTemplates, saveCustomTemplate, TEMPLATES, processTemplateVariables } from "./templates"
+import {
+  loadCustomTemplates,
+  saveCustomTemplate,
+  TEMPLATES,
+  processTemplateVariables,
+} from "./templates"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 
@@ -17,7 +22,9 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
   const [editingTemplate, setEditingTemplate] = useState(false)
   const [templateName, setTemplateName] = useState("")
   const [templateDescription, setTemplateDescription] = useState("")
-  const [templateContent, setTemplateContent] = useState("---\ntitle: {{title}}\ndate: {{date}}\ntags: []\n---\n\n# {{title}}\n")
+  const [templateContent, setTemplateContent] = useState(
+    "---\ntitle: {{title}}\ndate: {{date}}\ntags: []\n---\n\n# {{title}}\n",
+  )
   const modalRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   useFocusTrap(modalRef, open, onClose)
@@ -54,14 +61,30 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal modal-wide"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <span id={titleId}>{t.templateModal.title}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.templateModal.closeAriaLabel}>✕</button>
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.templateModal.closeAriaLabel}
+          >
+            ✕
+          </button>
         </div>
         <div className="modal-body template-body">
           <div className="template-actions-row">
-            <button className="template-create-toggle" onClick={() => setEditingTemplate((v) => !v)}>
+            <button
+              className="template-create-toggle"
+              onClick={() => setEditingTemplate((v) => !v)}
+            >
               {editingTemplate ? t.templateModal.useTemplates : t.templateModal.createTemplate}
             </button>
           </div>
@@ -85,55 +108,84 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
                 onChange={(e) => setTemplateContent(e.target.value)}
                 rows={12}
               />
-              <div className="template-vars-hint">{t.templateModal.variablesHint}: {"{{title}}"}, {"{{filename}}"}, {"{{date}}"}, {"{{date:formatted}}"}, {"{{year}}"}, {"{{time}}"}, {"{{datetime}}"}, {"{{author}}"}</div>
-              <button className="btn-create" onClick={handleSaveTemplate} disabled={!templateName.trim() || !templateContent.trim()}>
+              <div className="template-vars-hint">
+                {t.templateModal.variablesHint}: {"{{title}}"}, {"{{filename}}"}, {"{{date}}"},{" "}
+                {"{{date:formatted}}"}, {"{{year}}"}, {"{{time}}"}, {"{{datetime}}"}, {"{{author}}"}
+              </div>
+              <button
+                className="btn-create"
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || !templateContent.trim()}
+              >
                 {t.templateModal.saveTemplate}
               </button>
             </div>
           ) : (
-          <>
-          {[
-            { label: t.templateModal.sectionBasics, items: allTemplates.filter((tpl) => tpl.category !== "journal") },
-            { label: t.templateModal.sectionJournals, items: allTemplates.filter((tpl) => tpl.category === "journal") },
-          ].filter((section) => section.items.length > 0).map((section) => (
-            <div key={section.label}>
-              <div className="template-section-label">{section.label}</div>
-              <div className="template-grid">
-                {section.items.map((tpl) => {
-                  const tplT = t.templates[tpl.id]
-                  return (
-                    <button
-                      key={tpl.id}
-                      className={`template-card${selectedId === tpl.id ? " selected" : ""}`}
-                      onClick={() => setSelectedId(tpl.id)}
-                    >
-                      <span className="template-icon">{tpl.icon}</span>
-                      <span className="template-name">{tplT?.name ?? tpl.name}</span>
-                      <span className="template-desc">{tplT?.description ?? tpl.description}</span>
-                      {tpl.custom && <span className="template-custom-badge">{t.templateModal.customBadge}</span>}
-                    </button>
-                  )
-                })}
+            <>
+              {[
+                {
+                  label: t.templateModal.sectionBasics,
+                  items: allTemplates.filter((tpl) => tpl.category !== "journal"),
+                },
+                {
+                  label: t.templateModal.sectionJournals,
+                  items: allTemplates.filter((tpl) => tpl.category === "journal"),
+                },
+              ]
+                .filter((section) => section.items.length > 0)
+                .map((section) => (
+                  <div key={section.label}>
+                    <div className="template-section-label">{section.label}</div>
+                    <div className="template-grid">
+                      {section.items.map((tpl) => {
+                        const tplT = t.templates[tpl.id]
+                        return (
+                          <button
+                            key={tpl.id}
+                            className={`template-card${selectedId === tpl.id ? " selected" : ""}`}
+                            onClick={() => setSelectedId(tpl.id)}
+                          >
+                            <span className="template-icon">{tpl.icon}</span>
+                            <span className="template-name">{tplT?.name ?? tpl.name}</span>
+                            <span className="template-desc">
+                              {tplT?.description ?? tpl.description}
+                            </span>
+                            {tpl.custom && (
+                              <span className="template-custom-badge">
+                                {t.templateModal.customBadge}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              <div className="template-filename-row">
+                <label className="template-filename-label">{t.templateModal.filenameLabel}</label>
+                <input
+                  className="template-filename-input"
+                  placeholder={t.templateModal.filenamePlaceholder}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                  autoFocus
+                />
               </div>
-            </div>
-          ))}
-          <div className="template-filename-row">
-            <label className="template-filename-label">{t.templateModal.filenameLabel}</label>
-            <input
-              className="template-filename-input"
-              placeholder={t.templateModal.filenamePlaceholder}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
-            />
-          </div>
-          </>
+            </>
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>{t.templateModal.cancel}</button>
-          <button className="btn-create" onClick={handleCreate} disabled={editingTemplate || !name.trim()}>{t.templateModal.create}</button>
+          <button className="btn-cancel" onClick={onClose}>
+            {t.templateModal.cancel}
+          </button>
+          <button
+            className="btn-create"
+            onClick={handleCreate}
+            disabled={editingTemplate || !name.trim()}
+          >
+            {t.templateModal.create}
+          </button>
         </div>
       </div>
     </div>

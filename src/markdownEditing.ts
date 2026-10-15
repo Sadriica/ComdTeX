@@ -88,9 +88,7 @@ export function resolveEnterOverride(lineText: string, tabSize = 2): EnterOverri
         : { kind: "replaceLine", text: `${outdent(indent, tabSize)}${marker}${space}${task ?? ""}` }
     }
     const ordered = /^(\d+)([.)])$/.exec(marker)
-    const nextMarker = ordered
-      ? `${Number(ordered[1]) + 1}${ordered[2]}`
-      : marker
+    const nextMarker = ordered ? `${Number(ordered[1]) + 1}${ordered[2]}` : marker
     // A task item continues as an UNCHECKED box regardless of the current one.
     const nextTask = task ? "[ ] " : ""
     return { kind: "insertLine", text: `${indent}${nextMarker}${space}${nextTask}` }
@@ -161,7 +159,10 @@ export function normalizeTableBlock(lines: string[]): string[] {
  * The contiguous run of table rows containing `lineIndex`, or null if that line
  * is not part of a pipe table. Shared by the linter and the normalise command.
  */
-export function findTableBlock(lines: string[], lineIndex: number): { start: number; end: number } | null {
+export function findTableBlock(
+  lines: string[],
+  lineIndex: number,
+): { start: number; end: number } | null {
   if (!TABLE_ROW_RE.test(lines[lineIndex] ?? "")) return null
   let start = lineIndex
   while (start > 0 && TABLE_ROW_RE.test(lines[start - 1])) start--
@@ -215,7 +216,10 @@ export interface DocumentSection {
  * it belongs to the original document (frontmatter, an intro) and must not be
  * silently attached to the first section or dropped.
  */
-export function splitIntoSections(text: string, level: number): {
+export function splitIntoSections(
+  text: string,
+  level: number,
+): {
   preamble: string
   sections: DocumentSection[]
 } {
@@ -228,8 +232,12 @@ export function splitIntoSections(text: string, level: number): {
     const line = raw.trim()
     const fence = /^(```+|~~~+)/.exec(line)
     if (fence) {
-      if (!inFence) { inFence = true; fenceMarker = fence[1][0] }
-      else if (fence[1][0] === fenceMarker) { inFence = false }
+      if (!inFence) {
+        inFence = true
+        fenceMarker = fence[1][0]
+      } else if (fence[1][0] === fenceMarker) {
+        inFence = false
+      }
       return
     }
     if (inFence) return
@@ -310,8 +318,12 @@ export function computeFoldRanges(lines: string[]): FoldRange[] {
 
     const fence = /^(```+|~~~+)/.exec(line)
     if (fence) {
-      if (!inFence) { inFence = true; fenceMarker = fence[1][0] }
-      else if (fence[1][0] === fenceMarker) { inFence = false }
+      if (!inFence) {
+        inFence = true
+        fenceMarker = fence[1][0]
+      } else if (fence[1][0] === fenceMarker) {
+        inFence = false
+      }
       return
     }
     if (inFence) return
@@ -347,7 +359,9 @@ export function computeFoldRanges(lines: string[]): FoldRange[] {
  *
  * Returns line indices relative to `lines`.
  */
-export function raggedTableRows(lines: string[]): { line: number; expected: number; actual: number }[] {
+export function raggedTableRows(
+  lines: string[],
+): { line: number; expected: number; actual: number }[] {
   const out: { line: number; expected: number; actual: number }[] = []
   const seen = new Set<number>()
   for (let i = 0; i < lines.length; i++) {

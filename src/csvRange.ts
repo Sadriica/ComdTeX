@@ -137,18 +137,36 @@ export function parseCsv(text: string, delimiter?: string): string[][] {
     const ch = text[i]
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++ }
-        else inQuotes = false
+        if (text[i + 1] === '"') {
+          field += '"'
+          i++
+        } else inQuotes = false
       } else field += ch
       continue
     }
-    if (ch === '"') { inQuotes = true; continue }
-    if (ch === delim) { row.push(field); field = ""; continue }
+    if (ch === '"') {
+      inQuotes = true
+      continue
+    }
+    if (ch === delim) {
+      row.push(field)
+      field = ""
+      continue
+    }
     if (ch === "\r") continue
-    if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; continue }
+    if (ch === "\n") {
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ""
+      continue
+    }
     field += ch
   }
-  if (field !== "" || row.length > 0) { row.push(field); rows.push(row) }
+  if (field !== "" || row.length > 0) {
+    row.push(field)
+    rows.push(row)
+  }
   return rows.filter((r) => r.length > 1 || r[0] !== "")
 }
 
@@ -165,7 +183,10 @@ export function sniffDelimiter(text: string): string {
  * whole selection; `key: value` lines are also accepted for readability.
  */
 export function parseCsvBlock(body: string, caption = ""): CsvBlockSpec | null {
-  const lines = body.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  const lines = body
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
   if (lines.length === 0) return null
 
   // Key/value form
@@ -263,7 +284,8 @@ import { resolveBlockSource, type DatasetMap } from "./datasets"
 /** Reads a vault file by name or path; the same shape transclusion uses. */
 export type CsvResolver = (target: string) => string | null
 
-const CSV_BLOCK_RE = /^:::csv(?:\[([^\]]*)\])?(?:\{#((?:tbl|data):[\w:.-]+)\})?[ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm
+const CSV_BLOCK_RE =
+  /^:::csv(?:\[([^\]]*)\])?(?:\{#((?:tbl|data):[\w:.-]+)\})?[ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm
 
 /**
  * Replace every `:::csv` block with the Markdown table its selection

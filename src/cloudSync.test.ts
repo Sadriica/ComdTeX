@@ -83,14 +83,14 @@ describe("isPathInside", () => {
 
 describe("findConflicts", () => {
   const file = (name: string, dir = "/v"): FileNode => ({
-    name, path: `${dir}/${name}`, type: "file", ext: name.split(".").pop(),
+    name,
+    path: `${dir}/${name}`,
+    type: "file",
+    ext: name.split(".").pop(),
   })
 
   it("finds Dropbox conflict and pairs it with the original sibling", () => {
-    const tree: FileNode[] = [
-      file("note.md"),
-      file("note (conflicted copy 2026-04-29).md"),
-    ]
+    const tree: FileNode[] = [file("note.md"), file("note (conflicted copy 2026-04-29).md")]
     const conflicts = findConflicts(tree)
     expect(conflicts).toHaveLength(1)
     expect(conflicts[0].provider).toBe("dropbox")
@@ -99,9 +99,7 @@ describe("findConflicts", () => {
   })
 
   it("reports a Dropbox conflict even when the original is missing", () => {
-    const tree: FileNode[] = [
-      file("note (conflicted copy 2026-04-29).md"),
-    ]
+    const tree: FileNode[] = [file("note (conflicted copy 2026-04-29).md")]
     const conflicts = findConflicts(tree)
     expect(conflicts).toHaveLength(1)
     expect(conflicts[0].basePath).toBeNull()
@@ -114,10 +112,7 @@ describe("findConflicts", () => {
   })
 
   it("flags OneDrive conflict when sibling exists (onedrive hint)", () => {
-    const tree: FileNode[] = [
-      file("draft.md"),
-      file("draft-DESKTOP123.md"),
-    ]
+    const tree: FileNode[] = [file("draft.md"), file("draft-DESKTOP123.md")]
     const conflicts = findConflicts(tree, "onedrive")
     expect(conflicts).toHaveLength(1)
     expect(conflicts[0].provider).toBe("onedrive")
@@ -139,17 +134,16 @@ describe("findConflicts", () => {
   it("never flags hyphenated filenames when no provider hint is given", () => {
     // The destructive false positive: without an OneDrive root detected, a
     // genuine-looking machine-name suffix must still be ignored entirely.
-    const tree: FileNode[] = [
-      file("draft.md"),
-      file("draft-DESKTOP123.md"),
-    ]
+    const tree: FileNode[] = [file("draft.md"), file("draft-DESKTOP123.md")]
     expect(findConflicts(tree)).toHaveLength(0)
   })
 
   it("walks nested directories", () => {
     const tree: FileNode[] = [
       {
-        name: "subdir", path: "/v/subdir", type: "dir",
+        name: "subdir",
+        path: "/v/subdir",
+        type: "dir",
         children: [
           file("a.md", "/v/subdir"),
           file("a (conflicted copy 2026-04-29).md", "/v/subdir"),

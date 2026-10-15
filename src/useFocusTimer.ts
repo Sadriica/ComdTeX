@@ -52,7 +52,11 @@ export interface FocusTimer {
  * The interval is armed ONLY while the timer is running or a session is open, so
  * an idle timer costs nothing (no per-second re-render of AppContent).
  */
-export function useFocusTimer(config: PomodoroConfig, content: string, activePath?: string | null): FocusTimer {
+export function useFocusTimer(
+  config: PomodoroConfig,
+  content: string,
+  activePath?: string | null,
+): FocusTimer {
   const t = useT()
   const [timer, setTimer] = useState<PomodoroState>(() => createState(config))
   const [session, setSession] = useState<WritingSession | null>(null)
@@ -76,12 +80,19 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
   // interval arms; never read before that, so the placeholder is never used.
   const lastTickRef = useRef(0)
   const activePathRef = useRef(activePath ?? null)
-  useEffect(() => { activePathRef.current = activePath ?? null }, [activePath])
+  useEffect(() => {
+    activePathRef.current = activePath ?? null
+  }, [activePath])
 
-  const phaseLabel = useCallback((phase: Phase): string =>
-    phase === "work" ? tRef.current.focusTimer.phaseWork
-      : phase === "break" ? tRef.current.focusTimer.phaseBreak
-        : tRef.current.focusTimer.phaseLongBreak, [])
+  const phaseLabel = useCallback(
+    (phase: Phase): string =>
+      phase === "work"
+        ? tRef.current.focusTimer.phaseWork
+        : phase === "break"
+          ? tRef.current.focusTimer.phaseBreak
+          : tRef.current.focusTimer.phaseLongBreak,
+    [],
+  )
 
   // Tick the running timer + refresh the session clock. Armed only when there's
   // something live to advance.

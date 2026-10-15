@@ -15,11 +15,11 @@ export default function WelcomeScreen({
 }: WelcomeScreenProps) {
   const t = useT()
   const features = [
-    { icon: "∑",  name: t.welcome.featureMath,   desc: t.welcome.featureMathDesc },
-    { icon: "📚", name: t.welcome.featureBib,    desc: t.welcome.featureBibDesc },
-    { icon: "∀",  name: t.welcome.featureEnv,    desc: t.welcome.featureEnvDesc },
-    { icon: "⎘",  name: t.welcome.featureExport, desc: t.welcome.featureExportDesc },
-    { icon: "⚙",  name: t.welcome.featureWasmTex, desc: t.welcome.featureWasmTexDesc },
+    { icon: "∑", name: t.welcome.featureMath, desc: t.welcome.featureMathDesc },
+    { icon: "📚", name: t.welcome.featureBib, desc: t.welcome.featureBibDesc },
+    { icon: "∀", name: t.welcome.featureEnv, desc: t.welcome.featureEnvDesc },
+    { icon: "⎘", name: t.welcome.featureExport, desc: t.welcome.featureExportDesc },
+    { icon: "⚙", name: t.welcome.featureWasmTex, desc: t.welcome.featureWasmTexDesc },
   ]
 
   return (
@@ -63,7 +63,9 @@ export default function WelcomeScreen({
                 tabIndex={0}
                 title={path}
               >
-                <span className="welcome-recent-icon" aria-hidden="true">📁</span>
+                <span className="welcome-recent-icon" aria-hidden="true">
+                  📁
+                </span>
                 <span className="welcome-recent-info">
                   <span className="welcome-recent-name">{name}</span>
                   <span className="welcome-recent-path">{path}</span>

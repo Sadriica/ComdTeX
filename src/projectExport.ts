@@ -16,7 +16,12 @@ export interface ProjectPlan {
 function isMainDocument(file: ProjectFile): boolean {
   const fm = extractFrontmatter(file.content)
   const raw = fm?.data ?? {}
-  return raw["comdtex.main"] === true || raw["comdtex.main"] === "true" || raw.main === true || raw.main === "true"
+  return (
+    raw["comdtex.main"] === true ||
+    raw["comdtex.main"] === "true" ||
+    raw.main === true ||
+    raw.main === "true"
+  )
 }
 
 function scoreMainCandidate(file: ProjectFile): number {
@@ -30,18 +35,29 @@ function scoreMainCandidate(file: ProjectFile): number {
 }
 
 function findTarget(files: ProjectFile[], target: string): ProjectFile | null {
-  const clean = target.split("#")[0].replace(/\.[^.]+$/, "").toLowerCase()
-  return files.find((file) =>
-    file.name.replace(/\.[^.]+$/, "").toLowerCase() === clean ||
-    file.name.toLowerCase() === target.toLowerCase() ||
-    file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`)) ?? null
+  const clean = target
+    .split("#")[0]
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+  return (
+    files.find(
+      (file) =>
+        file.name.replace(/\.[^.]+$/, "").toLowerCase() === clean ||
+        file.name.toLowerCase() === target.toLowerCase() ||
+        file.path.toLowerCase().endsWith(`/${target.toLowerCase()}`),
+    ) ?? null
+  )
 }
 
 export function buildProjectPlan(files: ProjectFile[], activePath?: string | null): ProjectPlan {
   const markdownFiles = files.filter((file) => file.name.endsWith(".md"))
   const explicit = markdownFiles.find(isMainDocument)
   const active = activePath ? markdownFiles.find((file) => file.path === activePath) : null
-  const main = explicit ?? active ?? [...markdownFiles].sort((a, b) => scoreMainCandidate(b) - scoreMainCandidate(a))[0] ?? null
+  const main =
+    explicit ??
+    active ??
+    [...markdownFiles].sort((a, b) => scoreMainCandidate(b) - scoreMainCandidate(a))[0] ??
+    null
   if (!main) return { main: null, included: [], missingEmbeds: [] }
 
   const included = new Map<string, ProjectFile>()

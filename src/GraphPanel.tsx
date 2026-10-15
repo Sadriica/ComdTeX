@@ -13,15 +13,15 @@ interface GraphPanelProps {
 }
 
 interface GraphNode {
-  id: string       // file path
-  label: string    // display name
+  id: string // file path
+  label: string // display name
   x: number
   y: number
   vx: number
   vy: number
-  folder: string   // for coloring
-  degree: number   // total connections (in + out)
-  tags: string[]   // frontmatter tags
+  folder: string // for coloring
+  degree: number // total connections (in + out)
+  tags: string[] // frontmatter tags
 }
 
 interface GraphEdge {
@@ -30,8 +30,14 @@ interface GraphEdge {
 }
 
 const FOLDER_COLORS = [
-  "#569cd6", "#4ec9b0", "#ce9178", "#dcdcaa",
-  "#c586c0", "#9cdcfe", "#d7ba7d", "#6a9955",
+  "#569cd6",
+  "#4ec9b0",
+  "#ce9178",
+  "#dcdcaa",
+  "#c586c0",
+  "#9cdcfe",
+  "#d7ba7d",
+  "#6a9955",
 ]
 
 function buildGraph(
@@ -50,7 +56,8 @@ function buildGraph(
   }
 
   // Create nodes with random initial positions
-  const W = 400, H = 400
+  const W = 400,
+    H = 400
   const nodes: GraphNode[] = files.map((f) => {
     const folder = pathBasename(pathDirname(f.path))
     const content = tabContent.get(f.path) ?? ""
@@ -113,16 +120,14 @@ function buildGraph(
 
 // ── Force simulation ──────────────────────────────────────────────────────────
 
-function simulate(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
-  steps = 80,
-): GraphNode[] {
+function simulate(nodes: GraphNode[], edges: GraphEdge[], steps = 80): GraphNode[] {
   const ns = nodes.map((n) => ({ ...n }))
   const byId = new Map(ns.map((n) => [n.id, n]))
 
-  const W = 400, H = 400
-  const CENTER_X = W / 2, CENTER_Y = H / 2
+  const W = 400,
+    H = 400
+  const CENTER_X = W / 2,
+    CENTER_Y = H / 2
 
   for (let step = 0; step < steps; step++) {
     const alpha = 1 - step / steps
@@ -130,27 +135,35 @@ function simulate(
     // Repulsion
     for (let i = 0; i < ns.length; i++) {
       for (let j = i + 1; j < ns.length; j++) {
-        const a = ns[i], b = ns[j]
-        const dx = b.x - a.x, dy = b.y - a.y
+        const a = ns[i],
+          b = ns[j]
+        const dx = b.x - a.x,
+          dy = b.y - a.y
         const dist = Math.sqrt(dx * dx + dy * dy) || 1
         const force = (800 / (dist * dist)) * alpha
         const fx = (dx / dist) * force
         const fy = (dy / dist) * force
-        a.vx -= fx; a.vy -= fy
-        b.vx += fx; b.vy += fy
+        a.vx -= fx
+        a.vy -= fy
+        b.vx += fx
+        b.vy += fy
       }
     }
 
     // Attraction along edges
     for (const edge of edges) {
-      const a = byId.get(edge.source), b = byId.get(edge.target)
+      const a = byId.get(edge.source),
+        b = byId.get(edge.target)
       if (!a || !b) continue
-      const dx = b.x - a.x, dy = b.y - a.y
+      const dx = b.x - a.x,
+        dy = b.y - a.y
       const dist = Math.sqrt(dx * dx + dy * dy) || 1
       const target = 80
       const force = ((dist - target) / dist) * 0.3 * alpha
-      a.vx += dx * force; a.vy += dy * force
-      b.vx -= dx * force; b.vy -= dy * force
+      a.vx += dx * force
+      a.vy += dy * force
+      b.vx -= dx * force
+      b.vy -= dy * force
     }
 
     // Gravity toward center
@@ -161,7 +174,8 @@ function simulate(
 
     // Apply velocity with damping and boundary clamp
     for (const n of ns) {
-      n.vx *= 0.6; n.vy *= 0.6
+      n.vx *= 0.6
+      n.vy *= 0.6
       n.x = Math.max(20, Math.min(W - 20, n.x + n.vx))
       n.y = Math.max(20, Math.min(H - 20, n.y + n.vy))
     }
@@ -210,7 +224,9 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
     const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, openTabs)
     const simulated = layoutFor(graphShapeKey(rawNodes, rawEdges), rawNodes, rawEdges)
     const folders = [...new Set(simulated.map((n) => n.folder))]
-    const fc = new Map(folders.map((f, i) => [f, FOLDER_COLORS_LIST[i % FOLDER_COLORS_LIST.length]]))
+    const fc = new Map(
+      folders.map((f, i) => [f, FOLDER_COLORS_LIST[i % FOLDER_COLORS_LIST.length]]),
+    )
     return { nodes: simulated, edges: rawEdges, folderColors: fc }
   }, [tree, openTabs])
 
@@ -269,41 +285,56 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
 
   const getNodeAt = useCallback((path: string) => nodes.find((n) => n.id === path), [nodes])
 
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation()
-    const node = getNodeAt(nodeId)
-    if (!node) return
-    dragging.current = { nodeId, ox: e.clientX - node.x * zoom, oy: e.clientY - node.y * zoom, moved: false }
-  }, [getNodeAt, zoom])
+  const handleNodeMouseDown = useCallback(
+    (e: React.MouseEvent, nodeId: string) => {
+      e.stopPropagation()
+      const node = getNodeAt(nodeId)
+      if (!node) return
+      dragging.current = {
+        nodeId,
+        ox: e.clientX - node.x * zoom,
+        oy: e.clientY - node.y * zoom,
+        moved: false,
+      }
+    },
+    [getNodeAt, zoom],
+  )
 
-  const handleNodeClick = useCallback((nodeId: string) => {
-    // Treat as a click only if the user did not drag.
-    if (dragging.current?.moved) return
-    onOpenFile(nodeId)
-  }, [onOpenFile])
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      // Treat as a click only if the user did not drag.
+      if (dragging.current?.moved) return
+      onOpenFile(nodeId)
+    },
+    [onOpenFile],
+  )
 
-  const handleSvgMouseDown = useCallback((e: React.MouseEvent) => {
-    if (dragging.current) return
-    panning.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }
-  }, [pan])
+  const handleSvgMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (dragging.current) return
+      panning.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }
+    },
+    [pan],
+  )
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragging.current) {
-      const { nodeId, ox, oy } = dragging.current
-      dragging.current.moved = true
-      setDraggableNodes((prev) => {
-        const base = prev.length > 0 ? prev : nodes
-        return base.map((n) =>
-          n.id === nodeId
-            ? { ...n, x: (e.clientX - ox) / zoom, y: (e.clientY - oy) / zoom }
-            : n
-        )
-      })
-    } else if (panning.current) {
-      const { sx, sy, px, py } = panning.current
-      setPan({ x: px + (e.clientX - sx), y: py + (e.clientY - sy) })
-    }
-  }, [zoom, nodes])
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (dragging.current) {
+        const { nodeId, ox, oy } = dragging.current
+        dragging.current.moved = true
+        setDraggableNodes((prev) => {
+          const base = prev.length > 0 ? prev : nodes
+          return base.map((n) =>
+            n.id === nodeId ? { ...n, x: (e.clientX - ox) / zoom, y: (e.clientY - oy) / zoom } : n,
+          )
+        })
+      } else if (panning.current) {
+        const { sx, sy, px, py } = panning.current
+        setPan({ x: px + (e.clientX - sx), y: py + (e.clientY - sy) })
+      }
+    },
+    [zoom, nodes],
+  )
 
   const handleMouseUp = useCallback(() => {
     dragging.current = null
@@ -322,7 +353,17 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
   return (
     <div className="graph-panel">
       <div className="graph-toolbar">
-        <button className="graph-btn" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setDraggableNodes([]) }} title={t.graphPanel.resetView}>⊕</button>
+        <button
+          className="graph-btn"
+          onClick={() => {
+            setPan({ x: 0, y: 0 })
+            setZoom(1)
+            setDraggableNodes([])
+          }}
+          title={t.graphPanel.resetView}
+        >
+          ⊕
+        </button>
         <input
           className="graph-input"
           type="text"
@@ -389,13 +430,16 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
             if (!a || !b) return null
             const isHighlighted = hovered === e.source || hovered === e.target
             // Dim edges whose endpoints aren't both in the matched set.
-            const isMatched = !filterActive || (matchedIds.has(e.source) && matchedIds.has(e.target))
+            const isMatched =
+              !filterActive || (matchedIds.has(e.source) && matchedIds.has(e.target))
             const opacity = isHighlighted ? 0.95 : isMatched ? 0.5 : 0.1
             return (
               <line
                 key={i}
-                x1={a.x} y1={a.y}
-                x2={b.x} y2={b.y}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
                 stroke={isHighlighted ? "#569cd6" : "#3a3a3a"}
                 strokeWidth={isHighlighted ? 1.5 : 0.8}
                 strokeOpacity={opacity}
@@ -414,7 +458,8 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
             // Size by degree (clamped). Active/hovered get a small bump.
             const baseR = 4 + Math.min(8, node.degree)
             const r = isActive ? baseR + 2 : isHovered ? baseR + 1 : baseR
-            const dimmed = (filterActive && !isMatched) || (hovered != null && !isHovered && !isNeighbor)
+            const dimmed =
+              (filterActive && !isMatched) || (hovered != null && !isHovered && !isNeighbor)
             const opacity = dimmed ? 0.18 : 1
             const showLabel = isHovered || isActive || topLabelIds.has(node.id)
 

@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react"
-import { LABEL_KIND_TITLES, scanStructuralLabels, type StructuralLabel, type StructuralLabelKind } from "./structuralLabels"
+import {
+  LABEL_KIND_TITLES,
+  scanStructuralLabels,
+  type StructuralLabel,
+  type StructuralLabelKind,
+} from "./structuralLabels"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { matchesQuery } from "./PanelSearch"
@@ -10,7 +15,19 @@ interface LabelsPanelProps {
   onOpenFile: (path: string, line?: number) => void
 }
 
-const KIND_ORDER: StructuralLabelKind[] = ["sec", "eq", "fig", "tbl", "thm", "lem", "cor", "prop", "def", "ex", "exc"]
+const KIND_ORDER: StructuralLabelKind[] = [
+  "sec",
+  "eq",
+  "fig",
+  "tbl",
+  "thm",
+  "lem",
+  "cor",
+  "prop",
+  "def",
+  "ex",
+  "exc",
+]
 
 export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
   const t = useT()
@@ -35,7 +52,9 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
           <span className="panel-header-actions">0</span>
         </div>
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.labelsIcon}</div>
+          <div className="panel-empty-icon" aria-hidden="true">
+            {t.emptyStates.labelsIcon}
+          </div>
           <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.labelsMessage)}</p>
         </div>
       </div>
@@ -49,24 +68,49 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
         <span className="panel-header-actions">{index.labels.length}</span>
       </div>
       <div className="labels-controls">
-        <input className="tag-filter" placeholder={lp.filterPlaceholder} value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <select className="tag-filter tag-type-filter" value={kind} onChange={(e) => setKind(e.target.value as StructuralLabelKind | "all")}>
+        <input
+          className="tag-filter"
+          placeholder={lp.filterPlaceholder}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        <select
+          className="tag-filter tag-type-filter"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as StructuralLabelKind | "all")}
+        >
           <option value="all">{lp.allTypes}</option>
-          {KIND_ORDER.map((item) => <option key={item} value={item}>{LABEL_KIND_TITLES[item]}</option>)}
+          {KIND_ORDER.map((item) => (
+            <option key={item} value={item}>
+              {LABEL_KIND_TITLES[item]}
+            </option>
+          ))}
         </select>
       </div>
       <div className="labels-health">
-        <span className={index.broken.length ? "label-health-bad" : ""}>{lp.broken} {index.broken.length}</span>
-        <span className={index.duplicates.size ? "label-health-bad" : ""}>{lp.duplicates} {index.duplicates.size}</span>
-        <span>{lp.unused} {index.unused.length}</span>
+        <span className={index.broken.length ? "label-health-bad" : ""}>
+          {lp.broken} {index.broken.length}
+        </span>
+        <span className={index.duplicates.size ? "label-health-bad" : ""}>
+          {lp.duplicates} {index.duplicates.size}
+        </span>
+        <span>
+          {lp.unused} {index.unused.length}
+        </span>
       </div>
       {index.broken.length > 0 && (
         <div className="labels-section">
           <div className="labels-section-title">{lp.brokenSection}</div>
           {index.broken.map((ref, i) => (
-            <button key={`${ref.id}-${ref.filePath}-${ref.line}-${i}`} className="label-item label-item-bad" onClick={() => onOpenFile(ref.filePath, ref.line)}>
+            <button
+              key={`${ref.id}-${ref.filePath}-${ref.line}-${i}`}
+              className="label-item label-item-bad"
+              onClick={() => onOpenFile(ref.filePath, ref.line)}
+            >
               <span className="label-id">@{ref.id}</span>
-              <span className="label-file">{displayBasename(ref.filePath)}:{ref.line}</span>
+              <span className="label-file">
+                {displayBasename(ref.filePath)}:{ref.line}
+              </span>
             </button>
           ))}
         </div>
@@ -79,10 +123,18 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
               const duplicate = (index.duplicates.get(label.id)?.length ?? 0) > 1
               const unused = index.unused.includes(label)
               return (
-                <button key={`${label.id}-${label.filePath}-${label.line}-${i}`} className={`label-item${duplicate ? " label-item-bad" : ""}`} onClick={() => onOpenFile(label.filePath, label.line)}>
+                <button
+                  key={`${label.id}-${label.filePath}-${label.line}-${i}`}
+                  className={`label-item${duplicate ? " label-item-bad" : ""}`}
+                  onClick={() => onOpenFile(label.filePath, label.line)}
+                >
                   <span className="label-id">{label.id}</span>
-                  <span className="label-file">{displayBasename(label.filePath)}:{label.line}</span>
-                  {duplicate && <span className="label-chip label-chip-bad">{lp.duplicateChip}</span>}
+                  <span className="label-file">
+                    {displayBasename(label.filePath)}:{label.line}
+                  </span>
+                  {duplicate && (
+                    <span className="label-chip label-chip-bad">{lp.duplicateChip}</span>
+                  )}
                   {unused && <span className="label-chip">{lp.unusedChip}</span>}
                 </button>
               )

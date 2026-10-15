@@ -49,7 +49,10 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           disabled={item.disabled}
           onMouseDown={(e) => {
             e.preventDefault()
-            if (!item.disabled) { item.action(); onClose() }
+            if (!item.disabled) {
+              item.action()
+              onClose()
+            }
           }}
         >
           {item.label}

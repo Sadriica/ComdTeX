@@ -26,8 +26,7 @@ describe("sanitizeRenderedHtml, data: image policy", () => {
   })
 
   it("removes data:image/svg+xml even when base64-encoded", () => {
-    const svg =
-      "data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9ImFsZXJ0KDEpIi8+"
+    const svg = "data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9ImFsZXJ0KDEpIi8+"
     const html = sanitizeRenderedHtml(`<img src="${svg}">`)
     expect(html).not.toContain("data:image/svg")
   })
@@ -87,7 +86,7 @@ describe("sanitizeRenderedHtml, dangerous markup", () => {
 
   it("neutralizes mXSS-style namespace confusion (math > mtext > style)", () => {
     const html = sanitizeRenderedHtml(
-      '<math><mtext><style><img src=x onerror=alert(1)></style></mtext></math>',
+      "<math><mtext><style><img src=x onerror=alert(1)></style></mtext></math>",
     )
     expect(html).not.toContain("onerror")
     expect(html).not.toContain("alert(1)")
@@ -214,7 +213,9 @@ describe("sanitizeRenderedHtml, layout and form hardening", () => {
   })
 
   it("removes <style> inside an SVG when its rules are not scoped to the svg id", () => {
-    const html = sanitizeRenderedHtml('<svg id="mermaid-1"><style>body{display:none}</style><rect width="1" height="1"></rect></svg>')
+    const html = sanitizeRenderedHtml(
+      '<svg id="mermaid-1"><style>body{display:none}</style><rect width="1" height="1"></rect></svg>',
+    )
     expect(html).not.toContain("<style")
     expect(html).toContain("<rect")
   })
@@ -228,8 +229,12 @@ describe("sanitizeRenderedHtml, layout and form hardening", () => {
   })
 
   it("removes scoped <style> that smuggles url() or @import", () => {
-    expect(sanitizeRenderedHtml('<svg id="m1"><style>#m1{background:url(https://evil/x)}</style></svg>')).not.toContain("<style")
-    expect(sanitizeRenderedHtml('<svg id="m1"><style>@import "https://evil/x.css";#m1{}</style></svg>')).not.toContain("<style")
+    expect(
+      sanitizeRenderedHtml('<svg id="m1"><style>#m1{background:url(https://evil/x)}</style></svg>'),
+    ).not.toContain("<style")
+    expect(
+      sanitizeRenderedHtml('<svg id="m1"><style>@import "https://evil/x.css";#m1{}</style></svg>'),
+    ).not.toContain("<style")
   })
 
   it("strips position:fixed/absolute/sticky from inline style but keeps the rest", () => {
@@ -248,14 +253,18 @@ describe("sanitizeRenderedHtml, layout and form hardening", () => {
   })
 
   it("strips large z-index but allows small ones and position:relative", () => {
-    const html = sanitizeRenderedHtml('<span style="position:relative;z-index:2;top:-0.2em">y</span>')
+    const html = sanitizeRenderedHtml(
+      '<span style="position:relative;z-index:2;top:-0.2em">y</span>',
+    )
     expect(html).toContain("position:relative")
     expect(html).toContain("z-index:2")
     expect(sanitizeRenderedHtml('<span style="z-index:1000">y</span>')).not.toContain("z-index")
   })
 
   it("strips url() from inline style", () => {
-    expect(sanitizeRenderedHtml('<div style="background:url(https://evil/x.png)">x</div>')).not.toContain("url(")
+    expect(
+      sanitizeRenderedHtml('<div style="background:url(https://evil/x.png)">x</div>'),
+    ).not.toContain("url(")
   })
 
   it("removes forms and form controls", () => {
@@ -264,22 +273,37 @@ describe("sanitizeRenderedHtml, layout and form hardening", () => {
         "<select><option>a</option></select><button>Send</button></form><p>ok</p>",
     )
     expect(html).toContain("ok")
-    for (const tag of ["<form", "<input", "<textarea", "<select", "<button", "<option", "evil.example"]) {
+    for (const tag of [
+      "<form",
+      "<input",
+      "<textarea",
+      "<select",
+      "<button",
+      "<option",
+      "evil.example",
+    ]) {
       expect(html).not.toContain(tag)
     }
   })
 
   it("keeps the renderer's own task-list checkbox but not other inputs", () => {
-    const ok = sanitizeRenderedHtml('<input type="checkbox" class="preview-checkbox" data-line="3" checked>')
+    const ok = sanitizeRenderedHtml(
+      '<input type="checkbox" class="preview-checkbox" data-line="3" checked>',
+    )
     expect(ok).toContain("preview-checkbox")
     expect(ok).toContain('data-line="3"')
-    expect(sanitizeRenderedHtml('<input type="text" class="preview-checkbox">')).not.toContain("<input")
+    expect(sanitizeRenderedHtml('<input type="text" class="preview-checkbox">')).not.toContain(
+      "<input",
+    )
     expect(sanitizeRenderedHtml('<input type="checkbox">')).not.toContain("<input")
   })
 
   it("still renders real KaTeX output with its inline styles", async () => {
     const katex = (await import("katex")).default
-    const raw = katex.renderToString("\\frac{a}{\\sqrt{b}} + \\sum_{i=0}^n x_i^2 \\overbrace{xyz}^{k}", { throwOnError: false })
+    const raw = katex.renderToString(
+      "\\frac{a}{\\sqrt{b}} + \\sum_{i=0}^n x_i^2 \\overbrace{xyz}^{k}",
+      { throwOnError: false },
+    )
     const html = sanitizeRenderedHtml(raw)
     expect(html).toContain("katex-html")
     expect(html).toContain("vlist")

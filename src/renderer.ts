@@ -7,14 +7,33 @@ import katex from "katex"
 import "katex/contrib/mhchem"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { preprocess } from "./preprocessor"
-import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs, type EnvironmentDocResolver } from "./environments"
+import {
+  extractEnvironments,
+  prescanEnvironmentLabels,
+  resetEnvCounters,
+  resolveEnvironmentRefs,
+  type EnvironmentDocResolver,
+} from "./environments"
 import { processWikilinks } from "./wikilinks"
 import type { KatexMacros } from "./macros"
-import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, wrapInlineNumbered, NUMBERED_MATH_RE } from "./equations"
+import {
+  resetEqCounters,
+  prescanEquations,
+  resolveEqRefs,
+  wrapNumbered,
+  wrapInlineNumbered,
+  NUMBERED_MATH_RE,
+} from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
-import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preprocessFigureLabels } from "./figures"
+import {
+  resetFigCounters,
+  prescanFigures,
+  resolveFigRefs,
+  wrapFigures,
+  preprocessFigureLabels,
+} from "./figures"
 import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./references"
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
@@ -30,15 +49,35 @@ const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .enable("strikethrough")
 
 const CALLOUT_ICONS: Record<string, string> = {
-  note: "ℹ", info: "ℹ", tip: "💡", hint: "💡",
-  warning: "⚠", caution: "⚠", attention: "⚠",
-  important: "❗", danger: "🔴", failure: "✗", error: "✗",
-  success: "✓", check: "✓", done: "✓",
-  question: "?", help: "?", faq: "?",
-  quote: "❝", cite: "❝",
-  theorem: "∎", lemma: "∎", corollary: "∎", proposition: "∎",
-  definition: "≝", example: "▶", exercise: "✏", proof: "□",
-  remark: "◆", abstract: "◈",
+  note: "ℹ",
+  info: "ℹ",
+  tip: "💡",
+  hint: "💡",
+  warning: "⚠",
+  caution: "⚠",
+  attention: "⚠",
+  important: "❗",
+  danger: "🔴",
+  failure: "✗",
+  error: "✗",
+  success: "✓",
+  check: "✓",
+  done: "✓",
+  question: "?",
+  help: "?",
+  faq: "?",
+  quote: "❝",
+  cite: "❝",
+  theorem: "∎",
+  lemma: "∎",
+  corollary: "∎",
+  proposition: "∎",
+  definition: "≝",
+  example: "▶",
+  exercise: "✏",
+  proof: "□",
+  remark: "◆",
+  abstract: "◈",
 }
 
 function preprocessCallouts(text: string): string {
@@ -66,8 +105,8 @@ function preprocessCallouts(text: string): string {
 
       out.push(
         `<div class="callout callout-${type}">` +
-        `<div class="callout-title"><span class="callout-icon">${icon}</span> ${escHtml(title)}</div>` +
-        `<div class="callout-body">\n\n${body}\n\n</div></div>`,
+          `<div class="callout-title"><span class="callout-icon">${icon}</span> ${escHtml(title)}</div>` +
+          `<div class="callout-body">\n\n${body}\n\n</div></div>`,
       )
     } else {
       out.push(line)
@@ -166,9 +205,8 @@ function preRenderDisplayMath(
   // `@eq:` reference resolves to, and math renders inside what should be a
   // literal code listing. Mirror equations.ts stripCodeFences' fence pattern.
   const codeSpans: Array<{ start: number; end: number; text: string }> = []
-  const fenceBlanked = text.replace(
-    /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm,
-    (m) => " ".repeat(m.length),
+  const fenceBlanked = text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, (m) =>
+    " ".repeat(m.length),
   )
   const masked = fenceBlanked.replace(/(`+)([^`\n]*?)\1/g, (m, _t, _c, offset: number) => {
     codeSpans.push({ start: offset, end: offset + m.length, text: m })
@@ -188,9 +226,7 @@ function preRenderDisplayMath(
     const isDisplay = m[1] !== undefined
     const expr = isDisplay ? m[1] : m[3]
     const rendered = renderKatex(expr, isDisplay, macros)
-    const html = isDisplay
-      ? wrapNumbered(rendered, n)
-      : wrapInlineNumbered(rendered, n)
+    const html = isDisplay ? wrapNumbered(rendered, n) : wrapInlineNumbered(rendered, n)
     slots.push(html)
     out.push(`\x02DMATH${slots.length - 1}\x03`)
     cursor = m.index + m[0].length
@@ -236,7 +272,7 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
   html = preserveParagraphIndentation(html)
 
   html = html.replace(/\x02MATH(\d+)\x03/g, (_, i) => mathSlots[parseInt(i)] ?? "")
-  html = html.replace(/\x02ENV(\d+)\x03/g,  (_, i) => envSlots[parseInt(i)] ?? "")
+  html = html.replace(/\x02ENV(\d+)\x03/g, (_, i) => envSlots[parseInt(i)] ?? "")
 
   return html
 }
@@ -264,24 +300,23 @@ function preserveParagraphIndentationSource(text: string): string {
     const match = /^([ \t]{2,})(?=\S)/.exec(lines[i])
     if (!match) continue
     const spaces = match[1].replace(/\t/g, "    ").length
-    lines[i] = `<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>` + lines[i].slice(match[1].length)
+    lines[i] =
+      `<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>` +
+      lines[i].slice(match[1].length)
   }
   return lines.join("\n")
 }
 
 function resolveImages(html: string, vaultPath: string): string {
-  return html.replace(
-    /<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g,
-    (match, before, src, after) => {
-      if (/^https?:\/\/|^data:|^blob:/.test(src)) return match
-      const figLabelMatch = /title="fig-label:(fig:[\w:.-]+)"/.exec(before + " " + after)
-      const dataAttr = figLabelMatch ? ` data-fig-label="${figLabelMatch[1]}"` : ""
-      const cleanBefore = before.replace(/\s*title="fig-label:[^"]*"/, "")
-      const cleanAfter = after.replace(/\s*title="fig-label:[^"]*"/, "")
-      const abs = src.startsWith("/") ? src : `${vaultPath}/${src}`
-      return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
-    }
-  )
+  return html.replace(/<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g, (match, before, src, after) => {
+    if (/^https?:\/\/|^data:|^blob:/.test(src)) return match
+    const figLabelMatch = /title="fig-label:(fig:[\w:.-]+)"/.exec(before + " " + after)
+    const dataAttr = figLabelMatch ? ` data-fig-label="${figLabelMatch[1]}"` : ""
+    const cleanBefore = before.replace(/\s*title="fig-label:[^"]*"/, "")
+    const cleanAfter = after.replace(/\s*title="fig-label:[^"]*"/, "")
+    const abs = src.startsWith("/") ? src : `${vaultPath}/${src}`
+    return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
+  })
 }
 
 // ── Source-line annotation (preview ↔ editor sync) ──────────────────────────
@@ -290,23 +325,25 @@ const SOURCE_KEY_LEN = 40
 
 /** Strip markdown noise so a line's first 40 chars match its rendered text. */
 function normalizeSourceKey(s: string): string {
-  return s
-    // List bullets and task-list markers
-    .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
-    // Blockquote markers (also "> [!callout]")
-    .replace(/^\s*>+\s*(?:\[![\w]+\]\s*)?/, "")
-    // Heading markers
-    .replace(/^\s*#{1,6}\s+/, "")
-    // Table row leading pipe + cell separators
-    .replace(/^\s*\|\s*/, "")
-    // Common markdown emphasis / wikilink delimiters
-    .replace(/[*_`~|]+/g, "")
-    .replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, SOURCE_KEY_LEN)
+  return (
+    s
+      // List bullets and task-list markers
+      .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
+      // Blockquote markers (also "> [!callout]")
+      .replace(/^\s*>+\s*(?:\[![\w]+\]\s*)?/, "")
+      // Heading markers
+      .replace(/^\s*#{1,6}\s+/, "")
+      // Table row leading pipe + cell separators
+      .replace(/^\s*\|\s*/, "")
+      // Common markdown emphasis / wikilink delimiters
+      .replace(/[*_`~|]+/g, "")
+      .replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, SOURCE_KEY_LEN)
+  )
 }
 
 /** Pick the rendered-text key for a DOM element (first 40 chars, normalized). */
@@ -374,7 +411,10 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
     }
     if (inFence) continue
     // Toggle YAML frontmatter (only at very top)
-    if (i === 0 && trimmed === "---") { inFrontmatter = true; continue }
+    if (i === 0 && trimmed === "---") {
+      inFrontmatter = true
+      continue
+    }
     if (inFrontmatter) {
       if (trimmed === "---") inFrontmatter = false
       continue
@@ -507,28 +547,34 @@ function assignHeadingIds(html: string): { html: string; items: HeadingItem[] } 
   const used = new Set<string>()
   const items: HeadingItem[] = []
 
-  const withIds = html.replace(/<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
-    // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
-    const text = inner.replace(/<[^>]+>/g, "").replace(/^\s*\d+(?:\.\d+)*\s+/, "").trim()
-    if (!text) return full
+  const withIds = html.replace(
+    /<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g,
+    (full, lvl, attrs, inner) => {
+      // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
+      const text = inner
+        .replace(/<[^>]+>/g, "")
+        .replace(/^\s*\d+(?:\.\d+)*\s+/, "")
+        .trim()
+      if (!text) return full
 
-    const existing = /\sid="([^"]+)"/.exec(attrs)
-    if (existing) {
-      used.add(existing[1])
-      items.push({ level: Number(lvl), text, slug: existing[1] })
-      return full
-    }
+      const existing = /\sid="([^"]+)"/.exec(attrs)
+      if (existing) {
+        used.add(existing[1])
+        items.push({ level: Number(lvl), text, slug: existing[1] })
+        return full
+      }
 
-    let slug = slugifyHeading(text) || "section"
-    if (used.has(slug)) {
-      let k = 2
-      while (used.has(`${slug}-${k}`)) k++
-      slug = `${slug}-${k}`
-    }
-    used.add(slug)
-    items.push({ level: Number(lvl), text, slug })
-    return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
-  })
+      let slug = slugifyHeading(text) || "section"
+      if (used.has(slug)) {
+        let k = 2
+        while (used.has(`${slug}-${k}`)) k++
+        slug = `${slug}-${k}`
+      }
+      used.add(slug)
+      items.push({ level: Number(lvl), text, slug })
+      return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
+    },
+  )
 
   return { html: withIds, items }
 }
@@ -655,13 +701,23 @@ export function renderMarkdown(
 
   // Guarded like `maskCodeRegions`: most documents have no task list, and
   // this is a full split/scan/join of the whole document per render.
-  if (withRefs.includes("- [")) withRefs = withRefs.split('\n').map((line, i) => {
-    if (/^(\s*)-\s\[ \]/.test(line))
-      return line.replace(/^(\s*)-\s\[ \]/, `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}">`)
-    if (/^(\s*)-\s\[x\]/i.test(line))
-      return line.replace(/^(\s*)-\s\[x\]/i, `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}" checked>`)
-    return line
-  }).join('\n')
+  if (withRefs.includes("- ["))
+    withRefs = withRefs
+      .split("\n")
+      .map((line, i) => {
+        if (/^(\s*)-\s\[ \]/.test(line))
+          return line.replace(
+            /^(\s*)-\s\[ \]/,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}">`,
+          )
+        if (/^(\s*)-\s\[x\]/i.test(line))
+          return line.replace(
+            /^(\s*)-\s\[x\]/i,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}" checked>`,
+          )
+        return line
+      })
+      .join("\n")
 
   withRefs = preprocessCallouts(withRefs)
 
@@ -687,7 +743,8 @@ export function renderMarkdown(
     html = resolved.text
     citedKeys = resolved.citedKeys
   }
-  const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap, citeStyle) : ""
+  const bibHtml =
+    bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap, citeStyle) : ""
 
   // Assign heading ids for navigation (always; `@sec:` anchors must resolve in
   // documents with no TOC), then expand the `[[toc]]` placeholder against them.

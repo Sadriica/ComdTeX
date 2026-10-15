@@ -3,7 +3,8 @@ import { exportToObsidianMarkdown } from "./obsidianExport"
 
 describe("exportToObsidianMarkdown", () => {
   it("removes structural labels from visible markdown", () => {
-    const input = "# Intro {#sec:intro}\n\n$$x$$ {#eq:x}\n\n| A |\n|---|\n| 1 |\n{#tbl:a}\n\nVer @eq:x"
+    const input =
+      "# Intro {#sec:intro}\n\n$$x$$ {#eq:x}\n\n| A |\n|---|\n| 1 |\n{#tbl:a}\n\nVer @eq:x"
     const output = exportToObsidianMarkdown(input)
 
     expect(output).toContain("# Intro")

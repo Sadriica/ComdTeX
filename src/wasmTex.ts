@@ -119,7 +119,7 @@ export class WasmTexEngine {
           return
         }
         if (data.type === "init_error") {
-          reject(new Error(((data as { error?: string }).error) || "engine init failed"))
+          reject(new Error((data as { error?: string }).error || "engine init failed"))
           return
         }
       }
@@ -144,7 +144,11 @@ export class WasmTexEngine {
     ready.catch(() => {
       if (this.ready === ready) {
         this.ready = null
-        try { this.worker?.terminate() } catch { /* ignore */ }
+        try {
+          this.worker?.terminate()
+        } catch {
+          /* ignore */
+        }
         this.worker = null
       }
     })
@@ -208,7 +212,11 @@ export class WasmTexEngine {
     this.disposed = true
     for (const [, p] of this.pending) p.reject(new Error("disposed"))
     this.pending.clear()
-    try { this.worker?.terminate() } catch { /* ignore */ }
+    try {
+      this.worker?.terminate()
+    } catch {
+      /* ignore */
+    }
     this.worker = null
     this.ready = null
   }
@@ -218,7 +226,7 @@ export class WasmTexEngine {
     if (!data || typeof data !== "object") return
     if (data.type === "progress" && typeof data.id === "string") {
       const pending = this.pending.get(data.id)
-      pending?.onProgress?.(((data as { message?: string }).message) || "")
+      pending?.onProgress?.((data as { message?: string }).message || "")
       return
     }
     if (data.type === "result" && typeof data.id === "string") {
@@ -231,11 +239,12 @@ export class WasmTexEngine {
         log: string
         synctex?: string | null
       }
-      const pdf = payload.pdf == null
-        ? null
-        : payload.pdf instanceof Uint8Array
-          ? payload.pdf
-          : new Uint8Array(payload.pdf as ArrayBuffer)
+      const pdf =
+        payload.pdf == null
+          ? null
+          : payload.pdf instanceof Uint8Array
+            ? payload.pdf
+            : new Uint8Array(payload.pdf as ArrayBuffer)
       pending.resolve({
         status: payload.status,
         pdf,
@@ -267,7 +276,11 @@ export function getSharedWasmTexEngine(opts: WasmTexInitOptions = {}): {
 /** For tests. */
 export function _resetSharedEngine() {
   if (shared) {
-    try { shared.dispose() } catch { /* ignore */ }
+    try {
+      shared.dispose()
+    } catch {
+      /* ignore */
+    }
   }
   shared = null
 }

@@ -32,13 +32,23 @@ export function countMatches(text: string, re: RegExp): number {
  * to one), silently corrupting text such as LaTeX math or prices; a function
  * replacer inserts exactly what the user typed.
  */
-export function replaceWith(text: string, re: RegExp, replacement: string, opts?: SearchReplaceOptions): string {
+export function replaceWith(
+  text: string,
+  re: RegExp,
+  replacement: string,
+  opts?: SearchReplaceOptions,
+): string {
   // No options at all keeps the old string semantics for old callers; every
   // real call site passes the user's options and gets literal mode.
   return !opts || opts.regex ? text.replace(re, replacement) : text.replace(re, () => replacement)
 }
 
-export function replaceMatches(text: string, re: RegExp, replacement: string, opts?: SearchReplaceOptions) {
+export function replaceMatches(
+  text: string,
+  re: RegExp,
+  replacement: string,
+  opts?: SearchReplaceOptions,
+) {
   const count = countMatches(text, re)
   return {
     count,
@@ -59,7 +69,13 @@ function absoluteIndexFromLineOffset(text: string, line: number, offset: number)
   return lines.slice(0, line - 1).reduce((sum, current) => sum + current.length + 1, 0) + offset
 }
 
-export function replaceMatchAt(text: string, re: RegExp, replacement: string, target: SearchReplaceTarget, opts?: SearchReplaceOptions) {
+export function replaceMatchAt(
+  text: string,
+  re: RegExp,
+  replacement: string,
+  target: SearchReplaceTarget,
+  opts?: SearchReplaceOptions,
+) {
   const start = absoluteIndexFromLineOffset(text, target.line, target.matchStart)
   if (start < 0) return { count: 0, content: text }
 

@@ -23,9 +23,14 @@ function extractBraces(text: string, start: number): string {
   let result = ""
   while (i < text.length) {
     const ch = text[i]
-    if (ch === "{") { depth++; if (depth > 1) result += ch }
-    else if (ch === "}") { depth--; if (depth === 0) break; result += ch }
-    else if (depth > 0) result += ch
+    if (ch === "{") {
+      depth++
+      if (depth > 1) result += ch
+    } else if (ch === "}") {
+      depth--
+      if (depth === 0) break
+      result += ch
+    } else if (depth > 0) result += ch
     i++
   }
   return result
@@ -64,7 +69,11 @@ export function parseBibtex(src: string): Map<string, BibEntry> {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 // ── Citation rendering ────────────────────────────────────────────────────────
@@ -92,13 +101,13 @@ export function resolveCitations(
       : `Clave no encontrada: ${key}`
     const noteStr = note ? `, ${esc(note)}` : ""
     const entry = bibMap.get(key)
-    const marker = entry
-      ? style.inText({ type: entry.type, fields: entry.fields, n })
-      : `[${n}]`
+    const marker = entry ? style.inText({ type: entry.type, fields: entry.fields, n }) : `[${n}]`
     // Numbered styles ride as superscript; author-year sits inline, which is
     // how those venues actually print it.
     const body = noteStr
-      ? marker.replace(/([\])])?$/, "") + noteStr + (marker.endsWith("]") || marker.endsWith(")") ? marker.slice(-1) : "")
+      ? marker.replace(/([\])])?$/, "") +
+        noteStr +
+        (marker.endsWith("]") || marker.endsWith(")") ? marker.slice(-1) : "")
       : marker
     const link = `<a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">${esc(body)}</a>`
     return style.numbered ? `<sup>${link}</sup>` : link
@@ -115,7 +124,8 @@ function formatAuthors(raw: string): string {
     .split(/\s+and\s+/i)
     .map((a) => {
       const parts = a.split(",").map((s) => s.trim())
-      if (parts.length >= 2 && parts[1].trim().length > 0) return `${parts[0]}, ${parts[1].trim()[0]}.`
+      if (parts.length >= 2 && parts[1].trim().length > 0)
+        return `${parts[0]}, ${parts[1].trim()[0]}.`
       return parts[0]
     })
     .join("; ")
@@ -128,7 +138,9 @@ function formatEntry(entry: BibEntry, n: number, style: CiteStyle = CITE_STYLES.
       `<div class="bib-entry" id="bib-${esc(entry.key)}">`,
       style.numbered ? `<span class="bib-number">${n}.</span>` : "",
       `<span class="bib-content">${esc(text)}</span></div>`,
-    ].filter(Boolean).join("\n")
+    ]
+      .filter(Boolean)
+      .join("\n")
   }
   return formatEntryDefault(entry, n)
 }
@@ -142,7 +154,8 @@ function formatEntryDefault(entry: BibEntry, n: number): string {
   let source = ""
   if (entry.type === "article") {
     source = [f.journal, f.volume ? `vol. ${f.volume}` : "", f.pages ? `pp. ${f.pages}` : ""]
-      .filter(Boolean).join(", ")
+      .filter(Boolean)
+      .join(", ")
   } else if (entry.type === "book") {
     source = [f.publisher, f.address].filter(Boolean).join(", ")
   } else if (entry.type === "inproceedings" || entry.type === "incollection") {
@@ -169,7 +182,8 @@ export function renderBibliography(
   const items = citedKeys
     .map((key, i) => {
       const entry = bibMap.get(key)
-      if (!entry) return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] Referencia no encontrada: <code>${key}</code></div>`
+      if (!entry)
+        return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] Referencia no encontrada: <code>${key}</code></div>`
       return formatEntry(entry, i + 1, style)
     })
     .join("\n")

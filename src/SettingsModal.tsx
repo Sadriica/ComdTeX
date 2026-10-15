@@ -29,14 +29,25 @@ interface SettingsModalProps {
 
 type SectionId = "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "ai" | "sync"
 
-export default function SettingsModal({ open, settings, initialSection, cloudProvider, syncPosture, onOpenGit, onClose, onChange }: SettingsModalProps) {
+export default function SettingsModal({
+  open,
+  settings,
+  initialSection,
+  cloudProvider,
+  syncPosture,
+  onOpenGit,
+  onClose,
+  onChange,
+}: SettingsModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   // Initialize from the requested section. The parent passes a `key` derived
   // from `initialSection` so this component remounts (and re-runs this lazy
   // initializer) whenever it should jump to a different section.
-  const [section, setSection] = useState<SectionId>(() => (initialSection as SectionId) ?? "general")
+  const [section, setSection] = useState<SectionId>(
+    () => (initialSection as SectionId) ?? "general",
+  )
   // The ADS token is a credential: it lives in the OS keychain via
   // secretStore, never in the settings JSON alongside preferences.
   const [adsToken, setAdsToken] = useState("")
@@ -48,35 +59,55 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   const [aiChecking, setAiChecking] = useState(false)
   useEffect(() => {
     let alive = true
-    getSecret("ads_token").then((v) => { if (alive && v) setAdsToken(v) }).catch(() => {})
-    return () => { alive = false }
+    getSecret("ads_token")
+      .then((v) => {
+        if (alive && v) setAdsToken(v)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
   }, [])
   const aiCheckMessage = (check: AiCheck): string => {
     switch (check.code) {
-      case "ok": return t.aiSettings.testOk
-      case "incomplete": return t.aiSettings.testIncomplete
-      case "bad-url": return t.aiSettings.testBadUrl
-      case "unauthorized": return t.aiSettings.testUnauthorized
-      case "no-model": return t.aiSettings.testNoModel
-      case "unreachable": return t.aiSettings.testUnreachable
-      default: return t.aiSettings.testFailed
+      case "ok":
+        return t.aiSettings.testOk
+      case "incomplete":
+        return t.aiSettings.testIncomplete
+      case "bad-url":
+        return t.aiSettings.testBadUrl
+      case "unauthorized":
+        return t.aiSettings.testUnauthorized
+      case "no-model":
+        return t.aiSettings.testNoModel
+      case "unreachable":
+        return t.aiSettings.testUnreachable
+      default:
+        return t.aiSettings.testFailed
     }
   }
 
   const cs = t.cloudSync.settings
   const postureText =
-    syncPosture === "git-shared" ? cs.postureGitShared
-    : syncPosture === "git-local" ? cs.postureGitLocal
-    : syncPosture === "git-in-cloud" ? cs.postureGitInCloud
-    : syncPosture === "cloud-only" ? cs.postureCloudOnly
-    : cs.postureLocalOnly
+    syncPosture === "git-shared"
+      ? cs.postureGitShared
+      : syncPosture === "git-local"
+        ? cs.postureGitLocal
+        : syncPosture === "git-in-cloud"
+          ? cs.postureGitInCloud
+          : syncPosture === "cloud-only"
+            ? cs.postureCloudOnly
+            : cs.postureLocalOnly
   const postureAlarming = syncPosture === "git-in-cloud"
   const step = syncPosture ? nextStep(syncPosture) : null
   const postureStep =
-    step === "move-out-of-cloud" ? cs.stepMoveOutOfCloud
-    : step === "add-remote" ? cs.stepAddRemote
-    : step === "start-git" ? cs.stepStartGit
-    : null
+    step === "move-out-of-cloud"
+      ? cs.stepMoveOutOfCloud
+      : step === "add-remote"
+        ? cs.stepAddRemote
+        : step === "start-git"
+          ? cs.stepStartGit
+          : null
 
   useFocusTrap(modalRef, open, onClose)
   if (!open) return null
@@ -112,26 +143,43 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
   // control can. Nothing in the app linked to the documentation before this,
   // so the short text and the long text had no way to reach each other.
   const docsPageFor: Record<SectionId, DocsPage> = {
-    general: "settings", editor: "settings", preview: "settings",
-    dailyNotes: "daily-notes", pdf: "compile-pdf", sync: "collaboration", ai: "ai",
+    general: "settings",
+    editor: "settings",
+    preview: "settings",
+    dailyNotes: "daily-notes",
+    pdf: "compile-pdf",
+    sync: "collaboration",
+    ai: "ai",
   }
   const sectionDocsUrl = docsUrl(docsPageFor[section])
 
   const results = findSettings(query, t)
-  const sectionLabel = (id: SettingsSectionId) =>
-    tabs.find((tab) => tab.id === id)?.label ?? id
+  const sectionLabel = (id: SettingsSectionId) => tabs.find((tab) => tab.id === id)?.label ?? id
 
   const handleResetCloudHints = () => {
-    try { localStorage.removeItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED) } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(STORAGE_KEYS.CLOUD_BANNER_DISMISSED)
+    } catch {
+      /* ignore */
+    }
     showToast(t.cloudSync.settings.resetDismissedDone, "success")
   }
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal settings-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal settings-modal"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <span id={titleId}>{t.settings.title}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>
+            ✕
+          </button>
         </div>
 
         <div className="settings-search">
@@ -198,7 +246,10 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     type="password"
                     value={adsToken}
                     placeholder={t.settings.adsTokenPlaceholder}
-                    onChange={(e) => { setAdsToken(e.target.value); void setSecret("ads_token", e.target.value.trim()) }}
+                    onChange={(e) => {
+                      setAdsToken(e.target.value)
+                      void setSecret("ads_token", e.target.value.trim())
+                    }}
                   />
                 </label>
                 <p className="setting-hint">{t.settings.adsTokenNote}</p>
@@ -234,7 +285,10 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <span>{t.settings.editorFont}</span>
                   <div className="setting-control">
                     <input
-                      type="range" min={11} max={24} step={1}
+                      type="range"
+                      min={11}
+                      max={24}
+                      step={1}
                       value={settings.fontSize}
                       onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
                     />
@@ -265,10 +319,16 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     max="100000"
                     step="100"
                     value={settings.wordGoal}
-                    onChange={(e) => onChange({ wordGoal: Math.max(0, parseInt(e.target.value) || 0) })}
+                    onChange={(e) =>
+                      onChange({ wordGoal: Math.max(0, parseInt(e.target.value) || 0) })
+                    }
                     className="setting-input-num"
                   />
-                  <span className="setting-value">{settings.wordGoal === 0 ? t.settings.wordGoalOff : `${settings.wordGoal} ${t.settings.words}`}</span>
+                  <span className="setting-value">
+                    {settings.wordGoal === 0
+                      ? t.settings.wordGoalOff
+                      : `${settings.wordGoal} ${t.settings.words}`}
+                  </span>
                 </div>
 
                 <label className="setting-row" data-setting="vimMode">
@@ -352,7 +412,8 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                       // Clamp rather than trust the spinner: typing into a number
                       // field bypasses min/max, and 0 would make the estimate NaN.
                       const n = Number(e.target.value)
-                      if (Number.isFinite(n)) onChange({ readingWpm: Math.min(1000, Math.max(50, Math.round(n))) })
+                      if (Number.isFinite(n))
+                        onChange({ readingWpm: Math.min(1000, Math.max(50, Math.round(n))) })
                     }}
                   />
                 </label>
@@ -366,7 +427,10 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <span>{t.settings.previewFont}</span>
                   <div className="setting-control">
                     <input
-                      type="range" min={11} max={24} step={1}
+                      type="range"
+                      min={11}
+                      max={24}
+                      step={1}
                       value={settings.previewFontSize}
                       onChange={(e) => onChange({ previewFontSize: Number(e.target.value) })}
                     />
@@ -409,7 +473,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <span>{t.settings.previewTheme}</span>
                   <select
                     value={settings.previewTheme}
-                    onChange={(e) => onChange({ previewTheme: e.target.value as "dark" | "light" | "same" })}
+                    onChange={(e) =>
+                      onChange({ previewTheme: e.target.value as "dark" | "light" | "same" })
+                    }
                   >
                     <option value="same">{t.settings.previewThemeSame}</option>
                     <option value="dark">{t.settings.dark}</option>
@@ -510,7 +576,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <div className="setting-row">
                     <span>{postureStep}</span>
                     {onOpenGit && (
-                      <button className="setting-btn" onClick={onOpenGit}>{cs.openGit}</button>
+                      <button className="setting-btn" onClick={onOpenGit}>
+                        {cs.openGit}
+                      </button>
                     )}
                   </div>
                 )}
@@ -526,7 +594,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <input
                     type="checkbox"
                     checked={settings.cloudSyncBannerEnabled}
-                    onChange={() => onChange({ cloudSyncBannerEnabled: !settings.cloudSyncBannerEnabled })}
+                    onChange={() =>
+                      onChange({ cloudSyncBannerEnabled: !settings.cloudSyncBannerEnabled })
+                    }
                   />
                 </label>
 
@@ -538,7 +608,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                   <input
                     type="checkbox"
                     checked={settings.cloudSyncDetectEnabled}
-                    onChange={() => onChange({ cloudSyncDetectEnabled: !settings.cloudSyncDetectEnabled })}
+                    onChange={() =>
+                      onChange({ cloudSyncDetectEnabled: !settings.cloudSyncDetectEnabled })
+                    }
                   />
                 </label>
 
@@ -553,7 +625,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                 <label className="setting-row">
                   <span>
                     {t.cloudSync.settings.resetDismissed}
-                    <span className="setting-help">: {t.cloudSync.settings.resetDismissedDesc}</span>
+                    <span className="setting-help">
+                      : {t.cloudSync.settings.resetDismissedDesc}
+                    </span>
                   </span>
                   <button className="setting-btn" onClick={handleResetCloudHints}>
                     {t.cloudSync.settings.resetDismissed}
@@ -581,7 +655,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
                     onChange={(e) => onChange({ aiProviderId: e.target.value })}
                   >
                     {PROVIDER_PRESETS.map((p) => (
-                      <option key={p.id} value={p.id}>{p.label}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -687,7 +763,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
         <div className="settings-footer">
           <button
             className="settings-docs-link"
-            onClick={() => { void openUrl(sectionDocsUrl).catch(() => {}) }}
+            onClick={() => {
+              void openUrl(sectionDocsUrl).catch(() => {})
+            }}
           >
             {t.settings.docsLink} ↗
           </button>

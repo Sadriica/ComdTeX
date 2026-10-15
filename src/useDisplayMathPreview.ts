@@ -52,7 +52,10 @@ const mathHtmlCache = new Map<string, string | null>()
 let mathHtmlCacheMacros: KatexMacros | null = null
 
 function renderMathHtml(expr: string, macros: KatexMacros): string | null {
-  if (macros !== mathHtmlCacheMacros) { mathHtmlCache.clear(); mathHtmlCacheMacros = macros }
+  if (macros !== mathHtmlCacheMacros) {
+    mathHtmlCache.clear()
+    mathHtmlCacheMacros = macros
+  }
   const key = expr.trim()
   const cached = mathHtmlCache.get(key)
   if (cached !== undefined) return cached
@@ -99,13 +102,25 @@ export function setupDisplayMathPreview(
 
   function update() {
     const model = editor.getModel()
-    if (!model) { removeAllZones(); return }
-    if (!getEnabled()) { removeAllZones(); return }
-    try { updateZones(model) } catch {
+    if (!model) {
+      removeAllZones()
+      return
+    }
+    if (!getEnabled()) {
+      removeAllZones()
+      return
+    }
+    try {
+      updateZones(model)
+    } catch {
       // Monaco can throw transient view-zone/layout errors during editor
       // (re)mount or rapid model changes (e.g. "this.domNode.domNode"); reset and
       // carry on instead of surfacing an unhandled error.
-      try { removeAllZones() } catch { /* ignore */ }
+      try {
+        removeAllZones()
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -114,9 +129,7 @@ export function setupDisplayMathPreview(
     const blocks = findDisplayMathBlocks(model)
     const macros = getMacros()
 
-    const toShow = blocks.filter(
-      (b) => !(cursorLine >= b.startLine && cursorLine <= b.endLine),
-    )
+    const toShow = blocks.filter((b) => !(cursorLine >= b.startLine && cursorLine <= b.endLine))
 
     // Build decoration ranges to dim source lines
     const decorationRanges: monacoApi.editor.IModelDeltaDecoration[] = toShow.map((b) => ({
@@ -197,7 +210,10 @@ export function setupDisplayMathPreview(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   const scheduleUpdate = () => {
     if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => { debounceTimer = null; update() }, 140)
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null
+      update()
+    }, 140)
   }
 
   // Defer the first pass: running it synchronously inside onMount (before the
@@ -207,7 +223,10 @@ export function setupDisplayMathPreview(
 
   const d1 = editor.onDidChangeCursorPosition(scheduleUpdate)
   const d2 = editor.onDidChangeModelContent(scheduleUpdate)
-  const d3 = editor.onDidChangeModel(() => { removeAllZones(); scheduleUpdate() })
+  const d3 = editor.onDidChangeModel(() => {
+    removeAllZones()
+    scheduleUpdate()
+  })
 
   return {
     dispose() {
