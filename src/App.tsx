@@ -5,6 +5,7 @@ import type { VimAdapterInstance } from "monaco-vim"
 import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
+import { runGit } from "./gitApi"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath, openUrl } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
@@ -881,10 +882,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     if (!path) { setGitFacts({ isRepo: false, hasRemote: false }); return }
     void (async () => {
       try {
-        const repo = await Command.create("git", ["-C", path, "rev-parse", "--git-dir"]).execute()
+        const repo = await runGit(path, ["rev-parse", "--git-dir"])
         if (cancelled) return
         if (repo.code !== 0) { setGitFacts({ isRepo: false, hasRemote: false }); return }
-        const remote = await Command.create("git", ["-C", path, "remote"]).execute()
+        const remote = await runGit(path, ["remote"])
         if (cancelled) return
         setGitFacts({ isRepo: true, hasRemote: remote.stdout.trim().length > 0 })
       } catch {
