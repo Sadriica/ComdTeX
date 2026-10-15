@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useId } from "react"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
@@ -14,15 +14,16 @@ interface ClosedTabsPopupProps {
 export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: ClosedTabsPopupProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.vault.recentlyClosed}</span>
+          <span id={titleId}>{t.vault.recentlyClosed}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="modal-body" style={{ maxHeight: "300px", overflowY: "auto" }}>

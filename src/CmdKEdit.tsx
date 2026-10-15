@@ -199,7 +199,7 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
       className="cmdk-edit"
       style={{ top: pos.top, left: pos.left }}
       role="dialog"
-      aria-label="Ctrl+K"
+      aria-label={t.ai.cmdk.dialogLabel}
       onKeyDown={onContainerKeyDown}
     >
       <div className="cmdk-edit-row">

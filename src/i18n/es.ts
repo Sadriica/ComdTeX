@@ -507,6 +507,7 @@ export const es: T = {
       summarizeInstr: "Resume el siguiente texto en pocas frases, conservando los resultados matemáticos clave.",
     },
     cmdk: {
+      dialogLabel: "Edición IA en línea (Ctrl+K)",
       placeholderEdit: "Instrucción… (editar la selección)",
       placeholderInsert: "Instrucción… (insertar en el cursor)",
       disabledHint: "Activa el asistente IA en Ajustes",

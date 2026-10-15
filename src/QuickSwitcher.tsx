@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from "react"
+import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 
@@ -16,6 +17,9 @@ export default function QuickSwitcher({ open, files, recentFiles, onSelect, onCl
   const [selected, setSelected] = useState(0)
   const [inputKey, setInputKey] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Escape is handled by the input keydown; the trap only restores focus on close.
+  useFocusTrap(dialogRef, open)
 
   const handleOpen = useCallback(() => {
     setInputKey((k) => k + 1)
@@ -59,12 +63,13 @@ export default function QuickSwitcher({ open, files, recentFiles, onSelect, onCl
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="quick-switcher" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="quick-switcher" ref={dialogRef} role="dialog" aria-modal="true" aria-label={t.quickSwitcher.placeholder} onMouseDown={(e) => e.stopPropagation()}>
         <input
           key={inputKey}
           ref={inputRef}
           type="text"
           placeholder={t.quickSwitcher.placeholder}
+          aria-label={t.quickSwitcher.placeholder}
           value={query}
           onFocus={handleOpen}
           onChange={handleChange}

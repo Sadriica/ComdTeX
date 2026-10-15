@@ -57,6 +57,13 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
         : t.statusBar.texEngineLocal
   return (
     <div className="status-bar">
+      <span
+        role="status"
+        aria-live="polite"
+        style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}
+      >
+        {texEngineState === "compiling" ? t.statusBar.texEngineCompiling : fillingGaps ? t.aiGaps.working : ""}
+      </span>
       <span className="status-left">
         {isDirty && <span className="status-dirty">●</span>}
         {mode && <span className="status-mode">{mode === "tex" ? t.statusBar.modeTex : mode === "pdf" ? "PDF" : mode === "typ" ? "Typst" : t.statusBar.modeMarkdown}</span>}
@@ -109,7 +116,7 @@ export default function StatusBar({ mode, line, col, content, isDirty, macroCoun
           <span className="status-item">{t.statusBar.words(wc)}</span>
         )}
         {fillingGaps && (
-          <span className="status-item status-ai-busy" aria-live="polite">
+          <span className="status-item status-ai-busy">
             <span className="status-ai-spinner" aria-hidden="true">⟳</span> {t.aiGaps.working}
           </span>
         )}

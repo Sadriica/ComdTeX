@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useId } from "react"
 import { loadCustomTemplates, saveCustomTemplate, TEMPLATES, processTemplateVariables } from "./templates"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
@@ -19,6 +19,7 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
   const [templateDescription, setTemplateDescription] = useState("")
   const [templateContent, setTemplateContent] = useState("---\ntitle: {{title}}\ndate: {{date}}\ntags: []\n---\n\n# {{title}}\n")
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
@@ -53,9 +54,9 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.templateModal.title}</span>
+          <span id={titleId}>{t.templateModal.title}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.templateModal.closeAriaLabel}>✕</button>
         </div>
         <div className="modal-body template-body">

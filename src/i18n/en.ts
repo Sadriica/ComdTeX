@@ -507,6 +507,7 @@ export const en: T = {
       summarizeInstr: "Summarize the following text in a few sentences, preserving key mathematical results.",
     },
     cmdk: {
+      dialogLabel: "Inline AI edit (Ctrl+K)",
       placeholderEdit: "Instruction… (edit the selection)",
       placeholderInsert: "Instruction… (insert at the cursor)",
       disabledHint: "Enable the AI assistant in Settings",

@@ -91,7 +91,7 @@ export function useFocusTrap(
 
     return () => {
       container.removeEventListener("keydown", onKeyDown)
-      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+      if (previouslyFocused && previouslyFocused.isConnected && typeof previouslyFocused.focus === "function") {
         try { previouslyFocused.focus() } catch { /* element gone */ }
       }
     }

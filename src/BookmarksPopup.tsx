@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useId } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 import { renderEmptyMessage } from "./emptyStateMessage"
@@ -19,15 +19,16 @@ interface BookmarksPopupProps {
 export default function BookmarksPopup({ open, bookmarks, onGoTo, onRemove, onClose }: BookmarksPopupProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.app.bookmarks}</span>
+          <span id={titleId}>{t.app.bookmarks}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="modal-body">
@@ -43,7 +44,7 @@ export default function BookmarksPopup({ open, bookmarks, onGoTo, onRemove, onCl
               <button className="bookmark-line" onClick={() => { onGoTo(line); onClose() }}>
                 {t.app.line} {line}
               </button>
-              <button className="bookmark-remove" onClick={() => onRemove(slot)} title={t.app.removeBookmark}>×</button>
+              <button className="bookmark-remove" onClick={() => onRemove(slot)} title={t.app.removeBookmark} aria-label={t.app.removeBookmark}>×</button>
             </div>
           ))}
         </div>
