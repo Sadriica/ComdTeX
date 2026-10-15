@@ -1,5 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog"
-import { copyFile, exists, readFile, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
+import { copyFile, exists, mkdir, readFile, readTextFile, remove, writeFile, writeTextFile } from "@tauri-apps/plugin-fs"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { Command } from "@tauri-apps/plugin-shell"
 import { extractAnkiCards, exportAnkiTsv } from "./ankiExport"
@@ -14,6 +14,7 @@ import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import { resolveDocumentContent } from "./documentResolve"
+import { lossyExportWarnings } from "./exportCompatibility"
 import { buildTexLineMap } from "./texLineMap"
 import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
 import { getSharedWasmTexEngine, type WasmTexResult } from "./wasmTex"
@@ -54,6 +55,40 @@ export interface ExportMessages {
   wasmTexUnavailable?: string
   /** Shown after a .tex export copies referenced images and/or references.bib beside it. */
   texAssetsCopied?: (n: number) => string
+  /** Non-blocking heads-up listing what this export loses (exportCompatibility.ts). */
+  lossWarning?: (items: string) => string
+}
+
+/**
+ * Where a throwaway export file goes. The Tauri fs scope covers the vault (granted
+ * at runtime) and only the exact file the user picked in a save dialog, so a
+ * sibling of the chosen output (say on the Desktop) is NOT writable. The vault's
+ * hidden `.comdtex/tmp` dir is; callers still delete the file in `finally`.
+ * Returns an absolute path. Without a vault it falls back to `fallbackDir`.
+ */
+export async function exportTempPath(vaultPath: string | null | undefined, fallbackDir: string, name: string): Promise<string> {
+  let dir = fallbackDir
+  if (vaultPath) {
+    dir = await pathJoin(vaultPath, ".comdtex", "tmp")
+    await mkdir(dir, { recursive: true })
+  }
+  return pathJoin(dir, `${Date.now().toString(36)}-${name}`)
+}
+
+/**
+ * Tell the user, once and without blocking, what the target format will lose
+ * or degrade (see exportCompatibility.ts). The export proceeds regardless.
+ */
+export function warnLossyExport(
+  markdown: string,
+  target: "latex" | "obsidian",
+  format: ((items: string) => string) | undefined,
+  toast: (message: string, kind?: "success" | "error" | "info", duration?: number) => void,
+) {
+  if (!format) return
+  const items = lossyExportWarnings(markdown, target)
+  if (items.length === 0) return
+  toast(format(items.slice(0, 3).join("; ")), "info", 7000)
 }
 
 export interface AnkiExportMessages {
@@ -584,6 +619,7 @@ export async function exportPdf(ctx: ExportActionsContext) {
 
   try {
     ctx.toast(ctx.messages.generatingPdf, "info")
+    warnLossyExport(content, "latex", ctx.messages.lossWarning, ctx.toast)
     const tempInputPath = `${currentFile.path}.comdtex-export.tmp.md`
     await writeTextFile(tempInputPath, toPandocMarkdownInput(pandocContent))
 
@@ -668,6 +704,9 @@ export async function backupVault(ctx: ExportActionsContext) {
   if (!outPath) return
   try {
     const vaultName = pathBasename(ctx.vaultPath) || "vault"
+    // `zip -r` ADDS to an existing archive; the save dialog already confirmed the
+    // overwrite, so start from nothing or stale entries survive in the backup.
+    if (await exists(outPath).catch(() => false)) await remove(outPath)
     const result = await Command.create("zip", ["-r", outPath, vaultName], { cwd: ctx.vaultPath + "/.." }).execute()
     if (result.code !== 0) throw new Error(result.stderr)
     ctx.toast(ctx.messages.backupSuccess, "success")
@@ -798,6 +837,7 @@ export async function importDocument(ctx: ImportActionsContext) {
 }
 
 export interface TypstMessages {
+  lossWarning?: (items: string) => string
   pandocMissing: string
   typstMissing: string
   generating: string
@@ -809,6 +849,8 @@ export interface TypstMessages {
 
 export interface TypstExportContext {
   activeFile: ActiveDocument | null
+  /** Vault root; export temp files live under its `.comdtex/tmp`. */
+  vaultPath?: string | null
   deps: { pandoc?: boolean; zip?: boolean; typst?: boolean } | null
   dialogTitle: string
   messages: TypstMessages
@@ -876,7 +918,8 @@ export async function exportTypst(ctx: TypstExportContext) {
     defaultPath: file.name.replace(/\.[^.]+$/, ".typ"),
   })
   if (!outPath) return
-  const tmpPath = await pathJoin(pathDirname(outPath) || ".", `${pathBasename(outPath)}.comdtex-typst.tmp.md`)
+  warnLossyExport(content, "latex", ctx.messages.lossWarning, ctx.toast)
+  const tmpPath = await exportTempPath(ctx.vaultPath, pathDirname(file.path) || ".", "typst.tmp.md")
   try {
     ctx.toast(ctx.messages.generating, "info")
     await writeTextFile(tmpPath, toPandocMarkdownInput(content))
@@ -912,10 +955,9 @@ export async function exportTypstPdf(ctx: TypstExportContext) {
     defaultPath: file.name.replace(/\.[^.]+$/, ".pdf"),
   })
   if (!outPath) return
-  const dir = pathDirname(outPath) || "."
-  const base = pathBasename(outPath).replace(/\.[^.]+$/, "")
-  const tmpMd = await pathJoin(dir, `${base}.comdtex-typst.tmp.md`)
-  const tmpTyp = await pathJoin(dir, `${base}.comdtex-typst.tmp.typ`)
+  warnLossyExport(content, "latex", ctx.messages.lossWarning, ctx.toast)
+  const tmpMd = await exportTempPath(ctx.vaultPath, pathDirname(file.path) || ".", "typst.tmp.md")
+  const tmpTyp = tmpMd.replace(/\.md$/, ".typ")
   try {
     ctx.toast(ctx.messages.generating, "info")
     await writeTextFile(tmpMd, toPandocMarkdownInput(content))

@@ -735,6 +735,7 @@ export const en: T = {
     exportBeamerError: "Beamer export failed",
     backupSuccess: "Backup created",
     backupError: "Backup failed",
+    exportLossWarning: (items) => `This export will lose or degrade: ${items}`,
     copiedHtml: "HTML copied",
     copiedLatex: "LaTeX copied",
     copyError: "Copy failed",

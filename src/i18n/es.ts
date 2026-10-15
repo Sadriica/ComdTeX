@@ -736,6 +736,7 @@ export const es: T = {
     exportBeamerError: "Error al exportar presentación",
     backupSuccess: "Backup creado",
     backupError: "Error al crear backup",
+    exportLossWarning: (items) => `Esta exportación perderá o degradará: ${items}`,
     copiedHtml: "HTML copiado",
     copiedLatex: "LaTeX copiado",
     copyError: "Error al copiar",

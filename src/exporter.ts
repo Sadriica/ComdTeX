@@ -72,18 +72,76 @@ function calloutColorFor(type: string): string {
 
 // ── LaTeX escaping ────────────────────────────────────────────────────────────
 
+const TEX_ESCAPES: Record<string, string> = {
+  "\\": "\\textbackslash{}",
+  "&": "\\&",
+  "%": "\\%",
+  "$": "\\$",
+  "#": "\\#",
+  "_": "\\_",
+  "{": "\\{",
+  "}": "\\}",
+  "~": "\\textasciitilde{}",
+  "^": "\\textasciicircum{}",
+}
+
+/** Single pass over a char map: a sequential replace chain would re-escape the
+ *  braces of the `\textbackslash{}` it had just produced. */
 export function escTex(text: string): string {
-  return text
-    .replace(/\\/g, "\\textbackslash{}")
-    .replace(/&/g, "\\&")
-    .replace(/%/g, "\\%")
-    .replace(/\$/g, "\\$")
-    .replace(/#/g, "\\#")
-    .replace(/_/g, "\\_")
-    .replace(/\{/g, "\\{")
-    .replace(/\}/g, "\\}")
-    .replace(/~/g, "\\textasciitilde{}")
-    .replace(/\^/g, "\\textasciicircum{}")
+  return text.replace(/[\\&%$#_{}~^]/g, ch => TEX_ESCAPES[ch])
+}
+
+/** Escape a URL for hyperref's `\href` first argument. Backslash and braces
+ *  are percent-encoded (they would unbalance or inject); the rest are escaped. */
+export function escHref(url: string): string {
+  return url
+    .replace(/[\\{}]/g, ch => "\\%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"))
+    .replace(/(?<!\\)[%#&~_^$]/g, ch => "\\" + ch)
+}
+
+// Languages the `listings` package ships definitions for, keyed by the
+// lowercase aliases people write after the fence. Anything not listed gets no
+// `language=` option: an unknown one is a hard package error, which aborts a
+// -halt-on-error PDF export.
+const LISTINGS_LANGS: Record<string, string> = {
+  c: "C", "c++": "C++", cpp: "C++", cxx: "C++", java: "Java",
+  python: "Python", py: "Python", python3: "Python",
+  bash: "bash", sh: "sh", shell: "sh", zsh: "sh", ksh: "ksh", csh: "csh",
+  html: "HTML", xml: "XML", xslt: "XSLT", sql: "SQL", r: "R",
+  ruby: "Ruby", rb: "Ruby", perl: "Perl", pl: "Perl", php: "PHP",
+  haskell: "Haskell", hs: "Haskell", lua: "Lua", matlab: "Matlab",
+  octave: "Octave", tex: "TeX", latex: "TeX", make: "make", makefile: "make",
+  fortran: "Fortran", pascal: "Pascal", prolog: "Prolog", lisp: "Lisp",
+  tcl: "tcl", awk: "Awk", ml: "ML", ocaml: "Caml", caml: "Caml",
+  ada: "Ada", cobol: "Cobol", erlang: "erlang", gnuplot: "Gnuplot",
+  mathematica: "Mathematica", basic: "Basic", vhdl: "VHDL", verilog: "Verilog",
+  postscript: "PostScript", scilab: "Scilab", sas: "SAS", delphi: "Delphi",
+}
+
+/** Map a fence info string to a listings language name, or null. */
+export function listingsLanguage(info: string): string | null {
+  const first = info.trim().split(/[\s{]/)[0]?.toLowerCase() ?? ""
+  return Object.prototype.hasOwnProperty.call(LISTINGS_LANGS, first) ? LISTINGS_LANGS[first] : null
+}
+
+/** A fenced code block as LaTeX. A body containing the environment's own end
+ *  delimiter would break out of it into live LaTeX (`\input` and friends), so
+ *  pick an environment whose delimiter is absent, and as a last resort defuse
+ *  the delimiter. */
+export function codeBlockToTex(body: string, info = ""): string {
+  const text = body.endsWith("\n") ? body : body + "\n"
+  const END_LST = "\\end{lstlisting}"
+  const END_VERB = "\\end{verbatim}"
+  if (!text.includes(END_LST)) {
+    const lang = listingsLanguage(info)
+    const opt = lang ? `[language=${lang}]` : ""
+    return `\\begin{lstlisting}${opt}\n${text}\\end{lstlisting}\n`
+  }
+  if (!text.includes(END_VERB)) {
+    return `\\begin{verbatim}\n${text}\\end{verbatim}\n`
+  }
+  const defused = text.split(END_LST).join("\\end {lstlisting}")
+  return `\\begin{lstlisting}\n${defused}\\end{lstlisting}\n`
 }
 
 function refToTex(prefix: string, id: string): string {
@@ -230,7 +288,7 @@ function inlineToTex(tokens: Token[], footnotes: Map<number, string> = new Map()
       // markdown-it-mark: `==text==` → \hl{} (soul package).
       case "mark_open":     out += "\\hl{"; break
       case "mark_close":    out += "}"; break
-      case "link_open":    out += `\\href{${tok.attrGet("href") ?? ""}}{`; break
+      case "link_open":    out += `\\href{${escHref(tok.attrGet("href") ?? "")}}{`; break
       case "link_close":   out += "}"; break
       case "image":
         {
@@ -327,17 +385,11 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: 
 
       // ── Code ──────────────────────────────────────────────────────────────
       case "code_block":
-        out.push(`\\begin{verbatim}\n${tok.content}\\end{verbatim}\n`)
+        out.push(codeBlockToTex(tok.content))
         break
-      case "fence": {
-        const lang = tok.info.trim()
-        if (lang) {
-          out.push(`\\begin{lstlisting}[language=${lang}]\n${tok.content}\\end{lstlisting}\n`)
-        } else {
-          out.push(`\\begin{lstlisting}\n${tok.content}\\end{lstlisting}\n`)
-        }
+      case "fence":
+        out.push(codeBlockToTex(tok.content, tok.info))
         break
-      }
 
       // ── HR ────────────────────────────────────────────────────────────────
       case "hr":
@@ -801,6 +853,28 @@ function pickRevealTheme(raw: unknown): RevealTheme {
     : "black"
 }
 
+/** Split on a `---` line, but never inside a fenced code block. */
+export function splitSlides(body: string): string[] {
+  const slides: string[] = []
+  let cur: string[] = []
+  let fence: { ch: string; len: number } | null = null
+  for (const line of body.split("\n")) {
+    const f = /^ {0,3}(`{3,}|~{3,})/.exec(line)
+    if (f) {
+      if (!fence) fence = { ch: f[1][0], len: f[1].length }
+      else if (f[1][0] === fence.ch && f[1].length >= fence.len && /^ {0,3}[`~]+\s*$/.test(line)) fence = null
+    }
+    if (!fence && line === "---") {
+      slides.push(cur.join("\n"))
+      cur = []
+    } else {
+      cur.push(line)
+    }
+  }
+  slides.push(cur.join("\n"))
+  return slides
+}
+
 export function exportReveal(rawMarkdown: string, title: string): string {
   // Keep marks are editor-only: collapse them to plain text so no `^^`
   // ever reaches a slide. See keepMarks.ts.
@@ -813,7 +887,7 @@ export function exportReveal(rawMarkdown: string, title: string): string {
     : undefined
   const theme = pickRevealTheme(fmTheme)
 
-  const slides = body.split(/\n---\n/)
+  const slides = splitSlides(body)
 
   // Guard against breaking out of the <textarea data-template> wrapper: a literal
   // </textarea> in slide content would end the template early. Reveal's markdown
@@ -830,8 +904,8 @@ export function exportReveal(rawMarkdown: string, title: string): string {
 <head>
   <meta charset="utf-8">
   <title>${safeTitle}</title>
-  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
-  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/${theme}.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.1.0/dist/theme/${theme}.css">
 </head>
 <body>
   <div class="reveal">
@@ -839,10 +913,10 @@ export function exportReveal(rawMarkdown: string, title: string): string {
 ${slideHtml}
     </div>
   </div>
-  <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/markdown/markdown.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/highlight/highlight.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/math/math.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/math/math.js"></script>
   <script>
     Reveal.initialize({
       hash: true,
