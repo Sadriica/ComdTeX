@@ -3,6 +3,35 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.29.1] - 2026-10-15
+
+### Fixed
+- **Opening a Markdown note no longer destroys its tables.** A pipe table with rows was rewritten on open into a header-only shorthand, and the next autosave wrote back the header and nothing else. Tables with rows are now left as they are, and nothing inside a code block or inline code is ever treated as a table.
+- **Saving keeps what a note says about itself.** Environment labels such as `{#thm:pyth}` were dropped on save, so every `@thm:pyth` reference broke on the next autosave. Callouts also lost their fold marker (`-` or `+`) and any type the app did not know (`danger`, `quote`) became a plain note. All of them now survive a save and a reopen, checked by a round-trip test over forty fixtures.
+- **Closing a tab whose save failed no longer throws your edits away.** A full disk, a read-only file or a cancelled conflict prompt made the save fail quietly and the tab closed anyway. The tab now stays open and says why.
+- **Rename, move and create no longer overwrite an existing file.** Dragging a note onto a folder that already held one with the same name replaced it. The app now refuses and says so. Open tabs inside a renamed or moved folder follow it, and renaming a file without typing its extension keeps the old one instead of hiding the file from the tree.
+- **Unsaved edits are written before you switch or create a vault**, instead of being dropped with the old tab list.
+- **Replace across the vault inserts exactly what you typed.** `$$`, `$&` and `$1` were expanded even with regular expressions off, so replacing with display math wrote `$x$` into every file. It also overwrote unsaved edits in open tabs with the disk copy; it now applies to the text you see.
+- **Recovered drafts no longer overwrite newer files.** A draft is restored only if it is newer than the file on disk, and a restored draft is saved again. Open tabs are restored on restart again: the tab list was being cleared on startup before it could be read.
+- A character deleted right after a pause could stay on disk while the editor no longer showed it, and ticking a checkbox in the preview reset the undo history and could undo recent typing. Both now work from the editor's live text.
+- **Exports that broke on ordinary notes.** A code block in a language LaTeX does not know (JSON, YAML, Mermaid) failed the PDF export, and code could end its own block early. Backslashes printed as `\{}`, and a link containing `%` commented out the rest of the line. DOCX, Beamer and Typst exports to a folder outside the vault, such as the Desktop, failed on a temporary file; temporary files now live in a hidden `.comdtex/tmp` folder inside the vault. A vault backup over an existing zip replaces it instead of adding to it, and Reveal.js slides no longer split inside code blocks and load a fixed reveal.js version.
+- **Exports say what they will lose.** The compatibility check that only the Document Lab panel used now runs before exporting, and a short notice lists the features the target format cannot keep. The export still goes ahead.
+- **Opening an exported file or a backup from the app works.** The permission to open a path was missing, so successful Beamer, HTML and backup exports reported failure.
+- The Git panel handles files with spaces or accents in their names, and renamed files, and tells apart "git is not installed", "this folder is not a repository" and any other git error, which it now shows instead of claiming git is missing.
+
+### Security
+- **The preview no longer accepts page-wide styles, overlays or forms from a note.** A `<style>` block could hide the interface, an element with a fixed position could cover it, and a form could pose as a login prompt. They are removed, while math, diagrams and task checkboxes keep working.
+- **Links in the preview open in your browser** instead of replacing the app window, and the app refuses any navigation away from its own pages.
+- **Opening a cloned repository as a vault cannot run its code.** Git runs with `core.fsmonitor`, hooks and the `ext::` transport disabled for every command the app issues. This also means your own git hooks do not run on commits made from the Git panel; commit from a terminal if you rely on them.
+- Choosing the filesystem root, your home folder or a system folder as a vault is refused by the desktop layer too, not only by the interface.
+- Dependencies updated to clear the production audit findings: DOMPurify 3.4.17, markdown-it 14.3, KaTeX 0.19, pdf.js 6, Mermaid 11.17 and the Tauri plugins, with the Rust crates matched to them. One finding remains, in a build-time dependency of Excalidraw that has no fix upstream.
+
+### Changed
+- **Faster start.** The Spanish and English spelling dictionaries left the main bundle and load only when spellcheck is on: the main chunk went from 2.2 MB to 0.8 MB.
+- **A crash in one part of the window no longer blanks the whole app.** The preview, the editor and every panel and dialog fail on their own with a Retry button, and the error screen is translated. Uncaught errors are reported once, as a notice, instead of failing silently.
+- **Accessibility.** Every dialog is announced as one, with its name; the quick switcher returns focus where it was; notices and the compile status are read out by screen readers.
+- Releases are built only after lint, type checks, unit tests, clippy and rustfmt pass. Continuous integration also checks formatting and the coverage floor rose to match the real figure.
+
 ## [1.29.0] - 2026-09-28
 
 ### Added
