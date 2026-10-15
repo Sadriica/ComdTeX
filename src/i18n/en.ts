@@ -618,6 +618,7 @@ export const en: T = {
     notRepo: "This folder is not a Git repository.",
     gitNotFoundTitle: "Git not found",
     gitNotFoundHint: "Install Git and restart the application.",
+    statusError: (msg: string) => `Git could not read the status: ${msg}`,
     refresh: "Refresh",
     staged: "Staged changes",
     changes: "Changes",
