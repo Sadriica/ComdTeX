@@ -54,13 +54,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Install cargo-audit (prebuilt binary)
+        uses: taiki-e/install-action@v2
         with:
-          workspaces: src-tauri -> target
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+          tool: cargo-audit
 
       - name: Capture cargo audit JSON report
         working-directory: src-tauri

@@ -58,10 +58,10 @@ export default defineConfig(async () => ({
       // the pure-module test wave: ~36% lines / 29% branches / 25% functions
       // with i18n data excluded.
       thresholds: {
-        lines: 30,
-        statements: 28,
-        functions: 19,
-        branches: 24,
+        lines: 47,
+        statements: 45,
+        functions: 34,
+        branches: 40,
       },
     },
   },

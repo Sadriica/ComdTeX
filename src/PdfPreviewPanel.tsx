@@ -135,7 +135,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
     renderTasksRef.current.clear()
 
     if (!pdfPath) {
-      docRef.current?.destroy().catch(() => {})
+      docRef.current?.loadingTask.destroy().catch(() => {})
       docRef.current = null
       return
     }
@@ -148,10 +148,10 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
         const loadingTask = mod.getDocument({ url })
         const doc = await loadingTask.promise
         if (cancelled) {
-          doc.destroy().catch(() => {})
+          doc.loadingTask.destroy().catch(() => {})
           return
         }
-        docRef.current?.destroy().catch(() => {})
+        docRef.current?.loadingTask.destroy().catch(() => {})
         docRef.current = doc
 
         const pageInfos: RenderedPage[] = []
@@ -180,7 +180,7 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
     return () => {
       for (const task of renderTasks.values()) task.cancel()
       renderTasks.clear()
-      docRef.current?.destroy().catch(() => {})
+      docRef.current?.loadingTask.destroy().catch(() => {})
       docRef.current = null
     }
   }, [])

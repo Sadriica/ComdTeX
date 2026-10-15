@@ -76,6 +76,10 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Format check
+        if: matrix.os == 'ubuntu-22.04'
+        run: npm run format:check
+
       - name: Cargo clippy (lint, warnings as errors)
         working-directory: src-tauri
         run: cargo clippy --all-targets -- -D warnings
@@ -83,6 +87,10 @@ jobs:
       - name: Cargo fmt check
         working-directory: src-tauri
         run: cargo fmt -- --check
+
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test
 
       - name: Run tests
         run: npm test -- --run
