@@ -19,13 +19,11 @@
 
 import nspell, { type NSpell } from "nspell"
 
-// Raw Hunspell data. Relative `?raw` imports bypass each package's `exports`
-// map (which only exposes the Node-only ESM entry) and give us plain strings
-// that work in the browser bundle and in the (node) test environment alike.
-import esAff from "../node_modules/dictionary-es/index.aff?raw"
-import esDic from "../node_modules/dictionary-es/index.dic?raw"
-import enAff from "../node_modules/dictionary-en/index.aff?raw"
-import enDic from "../node_modules/dictionary-en/index.dic?raw"
+// Raw Hunspell data, loaded on demand. Relative `?raw` imports bypass each
+// package's `exports` map (which only exposes the Node-only ESM entry) and give
+// us plain strings that work in the browser bundle and in the (node) test
+// environment alike. They are dynamic imports so the 1-2 MB of dictionary text
+// becomes separate chunks that are only fetched when spell-check is used.
 
 export type SpellLang = "es" | "en"
 
@@ -42,9 +40,21 @@ export interface SpellIssue {
 
 // ── Dictionary lifecycle (lazy, async, cached) ─────────────────────────────────
 
-const RAW: Record<SpellLang, { aff: string; dic: string }> = {
-  es: { aff: esAff, dic: esDic },
-  en: { aff: enAff, dic: enDic },
+const RAW_LOADERS: Record<SpellLang, () => Promise<{ aff: string; dic: string }>> = {
+  es: async () => {
+    const [aff, dic] = await Promise.all([
+      import("../node_modules/dictionary-es/index.aff?raw"),
+      import("../node_modules/dictionary-es/index.dic?raw"),
+    ])
+    return { aff: aff.default, dic: dic.default }
+  },
+  en: async () => {
+    const [aff, dic] = await Promise.all([
+      import("../node_modules/dictionary-en/index.aff?raw"),
+      import("../node_modules/dictionary-en/index.dic?raw"),
+    ])
+    return { aff: aff.default, dic: dic.default }
+  },
 }
 
 const checkers: Partial<Record<SpellLang, NSpell>> = {}
@@ -78,8 +88,7 @@ function ensureChecker(lang: SpellLang): Promise<NSpell> {
   const inFlight = loading[lang]
   if (inFlight) return inFlight
 
-  const p = Promise.resolve().then(() => {
-    const { aff, dic } = RAW[lang]
+  const p = RAW_LOADERS[lang]().then(({ aff, dic }) => {
     const checker = nspell(aff, dic)
     checkers[lang] = checker
     delete loading[lang]
