@@ -77,7 +77,6 @@ export default function CitationManager({
 
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEntries(new Map(bibMap))
       setForm(DEFAULT_FORM)
       setError(null)
