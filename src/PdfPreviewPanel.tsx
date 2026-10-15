@@ -175,9 +175,11 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
 
   // Cleanup on unmount.
   useEffect(() => {
+    // The Map is created once and only mutated, so capturing it here is safe.
+    const renderTasks = renderTasksRef.current
     return () => {
-      for (const task of renderTasksRef.current.values()) task.cancel()
-      renderTasksRef.current.clear()
+      for (const task of renderTasks.values()) task.cancel()
+      renderTasks.clear()
       docRef.current?.destroy().catch(() => {})
       docRef.current = null
     }
@@ -229,7 +231,6 @@ export default function PdfPreviewPanel({ pdfPath, onClickSource, synctex, focus
       // resizing: don't surface those.
       const msg = err instanceof Error ? err.name : ""
       if (msg !== "RenderingCancelledException") {
-        // eslint-disable-next-line no-console
         console.warn("pdfjs render failed", err)
       }
     }

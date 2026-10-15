@@ -1401,4 +1401,11 @@ export const en: T = {
       safetyNet: "Safety net for vaults kept in a cloud folder. It never moves or deletes anything on its own: it only points out the conflict copies these services leave behind.",
     },
   },
+  errorBoundary: {
+    title: "Unexpected error",
+    retry: "Retry",
+    unexpectedBackground: "Something went wrong. If it keeps happening, save your work and restart.",
+    regionFailed: (r) => `${r} crashed`,
+    regions: { preview: "Preview", editor: "Editor", panel: "Panel", dialog: "Dialog" },
+  },
 }

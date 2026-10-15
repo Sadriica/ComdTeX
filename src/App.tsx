@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { lazy, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
@@ -93,7 +93,7 @@ import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 import { commitPreview } from "./previewMorph"
 import { handleGlobalShortcut } from "./appShortcuts"
 import { useTouchpadGestures } from "./useTouchpadGestures"
-import ErrorBoundary from "./ErrorBoundary"
+import ErrorBoundary, { LazyRegion } from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
 import { buildSearchRegExp, replaceMatchAt, replaceMatches, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
 import { toEditorContent, toDiskContent } from "./cmdxFormat"
@@ -1572,8 +1572,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     } finally {
       if (costSink) costSink.current = performance.now() - t0
     }
-    // mermaidVersion: included so re-renders that follow a mermaid SVG cache
-    // population read the freshly-stored SVGs and embed them inline.
+    // mermaidVersion / excalidrawVersion: deliberate cache-busters. They are not
+    // read inside the callback; bumping them changes its identity so re-renders
+    // that follow a mermaid/excalidraw SVG cache population read the freshly
+    // stored SVGs and embed them inline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [macros, macrosReady, vault.vaultPath, wikiNames, bibMap, transclusionResolver, envRefResolver, mermaidVersion, excalidrawVersion])
 
   const deferredPreviewContent = useDeferredValue(previewContent)
@@ -3820,7 +3823,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
           onOpenRecent={handleOpenRecent}
         />
-        <Suspense fallback={null}>
+        <LazyRegion region="dialog">
           <SettingsModal
             key={settingsSection ?? "default"}
             open={settingsOpen}
@@ -3837,7 +3840,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             onChange={updateSettings}
           />
           <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
-        </Suspense>
+        </LazyRegion>
       </div>
     )
   }
@@ -3923,7 +3926,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               />
             )}
             {sidebarMode === "searchReplace" && vault.vaultPath && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <SearchReplacePanel
                   vaultPath={vault.vaultPath}
                   onOpenFile={(path, line) => {
@@ -3936,7 +3939,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                   onReplaceInFile={handleReplaceInFile}
                   state={searchReplaceState}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "outline" && (
               <OutlinePanel content={previewContent} editorRef={editorRef} activeLine={cursorPos.line} onReorder={handleOutlineReorder} />
@@ -4014,7 +4017,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               />
             )}
             {sidebarMode === "graph" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <GraphPanel
                   tree={vault.tree}
                   openTabs={vault.openTabs}
@@ -4024,24 +4027,24 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                     if (node) handleOpenFileNode(node)
                   }}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "todo" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <TodoPanel
                   openTabs={vault.openTabs}
                   onNavigate={handleTodoNavigate}
                   onToggle={handleTodoToggle}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "equations" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <EquationsPanel content={vault.openFile?.content ?? ""} editorRef={editorRef} />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "environments" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <EnvironmentsPanel
                   openTabs={vault.openTabs}
                   editorRef={editorRef}
@@ -4051,10 +4054,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                     if (node) handleOpenFileNode(node)
                   }}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "stats" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <VaultStatsPanel
                   tree={vault.tree}
                   openTabs={vault.openTabs}
@@ -4089,12 +4092,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                     }
                   }}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "help" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <HelpPanel />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "symbols" && (
               <SymbolPickerPanel onInsert={(latex) => {
@@ -4105,7 +4108,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               }} />
             )}
             {sidebarMode === "pdfPreview" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <PdfPreviewPanel
                   pdfPath={pdfPath}
                   onClickSource={handlePdfClickSource}
@@ -4113,7 +4116,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                   focusPage={pdfFocusPage}
                   invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "cloudSync" && (
               <CloudSyncPanel
@@ -4126,7 +4129,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               />
             )}
             {sidebarMode === "comments" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <CommentsPanel
                   comments={comments}
                   vaultPath={vault.vaultPath}
@@ -4137,10 +4140,10 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                   onDelete={(id) => { void handleDeleteComment(id) }}
                   onEditBody={(id, body) => { void handleEditCommentBody(id, body) }}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
             {sidebarMode === "ai" && (
-              <Suspense fallback={null}>
+              <LazyRegion region="panel">
                 <AiPanel
                   settings={settings}
                   editor={editorRef.current}
@@ -4149,7 +4152,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                   renderHtml={aiRenderHtml}
                   onOpenSettings={() => { setSettingsSection("ai"); setSettingsOpen(true) }}
                 />
-              </Suspense>
+              </LazyRegion>
             )}
           </div>
           </>
@@ -4193,11 +4196,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             onNavigate={handleBreadcrumbNavigate}
           />
           {vault.openFile?.mode === "pdf" ? (
-            <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+            <LazyRegion region="panel" fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
               <PdfPreviewPanel pdfPath={vault.openFile.path} />
-            </Suspense>
+            </LazyRegion>
           ) : (
-            <Suspense fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+            <LazyRegion region="editor" fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
               <MonacoEditor
                 key={vault.activeTabPath ?? "welcome"}
                 defaultLanguage={vault.openFile?.mode === "tex" ? "latex" : vault.openFile?.mode === "typ" ? "typst" : "markdown"}
@@ -4208,18 +4211,18 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                 theme={settings.theme}
                 options={editorOptions}
               />
-            </Suspense>
+            </LazyRegion>
           )}
           {/* Ctrl/Cmd+K inline AI edit: floating prompt anchored at the selection. */}
           {cmdkAnchor && editorRef.current && (
-            <Suspense fallback={null}>
+            <LazyRegion region="dialog">
               <CmdKEdit
                 settings={settings}
                 editor={editorRef.current}
                 anchor={cmdkAnchor}
                 onClose={() => setCmdkAnchor(null)}
               />
-            </Suspense>
+            </LazyRegion>
           )}
           {/* Vim mode status bar */}
           <div
@@ -4233,6 +4236,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
         {/* ── Preview (suppressed for PDF tabs, where the PDF viewer takes the
              full pane, and for Typst sources, whose preview is the compiled PDF) ── */}
         {settings.previewVisible && vault.openFile?.mode !== "pdf" && vault.openFile?.mode !== "typ" && (
+          <ErrorBoundary region="preview">
           <div
             className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
             id="preview-pane"
@@ -4247,6 +4251,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
               ref={previewContentRef}
             />
           </div>
+          </ErrorBoundary>
         )}
 
         {/* ── Split view: reference panel ── */}
@@ -4337,7 +4342,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
 
       <OnboardingTour open={onboardingOpen} onClose={handleOnboardingClose} />
 
-      <Suspense fallback={null}>
+      <LazyRegion region="dialog">
         <SettingsModal
           key={settingsSection ?? "default"}
           open={settingsOpen}
@@ -4348,11 +4353,11 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           onChange={updateSettings}
         />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
-      </Suspense>
+      </LazyRegion>
 
       <ToastContainer />
 
-      <Suspense fallback={null}>
+      <LazyRegion region="dialog">
         <TemplateModal
           open={templateOpen}
           onClose={() => setTemplateOpen(false)}
@@ -4364,7 +4369,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             and it should not cost the file tree its place on screen. */}
         {focusPopoverOpen && (
           <div className="focus-popover" ref={focusPopoverRef} role="dialog" aria-label={t.sidebar.focusTimer}>
-            <Suspense fallback={null}>
+            <LazyRegion region="dialog">
               <FocusTimerPanel
                 content={vault.openFile?.content ?? ""}
                 config={pomodoroConfig}
@@ -4377,7 +4382,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
                   ...(patch.cyclesBeforeLongBreak !== undefined && { pomodoroCyclesBeforeLongBreak: patch.cyclesBeforeLongBreak }),
                 })}
               />
-            </Suspense>
+            </LazyRegion>
           </div>
         )}
 
@@ -4395,7 +4400,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
           onPersist={handlePersistBib}
           onClose={() => setCitationManagerOpen(false)}
         />
-      </Suspense>
+      </LazyRegion>
       <TableEditor
         open={tableEditorOpen}
         onClose={() => setTableEditorOpen(false)}
@@ -4403,7 +4408,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       />
 
       {excalidraw.open && (
-        <Suspense fallback={null}>
+        <LazyRegion region="dialog">
           <ExcalidrawModal
             open={excalidraw.open}
             sceneB64={excalidraw.sceneB64}
@@ -4411,7 +4416,7 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
             onSave={handleSaveExcalidraw}
             onClose={() => setExcalidraw({ open: false, sceneB64: "", targetLine: null })}
           />
-        </Suspense>
+        </LazyRegion>
       )}
 
       {latexDiagnostics && (
@@ -4422,14 +4427,14 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       )}
 
       {updateInfo?.available && !updaterDismissed && (
-        <Suspense fallback={null}>
+        <LazyRegion region="dialog">
           <UpdateChecker
             updateInfo={updateInfo}
             onInstall={handleInstallUpdate}
             onDismiss={() => setUpdaterDismissed(true)}
             installing={installing}
           />
-        </Suspense>
+        </LazyRegion>
       )}
     </div>
   )

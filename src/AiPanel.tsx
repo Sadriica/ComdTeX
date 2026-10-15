@@ -10,7 +10,7 @@
 // intentionally out of scope for the MVP.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import * as monaco from "monaco-editor"
+import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
 import { sendMessage, getPreset, AiError, warmUp, isAiReady, classifyAiFailure, type ChatMessage } from "./ai/aiProvider"
@@ -239,7 +239,7 @@ export default function AiPanel({
     editor.focus()
     const pos = editor.getPosition()
     const range = pos
-      ? new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column)
+      ? { startLineNumber: pos.lineNumber, startColumn: pos.column, endLineNumber: pos.lineNumber, endColumn: pos.column }
       : editor.getSelection()
     if (!range) return
     editor.executeEdits("ai-insert", [{ range, text, forceMoveMarkers: true }])

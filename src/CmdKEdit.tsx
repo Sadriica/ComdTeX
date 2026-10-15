@@ -15,7 +15,8 @@
 // edits as Monaco diffs so they remain undo-safe) and OS-keychain key storage.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import * as monaco from "monaco-editor"
+import type * as monaco from "monaco-editor"
+import { monaco as monacoRt } from "./monacoRuntime"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
 import { sendInlineEdit, AiError } from "./ai/aiProvider"
@@ -86,7 +87,7 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
     const node = editor.getDomNode()
     if (!visible || !node) { setPos(null); return }
     const rect = node.getBoundingClientRect()
-    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
+    const lineHeight = editor.getOption(monacoRt.editor.EditorOption.lineHeight)
     // Viewport-absolute coordinates (the widget uses position:fixed) so we don't
     // depend on the offset of whichever ancestor it renders into. `visible` is
     // relative to the editor DOM node, so add the node's page rect.
