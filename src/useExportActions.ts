@@ -24,6 +24,8 @@ import {
   compileTypstFilePdf as compileTypstFilePdfAction,
   collectSyncTex,
   bundleTexAssets,
+  exportTempPath,
+  warnLossyExport,
   type SyncTexBundle,
 } from "./exportActions"
 import type { ProjectFile } from "./projectExport"
@@ -81,6 +83,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     })
     if (!path) return
     // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
+    warnLossyExport(editor.getValue(), "obsidian", t.app.exportLossWarning, showToast)
     await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
   }, [t, editorRef])
 
@@ -116,6 +119,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
       } catch { raw = editor.getValue() }
     }
     const content = resolveDocumentContent(raw, transclusionResolver)
+    warnLossyExport(content, "latex", t.app.exportLossWarning, showToast)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const author = fm?.author as string | undefined
@@ -314,7 +318,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
       vaultFiles,
       deps,
       dialogs: { saveAs: "Save as", exportMd: t.app.dialogExportMd, exportTex: t.app.dialogExportTex, exportPdf: t.app.dialogExportPdf, exportReveal: "Export Reveal.js" },
-      messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing },
+      messages: { pandocMissing: t.app.pandocMissing, generatingPdf: t.app.generatingPdf, pdfDone: t.app.pdfDone, pandocError: t.app.pandocError, backupSuccess: t.app.backupSuccess, backupError: t.app.backupError, copiedLatex: t.app.copiedLatex, copyError: t.app.copyError, revealExportSuccess: t.app.revealExportSuccess, revealExportError: t.app.revealExportError, noMainDocument: t.app.noMainDocument, pdfCompiledLocal: t.app.pdfCompiledLocal, compilationFailed: t.app.compilationFailed, zipMissing: t.app.zipMissing, lossWarning: t.app.exportLossWarning },
       readEditorContent: () => editorRef.current?.getValue() ?? null,
       reloadVault: async () => { await vaultRef.current.loadVault?.() },
       resolveTransclusion: transclusionResolver,
@@ -357,11 +361,13 @@ export function useExportActions(ctx: ExportActionsCtx) {
     typstError: t.app.typstError,
     typstPdfSuccess: t.app.typstPdfSuccess,
     typstPdfError: t.app.typstPdfError,
+    lossWarning: t.app.exportLossWarning,
   }), [t])
 
   const handleExportTypst = useCallback(async () => {
     await exportTypstAction({
       activeFile: vaultRef.current.openFile,
+      vaultPath: vaultRef.current.vaultPath,
       deps,
       dialogTitle: t.app.typstExportTitle,
       messages: typstMessages,
@@ -373,6 +379,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
   const handleExportTypstPdf = useCallback(async () => {
     await exportTypstPdfAction({
       activeFile: vaultRef.current.openFile,
+      vaultPath: vaultRef.current.vaultPath,
       deps,
       dialogTitle: t.app.typstExportTitle,
       messages: typstMessages,
@@ -409,18 +416,24 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // extension, so a `.replace(/\.docx$/…)` would be a no-op and tmpPath would
     // equal outPath: pandoc would then read+write the same path and `remove`
     // would delete the user's chosen file, destroying it.
-    const tmpPath = `${outPath}.comdtex-tmp.md`
+    // The temp lives in the vault (writable scope), never beside outPath: the fs
+    // scope only grants the exact file picked in the dialog, so a sibling on the
+    // Desktop would fail to write.
+    let tmpPath: string | null = null
     try {
-      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
+      const source = editorRef.current?.getValue() ?? file.content
+      warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
+      tmpPath = await exportTempPath(vaultRef.current.vaultPath, pathDirname(file.path) || ".", "docx.tmp.md")
+      await writeTextFile(tmpPath, toPandocMarkdownInput(source))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
-      await remove(tmpPath)
       showToast(t.app.exportDocxSuccess, "success")
     } catch (e) {
-      try { await remove(tmpPath) } catch {}
       showToast(t.app.exportDocxError, "error")
       console.error(e)
+    } finally {
+      if (tmpPath) await remove(tmpPath).catch(() => {})
     }
   }, [t, deps, editorRef])
 
@@ -436,19 +449,22 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // Append rather than swap the `.pdf` suffix: see handleExportDocx: an
     // extension-less outPath would otherwise make tmpPath === outPath and the
     // final `remove` would destroy the user's chosen file.
-    const tmpPath = `${outPath}.comdtex-tmp.md`
+    let tmpPath: string | null = null
     try {
-      await writeTextFile(tmpPath, toPandocMarkdownInput(editorRef.current?.getValue() ?? file.content))
+      const source = editorRef.current?.getValue() ?? file.content
+      warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
+      tmpPath = await exportTempPath(vaultRef.current.vaultPath, pathDirname(file.path) || ".", "beamer.tmp.md")
+      await writeTextFile(tmpPath, toPandocMarkdownInput(source))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
-      await remove(tmpPath)
       showToast(t.app.exportBeamerSuccess, "success")
       await openPath(outPath)
     } catch (e) {
-      try { await remove(tmpPath) } catch {}
       showToast(t.app.exportBeamerError, "error")
       console.error(e)
+    } finally {
+      if (tmpPath) await remove(tmpPath).catch(() => {})
     }
   }, [t, deps, editorRef])
 
@@ -538,6 +554,7 @@ ${html}
       defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
     })
     if (!path) return
+    warnLossyExport(editor.getValue(), "obsidian", t.app.exportLossWarning, showToast)
     await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
     showToast(t.app.revealExportSuccess, "success")
   }, [t, editorRef])

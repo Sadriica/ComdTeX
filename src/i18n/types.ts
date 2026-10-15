@@ -632,6 +632,7 @@ export interface T {
     exportDocxSuccess: string; exportDocxError: string
     exportBeamerSuccess: string; exportBeamerError: string
     backupSuccess: string; backupError: string
+    exportLossWarning: (items: string) => string
     copiedHtml: string; copiedLatex: string; copyError: string; bibSaved: string
     revealExportSuccess: string; revealExportError: string
     focusModeOn: string; focusModeOff: string

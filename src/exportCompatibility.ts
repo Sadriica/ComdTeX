@@ -57,3 +57,15 @@ export function analyzeExportCompatibility(markdown: string): CompatibilityRepor
     obsidianIssues,
   }
 }
+
+/**
+ * Unique, warning-level messages for what the chosen export will lose or
+ * degrade. Used right before exporting so the user hears about it once, in a
+ * toast, without the export being blocked. `info` issues are left to the
+ * Document Lab panel: they would fire on almost every document.
+ */
+export function lossyExportWarnings(markdown: string, target: "latex" | "obsidian"): string[] {
+  const report = analyzeExportCompatibility(markdown)
+  const issues = target === "latex" ? report.latexIssues : report.obsidianIssues
+  return [...new Set(issues.filter((issue) => issue.severity === "warning").map((issue) => issue.message))]
+}
