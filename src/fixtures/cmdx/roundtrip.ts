@@ -33,7 +33,9 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
       "Body",
       ":::",
       "",
-      "table(A, B)",
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
     ].join("\n"),
     expectedStorage: [
       "---",
@@ -44,6 +46,7 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
       "",
       "| A | B |",
       "| --- | --- |",
+      "| 1 | 2 |",
     ].join("\n"),
   },
   {
