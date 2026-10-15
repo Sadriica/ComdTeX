@@ -19,16 +19,16 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
-tauri-plugin-opener = "2"
+tauri-plugin-opener = "2.7.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-fs = "2.4.5"
-tauri-plugin-dialog = "2.6.0"
-tauri-plugin-shell = "2.3.5"
-tauri-plugin-updater = "2"
-tauri-plugin-process = "2"
+tauri-plugin-fs = "2.7.1"
+tauri-plugin-dialog = "2.8.3"
+tauri-plugin-shell = "2.5.0"
+tauri-plugin-updater = "2.14.0"
+tauri-plugin-process = "2.4.0"
 # AI requests go through Rust so a user-supplied endpoint is not subject to
 # the webview CSP; the allowed hosts live in the capability, not in a
 # hard-coded list the user cannot change.
-tauri-plugin-http = "2"
+tauri-plugin-http = "2.8.3"
 keyring = { version = "3", features = ["sync-secret-service", "vendored"] }
