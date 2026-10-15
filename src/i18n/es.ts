@@ -833,6 +833,8 @@ export const es: T = {
     moveError: "No se pudo mover el archivo",
     replaceError: "Error al reemplazar",
     closeTabSaveError: (name, err) => `No se pudo guardar "${name}", pestaña no cerrada: ${err}`,
+    closeTabUnsaved: (name) => `"${name}" tiene cambios sin guardar que no se pudieron guardar, así que la pestaña sigue abierta`,
+    alreadyExists: (name) => `"${name}" ya existe en esa carpeta, no se cambió nada`,
     invalidPath: (path) => `Ruta inválida para vault: «${path}». Elige una carpeta dentro de tu directorio personal.`,
     invalidPathSystem: "No puedes usar una carpeta del sistema (/, /etc, /usr, /proc, etc.) como vault.",
     selectVaultError: (err) => `No se pudo abrir el selector de carpeta: ${err}`,

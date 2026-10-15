@@ -2065,7 +2065,12 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
     // external change (conflict reload / replace / programmatic edit).
     lastEditorContentRef.current = content
     // Ignore onChange fires on mount / programmatic value change
-    if (content !== (vault.openFile?.content ?? "")) {
+    // Compare against the LIVE buffer (pending keystrokes), not React state,
+    // which lags typing by up to 250ms: a stale comparison could swallow an
+    // edit that reverts to the last committed text.
+    const livePath = vault.openFile?.path
+    const liveContent = livePath ? vault.getLiveContent(livePath) : undefined
+    if (content !== (liveContent ?? vault.openFile?.content ?? "")) {
       vault.updateContent(content)
     }
     // Debounce preview 150ms to avoid re-rendering on every keystroke
@@ -2545,17 +2550,33 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const input = el as HTMLInputElement
       const lineIdx = parseInt(input.dataset.line ?? "-1")
       if (lineIdx >= 0 && vault.openFile) {
-        const lines = vault.openFile.content.split("\n")
-        if (lines[lineIdx] !== undefined) {
-          const line = lines[lineIdx]
-          const isChecked = input.checked
-          const newLine = isChecked
-            ? line.replace(/^(\s*)-\s\[ \]/, "$1- [x]")
-            : line.replace(/^(\s*)-\s\[x\]/i, "$1- [ ]")
-          lines[lineIdx] = newLine
-          const newContent = lines.join("\n")
-          vault.updateContent(newContent)
-          if (editorRef.current) editorRef.current.setValue(newContent)
+        // Edit the editor's OWN buffer: vault.openFile.content is React state
+        // that lags typing by up to 250ms, and setValue() would wipe undo.
+        const editor = editorRef.current
+        const model = editor?.getModel()
+        const toggle = (line: string) => (input.checked
+          ? line.replace(/^(\s*)-\s\[ \]/, "$1- [x]")
+          : line.replace(/^(\s*)-\s\[x\]/i, "$1- [ ]"))
+        if (editor && model) {
+          if (lineIdx + 1 <= model.getLineCount()) {
+            const lineNo = lineIdx + 1
+            const line = model.getLineContent(lineNo)
+            const newLine = toggle(line)
+            if (newLine !== line) {
+              editor.pushUndoStop()
+              editor.executeEdits("preview-checkbox", [{
+                range: { startLineNumber: lineNo, startColumn: 1, endLineNumber: lineNo, endColumn: line.length + 1 },
+                text: newLine,
+              }])
+              editor.pushUndoStop()
+            }
+          }
+        } else {
+          const lines = (vault.getLiveContent(vault.openFile.path) ?? vault.openFile.content).split("\n")
+          if (lines[lineIdx] !== undefined) {
+            lines[lineIdx] = toggle(lines[lineIdx])
+            vault.updateContent(lines.join("\n"))
+          }
         }
       }
       return
@@ -2937,8 +2958,8 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       const re = buildSearchRegExp(search, opts)
       if (!re) return 0
       const { count, content: newContent } = target
-        ? replaceMatchAt(text, re, replace, target)
-        : replaceMatches(text, re, replace)
+        ? replaceMatchAt(text, re, replace, target, opts)
+        : replaceMatches(text, re, replace, opts)
       if (count === 0) return 0
       await vault.writeFileSafe(filePath, newContent)
       return count

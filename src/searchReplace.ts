@@ -24,11 +24,25 @@ export function countMatches(text: string, re: RegExp): number {
   return text.match(globalRe)?.length ?? 0
 }
 
-export function replaceMatches(text: string, re: RegExp, replacement: string) {
+/**
+ * What to hand to String.replace. In regex mode the user's replacement may use
+ * the group tokens (dollar-1, dollar-ampersand, ...), so the string goes
+ * through unchanged. In literal mode a replacement string would STILL be
+ * interpreted (dollar-ampersand inserts the match, a double dollar collapses
+ * to one), silently corrupting text such as LaTeX math or prices; a function
+ * replacer inserts exactly what the user typed.
+ */
+export function replaceWith(text: string, re: RegExp, replacement: string, opts?: SearchReplaceOptions): string {
+  // No options at all keeps the old string semantics for old callers; every
+  // real call site passes the user's options and gets literal mode.
+  return !opts || opts.regex ? text.replace(re, replacement) : text.replace(re, () => replacement)
+}
+
+export function replaceMatches(text: string, re: RegExp, replacement: string, opts?: SearchReplaceOptions) {
   const count = countMatches(text, re)
   return {
     count,
-    content: count > 0 ? text.replace(re, replacement) : text,
+    content: count > 0 ? replaceWith(text, re, replacement, opts) : text,
   }
 }
 
@@ -45,7 +59,7 @@ function absoluteIndexFromLineOffset(text: string, line: number, offset: number)
   return lines.slice(0, line - 1).reduce((sum, current) => sum + current.length + 1, 0) + offset
 }
 
-export function replaceMatchAt(text: string, re: RegExp, replacement: string, target: SearchReplaceTarget) {
+export function replaceMatchAt(text: string, re: RegExp, replacement: string, target: SearchReplaceTarget, opts?: SearchReplaceOptions) {
   const start = absoluteIndexFromLineOffset(text, target.line, target.matchStart)
   if (start < 0) return { count: 0, content: text }
 
@@ -56,7 +70,7 @@ export function replaceMatchAt(text: string, re: RegExp, replacement: string, ta
   while ((match = globalRe.exec(text)) !== null) {
     if (match.index === start && match[0].length === expectedLength) {
       const singleRe = new RegExp(re.source, re.flags.replace(/g/g, ""))
-      const replaced = match[0].replace(singleRe, replacement)
+      const replaced = replaceWith(match[0], singleRe, replacement, opts)
       return {
         count: 1,
         content: text.slice(0, start) + replaced + text.slice(start + match[0].length),

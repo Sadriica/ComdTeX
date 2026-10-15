@@ -832,6 +832,8 @@ export const en: T = {
     moveError: "Could not move file",
     replaceError: "Error replacing",
     closeTabSaveError: (name, err) => `Couldn't save "${name}", tab kept open: ${err}`,
+    closeTabUnsaved: (name) => `"${name}" has unsaved changes that could not be saved, so the tab was kept open`,
+    alreadyExists: (name) => `"${name}" already exists in that folder, nothing was changed`,
     invalidPath: (path) => `Invalid vault path: "${path}". Pick a folder inside your home directory.`,
     invalidPathSystem: "You cannot use a system folder (/, /etc, /usr, /proc, etc.) as a vault.",
     selectVaultError: (err) => `Could not open folder picker: ${err}`,

@@ -230,7 +230,7 @@ describe("useVault CMDX integration", () => {
     expect(result.current.openTabs.find((tab) => tab.path === newPath)).toBeTruthy()
   })
 
-  it("cancels a pending autosave when replaceInVault rewrites an open file", async () => {
+  it("applies replaceInVault to the unsaved buffer and cancels the pending autosave", async () => {
     const mdPath = `${VAULT}/note.md`
     fsMock.touch(mdPath, "alpha beta")
 
@@ -244,7 +244,7 @@ describe("useVault CMDX integration", () => {
     })
     await waitFor(() => expect(result.current.openFile?.path).toBe(mdPath))
 
-    // Queue a stale autosave that would clobber the replacement if not cancelled.
+    // Unsaved edit: the replacement must land in it, and the queued autosave must not fire later with the pre-replace text.
     act(() => {
       result.current.updateContent("alpha beta STALE")
     })
@@ -258,7 +258,7 @@ describe("useVault CMDX integration", () => {
       await new Promise((r) => setTimeout(r, 60))
     })
 
-    expect(fsMock.files.get(mdPath)?.content).toBe("alpha gamma")
+    expect(fsMock.files.get(mdPath)?.content).toBe("alpha gamma STALE")
   })
 
   it("does not read binary preview files during vault search or replace", async () => {

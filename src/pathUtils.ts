@@ -45,3 +45,19 @@ export function pathDirname(path: string): string {
 
 /** Display-only alias of `pathBasename`. */
 export const displayBasename = pathBasename
+
+const KNOWN_FILE_EXTS = new Set(["md", "tex", "bib", "typ", "csv", "pdf", "txt", "json"])
+
+/**
+ * The name a file rename should really use. If the user typed a name with no
+ * recognised extension (they dropped ".md" while editing), the original
+ * extension is kept so the file does not silently vanish from the tree.
+ * A recognised extension typed on purpose (`a.md` -> `a.tex`) is respected.
+ */
+export function keepFileExtension(newName: string, originalName: string): string {
+  const orig = originalName.match(/\.([^./\\]+)$/)?.[1]
+  if (!orig) return newName
+  const typed = newName.match(/\.([^./\\]+)$/)?.[1]?.toLowerCase()
+  if (typed && KNOWN_FILE_EXTS.has(typed)) return newName
+  return `${newName}.${orig}`
+}

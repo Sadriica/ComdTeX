@@ -710,6 +710,8 @@ export interface T {
     moveError: string
     replaceError: string
     closeTabSaveError: (name: string, err: string) => string
+    closeTabUnsaved: (name: string) => string
+    alreadyExists: (name: string) => string
     invalidPath: (path: string) => string
     invalidPathSystem: string
     selectVaultError: (err: string) => string
