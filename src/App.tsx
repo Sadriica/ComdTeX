@@ -6,7 +6,7 @@ import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { openPath } from "@tauri-apps/plugin-opener"
+import { openPath, openUrl } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
 import { MERMAID_CONFIG } from "./mermaidConfig"
 import type { CmdKAnchor } from "./CmdKEdit"
@@ -2503,6 +2503,20 @@ function AppContent({ settings, updateSettings }: { settings: Settings; updateSe
       // which is a pseudo-class separator in a CSS id selector.
       const target = id ? previewPaneRef.current?.querySelector(`[id="${id.replace(/["\\]/g, "\\$&")}"]`) : null
       target?.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+
+    // ── Any other link: never let the webview navigate away from the app ───
+    // http(s)/mailto open in the system handler; wikilinks fall through to
+    // their own branch below; everything else (relative, file:, etc.) is
+    // swallowed because navigating would replace the whole UI.
+    const linkEl = el.closest("a[href]") as HTMLAnchorElement | null
+    if (linkEl && !linkEl.classList.contains("wikilink")) {
+      e.preventDefault()
+      const href = (linkEl.getAttribute("href") ?? "").trim()
+      if (/^(https?:|mailto:)/i.test(href)) {
+        openUrl(href).catch(() => showToast(href, "error"))
+      }
       return
     }
 
