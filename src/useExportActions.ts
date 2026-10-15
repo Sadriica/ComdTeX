@@ -164,7 +164,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     })
     if (!path) return
     await writeTextFile(path, tex)
-  }, [vaultFiles, t])
+  }, [vaultFiles, t, transclusionResolver])
 
   const handleCompileLatexPdf = useCallback(async (opts?: { forceWasm?: boolean }) => {
     await compileLatexPdfAction({
