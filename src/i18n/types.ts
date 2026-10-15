@@ -517,6 +517,7 @@ export interface T {
     notRepo: string
     gitNotFoundTitle: string
     gitNotFoundHint: string
+    statusError: (msg: string) => string
     refresh: string
     staged: string
     changes: string

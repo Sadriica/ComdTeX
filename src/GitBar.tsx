@@ -1,49 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Command } from "@tauri-apps/plugin-shell"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
 import { showToast } from "./toastService"
 import { pathBasename, pathDirname } from "./pathUtils"
+import { runGit, isNotRepo, parseStatusZ, type GitFile, type GitStatus } from "./gitApi"
 import { collabState, defaultSaveMessage, unmergedFiles } from "./collabGuide"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface GitFile { x: string; y: string; path: string }
-
-interface GitStatus {
-  branch: string; upstream: string
-  ahead: number; behind: number
-  staged: GitFile[]; unstaged: GitFile[]; untracked: GitFile[]
-}
-
 interface Remote { name: string; fetchUrl: string; pushUrl: string }
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
-
-function parseStatus(raw: string): GitStatus {
-  const lines = raw.split("\n").filter(Boolean)
-  const bl = lines.find(l => l.startsWith("## "))
-  let branch = "", upstream = "", ahead = 0, behind = 0
-  if (bl) {
-    const rest = bl.slice(3)
-    const parts = rest.split("...")
-    branch = parts[0].replace(/^No commits yet on /, "").trim()
-    upstream = parts[1]?.split(/\s/)[0] ?? ""
-    const am = /ahead (\d+)/.exec(rest);  if (am) ahead  = parseInt(am[1])
-    const bm = /behind (\d+)/.exec(rest); if (bm) behind = parseInt(bm[1])
-  }
-  const staged: GitFile[] = [], unstaged: GitFile[] = [], untracked: GitFile[] = []
-  for (const line of lines) {
-    if (line.startsWith("## ") || line.length < 3) continue
-    const x = line[0], y = line[1]
-    const fullPath = line.slice(3)
-    const path = (x === "R" || y === "R") ? fullPath.split(" -> ")[0] : fullPath
-    if (x === "?" && y === "?") untracked.push({ x, y, path })
-    else { if (x !== " ") staged.push({ x, y, path }); if (y !== " " && y !== "?") unstaged.push({ x, y, path }) }
-  }
-  return { branch, upstream, ahead, behind, staged, unstaged, untracked }
-}
 
 function parseRemotes(raw: string): Remote[] {
   const map = new Map<string, Partial<Remote>>()
@@ -149,7 +117,7 @@ function BranchDropdown({ vaultPath, currentBranch, onClose, onRefresh }: {
   const [branches, setBranches] = useState<string[]>([])
   const [newBranch, setNewBranch] = useState("")
   const ref = useRef<HTMLDivElement>(null)
-  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
 
   useEffect(() => {
     git("branch", "--format=%(refname:short)").then(r => {
@@ -212,7 +180,7 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
   const [urlInput, setUrlInput] = useState("")
   const [newName, setNewName] = useState("")
   const [newUrl, setNewUrl] = useState("")
-  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
 
   const load = useCallback(async () => {
     try {
@@ -306,7 +274,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
   const [name, setName]   = useState("")
   const [email, setEmail] = useState("")
   const [editing, setEditing] = useState(false)
-  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
 
   const load = useCallback(async () => {
     try {
@@ -364,7 +332,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
 export function StashSection({ vaultPath }: { vaultPath: string }) {
   const g = useT().git
   const [stashes, setStashes] = useState<string[]>([])
-  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
   const load = useCallback(async () => {
     try { const r = await git("stash", "list"); setStashes(r.code === 0 ? r.stdout.split("\n").filter(Boolean) : []) }
     catch { setStashes([]) }
@@ -422,7 +390,7 @@ function CollabSection({ vaultPath, status, onRefresh }: {
   const [remoteUrl, setRemoteUrl] = useState("")
   const [saveMsg, setSaveMsg] = useState("")
   const [busy, setBusy] = useState(false)
-  const git = useCallback((...args: string[]) => Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
 
   useEffect(() => {
     git("remote").then(r => setHasRemote(r.code === 0 && r.stdout.trim().length > 0)).catch(() => setHasRemote(false))
@@ -591,21 +559,19 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
   const [diffs, setDiffs] = useState<Record<string, string>>({})
   const [log, setLog] = useState<string[]>([])
 
-  const git = useCallback((...args: string[]) =>
-    Command.create("git", ["-C", vaultPath, ...args]).execute(), [vaultPath])
+  const git = useCallback((...args: string[]) => runGit(vaultPath, args), [vaultPath])
 
-  const toggleDiff = useCallback(async (path: string, staged: boolean) => {
+  const toggleDiff = useCallback(async (path: string, staged: boolean, orig?: string) => {
     const key = `${staged ? "s" : "u"}:${path}`
     if (key in diffs) { setDiffs(d => { const n = { ...d }; delete n[key]; return n }); return }
     try {
-      const r = await Command.create("git", ["-C", vaultPath,
-        ...(staged ? ["diff", "--staged", "--", path] : ["diff", "--", path])]).execute()
+      const r = await runGit(vaultPath, staged ? ["diff", "--staged", "-M", "--", ...(orig ? [orig] : []), path] : ["diff", "--", path])
       setDiffs(d => ({ ...d, [key]: r.stdout || "(no diff)" }))
     } catch { setDiffs(d => ({ ...d, [key]: "(error)" })) }
   }, [vaultPath, diffs])
 
   const stage      = useCallback(async (p: string) => { try { await git("add","--",p); onRefresh() } catch (e) { showToast(g.stageError(String(e)),"error") } }, [git,onRefresh,g])
-  const unstage    = useCallback(async (p: string) => { try { await git("restore","--staged","--",p); onRefresh() } catch (e) { showToast(g.unstageError(String(e)),"error") } }, [git,onRefresh,g])
+  const unstage    = useCallback(async (p: string, orig?: string) => { try { await git("restore","--staged","--",p,...(orig ? [orig] : [])); onRefresh() } catch (e) { showToast(g.unstageError(String(e)),"error") } }, [git,onRefresh,g])
   const stageAll   = useCallback(async () => { try { await git("add","-A"); onRefresh() } catch (e) { showToast(g.stageError(String(e)),"error") } }, [git,onRefresh,g])
   const unstageAll = useCallback(async () => { try { await git("restore","--staged","."); onRefresh() } catch (e) { showToast(g.unstageError(String(e)),"error") } }, [git,onRefresh,g])
 
@@ -674,7 +640,7 @@ function ChangesPanel({ vaultPath, status, onRefresh }: {
           headerAction={{ label:"−−", title:g.unstageAll, onClick:unstageAll }}>
           {status.staged.map(f => (
             <FileRow key={`s:${f.path}`} file={f} isStaged diff={diffs[`s:${f.path}`]??null}
-              onUnstage={() => unstage(f.path)} onToggleDiff={() => toggleDiff(f.path, true)}
+              onUnstage={() => unstage(f.path, f.orig)} onToggleDiff={() => toggleDiff(f.path, true, f.orig)}
               stageTitle={g.stageOne} unstageTitle={g.unstageOne} discardTitle={g.discard} />
           ))}
         </GitSection>
@@ -766,22 +732,26 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
 
   const git = useCallback(async (...args: string[]) => {
     if (!vaultPath) throw new Error("no vault")
-    const r = await Command.create("git", ["-C", vaultPath, ...args]).execute()
-    return { stdout: r.stdout, code: r.code ?? 1, stderr: r.stderr }
+    return runGit(vaultPath, args)
   }, [vaultPath])
 
   const refresh = useCallback(async () => {
     if (!vaultPath) return
     setLoading(true)
     try {
-      const check = await Command.create("git", ["-C", vaultPath, "rev-parse", "--git-dir"]).execute()
-      if (check.code !== 0) { setNotRepo(true); setStatus(null); return }
+      setGitMissing(false)
+      const r = await runGit(vaultPath, ["status", "--porcelain=v1", "-z", "-b"])
+      if (isNotRepo(r)) { setNotRepo(true); setStatus(null); return }
       setNotRepo(false)
-      const r = await Command.create("git", ["-C", vaultPath, "status", "--porcelain", "-b"]).execute()
-      setStatus(parseStatus(r.stdout))
-    } catch { setGitMissing(true) }
+      if (r.code !== 0) {
+        setStatus(null)
+        showToast(g.statusError(r.stderr.trim() || `exit ${r.code}`), "error")
+        return
+      }
+      setStatus(parseStatusZ(r.stdout))
+    } catch { setGitMissing(true); setStatus(null) }
     finally { setLoading(false) }
-  }, [vaultPath])
+  }, [vaultPath, g])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh() }, [vaultPath])
