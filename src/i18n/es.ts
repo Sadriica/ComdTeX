@@ -1400,4 +1400,11 @@ export const es: T = {
       safetyNet: "Red de seguridad para vaults guardados en una carpeta de la nube. Nunca mueve ni borra nada por su cuenta: solo señala las copias en conflicto que dejan estos servicios.",
     },
   },
+  errorBoundary: {
+    title: "Error inesperado",
+    retry: "Reintentar",
+    unexpectedBackground: "Algo salió mal. Si se repite, guarda tu trabajo y reinicia la app.",
+    regionFailed: (r) => `Falló: ${r}`,
+    regions: { preview: "Vista previa", editor: "Editor", panel: "Panel", dialog: "Diálogo" },
+  },
 }

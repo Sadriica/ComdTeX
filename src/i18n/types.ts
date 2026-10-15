@@ -1180,4 +1180,12 @@ export interface T {
       safetyNet: string
     }
   }
+  errorBoundary: {
+    title: string
+    retry: string
+    unexpectedBackground: string
+    regionFailed: (region: string) => string
+    /** Display names for the `region` keys: preview, editor, panel, dialog. */
+    regions: Record<"preview" | "editor" | "panel" | "dialog", string>
+  }
 }
