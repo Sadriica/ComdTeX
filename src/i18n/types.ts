@@ -421,6 +421,7 @@ export interface T {
     }
     // Ctrl/Cmd+K inline AI edit widget.
     cmdk: {
+      dialogLabel: string
       placeholderEdit: string
       placeholderInsert: string
       disabledHint: string

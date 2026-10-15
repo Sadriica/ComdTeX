@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState, useId } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 
@@ -12,6 +12,7 @@ type ShortcutItem = { group: string } | { key: string; desc: string }
 export default function HelpModal({ open, onClose }: HelpModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const [query, setQuery] = useState("")
   useFocusTrap(modalRef, open, onClose)
 
@@ -93,9 +94,9 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.help.title}</span>
+          <span id={titleId}>{t.help.title}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>✕</button>
         </div>
         <div className="help-search-row">

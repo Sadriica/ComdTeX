@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useId } from "react"
 import { getSecret, setSecret } from "./secretStore"
 import { useT } from "./i18n"
 import type { Settings } from "./useSettings"
@@ -32,6 +32,7 @@ type SectionId = "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "ai" 
 export default function SettingsModal({ open, settings, initialSection, cloudProvider, syncPosture, onOpenGit, onClose, onChange }: SettingsModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   // Initialize from the requested section. The parent passes a `key` derived
   // from `initialSection` so this component remounts (and re-runs this lazy
   // initializer) whenever it should jump to a different section.
@@ -127,9 +128,9 @@ export default function SettingsModal({ open, settings, initialSection, cloudPro
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal settings-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal settings-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.settings.title}</span>
+          <span id={titleId}>{t.settings.title}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>✕</button>
         </div>
 

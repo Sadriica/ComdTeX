@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useId } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 
@@ -10,6 +10,7 @@ interface OnboardingTourProps {
 export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const [step, setStep] = useState(0)
   useFocusTrap(modalRef, open, onClose)
 
@@ -42,9 +43,9 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
 
   return (
     <div className="modal-overlay" onMouseDown={handleClose}>
-      <div className="onboarding-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="onboarding-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="onboarding-header">
-          <span className="onboarding-title">{t.onboarding.title}</span>
+          <span id={titleId} className="onboarding-title">{t.onboarding.title}</span>
           <span className="onboarding-step-counter">{t.onboarding.step(step + 1, total)}</span>
         </div>
         <div className="onboarding-body">

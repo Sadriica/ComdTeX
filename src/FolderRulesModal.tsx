@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useId } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
@@ -42,6 +42,7 @@ export default function FolderRulesModal(props: FolderRulesModalProps) {
 function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useFocusTrap(modalRef, dirPath !== null, onClose)
 
   const [defaultTemplate, setDefaultTemplate] = useState(rules?.defaultTemplate ?? "")
@@ -95,9 +96,9 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>{t.folderRules.title(displayBasename(dirPath))}</span>
+          <span id={titleId}>{t.folderRules.title(displayBasename(dirPath))}</span>
           <button className="modal-close" onClick={onClose} aria-label={t.folderRules.close}>✕</button>
         </div>
 
