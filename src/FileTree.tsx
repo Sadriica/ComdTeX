@@ -2,7 +2,7 @@ import { memo, useRef, useMemo, useState } from "react"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import type { FileNode } from "./types"
 import ContextMenu from "./ContextMenu"
-import { displayBasename, pathDirname } from "./pathUtils"
+import { displayBasename, pathDirname, keepFileExtension } from "./pathUtils"
 import { useT } from "./i18n"
 
 interface FileTreeProps {
@@ -81,7 +81,8 @@ function FileNodeRow({
 
   const submitRename = () => {
     const val = renameVal.trim()
-    if (val && val !== node.name) onRename(node.path, val)
+    const finalName = val && node.type === "file" ? keepFileExtension(val, node.name) : val
+    if (finalName && finalName !== node.name) onRename(node.path, finalName)
     setRenaming(false)
   }
 
@@ -425,14 +426,16 @@ function FileTree({
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const val = newName.trim()
+                const typed = newName.trim()
+                const val = typed && renamingCtx.type === "file" ? keepFileExtension(typed, renamingCtx.name) : typed
                 if (val && val !== renamingCtx.name) onRenameFile(renamingCtx.path, val)
                 setRenamingCtx(null)
               }
               if (e.key === "Escape") setRenamingCtx(null)
             }}
             onBlur={() => {
-              const val = newName.trim()
+              const typed = newName.trim()
+              const val = typed && renamingCtx.type === "file" ? keepFileExtension(typed, renamingCtx.name) : typed
               if (val && val !== renamingCtx.name) onRenameFile(renamingCtx.path, val)
               setRenamingCtx(null)
             }}
