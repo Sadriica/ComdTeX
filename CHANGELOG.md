@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.29.0] - 2026-08-06
+## [1.29.0] - 2026-09-28
 
 ### Added
 - **Settings has a search box.** Thirty-four options across seven tabs, grouped by what they belong to rather than by the word you have in your head, meant looking for "autosave" involved opening three tabs. Type a word, click the result, and it opens the right tab and marks the row. A guard test fails the build if an option is ever added to Settings without being added to what search can find.

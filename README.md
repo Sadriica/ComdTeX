@@ -428,7 +428,7 @@ Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settin
 
 ### Linux: Arch (AUR-style package)
 
-`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration, updates via your AUR helper once published):
+`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration). **Not published on the AUR yet**, and the PKGBUILD is pinned to 1.16.0: use the one-line installer for current releases, or bump it first with `packaging/aur/update.sh <version>`:
 
 ```bash
 cd packaging/aur/comdtex-bin && makepkg -si
@@ -611,8 +611,8 @@ This is only relevant when building locally on Arch; release artifacts downloade
 Releases are triggered by pushing a version tag:
 
 ```bash
-git tag v1.9.5
-git push origin v1.9.5
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 This triggers the GitHub Actions release workflow:

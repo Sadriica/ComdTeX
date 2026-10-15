@@ -2,6 +2,8 @@
 
 Distribution channels beyond the GitHub release itself. Every submission is an outward-facing action: prepare here, publish only on explicit request.
 
+**Status: none of these channels has been published, and all three manifests are frozen at 1.16.0** (the app is at 1.29.0). The AUR package, the Flathub submission and the winget PR do not exist yet. Bumping needs the sha256 of a published release asset (`aur/update.sh` fetches it; the Flatpak and winget files are edited by hand).
+
 | Channel | Dir | Bump procedure | Publish procedure |
 |---|---|---|---|
 | AUR (Arch) | `aur/comdtex-bin/` | `aur/update.sh <version>` (fills sha256 from the release) | Copy PKGBUILD into the AUR git clone, `makepkg --printsrcinfo > .SRCINFO`, test with `makepkg -si`, push (needs an AUR account with SSH key) |

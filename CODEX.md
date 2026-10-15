@@ -221,13 +221,15 @@ When adding export behavior:
 
 ## Current Verification Baseline
 
-Latest successful verification after the Quality layer implementation:
+Latest verification at v1.29.0 (2026-10-15, local run):
 
 ```text
-git diff --check: passed
-npm test: 22 files, 193 tests passed
-npm run build: passed
+npm test: 83 files, 1326 tests passed
+npx tsc --noEmit: passed
+npx eslint src/: 0 errors, 5 warnings
 ```
+
+Before tagging, the full gate list lives in `CLAUDE.md` (Release workflow).
 
 Expected non-blocking warning:
 
@@ -278,10 +280,8 @@ Navigation/UX:
 
 High-value next steps:
 
-- Reduce `App.tsx` by extracting export actions, sidebar composition, and command palette construction.
-- Add Playwright/e2e coverage for sidebar panel navigation and export flows.
-- Improve local LaTeX compile by parsing `.log` into line-level diagnostics.
+- Reduce `App.tsx` (about 4,400 lines). Export actions already moved to `exportActions.ts` and `useExportActions.ts`; sidebar composition and command palette construction are still inside it.
+- Extend Playwright coverage (`e2e/` has a smoke spec and a Mermaid labels spec) to sidebar panel navigation and export flows.
 - Add a real compatibility report export/copy button.
-- Add command labels for Quality/project/local compile to `i18n.ts` instead of keeping temporary hardcoded Spanish labels in `App.tsx`.
 - Add manualChunks/build tuning for Monaco/Mermaid if bundle warnings become a release concern.
 
