@@ -49,7 +49,7 @@ Do not accept TypeScript, ESLint, CSS minifier, or failing test errors as normal
 - `sanitizeRenderedHtml()` must wrap rendered preview HTML before `dangerouslySetInnerHTML`. It removes form controls, global `<style>`, out-of-flow `position`, high `z-index` and `url()` in inline styles.
 - Every git call goes through `runGit` in `src/gitApi.ts` (hooks, `core.fsmonitor` and `ext::` disabled). Never call `Command.create("git", ...)` directly.
 - Storage conversion (`cmdxFormat.ts`) must never rewrite a table that has body rows, and must keep environment labels, callout fold markers and unknown callout types. `cmdxFormat.roundtrip` tests guard this.
-- Pinned on purpose: `monaco-editor` 0.55.1, `@types/markdown-it` `~14.1.2`, `eslint-plugin-react-hooks` `~7.0.1`. `git config blame.ignoreRevsFile .git-blame-ignore-revs` hides the bulk prettier commit from blame.
+- Pinned on purpose: `monaco-editor` 0.55.1, `@types/markdown-it` `~14.1.2`, `eslint-plugin-react-hooks` `~7.0.1` (monaco 0.57 breaks the vite build, @types/markdown-it 14.2 breaks the plugin typings, react-hooks 7.1 adds 37 lint errors). `git config blame.ignoreRevsFile .git-blame-ignore-revs` hides the bulk prettier commit from blame.
 - Monaco snippets from toolbar should use `snippetController2.insert()`, not `editor.trigger()`.
 - Tauri v2 shell config should stay simple: `tauri.conf.json` uses `plugins.shell.open = true`; permissions live in `src-tauri/capabilities/default.json`.
 

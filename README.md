@@ -594,7 +594,7 @@ Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statement
 
 The bulk prettier commit is listed in `.git-blame-ignore-revs`; to make `git blame` skip it run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
-Three dependencies are pinned on purpose to the versions that still build and lint cleanly with the 1.29.1 dependency set: `monaco-editor` 0.55.1 (an `overrides` entry, so only one copy is installed), `@types/markdown-it` `~14.1.2` and `eslint-plugin-react-hooks` `~7.0.1` (patch-level ranges only). Do not widen them without running the full gate.
+Three dependencies are pinned on purpose to the versions that still build and lint cleanly with the 1.29.1 dependency set: `monaco-editor` 0.55.1 (an `overrides` entry, so only one copy is installed; 0.57 breaks `vite build` on the `monaco-editor/esm/vs/editor/editor.api.js` import), `@types/markdown-it` `~14.1.2` (14.2 breaks the footnote and mark plugin typings) and `eslint-plugin-react-hooks` `~7.0.1` (7.1 adds the `refs` and `set-state-in-effect` rules, which report 37 errors in `src/`). Do not widen them without running the full gate.
 
 ### Build output
 
