@@ -43,7 +43,20 @@ Markdown storage is Obsidian-compatible:
 - Theorem-like CMDX environments become Obsidian callouts.
 - Environment type is encoded in the callout title, e.g. `Theorem: Title`, so it
   can be recovered on reopen.
-- Markdown tables become `table(...)` on open and storage tables on save.
+- The environment label is saved on the callout heading, e.g.
+  `> [!abstract] Theorem: Pyth {#thm:pyth}`, so `@thm:pyth` references survive a
+  save and a reopen. `toStorageMd(text, { envLabels })` controls this: storage keeps
+  labels (the default); user-facing exports (Obsidian, Pandoc input) pass
+  `envLabels: false` and drop them.
+- Fold markers (`[!note]-`, `[!note]+`) are preserved.
+- Callout types with no exact environment (`danger`, `quote`, and any other type the app
+  does not know) are preserved. When the type cannot be recovered from the heading, the
+  converter writes a lossless marker line, `<!--cmdx type=... fold=... -->`, right
+  after the heading and reads it back on open.
+- Tables that have body rows are left exactly as written on open. Only a bare header
+  plus separator row (no body) becomes `table(A, B)`, and it is written back as that
+  header and separator on save.
+- Nothing inside a fenced code block or inline code is converted.
 - Frontmatter is preserved.
 - Plain blockquotes that are not Obsidian callouts are preserved.
 

@@ -224,3 +224,20 @@ headings, labelled equations, theorem environments, tables, citations):
 
 The render debounce is 150-700 ms by document size, and the linter has its own
 600 ms timer, so neither blocks a keystroke at these sizes.
+
+## 7. Changes in v1.29.1
+
+- **Spellcheck dictionaries load on demand.** The Hunspell dictionaries
+  (`dictionary-en`, `dictionary-es`) are imported dynamically by `spellcheck.ts`
+  and fetched only when spellcheck is switched on, so they no longer sit in the
+  main bundle. The main chunk went from 2.2 MB to about 0.8 MB. The same pass
+  replaced value imports of `monaco-editor` with type-only imports.
+- **Render crashes stay local.** `ErrorBoundary` takes a `region` prop; the
+  preview, the editor and each panel and dialog sit in their own boundary (the
+  lazy ones through `LazyRegion`), so one crash shows a Retry button for that
+  region instead of blanking the app. `src/globalErrorHandlers.ts` reports
+  uncaught errors and unhandled rejections once, as a toast.
+- **Preview sanitizer.** It now also strips global `<style>` (styles scoped to a Mermaid SVG are kept),
+  form controls, out-of-flow `position`, large `z-index` and `url()` in inline
+  styles. This adds a pass over the parsed fragment; it runs inside the same
+  single parse described in section 1.
