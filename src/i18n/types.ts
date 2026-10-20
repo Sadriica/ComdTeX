@@ -774,6 +774,11 @@ export interface T {
     elapsed: string
     wpm: string
     goalProgress: string
+    today: string
+    wordsToday: string
+    activeToday: string
+    pomodorosToday: string
+    wordsLast7Days: string
     phaseDone: (phase: string) => string
   }
 

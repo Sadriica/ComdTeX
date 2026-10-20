@@ -36,6 +36,7 @@ describe("storageKeys", () => {
       AI_CONVERSATIONS: "comdtex_ai_conversations",
       AI_ACTIVE_CONVERSATION: "comdtex_ai_active",
       AI_INPUT_DRAFT: "comdtex_ai_input",
+      WRITING_STATS: "comdtex_writing_stats",
       CUSTOM_TEMPLATES: "comdtex.customTemplates",
     })
   })
