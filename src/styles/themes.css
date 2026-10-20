@@ -5,7 +5,8 @@
 
 :root,
 .app,
-.app[data-theme="dark"] {
+.app[data-theme="dark"],
+.preview-pane.preview-dark {
   color-scheme: dark;
   --bg-app: oklch(0.185 0.006 170);
   --bg-surface: oklch(0.215 0.006 170);
@@ -88,7 +89,8 @@
   --shadow-3: 0 16px 40px oklch(0 0 0 / 0.55);
 }
 
-.app[data-theme="light"] {
+.app[data-theme="light"],
+.preview-pane.preview-light {
   color-scheme: light;
   --bg-app: oklch(0.945 0.014 90);
   --bg-surface: oklch(0.972 0.012 90);
@@ -259,7 +261,9 @@
    scope's own tokens. Remove an alias once nothing references it. */
 :root,
 .app,
-.app[data-theme] {
+.app[data-theme],
+.preview-pane.preview-light,
+.preview-pane.preview-dark {
   --bg: var(--bg-app);
   --surface: var(--bg-surface);
   --surface2: var(--bg-raised);

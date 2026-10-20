@@ -1,0 +1,217 @@
+/* TEMPORARY compatibility skin. The component stylesheets still hardcode the
+   old VS Code greys; until each one is converted to tokens, these rules lay
+   the slate and chalk palette over the main surfaces so every theme looks
+   right. Theme independent: only tokens, no [data-theme].
+
+   Owners of a component stylesheet: when you convert a selector listed here
+   to tokens in your own file, delete its entry below. Delete this file (and
+   its import in index.css) once it is empty. */
+
+/* Window chrome */
+.titlebar {
+  background: var(--chrome-bg);
+  border-bottom-color: var(--border);
+}
+.titlebar-title {
+  color: var(--fg-muted);
+}
+.menu-bar,
+.toolbar,
+.sidebar-header,
+.tab-bar {
+  background: var(--chrome-bg);
+  border-color: var(--border);
+}
+.menu-btn,
+.menu-entry {
+  color: var(--chrome-fg);
+}
+.menu-btn:hover,
+.menu-btn.open {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.menu-panel {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+.menu-entry:hover:not(:disabled) {
+  background: var(--bg-selected);
+  color: var(--fg);
+}
+.menu-list {
+  box-shadow: var(--shadow-2);
+}
+.status-bar {
+  background: var(--status-bg);
+  color: var(--status-fg);
+}
+.status-position:hover {
+  background: var(--bg-hover);
+}
+
+/* Panes */
+.sidebar,
+.preview-pane,
+.breadcrumb,
+.pdf-preview-panel,
+.tab-active {
+  background: var(--bg-surface);
+}
+.sidebar,
+.breadcrumb,
+.tab {
+  border-color: var(--border);
+}
+.tab-active {
+  color: var(--fg);
+  border-top-color: var(--accent);
+}
+.tab {
+  color: var(--fg-muted);
+}
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.resizer-v:hover,
+.resizer-v:active {
+  background: var(--accent);
+}
+.sidebar-collapse-btn,
+.tree-header,
+.breadcrumb,
+.breadcrumb-link {
+  color: var(--fg-muted);
+}
+.sidebar-collapse-btn:hover,
+.breadcrumb-link:hover,
+.breadcrumb-current {
+  color: var(--fg);
+}
+.tree-header {
+  border-bottom-color: var(--border);
+}
+.tree-icon,
+.tree-actions button,
+.tree-empty,
+.sidebar-empty {
+  color: var(--fg-muted);
+}
+.tree-actions button:hover {
+  color: var(--fg);
+  background: var(--bg-hover);
+}
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+.tree-file.tree-active {
+  background: var(--bg-selected);
+  color: var(--fg);
+}
+.tree-file.tree-focused:not(.tree-active) {
+  outline-color: var(--accent);
+}
+.tree-dir .tree-name {
+  color: var(--fg);
+}
+.tree-file .tree-name {
+  color: var(--fg);
+}
+.tree-new-input input,
+.tree-rename-input,
+.tree-filter-input {
+  background: var(--bg-sunken);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+.btn-vault,
+.btn-create {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.btn-vault:hover,
+.btn-create:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+
+/* Preview */
+.preview-content {
+  color: var(--fg);
+}
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4 {
+  color: var(--fg);
+}
+.preview-content h1,
+.preview-content h2 {
+  border-bottom-color: var(--border);
+}
+.preview-content th {
+  background: var(--bg-raised);
+}
+.preview-content tr:nth-child(even) td {
+  background: var(--bg-sunken);
+}
+
+/* Overlays */
+.modal,
+.palette,
+.quick-switcher,
+.latex-err-modal,
+.table-editor-dialog,
+.onboarding-modal,
+.wikilink-hover-card {
+  background: var(--bg-raised);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.palette-item-selected,
+.quick-switcher-item:hover,
+.quick-switcher-item.selected {
+  background: var(--bg-selected);
+}
+.quick-switcher-footer {
+  background: var(--bg-hover);
+}
+.settings-tab:hover {
+  background: var(--bg-hover);
+}
+.settings-tab.active {
+  background: var(--bg-active);
+}
+
+/* Monaco: it paints its own surface from the Monaco theme; follow the tokens. */
+.monaco-editor,
+.monaco-editor .monaco-editor-background,
+.monaco-editor .margin,
+.monaco-editor .inputarea.ime-input {
+  background-color: var(--bg-surface) !important;
+}
+.fm-author {
+  color: var(--link);
+}
+
+/* Welcome */
+.welcome-screen {
+  background: var(--bg-app);
+  color: var(--fg-muted);
+}
+.welcome-btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.welcome-btn-primary:hover {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+.welcome-btn-secondary {
+  background: var(--bg-raised);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.welcome-btn-secondary:hover {
+  background: var(--bg-hover);
+}
