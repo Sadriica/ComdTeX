@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./e2e",
+  // The visual harness is slow; it only joins the run with VISUAL=1 (see playwright.visual.config.ts).
+  testIgnore: process.env.VISUAL === "1" ? [] : /visual\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 5_000 },
   use: {
