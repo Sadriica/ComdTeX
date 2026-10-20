@@ -40,7 +40,7 @@
     "markdown-it": "^14.3.1",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-mark": "^4.0.0",
-    "mermaid": "^11.14.0",
+    "mermaid": "^12.2.0",
     "monaco-vim": "^0.4.4",
     "nspell": "^2.1.5",
     "pdfjs-dist": "^6.4.299",
