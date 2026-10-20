@@ -368,6 +368,45 @@ for (const { name, theme } of THEMES) {
         comdtex_ai_conversations: JSON.stringify(conversation),
         comdtex_ai_active: "c1",
       },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page, { math: true })
+
+    await page.locator('.menubar-direct-btn[title="AI assistant"]').click()
+    await page.locator(".ai-messages").waitFor()
+    await settle(page)
+    await shot(page, name, "panel__ai-chat")
+
+    await palette(page, "symbol picker")
+    await page.keyboard.press("Enter")
+    await page.locator(".symbol-picker").waitFor({ timeout: 5000 })
+    await page.locator(".symbol-btn").nth(5).hover()
+    await page.waitForTimeout(300)
+    await shot(page, name, "panel__symbols")
+
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+    await page.locator(".focus-timer-ring").waitFor()
+    await page.locator(".focus-timer-btn-primary").click()
+    await page.waitForTimeout(500)
+    await shot(page, name, "popover__focus-running")
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+
+    await palette(page, "table editor")
+    await page.keyboard.press("Enter")
+    await page.locator(".table-editor-dialog").waitFor({ timeout: 5000 })
+    const cells = page.locator(".table-editor-cell")
+    await cells.nth(0).fill("Name")
+    await cells.nth(1).fill("Value")
+    await cells.nth(2).fill("Unit")
+    await cells.nth(3).fill("alpha")
+    await cells.nth(4).fill("0.05")
+    await page.locator(".table-editor-align").nth(1).locator("button").nth(2).click()
+    await page.waitForTimeout(300)
+    await shot(page, name, "modal__table-editor-filled")
+    await closeOverlays(page)
+  })
+}
 
 // Overlays and floating UI: the states the main walk does not reach. The ones
 // that need app internals (LaTeX diagnostics, toast kinds, hover cards, the
