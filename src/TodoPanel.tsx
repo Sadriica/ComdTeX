@@ -113,7 +113,7 @@ export default function TodoPanel({
               <span
                 className="todo-text"
                 onClick={() => onNavigate(item.filePath, item.line)}
-                title={`Línea ${item.line}`}
+                title={t.todo.lineTitle(item.line)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && onNavigate(item.filePath, item.line)}

@@ -719,6 +719,7 @@ export interface T {
     summary: (done: number, total: number) => string
     markDone: string
     markPending: string
+    lineTitle: (n: number) => string
   }
 
   equations: { empty: string; count: (n: number) => string; lineTitle: (n: number) => string }
@@ -791,6 +792,7 @@ export interface T {
   git: {
     noVault: string
     notRepo: string
+    notRepoHint: string
     gitNotFoundTitle: string
     gitNotFoundHint: string
     statusError: (msg: string) => string

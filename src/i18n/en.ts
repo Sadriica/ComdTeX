@@ -748,6 +748,7 @@ export const en: T = {
     summary: (done, total) => `${done}/${total} completed`,
     markDone: "Mark as done",
     markPending: "Mark as pending",
+    lineTitle: (n) => `Line ${n}`,
   },
 
   equations: {
@@ -835,6 +836,7 @@ export const en: T = {
   git: {
     noVault: "Open a vault to use Git.",
     notRepo: "This folder is not a Git repository.",
+    notRepoHint: "Start one to keep a history of your changes and sync with a remote.",
     gitNotFoundTitle: "Git not found",
     gitNotFoundHint: "Install Git and restart the application.",
     statusError: (msg: string) => `Git could not read the status: ${msg}`,

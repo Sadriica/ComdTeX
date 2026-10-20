@@ -85,7 +85,7 @@ export default function StatusBar({
       <span className="status-left">
         {isDirty && (
           <span className="status-dirty" aria-hidden="true">
-            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            <Icon icon={Circle} size={14} className="icon-filled" />
           </span>
         )}
         {mode && (

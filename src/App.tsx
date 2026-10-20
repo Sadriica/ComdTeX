@@ -5233,7 +5233,9 @@ function AppContent({
         <div
           className={`pane editor-pane${dragOver ? " drag-over" : ""}`}
           id="editor-pane"
-          style={editorFlex ? { width: editorFlex, flex: "none" } : { flex: 1 }}
+          style={
+            focusMode ? undefined : editorFlex ? { width: editorFlex, flex: "none" } : { flex: 1 }
+          }
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -5264,11 +5266,11 @@ function AppContent({
             onNavigate={handleBreadcrumbNavigate}
           />
           {vault.openFile?.mode === "pdf" ? (
-            <LazyRegion region="panel" fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+            <LazyRegion region="panel" fallback={<div className="region-fallback" />}>
               <PdfPreviewPanel pdfPath={vault.openFile.path} />
             </LazyRegion>
           ) : (
-            <LazyRegion region="editor" fallback={<div style={{ flex: 1, minHeight: 0 }} />}>
+            <LazyRegion region="editor" fallback={<div className="region-fallback" />}>
               <MonacoEditor
                 key={vault.activeTabPath ?? "welcome"}
                 defaultLanguage={
