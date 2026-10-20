@@ -37,7 +37,7 @@ export default function BookmarksPopup({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="modal"
+        className="modal modal-compact"
         ref={modalRef}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -52,7 +52,7 @@ export default function BookmarksPopup({
             <Icon icon={X} size={14} />
           </button>
         </div>
-        <div className="modal-body">
+        <div className="modal-body modal-list">
           {bookmarks.length === 0 && (
             <div className="panel-empty-rich">
               <div className="panel-empty-icon" aria-hidden="true">

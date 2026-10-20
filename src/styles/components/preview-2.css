@@ -17,20 +17,15 @@
   border-bottom-color: var(--fg-muted);
 }
 
-/* ── Wikilink hover preview card ── */
+/* ── Wikilink hover preview card ── (surface from modals.css) */
 .wikilink-hover-card {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   max-width: 400px;
   max-height: 300px;
+  padding: var(--space-5) var(--space-6);
   overflow: auto;
-  background: #1e1e1e;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
-  padding: 10px 14px;
-  font-size: 13px;
-  color: #d4d4d4;
+  font-size: var(--text-md);
   pointer-events: none;
 }
 .wikilink-hover-card h1,
@@ -48,7 +43,7 @@
   margin: 0.4em 0;
 }
 .wikilink-hover-card .wikilink-hover-empty {
-  color: #888;
+  color: var(--fg-muted);
   font-style: italic;
 }
 

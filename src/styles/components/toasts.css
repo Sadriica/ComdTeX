@@ -1,55 +1,63 @@
-/* ── Toast notifications ── */
+/* ── Toast notifications ──
+   Bottom-right stack. The kind shows as a left accent and a tinted icon slot
+   (--toast-accent); the surface is the shared raised card. */
 .toast-container {
   position: fixed;
+  right: var(--space-6);
   bottom: 36px;
-  right: 16px;
-  z-index: 9999;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-4);
   pointer-events: none;
 }
 
 .toast {
+  --toast-accent: var(--info);
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 9px 14px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: var(--space-4);
   max-width: 360px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  animation: toast-in 0.2s ease;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.toast-icon {
-  margin-top: 1px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-raised);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--toast-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
 }
 .toast-success {
-  background: #1a4a2a;
-  border: 1px solid #2e7d4f;
-  color: #8de8a8;
+  --toast-accent: var(--ok);
 }
 .toast-error {
-  background: #4a1a1a;
-  border: 1px solid #7d2e2e;
-  color: #e88d8d;
+  --toast-accent: var(--danger);
 }
 .toast-info {
-  background: #1a2e4a;
-  border: 1px solid #1177bb;
-  color: #8dc9e8;
+  --toast-accent: var(--info);
+}
+/* Icon slot (added by the icon pass): fixed box, tinted by the kind. */
+.toast-icon,
+.toast > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--toast-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    transition:
+      opacity var(--dur-med) var(--ease-standard),
+      transform var(--dur-med) var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+      transform: translateX(var(--space-6));
+    }
+  }
 }
 
 /* ── Drag-and-drop overlay ── */
@@ -75,7 +83,6 @@
 }
 
 /* ── Vim mode status bar ── */
-
 /* ── Preview light/dark themes ── */
 .preview-light {
   background: #fafafa;
