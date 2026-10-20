@@ -25,6 +25,7 @@ import {
   NUMBERED_MATH_RE,
 } from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
+import { resolveImagePath } from "./imagePaths"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import {
@@ -307,14 +308,28 @@ function preserveParagraphIndentationSource(text: string): string {
   return lines.join("\n")
 }
 
-function resolveImages(html: string, vaultPath: string): string {
+function safeDecode(src: string): string {
+  try {
+    return decodeURI(src)
+  } catch {
+    return src
+  }
+}
+
+function resolveImages(
+  html: string,
+  vaultPath: string,
+  docPath?: string,
+  fileExists?: (absPath: string) => boolean,
+): string {
   return html.replace(/<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g, (match, before, src, after) => {
     if (/^https?:\/\/|^data:|^blob:/.test(src)) return match
     const figLabelMatch = /title="fig-label:(fig:[\w:.-]+)"/.exec(before + " " + after)
     const dataAttr = figLabelMatch ? ` data-fig-label="${figLabelMatch[1]}"` : ""
     const cleanBefore = before.replace(/\s*title="fig-label:[^"]*"/, "")
     const cleanAfter = after.replace(/\s*title="fig-label:[^"]*"/, "")
-    const abs = src.startsWith("/") ? src : `${vaultPath}/${src}`
+    // The document's own folder first, then the vault root (imagePaths.ts).
+    const abs = resolveImagePath(safeDecode(src), docPath, vaultPath, fileExists) ?? src
     return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
   })
 }
@@ -639,6 +654,13 @@ export function renderMarkdown(
      * copy-as-HTML) also pass `false` to skip the cost outright.
      */
     annotate?: boolean
+    /**
+     * Vault path of the document being rendered. Relative image paths are read
+     * from its folder first, then from the vault root.
+     */
+    docPath?: string
+    /** Sync existence check (forward-slash absolute paths) used to pick between those two. */
+    fileExists?: (absPath: string) => boolean
   },
 ): string {
   resetEnvCounters()
@@ -729,7 +751,7 @@ export function renderMarkdown(
   // Restore display-math placeholders left intact through markdown-it and
   // recursive environment extraction.
   html = html.replace(/\x02DMATH(\d+)\x03/g, (_, i) => dmath.slots[parseInt(i)] ?? "")
-  if (vaultPath) html = resolveImages(html, vaultPath)
+  if (vaultPath) html = resolveImages(html, vaultPath, opts?.docPath, opts?.fileExists)
   // Footnotes are fully handled by the markdown-it-footnote plugin during
   // md.render (it emits `.footnote-ref` / `.footnotes` markup the preview CSS
   // already styles). No post-pass is needed.

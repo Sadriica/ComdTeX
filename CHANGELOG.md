@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Images load from the note's own folder.** `![](../figures/x.svg)` in `papers/doc.md` did not load because every relative image path was read from the vault root. The note's folder is now tried first and the vault root stays as the fallback, in the preview, in Document Lab and when a LaTeX export copies its images.
 - **Grouped citations work.** `[@a; @b]` and `[@a; @b, p. 3]` now render as one bracket (`[1, 2]`, or `(Rudin, 1976; Smith, 2001)` in author-year styles), export as a single `\cite{a,b}`, and are checked key by key. `[@a][@b]` still renders as two markers.
 - **Document Lab no longer cries wolf.** Diagnostics flagged every `[@key]` citation as not found and every local image as missing, because it never saw the bibliography or the image files. It now uses the vault bibliography and every file in the vault, and resolves image paths relative to the document first, then the vault root. Its messages follow the interface language.
 - **No more false "Something went wrong" toast.** The browser's harmless "ResizeObserver loop" notices are no longer reported as errors.

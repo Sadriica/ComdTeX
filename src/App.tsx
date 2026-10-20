@@ -913,6 +913,19 @@ function AppContent({
     [vaultFileNodes],
   )
 
+  // Every file path in the vault (forward slashes), read through a ref so the
+  // preview renderer's identity stays stable while typing. The renderer uses
+  // it to pick between the document's folder and the vault root for images.
+  const vaultFilePathSet = useMemo(
+    () => new Set(vaultFileNodes.map((f) => f.path.replace(/\\/g, "/"))),
+    [vaultFileNodes],
+  )
+  const vaultFilePathSetRef = useRef(vaultFilePathSet)
+  useEffect(() => {
+    vaultFilePathSetRef.current = vaultFilePathSet
+  }, [vaultFilePathSet])
+  const imageExists = useCallback((absPath: string) => vaultFilePathSetRef.current.has(absPath), [])
+
   const vaultFiles = useMemo(() => {
     // Recompute when the open-tab shape changes immediately, or when debounced
     // content changes are allowed through. The actual content is read from the
@@ -1961,7 +1974,7 @@ function AppContent({
   // split reference pane calls this same function but passes nothing, so it
   // can never poison the main pane's adaptive debounce.
   const renderPreviewHtml = useCallback(
-    (content: string, costSink?: { current: number }) => {
+    (content: string, costSink?: { current: number }, docPath?: string | null) => {
       // Defer rendering until the macros file has been loaded once for this
       // vault. Without this gate the first paint of a freshly-opened file uses
       // `macros = {}`, so any equation that relies on a user-defined macro
@@ -1986,7 +1999,7 @@ function AppContent({
           bibMap,
           transclusionResolver,
           envRefResolver,
-          { annotate: false },
+          { annotate: false, docPath: docPath ?? undefined, fileExists: imageExists },
         )
       } catch (e) {
         return renderErrorHtml(e)
@@ -2007,6 +2020,7 @@ function AppContent({
       bibMap,
       transclusionResolver,
       envRefResolver,
+      imageExists,
       mermaidVersion,
       excalidrawVersion,
     ],
@@ -2018,9 +2032,20 @@ function AppContent({
   // Previously this ran on every (debounced) keystroke regardless of visibility,
   // so drafting with the preview collapsed still paid the whole render cost.
   const previewHtml = useMemo(
-    // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
-    () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent, renderCostRef) : ""),
-    [settings.previewVisible, renderPreviewHtml, deferredPreviewContent],
+    () =>
+      settings.previewVisible
+        ? // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
+          renderPreviewHtml(deferredPreviewContent, renderCostRef, vault.activeTabPath)
+        : "",
+    // vaultFilePathSet: a new or renamed image must refresh the preview.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      settings.previewVisible,
+      renderPreviewHtml,
+      deferredPreviewContent,
+      vault.activeTabPath,
+      vaultFilePathSet,
+    ],
   )
 
   // Commit previewHtml via `commitPreview` (sanitize → annotate → block-level
@@ -2055,8 +2080,9 @@ function AppContent({
 
   const splitPreviewHtml = useMemo(
     // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
-    () => (splitTab ? renderPreviewHtml(deferredSplitContent) : ""),
-    [renderPreviewHtml, splitTab, deferredSplitContent],
+    () => (splitTab ? renderPreviewHtml(deferredSplitContent, undefined, splitTab.path) : ""),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [renderPreviewHtml, splitTab, deferredSplitContent, vaultFilePathSet],
   )
 
   // Same single-parse commit (sanitize → annotate → morph) for the split
@@ -3509,7 +3535,11 @@ function AppContent({
         bibMap,
         transclusionResolver,
         undefined,
-        { annotate: false },
+        {
+          annotate: false,
+          docPath: file.path,
+          fileExists: (p) => vaultFilePathSetRef.current.has(p),
+        },
       )
       await navigator.clipboard.writeText(sanitizeRenderedHtml(html))
       showToast(t.app.copiedHtml, "success")

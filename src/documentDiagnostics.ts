@@ -1,5 +1,6 @@
 import { scanStructuralLabels } from "./structuralLabels"
-import { pathBasename, pathDirname } from "./pathUtils"
+import { pathBasename } from "./pathUtils"
+import { imageCandidates } from "./imagePaths"
 import { CITATION_GROUP_RE, parseCitationGroup } from "./bibtex"
 import { es } from "./i18n/es"
 import type { T } from "./i18n/types"
@@ -125,8 +126,7 @@ function scanImages(
       const src = match[1].trim().replace(/^<|>$/g, "").split(/\s+/)[0]
       if (/^(https?:|data:|file:|blob:)/i.test(src)) continue
       const clean = src.replace(/^\.\//, "")
-      const candidates = [clean, joinNormalized(pathDirname(file.path), src)]
-      if (vaultRoot) candidates.push(joinNormalized(vaultRoot, src))
+      const candidates = [clean, ...imageCandidates(src, file.path, vaultRoot)]
       const found =
         candidates.some((c) => known.has(norm(c))) ||
         basenames.has(pathBasename(clean).toLowerCase())
@@ -142,19 +142,6 @@ function scanImages(
       }
     }
   }
-}
-
-/** Joins `base` and a relative `rel`, collapsing `.` and `..` segments. */
-function joinNormalized(base: string, rel: string): string {
-  if (rel.startsWith("/")) return rel
-  const out: string[] = base.replace(/\\/g, "/").split("/")
-  rel = rel.replace(/\\/g, "/")
-  for (const part of rel.split("/")) {
-    if (part === "" || part === ".") continue
-    if (part === "..") out.pop()
-    else out.push(part)
-  }
-  return out.join("/")
 }
 
 function scanMath(file: DiagnosticFile, issues: DiagnosticIssue[], msg: DiagnosticMessages) {
