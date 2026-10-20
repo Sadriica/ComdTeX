@@ -9,6 +9,7 @@ import { showToast } from "./toastService"
 import { useT } from "./i18n"
 import {
   analyzeConversion,
+  renameLineEnding,
   storageFormatForPath,
   toEditorContent,
   toDiskContent,
@@ -1703,6 +1704,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         }
         renameViewState(p, np)
       }
+      renameLineEnding(oldPath, newPath)
       // A folder move relocates entries the cache cannot enumerate by prefix.
       searchIndexRef.current.clear()
       const retag = (tab: OpenFile): OpenFile => {

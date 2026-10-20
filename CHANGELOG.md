@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Files with Windows line endings stay that way.** A `.md` or `.tex` file saved with CRLF came back with LF on its first save, so every line showed up as changed in git. The line ending is now remembered per file, follows renames and moves, and new lines get the same ending.
 - **The link graph and the task list now cover the whole vault.** Both panels only looked at documents open in tabs, so links and tasks in closed notes were missing. They now read every note through the same mtime-gated index vault search uses (an unchanged file is never read twice), and an open tab's unsaved text still wins over the disk copy. Ticking a task in a note that is not open edits that file safely: the line is re-checked against the file as it is now, and nothing is written if it changed.
 - **Callouts survive open and save byte for byte.** `> [!tip] Hi` was saved as `> [!tip] Tip: Hi`, because the environment name was baked into the title. The name is now written only when the callout type alone would reopen as a different environment (`Theorem: Pyth`).
 - **No more `<!--cmdx type=... -->` line in the editor.** Callouts that no environment reproduces exactly (folded ones, `[!theorem]` without a prefix, `[!NOTE]`, `[!my-type]`) now stay ordinary callouts in the editor and are saved as written. Editor text from older builds that still carries the marker loads and saves correctly.

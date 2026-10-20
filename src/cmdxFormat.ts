@@ -46,14 +46,44 @@ export function storageFormatForPath(path: string): StorageFormat | null {
   return null
 }
 
+/**
+ * Line ending each .md/.tex file had when it was last read from disk. The
+ * conversions work on LF text, so without this a CRLF file came back LF on its
+ * first save and every line showed up as changed in git.
+ */
+const crlfPaths = new Set<string>()
+
+/** True when most line breaks in `text` are CRLF. */
+export function usesCrlf(text: string): boolean {
+  const crlf = text.match(/\r\n/g)?.length ?? 0
+  if (crlf === 0) return false
+  const all = text.match(/\n/g)?.length ?? 0
+  return crlf * 2 >= all
+}
+
+/** Carry a file's remembered line ending over to its new path after a rename or move. */
+export function renameLineEnding(oldPath: string, newPath: string): void {
+  for (const p of [...crlfPaths]) {
+    if (p === oldPath || p.startsWith(oldPath + "/") || p.startsWith(oldPath + "\\")) {
+      crlfPaths.delete(p)
+      crlfPaths.add(newPath + p.slice(oldPath.length))
+    }
+  }
+}
+
 export function toEditorContent(path: string, content: string): string {
   const format = storageFormatForPath(path)
-  return format ? toCmdx(content, format) : content
+  if (!format) return content
+  if (usesCrlf(content)) crlfPaths.add(path)
+  else crlfPaths.delete(path)
+  return toCmdx(content.replace(/\r\n/g, "\n"), format)
 }
 
 export function toDiskContent(path: string, content: string): string {
   const format = storageFormatForPath(path)
-  return format ? toStorage(content, format) : content
+  if (!format) return content
+  const stored = toStorage(content, format)
+  return crlfPaths.has(path) ? stored.replace(/\r?\n/g, "\r\n") : stored
 }
 
 export function analyzeConversion(text: string, format: StorageFormat): ConversionReport {
