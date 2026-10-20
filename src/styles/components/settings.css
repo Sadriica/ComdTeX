@@ -362,6 +362,9 @@
 /* ── Doc links ── */
 .settings-docs-link,
 .hp-docs-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   background: none;
   border: 0;
