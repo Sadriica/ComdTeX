@@ -3441,7 +3441,8 @@ function AppContent({
         }
       }
       card.innerHTML = html
-      document.body.appendChild(card)
+      // Inside .app so the card resolves the active theme's tokens.
+      ;(document.querySelector(".app") ?? document.body).appendChild(card)
     }
 
     const onOver = (e: MouseEvent) => {

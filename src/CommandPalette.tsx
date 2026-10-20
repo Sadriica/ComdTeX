@@ -17,6 +17,7 @@ import {
   Sparkles,
   Upload,
 } from "./icons"
+import { useFocusTrap } from "./useFocusTrap"
 
 export type PaletteCategory =
   "Edición" | "Insertar" | "Matemáticas" | "Vista" | "Exportar" | "IA" | "Vault" | "Navegación"
@@ -135,6 +136,10 @@ export default function CommandPalette({
   // Drill-in stack: each entry is a parent command whose `children` we're showing.
   const [stack, setStack] = useState<PaletteCommand[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Escape is handled by the input (it steps back out of a sub-level first); the
+  // trap keeps Tab inside and gives focus back on close.
+  useFocusTrap(dialogRef, open)
 
   useEffect(() => {
     if (!open) return
@@ -293,7 +298,14 @@ export default function CommandPalette({
 
   return (
     <div className="palette-overlay" onMouseDown={onClose}>
-      <div className="palette" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="palette"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.palette.placeholder}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         {inSubLevel && parent && (
           <div className="palette-breadcrumb">
             <button

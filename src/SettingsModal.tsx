@@ -336,6 +336,7 @@ export default function SettingsModal({
                       : `${settings.wordGoal} ${t.settings.words}`}
                   </span>
                 </div>
+                <p className="setting-hint">{t.settings.hints.wordGoal}</p>
 
                 <label className="setting-row" data-setting="vimMode">
                   <span>{t.settings.vimMode}</span>
@@ -345,7 +346,6 @@ export default function SettingsModal({
                     onChange={(e) => onChange({ vimMode: e.target.checked })}
                   />
                 </label>
-                <p className="setting-hint">{t.settings.hints.wordGoal}</p>
 
                 <label className="setting-row" data-setting="typewriterMode">
                   <span>{t.settings.typewriterMode}</span>
