@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { getUiLanguage, parseLanguageTag, resolveDocLanguage, setUiLanguage } from "./docLang"
+import {
+  getUiLanguage,
+  parseLanguageTag,
+  previewLangTag,
+  resolveDocLanguage,
+  setUiLanguage,
+} from "./docLang"
 import { renderMarkdown } from "./renderer"
 import { numberEnvironmentsForExport } from "./envExport"
 import { toExportMarkdownContent } from "./exportConversion"
@@ -150,5 +156,22 @@ describe("translations", () => {
       "Mermaid should",
     )
     expect(analyzeExportCompatibility(md).latexIssues[0].message).toContain("Mermaid debe")
+  })
+})
+
+describe("previewLangTag", () => {
+  it("passes a well-formed frontmatter tag through, even for a language with no UI words", () => {
+    expect(previewLangTag({ lang: "fr" })).toBe("fr")
+    expect(previewLangTag({ language: "de_CH" })).toBe("de-CH")
+  })
+
+  it("maps spelled-out names to a supported tag", () => {
+    expect(previewLangTag({ lang: "english" })).toBe("en")
+    expect(previewLangTag({ lang: "Español" })).toBe("es")
+  })
+
+  it("falls back to the given language without frontmatter", () => {
+    expect(previewLangTag(undefined, "en")).toBe("en")
+    expect(previewLangTag({ title: "x" }, "es")).toBe("es")
   })
 })

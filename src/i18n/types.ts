@@ -214,6 +214,9 @@ export interface T {
     mathPreview: string
     previewTheme: string
     previewThemeSame: string
+    documentStyle: string
+    documentStylePaper: string
+    documentStyleSans: string
     dark: string
     light: string
     highContrast: string
@@ -271,6 +274,7 @@ export interface T {
       syncScroll: string
       mathPreview: string
       previewTheme: string
+      documentStyle: string
       dailyNotesEnabled: string
       dailyNotesFolder: string
       aiProviderId: string

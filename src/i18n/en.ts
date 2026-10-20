@@ -209,6 +209,9 @@ export const en: T = {
     mathPreview: "Equation preview",
     previewTheme: "Preview theme",
     previewThemeSame: "Same as editor",
+    documentStyle: "Document style",
+    documentStylePaper: "Paper (serif)",
+    documentStyleSans: "Sans",
     dark: "Dark",
     light: "Light",
     highContrast: "High contrast",
@@ -279,6 +282,8 @@ export const en: T = {
         "Shows the rendered formula when the cursor sits on display math, without leaving the editor.",
       previewTheme:
         "Colours for the preview. Keep it light while the editor is dark if you want to see the page as it will print.",
+      documentStyle:
+        "Paper sets the preview in a serif typeface like a printed article. Sans uses the interface font with the same spacing.",
       dailyNotesEnabled:
         "Turns on Ctrl+Shift+D, which opens today's note and creates it the first time.",
       dailyNotesFolder:

@@ -209,6 +209,9 @@ export const es: T = {
     mathPreview: "Vista previa de ecuaciones",
     previewTheme: "Tema del preview",
     previewThemeSame: "Mismo que editor",
+    documentStyle: "Estilo del documento",
+    documentStylePaper: "Paper (serif)",
+    documentStyleSans: "Sans",
     dark: "Oscuro",
     light: "Claro",
     highContrast: "Alto contraste",
@@ -282,6 +285,8 @@ export const es: T = {
         "Muestra la fórmula renderizada cuando el cursor está sobre matemáticas en bloque, sin salir del editor.",
       previewTheme:
         "Colores de la vista previa. Déjala clara con el editor oscuro si quieres ver la página como se imprimirá.",
+      documentStyle:
+        "Paper compone la vista previa con una tipografía serif, como un artículo impreso. Sans usa la fuente de la interfaz con el mismo espaciado.",
       dailyNotesEnabled: "Activa Ctrl+Shift+D, que abre la nota de hoy y la crea la primera vez.",
       dailyNotesFolder: "Carpeta dentro del vault donde se crean esas notas. Se crea si no existe.",
       aiProviderId:

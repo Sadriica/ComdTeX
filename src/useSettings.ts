@@ -13,6 +13,8 @@ export interface Settings {
   wordGoal: number // 0 = no goal
   touchpadGestures: boolean
   previewTheme: "dark" | "light" | "same"
+  /** Typeface of the rendered document: a serif paper (default) or the UI sans. */
+  documentStyle: "paper" | "sans"
   mathPreview: boolean
   wordWrap: boolean
   minimapEnabled: boolean
@@ -93,6 +95,7 @@ export const DEFAULTS: Settings = {
   wordGoal: 0,
   touchpadGestures: true,
   previewTheme: "same",
+  documentStyle: "paper",
   mathPreview: true,
   wordWrap: true,
   minimapEnabled: false,
@@ -128,7 +131,11 @@ const AI_API_KEY_SECRET = "aiApiKey"
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
+    if (!raw) return DEFAULTS
+    const merged: Settings = { ...DEFAULTS, ...JSON.parse(raw) }
+    if (merged.documentStyle !== "paper" && merged.documentStyle !== "sans")
+      merged.documentStyle = DEFAULTS.documentStyle
+    return merged
   } catch {
     localStorage.removeItem(KEY)
     return DEFAULTS
