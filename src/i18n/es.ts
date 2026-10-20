@@ -1606,6 +1606,14 @@ export const es: T = {
     root: "raíz",
     searchPlaceholder: "Buscar archivo…",
     filterPlaceholder: "tag:nombre",
+    modeLocal: "Local",
+    modeGlobal: "Global",
+    depthLabel: "Profundidad",
+    canvasLabel: (n, l, mode) => `Grafo de notas, vista ${mode}: ${n} notas, ${l} enlaces`,
+    neighboursLabel: (name) => `Notas enlazadas con ${name}`,
+    noNeighbours: "Sin notas enlazadas",
+    layoutPending: "Calculando...",
+    moreFolders: (n) => `+${n} más`,
   },
 
   preview: {

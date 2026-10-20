@@ -1497,6 +1497,14 @@ export interface T {
     root: string
     searchPlaceholder: string
     filterPlaceholder: string
+    modeLocal: string
+    modeGlobal: string
+    depthLabel: string
+    canvasLabel: (nodes: number, links: number, mode: string) => string
+    neighboursLabel: (name: string) => string
+    noNeighbours: string
+    layoutPending: string
+    moreFolders: (n: number) => string
   }
 
   preview: {

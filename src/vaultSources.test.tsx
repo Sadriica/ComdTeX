@@ -143,6 +143,11 @@ describe("panels", () => {
         onOpenFile={() => {}}
       />,
     )
-    await waitFor(() => expect(container.querySelectorAll("line").length).toBe(2))
+    await waitFor(() =>
+      expect(container.querySelector(".graph-info")?.textContent).toMatch(/\b2\b.*(enlaces|links)/),
+    )
+    await waitFor(() =>
+      expect(container.querySelector(".graph-panel")?.getAttribute("data-layout")).toBe("done"),
+    )
   })
 })

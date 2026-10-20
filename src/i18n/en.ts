@@ -1594,6 +1594,14 @@ export const en: T = {
     root: "root",
     searchPlaceholder: "Search file…",
     filterPlaceholder: "tag:name",
+    modeLocal: "Local",
+    modeGlobal: "Global",
+    depthLabel: "Depth",
+    canvasLabel: (n, l, mode) => `Note graph, ${mode} view: ${n} notes, ${l} links`,
+    neighboursLabel: (name) => `Notes linked with ${name}`,
+    noNeighbours: "No linked notes",
+    layoutPending: "Laying out...",
+    moreFolders: (n) => `+${n} more`,
   },
 
   preview: {
