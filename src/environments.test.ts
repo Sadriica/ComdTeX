@@ -47,6 +47,26 @@ describe("buildEnvHTML", () => {
     expect(html).toContain("□")
   })
 
+  it("puts the QED mark at the end of the last paragraph, once", () => {
+    const html = buildEnvHTML("proof", "", "", "<p>Done.</p>")
+    expect(html).toContain('<p>Done.<span class="math-env-qed"')
+    expect(html.match(/math-env-qed/g)).toHaveLength(1)
+  })
+
+  it("drops a QED symbol the author already typed at the end", () => {
+    for (const tail of ["$\\square$", "\\blacksquare", "□", "∎", "$\\qed$"]) {
+      const { slots } = extractEnvironments(`:::proof\nClaim holds. ${tail}\n:::`, identity)
+      expect(slots[0]).toContain("Claim holds.")
+      expect(slots[0]).not.toMatch(/\\(square|blacksquare|qed)|∎/)
+      expect(slots[0].match(/□/g)).toHaveLength(1)
+    }
+  })
+
+  it("keeps a square that is part of the argument", () => {
+    const { slots } = extractEnvironments(":::proof\nTake $\\square^2$ of it.\n:::", identity)
+    expect(slots[0]).toContain("\\square^2")
+  })
+
   it("does not add QED marker for non-proof envs", () => {
     const html = buildEnvHTML("theorem", "", "1", "body")
     expect(html).not.toContain("□")

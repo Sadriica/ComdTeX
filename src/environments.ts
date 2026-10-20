@@ -257,6 +257,31 @@ export function nextEnvNumber(counters: Record<string, number>, envName: string)
   return String(counters[envName])
 }
 
+const QED_SPAN = `<span class="math-env-qed" aria-hidden="true">□</span>`
+
+/**
+ * Puts the end-of-proof mark at the end of the last line of the body, not in a
+ * block of its own below it. A proof body that does not end in a paragraph
+ * (a list, a display equation) gets the mark appended after it.
+ */
+function withQedMark(innerHTML: string): string {
+  const trimmed = innerHTML.trimEnd()
+  if (trimmed.endsWith("</p>")) return `${trimmed.slice(0, -4)}${QED_SPAN}</p>`
+  return `${trimmed}${QED_SPAN}`
+}
+
+/**
+ * A proof gets its end mark from the environment, so a QED symbol the author
+ * typed at the end of the body (`$\square$`, `\blacksquare`, `□`, `∎`) would
+ * show up twice. It is removed here and the environment's mark stands in for it.
+ */
+const TRAILING_QED_RE =
+  /(?:\$\s*\\(?:square|blacksquare|Box|qed|qedsymbol|qedhere)\s*\$|\\(?:square|blacksquare|Box|qed)(?![A-Za-z])|[□■∎◻◼▫▪])\s*$/
+
+export function stripTrailingQed(content: string): string {
+  return content.replace(TRAILING_QED_RE, "").trimEnd()
+}
+
 export function buildEnvHTML(
   envName: string,
   title: string,
@@ -289,8 +314,7 @@ export function buildEnvHTML(
   return [
     `<div class="math-env math-env-${envName}${sizeClass}"${idAttr}>`,
     `<div class="math-env-header"><span class="math-env-label">${displayLabel}${isProof ? "" : "."}</span>${label ? `<span class="math-env-anchor">${escHtml(label)}</span>` : ""}</div>`,
-    `<div class="math-env-body">${innerHTML}</div>`,
-    isProof ? `<div class="math-env-qed">□</div>` : "",
+    `<div class="math-env-body">${isProof ? withQedMark(innerHTML) : innerHTML}</div>`,
     `</div>`,
   ]
     .filter(Boolean)
@@ -507,7 +531,9 @@ export function extractEnvironments(
 
         let innerHTML: string
         try {
-          innerHTML = renderFn(content.trim())
+          innerHTML = renderFn(
+            envName === "proof" ? stripTrailingQed(content.trim()) : content.trim(),
+          )
         } catch (e) {
           const msg = String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
           innerHTML = `<pre class="math-error">Error in environment: ${msg}</pre>`
@@ -729,7 +755,7 @@ export function envToLatex(
 
   if (latex === "proof") {
     // amsthm provides proof natively
-    return `\\begin{proof}${optTitle}${labelLine}\n${content}\n\\end{proof}`
+    return `\\begin{proof}${optTitle}${labelLine}\n${stripTrailingQed(content)}\n\\end{proof}`
   }
 
   return `\\begin{${latex}}${optTitle}${labelLine}\n${content}\n\\end{${latex}}`

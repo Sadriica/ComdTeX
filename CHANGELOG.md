@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Plots no longer clip the curve, and the legend is readable.** The automatic y range dropped the lowest and highest few percent of a curve, so a decay ending at 0.057 was cut off at 0.1. A curve's real extremes are now inside the frame (an asymptote is still ignored). The legend swatch no longer sits on top of its label, and its text is at least as large as the tick labels.
+- **A proof shows one end mark.** The proof environment added its own box in the corner, so a note that also ended with `$\square$` showed two. The mark the author typed is dropped (also in the LaTeX export, where `proof` adds its own) and the single mark now sits at the end of the last line.
 - **Images load from the note's own folder.** `![](../figures/x.svg)` in `papers/doc.md` did not load because every relative image path was read from the vault root. The note's folder is now tried first and the vault root stays as the fallback, in the preview, in Document Lab and when a LaTeX export copies its images.
 - **Grouped citations work.** `[@a; @b]` and `[@a; @b, p. 3]` now render as one bracket (`[1, 2]`, or `(Rudin, 1976; Smith, 2001)` in author-year styles), export as a single `\cite{a,b}`, and are checked key by key. `[@a][@b]` still renders as two markers.
 - **Document Lab no longer cries wolf.** Diagnostics flagged every `[@key]` citation as not found and every local image as missing, because it never saw the bibliography or the image files. It now uses the vault bibliography and every file in the vault, and resolves image paths relative to the document first, then the vault root. Its messages follow the interface language.
