@@ -169,6 +169,12 @@ describe("citations reach LaTeX", () => {
     expect(tex).toContain("\\cite[p. 321]{rudin1976}")
   })
 
+  it("groups [@a; @b] into a single \\cite", () => {
+    const tex = exportToTex("Both [@a; @b] agree.", "", "T")
+    expect(tex).toContain("\\cite{a,b}")
+    expect(tex).not.toContain("[@")
+  })
+
   it("closes the document with the bibliography when something was cited", () => {
     const tex = exportToTex("Cited [@a].", "", "T")
     expect(tex).toContain("\\bibliography{references}")

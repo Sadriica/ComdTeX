@@ -16,6 +16,7 @@
  *  - macros.md: duplicate \newcommand definitions, unbalanced braces
  */
 
+import { CITATION_GROUP_RE, parseCitationGroup } from "./bibtex"
 import type * as monacoApi from "monaco-editor"
 import { checkText, type SpellLang } from "./spellcheck"
 import { raggedTableRows } from "./markdownEditing"
@@ -275,12 +276,12 @@ function lintCitations(
   if (bibKeys.size === 0) return [] // no bib file loaded
 
   const markers: monacoApi.editor.IMarkerData[] = []
-  const re = /\[@([\w:.-]+)(?:,\s*[^\]]*)?\]/g
+  const re = new RegExp(CITATION_GROUP_RE.source, "g")
   let m: RegExpExecArray | null
 
   while ((m = re.exec(text)) !== null) {
-    const key = m[1]
-    if (!bibKeys.has(key)) {
+    for (const { key } of parseCitationGroup(m[1]) ?? []) {
+      if (bibKeys.has(key)) continue
       markers.push(
         mkMarker(
           lineIdx,

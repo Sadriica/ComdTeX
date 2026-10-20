@@ -21,6 +21,7 @@ import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
+import { parseCitationGroup } from "./bibtex"
 
 interface LatexMacro {
   command: string
@@ -274,21 +275,34 @@ function textRefsToTex(text: string): string {
   // matches the INNER `@def:x` of `@doc@def:x` and emits a dangling
   // `\ref{def:x}` while leaving `@doc` as escaped prose.
   const re =
-    /\[@([\w:.-]+)(?:,\s*([^\]]*))?\]|@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+    /\[(@[^\]\n]*)\]|@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
+    const items = m[1] !== undefined ? parseCitationGroup(m[1]) : null
+    if (m[1] !== undefined && !items) {
+      // Not a citation: leave the bracket to the plain-text escape and keep
+      // scanning inside it, so a `@ref` within it is still found.
+      re.lastIndex = m.index + 1
+      continue
+    }
     out.push(escTex(text.slice(last, m.index)))
-    if (m[1] !== undefined) {
+    if (items) {
       // `[@key, p. 321]` becomes \cite[p. 321]{key}: LaTeX's own way of
       // carrying a locator, so every citation style renders it correctly.
-      const note = m[2]?.trim()
-      out.push(note ? `\\cite[${escTex(note)}]{${m[1]}}` : `\\cite{${m[1]}}`)
+      // `[@a; @b]` becomes one \cite{a,b}; LaTeX takes a single locator for
+      // the whole group, so several notes are joined.
+      const note = items
+        .map((i) => i.note)
+        .filter(Boolean)
+        .join("; ")
+      const keys = items.map((i) => i.key).join(",")
+      out.push(note ? `\\cite[${escTex(note)}]{${keys}}` : `\\cite{${keys}}`)
       citedInLastPass = true
-    } else if (m[5] !== undefined) {
-      out.push(crossRefToTex((m[3] ?? m[4] ?? "").trim(), m[5], m[6]))
+    } else if (m[4] !== undefined) {
+      out.push(crossRefToTex((m[2] ?? m[3] ?? "").trim(), m[4], m[5]))
     } else {
-      out.push(refToTex(m[7], m[8]))
+      out.push(refToTex(m[6], m[7]))
     }
     last = m.index + m[0].length
   }

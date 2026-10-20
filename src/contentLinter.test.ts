@@ -166,6 +166,13 @@ describe("lintCitations", () => {
     const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["ref"]) }
     expect(lint("[@ref, p. 42]", ctx).filter((m) => m.message.includes("Cita"))).toHaveLength(0)
   })
+
+  it("checks every key of a grouped citation", () => {
+    const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["a"]) }
+    const markers = lint("[@a; @b, p. 3]", ctx).filter((m) => m.message.includes("Cita"))
+    expect(markers).toHaveLength(1)
+    expect(markers[0].message).toContain("@b")
+  })
 })
 
 // ── Shorthands ────────────────────────────────────────────────────────────────
