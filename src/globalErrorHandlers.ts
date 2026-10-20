@@ -4,6 +4,12 @@ import { en, es } from "./i18n"
 /** Minimum gap between two "something went wrong" toasts. */
 export const GLOBAL_ERROR_TOAST_INTERVAL_MS = 10_000
 
+/** Benign browser notices that are not real failures (layout feedback loops). */
+export function isBenignError(detail: unknown): boolean {
+  const text = detail instanceof Error ? detail.message : typeof detail === "string" ? detail : ""
+  return /ResizeObserver loop (completed with undelivered notifications|limit exceeded)/.test(text)
+}
+
 function message(): string {
   const lang = typeof navigator !== "undefined" ? navigator.language.toLowerCase() : "es"
   return (lang.startsWith("en") ? en : es).errorBoundary.unexpectedBackground
@@ -22,6 +28,7 @@ export function installGlobalErrorHandlers(
   let lastToastAt = -Infinity
 
   const report = (label: string, detail: unknown) => {
+    if (isBenignError(detail)) return
     console.error(`[ComdTeX] ${label}:`, detail)
     const t = now()
     if (t - lastToastAt < GLOBAL_ERROR_TOAST_INTERVAL_MS) return

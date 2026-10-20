@@ -1669,12 +1669,11 @@ function AppContent({
             e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement,
         },
         {
-          toggleFocusMode: () =>
-            setFocusMode((f) => {
-              const next = !f
-              showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info")
-              return next
-            }),
+          toggleFocusMode: () => {
+            const next = !focusMode
+            setFocusMode(next)
+            showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info")
+          },
           exitFocusMode: () => setFocusMode(false),
           openCommandPalette: () => setPaletteOpen(true),
           openQuickSwitcher: () => setQuickSwitcherOpen(true),
