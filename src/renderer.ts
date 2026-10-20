@@ -43,8 +43,20 @@ import { processBlockIds, attachBlockIds, type TransclusionResolver } from "./tr
 import { resolveDocumentContent } from "./documentResolve"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
+import { highlightCode } from "./syntaxHighlight"
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+// `breaks`: a single newline inside a paragraph is a line break, as the preview
+// has always shown it (it used to be `white-space: pre-wrap` in CSS, which also
+// kept runs of spaces and broke normal typesetting). `highlight` returns the
+// inner HTML of a known language or "", which keeps markdown-it's plain
+// escaped output.
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: true,
+  highlight: (code, lang) => highlightCode(code, lang) ?? "",
+})
   .use(footnotePlugin)
   .use(markPlugin)
   .enable("table")
@@ -542,6 +554,20 @@ interface HeadingItem {
  * `numberHeadings` onto their rendered `<h*>` element. Runs for every document,
  * so `@sec:` links work with or without a `[[toc]]`.
  */
+/**
+ * The auto-number prefix `numberHeadings` writes ("1.2 Title") gets its own
+ * span so the preview can align and style it. The text is unchanged: the
+ * space after the span stays, and every reader of `textContent` (source-line
+ * keys, heading ids, the outline) sees "1.2 Title" as before.
+ */
+function wrapSectionNumbers(html: string): string {
+  return html.replace(
+    /<h([1-3])(\b[^>]*)>(\d+(?:\.\d+)*) /g,
+    (_m, lvl: string, attrs: string, num: string) =>
+      `<h${lvl}${attrs}><span class="sec-num">${num}</span> `,
+  )
+}
+
 function attachSectionIds(html: string): string {
   // No marker, nothing to attach: skip two full-document regex scans.
   if (html.indexOf("\x02SECID:") < 0) return html
@@ -781,6 +807,7 @@ function renderMarkdownImpl(
   // Assign heading ids for navigation (always; `@sec:` anchors must resolve in
   // documents with no TOC), then expand the `[[toc]]` placeholder against them.
   html = attachSectionIds(html)
+  html = wrapSectionNumbers(html)
   const headings = assignHeadingIds(html)
   html = injectToc(headings.html, headings.items)
 

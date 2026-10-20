@@ -7,15 +7,22 @@ describe("renderMarkdown", () => {
   it("numbers headings without exposing internal anchor text", () => {
     const html = renderMarkdown("# Intro\n\n## Details")
 
-    expect(html).toMatch(/<h1[^>]*>1 Intro<\/h1>/)
-    expect(html).toMatch(/<h2[^>]*>1\.1 Details<\/h2>/)
+    expect(html).toMatch(/<h1[^>]*><span class="sec-num">1<\/span> Intro<\/h1>/)
+    expect(html).toMatch(/<h2[^>]*><span class="sec-num">1\.1<\/span> Details<\/h2>/)
     expect(html).not.toContain("{#sec-")
   })
 
-  it("keeps soft line breaks in plain paragraphs for preview CSS to display", () => {
+  it("keeps the section number as plain text next to its span", () => {
+    const html = renderMarkdown("# Intro\n\n## Details")
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelector("h1")?.textContent).toBe("1 Intro")
+    expect(doc.querySelector("h2")?.textContent).toBe("1.1 Details")
+  })
+
+  it("turns soft line breaks in plain paragraphs into <br>, without needing pre-wrap CSS", () => {
     const html = renderMarkdown("Datos:\nIncognitas:\nSolucion:")
 
-    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+    expect(html).toContain("<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>")
   })
 
   it("preserves leading indentation on paragraph continuation lines", () => {
@@ -26,11 +33,11 @@ describe("renderMarkdown", () => {
     expect(html).toContain('class="katex"')
   })
 
-  it("keeps soft line breaks inside prose environments for preview CSS to display", () => {
+  it("keeps soft line breaks inside prose environments as <br>", () => {
     const html = renderMarkdown(":::example\nDatos:\nIncognitas:\nSolucion:\n:::")
 
     expect(html).toContain('class="math-env math-env-example"')
-    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+    expect(html).toContain("<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>")
   })
 
   it("renders markdown formatting inside prose environments", () => {
@@ -216,9 +223,10 @@ describe("renderMarkdown", () => {
       const html = renderMarkdown(raw)
       expect(html).toMatch(/<pre[^>]*data-source-line="4"/)
       expect(html).toMatch(/<p[^>]*data-source-line="8"[^>]*>After/)
-      // Fenced content is still rendered verbatim (no regression).
-      expect(html).toContain("const a = 1")
-      expect(html).toContain("const b = 2")
+      // Fenced content is still rendered verbatim (no regression); the
+      // highlighter only adds token spans around it.
+      const text = new DOMParser().parseFromString(html, "text/html").querySelector("pre")
+      expect(text?.textContent).toBe("const a = 1\nconst b = 2\n")
     })
 
     it("does not let fenced code content shadow identical prose lines", () => {
@@ -275,7 +283,25 @@ describe("renderMarkdown", () => {
     it("triple-backtick fences still render normally (regression)", () => {
       const html = renderMarkdown("```python\nx = 1\n```")
       expect(html).toContain("language-python")
-      expect(html).toContain("x = 1")
+      const pre = new DOMParser().parseFromString(html, "text/html").querySelector("pre")
+      expect(pre?.textContent).toBe("x = 1\n")
+    })
+
+    it("highlights known languages with token spans only, and leaves unknown ones plain", () => {
+      const known = renderMarkdown('```python\ndef f(x):\n    return "a" + 1  # note\n```')
+      expect(known).toContain('<span class="tok-kw">def</span>')
+      expect(known).toContain('<span class="tok-fn">f</span>')
+      expect(known).toContain('<span class="tok-str">"a"</span>')
+      expect(known).toContain('<span class="tok-com"># note</span>')
+
+      const unknown = renderMarkdown("```brainfuck\n+++[->+<]\n```")
+      expect(unknown).not.toContain("tok-")
+      expect(unknown).toContain("-&gt;")
+    })
+
+    it("does not highlight mermaid blocks, which the diagram pass reads as plain text", () => {
+      const html = renderMarkdown("```mermaid\ngraph TD\n  A --> B\n```")
+      expect(html).not.toContain("tok-")
     })
   })
 
@@ -325,8 +351,10 @@ describe("renderMarkdown", () => {
       expect(html).toContain('href="#details"')
       expect(html).toContain('href="#conclusion"')
       // Matching ids assigned to the rendered headings for navigation.
-      expect(html).toMatch(/<h1[^>]*id="intro"[^>]*>1 Intro<\/h1>/)
-      expect(html).toMatch(/<h2[^>]*id="details"[^>]*>1\.1 Details<\/h2>/)
+      expect(html).toMatch(/<h1[^>]*id="intro"[^>]*><span class="sec-num">1<\/span> Intro<\/h1>/)
+      expect(html).toMatch(
+        /<h2[^>]*id="details"[^>]*><span class="sec-num">1\.1<\/span> Details<\/h2>/,
+      )
     })
 
     it("also accepts the single-bracket [toc] form, case-insensitively", () => {
