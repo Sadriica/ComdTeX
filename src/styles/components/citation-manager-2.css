@@ -301,9 +301,5 @@
 }
 
 /* ── File tree drag-drop ── */
-.tree-drop-target {
-  background: var(--accent-soft);
-  outline: 1px dashed var(--accent);
-}
 
 /* ── Word goal progress ── */

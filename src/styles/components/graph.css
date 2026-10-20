@@ -221,12 +221,6 @@
 }
 
 /* ── Search highlight ── */
-.search-highlight {
-  background: #5f4f00;
-  color: #ffd700;
-  border-radius: 2px;
-  padding: 0 1px;
-}
 
 /* ── Split pane ── */
 .split-pane {
@@ -297,43 +291,12 @@
 }
 
 /* ── Outline active item ── */
-.outline-item-active {
-  background: rgba(86, 156, 214, 0.15);
-  color: #569cd6;
-  border-left: 2px solid #569cd6;
-}
 
 /* ── Status bar selection ── */
 
 /* ── Search & Replace ──
    .search-replace-toggle styling is consolidated in the "Search & Replace panel"
    block below (theme-driven, monochrome). */
-.search-replace-wrap {
-  display: flex;
-  gap: 4px;
-  padding: 4px 8px 0;
-}
-.search-replace-input {
-  flex: 1;
-}
-.search-replace-btn {
-  background: rgba(86, 156, 214, 0.18);
-  border: 1px solid #569cd6;
-  border-radius: 4px;
-  color: #569cd6;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 3px 10px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.search-replace-btn:hover {
-  background: rgba(86, 156, 214, 0.3);
-}
-.search-replace-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
 /* ── CommandPalette recent files ── */
 .palette-kind-recent {

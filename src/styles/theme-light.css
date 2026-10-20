@@ -6,75 +6,6 @@
    once that component is written with tokens. */
 
 /* Sidebar / file tree */
-.app[data-theme="light"] .tree-header {
-  color: var(--fg-muted);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .tree-actions button {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tree-actions button:hover {
-  color: var(--fg);
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .tree-new-input input,
-.app[data-theme="light"] .tree-rename-input {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tree-new-input input:focus,
-.app[data-theme="light"] .tree-rename-input {
-  border-color: var(--accent);
-}
-.app[data-theme="light"] .tree-row:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .tree-file.tree-active {
-  background: var(--bg-selected);
-  color: var(--accent);
-}
-.app[data-theme="light"] .tree-file.tree-focused:not(.tree-active) {
-  outline-color: var(--accent);
-}
-.app[data-theme="light"] .tree-icon {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tree-dir .tree-name {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tree-file .tree-name {
-  color: var(--accent);
-}
-.app[data-theme="light"] .tree-empty,
-.app[data-theme="light"] .sidebar-empty {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .btn-vault {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .btn-vault:hover {
-  background: var(--accent);
-}
-.app[data-theme="light"] .tree-filter-input {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tree-filter-input:focus {
-  border-color: var(--accent);
-}
-.app[data-theme="light"] .tree-filter-clear {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tree-filter-clear:hover {
-  color: var(--fg);
-}
-.app[data-theme="light"] .tree-drop-target {
-  background: color-mix(in oklch, var(--accent) 12%, transparent);
-  outline-color: var(--accent);
-}
 
 /* Panes */
 .app[data-theme="light"] .editor-pane {
@@ -186,135 +117,12 @@
 }
 
 /* Search panel */
-.app[data-theme="light"] .search-input-wrap {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .search-input {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .search-input:focus {
-  border-color: var(--accent);
-}
-.app[data-theme="light"] .search-spinner {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-empty {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-group {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .search-file {
-  color: var(--accent);
-  background: var(--chrome-bg);
-}
-.app[data-theme="light"] .search-file:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .search-count {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .search-hit {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-hit:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .search-line {
-  color: var(--accent);
-}
-.app[data-theme="light"] .search-more {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-highlight {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
 
 /* Search & replace */
-.app[data-theme="light"] .search-replace-toggle {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-replace-toggle:hover,
-.app[data-theme="light"] .search-replace-toggle.active {
-  color: var(--accent);
-  background: color-mix(in oklch, var(--accent) 10%, transparent);
-}
-.app[data-theme="light"] .search-replace-btn {
-  background: color-mix(in oklch, var(--accent) 12%, transparent);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.app[data-theme="light"] .search-replace-btn:hover {
-  background: color-mix(in oklch, var(--accent) 22%, transparent);
-}
-.app[data-theme="light"] .search-replace-inputs input {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .search-replace-options {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-replace-btns button {
-  background: var(--chrome-bg);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .search-replace-btns button:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .search-replace-result {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .search-replace-result:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .search-replace-result-file {
-  color: var(--accent);
-}
-.app[data-theme="light"] .search-replace-result-line {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .search-replace-result-text {
-  color: var(--fg);
-}
-.app[data-theme="light"] .search-replace-result mark {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
-.app[data-theme="light"] .search-replace-result-btn {
-  background: var(--ok-bg);
-  border-color: var(--ok);
-  color: var(--ok);
-}
 
 /* Outline */
-.app[data-theme="light"] .outline-item {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .outline-item:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .outline-level {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .outline-item-active {
-  background: color-mix(in oklch, var(--accent) 12%, transparent);
-  color: var(--accent);
-  border-left-color: var(--accent);
-}
 
 /* Backlinks */
-.app[data-theme="light"] .backlinks-header {
-  color: var(--fg-muted);
-  border-bottom-color: var(--border);
-}
 
 /* Command palette */
 .app[data-theme="light"] .palette-overlay {
@@ -417,28 +225,6 @@
 }
 
 /* Context menu */
-.app[data-theme="light"] .ctx-menu {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-2);
-}
-.app[data-theme="light"] .ctx-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .ctx-item:hover:not(:disabled) {
-  background: var(--bg-selected);
-  color: var(--accent);
-}
-.app[data-theme="light"] .ctx-item:disabled {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .ctx-item.ctx-danger {
-  color: var(--danger);
-}
-.app[data-theme="light"] .ctx-item.ctx-danger:hover:not(:disabled) {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
 
 /* Toasts */
 .app[data-theme="light"] .toast {
@@ -692,86 +478,8 @@
 }
 
 /* Tag panel */
-.app[data-theme="light"] .tag-filter {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tag-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .tag-item:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .tag-name {
-  color: var(--ok);
-}
-.app[data-theme="light"] .tag-type {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tag-count {
-  background: var(--bg-active);
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tag-back {
-  color: var(--accent);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .tag-back:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .tag-file-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .tag-file-item:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tag-source {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tag-source-frontmatter {
-  color: var(--warn);
-}
-.app[data-theme="light"] .tag-source-inline {
-  color: var(--accent);
-}
 
 /* Labels panel */
-.app[data-theme="light"] .labels-health {
-  color: var(--fg-muted);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .label-health-bad {
-  color: var(--danger);
-}
-.app[data-theme="light"] .labels-section {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .labels-section-title {
-  color: var(--accent);
-}
-.app[data-theme="light"] .label-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .label-item:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .label-item-bad {
-  color: var(--danger);
-}
-.app[data-theme="light"] .label-file {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .label-chip {
-  border-color: var(--border);
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .label-chip-bad {
-  border-color: #c0392b66;
-  color: var(--danger);
-}
 
 /* Document Lab */
 .app[data-theme="light"] .lab-tabs {
@@ -835,165 +543,16 @@
 }
 
 /* Frontmatter panel */
-.app[data-theme="light"] .fm-label {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .fm-input,
-.app[data-theme="light"] .fm-textarea {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .fm-input:focus,
-.app[data-theme="light"] .fm-textarea:focus {
-  border-color: var(--accent);
-}
-.app[data-theme="light"] .fm-remove {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .fm-remove:hover {
-  color: var(--danger);
-}
-.app[data-theme="light"] .fm-add-field {
-  border-top-color: var(--border);
-}
-.app[data-theme="light"] .fm-add-btn {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .fm-add-btn:hover {
-  background: var(--accent);
-}
 
 /* Graph panel */
 
 /* Todo panel */
-.app[data-theme="light"] .todo-header {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .todo-summary {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .todo-filter {
-  border-color: var(--border);
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .todo-filter:hover {
-  border-color: var(--border-strong);
-  color: var(--fg);
-}
-.app[data-theme="light"] .todo-filter.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in oklch, var(--accent) 8%, transparent);
-}
-.app[data-theme="light"] .todo-file-group {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .todo-file-name {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .todo-item:hover {
-  background: color-mix(in oklch, var(--fg) 4%, transparent);
-}
-.app[data-theme="light"] .todo-check {
-  border-color: var(--border-strong);
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .todo-check:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.app[data-theme="light"] .todo-done .todo-check {
-  border-color: var(--ok);
-  color: var(--ok);
-  background: color-mix(in oklch, var(--ok) 10%, transparent);
-}
-.app[data-theme="light"] .todo-text {
-  color: var(--fg);
-}
-.app[data-theme="light"] .todo-text:hover {
-  color: var(--fg);
-}
-.app[data-theme="light"] .todo-done .todo-text {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .eq-list-item {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .eq-list-item:hover {
-  background: color-mix(in oklch, var(--fg) 4%, transparent);
-}
-.app[data-theme="light"] .eq-list-num {
-  color: var(--accent);
-}
-.app[data-theme="light"] .eq-list-label {
-  color: var(--ok);
-}
-.app[data-theme="light"] .eq-list-preview {
-  color: var(--accent);
-}
 
 /* Stats panel */
-.app[data-theme="light"] .stats-section {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .stats-section-title {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .stats-row:hover {
-  background: color-mix(in oklch, var(--fg) 3%, transparent);
-}
-.app[data-theme="light"] .stats-label {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .stats-value {
-  color: var(--fg);
-}
-.app[data-theme="light"] .stats-accent .stats-value {
-  color: var(--danger);
-}
-.app[data-theme="light"] .stats-broken {
-  border-top-color: var(--danger);
-}
-.app[data-theme="light"] .stats-broken-title {
-  color: var(--danger);
-}
-.app[data-theme="light"] .stats-broken-item {
-  border-bottom-color: var(--danger-border);
-}
-.app[data-theme="light"] .stats-broken-link {
-  color: var(--warn);
-}
-.app[data-theme="light"] .stats-broken-file {
-  color: var(--fg-muted);
-}
 
 /* Environments panel */
-.app[data-theme="light"] .env-list-item {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .env-list-item:hover {
-  background: color-mix(in oklch, var(--fg) 4%, transparent);
-}
-.app[data-theme="light"] .env-list-title {
-  color: var(--fg);
-}
-.app[data-theme="light"] .env-list-num {
-  color: var(--accent);
-}
-.app[data-theme="light"] .env-list-file {
-  color: var(--fg-muted);
-}
 
 /* Panel header / empty */
-.app[data-theme="light"] .panel-header {
-  color: var(--fg-muted);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .panel-empty {
-  color: var(--fg-muted);
-}
 
 /* Math hover widget */
 .app[data-theme="light"] .math-hover-widget {

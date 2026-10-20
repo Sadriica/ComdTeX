@@ -177,41 +177,6 @@
 }
 
 /* ── Panel filter box (PanelSearch) ─────────────────────────────────────── */
-.panel-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-.panel-search-input {
-  flex: 1;
-  min-width: 0;
-  background: var(--surface2);
-  color: var(--fg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 12px;
-  font-family: inherit;
-}
-.panel-search-count {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.panel-search-clear {
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 2px 4px;
-}
-.panel-search-clear:hover {
-  color: var(--fg);
-}
 
 /* ── Focus-session clock in the top bar ─────────────────────────────────── */
 
