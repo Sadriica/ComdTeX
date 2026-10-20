@@ -703,6 +703,9 @@
   color: transparent;
   font-size: 0;
 }
+.search-spinner svg {
+  display: none;
+}
 .search-spinner::before {
   content: "";
   position: absolute;

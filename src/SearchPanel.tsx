@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { SearchResult } from "./types"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
-import { ArrowLeftRight, Icon, RefreshCw, TriangleAlert } from "./icons"
+import { ArrowLeftRight, ChevronDown, Icon, RefreshCw, TriangleAlert } from "./icons"
 import PanelHeader from "./PanelHeader"
 
 interface SearchPanelProps {
@@ -250,7 +250,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
-                  ▾
+                  <Icon icon={ChevronDown} size={14} />
                 </button>
                 <span className="search-file-name">{displayBasename(filePath)}</span>
                 <span className="search-count" aria-label={t.search.count(hits.length)}>
