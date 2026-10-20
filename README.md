@@ -586,11 +586,12 @@ npm run tauri dev     # development mode with hot-reload
 npm test              # run the test suite (vitest)
 npm run build         # frontend only (eslint + tsc + vite)
 npm run format:check  # prettier check (CI runs it)
+npm run lint:css      # stylelint: tokens only, no colour literals, no !important (CI runs it)
 npm run test:coverage # coverage with the regression floor
 (cd src-tauri && cargo test --lib)   # Rust tests
 ```
 
-Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statements, 40% branches, 34% functions, 47% lines (the real figures are about 52.5 / 47 / 40.8 / 53.6). CI (`ci.yml`) runs lint, type check, `format:check`, tests with coverage, clippy, `cargo fmt --check` and `cargo test`.
+Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statements, 40% branches, 34% functions, 47% lines (the real figures are about 52.5 / 47 / 40.8 / 53.6). CI (`ci.yml`) runs lint, `lint:css`, type check, `format:check`, tests with coverage, clippy, `cargo fmt --check` and `cargo test`.
 
 The bulk prettier commit is listed in `.git-blame-ignore-revs`; to make `git blame` skip it run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
