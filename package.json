@@ -75,6 +75,9 @@
       "nanoid": "^5.1.16"
     },
     "monaco-editor": "0.55.1",
-    "@types/markdown-it": "$@types/markdown-it"
+    "@types/markdown-it": "$@types/markdown-it",
+    "@excalidraw/excalidraw": {
+      "sass": "^1.80.0"
+    }
   }
 }
