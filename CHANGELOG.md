@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **The preview is typeset like a paper.** Libertinus Serif at a 68-character measure, theorem environments in the amsthm style (bold run-in label, italic statement, "Proof." with a tombstone), booktabs tables with the caption above, a title block with an abstract, and print that follows the same layout. Settings > Preview > Document style switches to a sans face with the same spacing.
+- **Syntax highlighting in preview code blocks** for about 18 common languages, offline and themed with the `--syn-*` colours.
+
 ### Fixed
+- **Nested lists nest again.** An indented sub-item under a list item rendered as plain text with a leading dash.
+- **No stray blank lines around equations and environments** in the preview.
 - **A collapsed sidebar can be reopened.** Collapsing it left no visible control to bring it back. It now leaves a slim rail with the expand button.
 - **Escape and Tab work in the quick switcher, the command palette and the LaTeX error dialog.** The quick switcher re-created its text field every time it took focus, which swallowed keystrokes and made Escape unreliable; the palette and the LaTeX error dialog had no focus trap at all. All three now keep Tab inside, close on Escape (the palette steps out of a sub-menu first) and give focus back where it was. The word-goal hint in Settings also sits under its own row now instead of under Vim mode.
 - **English interface, English document words.** The preview printed "Definición", "Demostración", "Teorema" and "Figura", the Labels panel said "SECCIONES" and "ECUACIONES", and Document Lab messages were Spanish. They now follow the interface language, and the same goes for the headings, references, figure and table captions and the bibliography title in the preview and in the Markdown, Obsidian, DOCX, Typst, Beamer and Reveal.js exports. A note can set its own with `lang: en` or `language: es` in its frontmatter, which wins over the interface. The LaTeX export is unchanged and still names things through babel. Spanish stays as it was.
