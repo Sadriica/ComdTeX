@@ -1,0 +1,251 @@
+/* ── Menu Bar ── */
+.menu-bar {
+  display: flex;
+  align-items: center;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  padding: 0 4px;
+  height: 26px;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu-btn {
+  background: transparent;
+  border: none;
+  color: #bbb;
+  padding: 3px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 3px;
+  height: 26px;
+}
+.menu-btn:hover,
+.menu-btn.open {
+  background: #2d2d2d;
+  color: #fff;
+}
+
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 200;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 220px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.menu-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  gap: 24px;
+}
+.menu-entry:hover:not(:disabled) {
+  background: #094771;
+  color: #fff;
+}
+.menu-entry:disabled {
+  color: #555;
+  cursor: default;
+}
+
+.menu-entry-label {
+  flex: 1;
+  white-space: nowrap;
+}
+.menu-shortcut {
+  color: #888;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.menu-entry:hover:not(:disabled) .menu-shortcut {
+  color: #aaa;
+}
+
+.menu-sep {
+  height: 1px;
+  background: #3a3a3a;
+  margin: 4px 0;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ── Top horizontal panel-switcher row ── */
+/* Single top line: toolbar (left, natural width) + panel tabs (fill + scroll). */
+.topbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface2, #2a2a2a); /* ONE shared bar background */
+  border-bottom: 1px solid var(--border, #333);
+}
+
+/* ── Unified menu bar ── */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  width: 100%;
+  min-width: 0;
+  background: transparent; /* inherit the unified topbar bg */
+}
+.menubar-spacer {
+  flex: 1 1 0;
+  min-width: 8px;
+}
+
+.menubar-section-btn,
+.menubar-direct-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--icon, #d4d4d4);
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.3;
+  font-variant-emoji: text;
+}
+.menubar-section-btn:hover,
+.menubar-direct-btn:hover {
+  background: var(--surface, #1e1e1e);
+  color: var(--fg, #fff);
+}
+.menubar-section-btn.open {
+  background: var(--surface, #1e1e1e);
+  border-color: var(--border, #555);
+  color: var(--fg, #fff);
+}
+.menubar-section-btn.section-active,
+.menubar-direct-btn.active {
+  background: var(--accent-dim, #1e3a52);
+  color: var(--accent, #7c9cbf);
+  border-color: var(--accent, #7c9cbf);
+}
+.menubar-section-btn:focus-visible,
+.menubar-direct-btn:focus-visible {
+  outline: 1px solid var(--accent, #7c9cbf);
+  outline-offset: -2px;
+}
+.menubar-section-icon {
+  display: inline-block;
+  min-width: 14px;
+  text-align: center;
+  /* Force flat (text) presentation so any glyph with a text variant renders
+     monochrome and inherits `color` (--icon/--fg) instead of a colored emoji. */
+  font-variant-emoji: text;
+}
+.menubar-section-label {
+  font-weight: 500;
+}
+.menubar-section-arrow {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* Section / submenu popups (position:fixed so they escape overflow clipping) */
+.menubar-popup {
+  position: fixed;
+  z-index: 1000;
+}
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface2, #2a2a2a);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.menu-list-sep {
+  height: 1px;
+  background: var(--border, #444);
+  margin: 4px 2px;
+}
+.menu-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg, #d4d4d4);
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.menu-list-item:hover,
+.menu-sub-trigger.open {
+  background: var(--surface, #1e1e1e);
+  color: var(--fg, #fff);
+}
+.menu-list-panel.active {
+  background: var(--accent-dim, #1e3a52);
+  color: var(--accent, #7c9cbf);
+  border-color: var(--accent, #7c9cbf);
+}
+
+/* Nested submenu */
+.menu-sub {
+  position: relative;
+}
+.menu-sub-arrow {
+  font-size: 10px;
+  opacity: 0.7;
+}
+.menu-sub-panel {
+  position: fixed; /* coords set inline from the trigger rect → flyout right */
+  z-index: 1001;
+}
+.menu-sub-panel .menu-list {
+  min-width: 180px;
+}
+
+/* Symbol grid embedded in the "Símbolos" submenu */
+.symbol-panel-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px;
+}

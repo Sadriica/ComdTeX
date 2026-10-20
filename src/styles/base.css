@@ -1,0 +1,67 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Theme variable palette ──
+   These custom properties are consumed across App.css (graph/truth-table/plot
+   blocks, symbol picker, latex-error modal, status bar, etc.). Previously they
+   were only referenced via var(--x, fallback) and never defined, so every
+   theme resolved to the dark fallback. Defined once per theme below. */
+:root,
+.app[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --fg: #d4d4d4;
+  --surface: #1e1e1e;
+  --surface2: #2a2a2a;
+  --border: #444;
+  --accent: #7c9cbf;
+  --accent-dim: #1e3a52;
+  --icon: #d4d4d4;
+  --status-fg: #aaa;
+  --muted: #888;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.app[data-theme="light"] {
+  --bg: #ffffff;
+  --fg: #1f1f1f;
+  --surface: #ffffff;
+  --surface2: #f0f0f0;
+  --border: #d0d0d0;
+  --accent: #0066cc;
+  --accent-dim: #cce4ff;
+  --icon: #3a3a3a;
+  --status-fg: #6a6a6a;
+  --muted: #6a6a6a;
+}
+
+.app[data-theme="hc"] {
+  --bg: #000000;
+  --fg: #ffffff;
+  --surface: #000000;
+  --surface2: #1a1a1a;
+  --border: #ffffff;
+  --accent: #ffff00;
+  --accent-dim: #1a1a00;
+  --icon: #ffffff;
+  --status-fg: #ffffff;
+  --muted: #cccccc;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}

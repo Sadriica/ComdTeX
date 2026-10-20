@@ -1,0 +1,107 @@
+/* ── Folder rules modal ─────────────────────────────────────────────────── */
+/* Colors come from the theme palette at the top of this file (--surface2,
+   --fg, --muted, --border). An earlier version invented --bg-input/--text/
+   --text-muted, which resolve to nothing, so `background` fell back to the
+   native widget and the selects rendered white. Select styling itself is
+   shared with `.setting-row select` above; see the appearance:none note. */
+.folder-rules-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.folder-rules-intro {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.folder-rules-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.folder-rules-field > span {
+  font-size: 12px;
+  font-weight: 600;
+}
+.folder-rules-field > small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.folder-rules-field input[type="text"],
+.folder-rules-field textarea,
+.folder-rules-generated-row input[type="text"] {
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.folder-rules-field textarea {
+  font-family: var(--mono);
+  resize: vertical;
+}
+.folder-rules-generated-row {
+  display: grid;
+  /* Filename takes the slack; the two selects and the remove button are fixed. */
+  grid-template-columns: 1fr auto auto auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+.folder-rules-add,
+.folder-rules-remove {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.folder-rules-add {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.folder-rules-add:hover,
+.folder-rules-remove:hover {
+  background: var(--surface2);
+}
+.tree-new-target {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 4px 2px;
+}
+
+.template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.template-content-input {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #d4d4d4;
+  padding: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+.template-vars-hint {
+  color: #777;
+  font-size: 11px;
+}
+.template-custom-badge {
+  align-self: flex-start;
+  color: #4ec9b0;
+  border: 1px solid #4ec9b055;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 9px;
+}

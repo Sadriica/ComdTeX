@@ -1,0 +1,114 @@
+/* Onboarding tour */
+.onboarding-modal {
+  background: #1e1e1e;
+  border: 1px solid #3c3c3c;
+  border-radius: 8px;
+  width: 480px;
+  max-width: 92vw;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+}
+.onboarding-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #2c2c2c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.onboarding-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #eee;
+}
+.onboarding-step-counter {
+  font-size: 11px;
+  color: #888;
+}
+.onboarding-body {
+  padding: 24px 20px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.onboarding-step-icon {
+  font-size: 48px;
+  line-height: 1;
+  opacity: 0.85;
+}
+.onboarding-step-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ddd;
+}
+.onboarding-step-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #aaa;
+  max-width: 360px;
+}
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 4px 0 12px;
+}
+.onboarding-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #444;
+  transition: background 0.18s;
+}
+.onboarding-progress-dot.active {
+  background: #4a9eff;
+}
+.onboarding-actions {
+  padding: 12px 20px;
+  border-top: 1px solid #2c2c2c;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.onboarding-actions button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #333;
+  color: #ddd;
+  border: 1px solid #3c3c3c;
+  font-size: 13px;
+}
+.onboarding-actions button.primary {
+  background: #4a9eff;
+  border-color: #4a9eff;
+  color: white;
+}
+.onboarding-actions button:hover {
+  background: #3a3a3a;
+}
+.onboarding-actions button.primary:hover {
+  background: #3b8be6;
+}
+
+/* ── Breadcrumb nav buttons ── */
+.breadcrumb-nav-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 3px;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+.breadcrumb-nav-btn:hover:not(:disabled) {
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.08);
+}

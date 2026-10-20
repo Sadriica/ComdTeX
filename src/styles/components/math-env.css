@@ -1,0 +1,318 @@
+/* ── Math Environments ── */
+.math-env {
+  margin: 1.4em 0;
+  padding: 0.8em 1.1em 0.8em 1.1em;
+  border-radius: 5px;
+  border-left: 3px solid;
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  /* Prevent long display-math from expanding the box past its container width */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+.math-env .katex-display {
+  /* Long single-line equations scroll horizontally inside the box instead of overflowing it */
+  overflow-x: auto;
+  max-width: 100%;
+}
+.math-env-body {
+  min-width: 0;
+}
+
+.math-env-header {
+  margin-bottom: 0.4em;
+}
+
+.math-env-label {
+  font-weight: 700;
+  font-style: italic;
+  font-size: 0.95em;
+}
+.math-env-anchor {
+  margin-left: 8px;
+  color: #666;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.math-env-body p:last-child {
+  margin-bottom: 0;
+}
+.math-env-body p:first-child {
+  margin-top: 0;
+}
+
+/* Headings inside environments: scaled to fit the context */
+.math-env-body h1 {
+  font-size: 1.05em;
+  font-weight: 700;
+  margin: 0.7em 0 0.25em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.75;
+}
+.math-env-body h2 {
+  font-size: 0.98em;
+  font-weight: 700;
+  margin: 0.6em 0 0.2em;
+}
+.math-env-body h3 {
+  font-size: 0.93em;
+  font-weight: 600;
+  font-style: italic;
+  margin: 0.5em 0 0.15em;
+}
+.math-env-body h4 {
+  font-size: 0.9em;
+  font-weight: 600;
+  margin: 0.4em 0 0.1em;
+  color: inherit;
+  opacity: 0.8;
+}
+.math-env-body h1:first-child,
+.math-env-body h2:first-child,
+.math-env-body h3:first-child,
+.math-env-body h4:first-child {
+  margin-top: 0;
+}
+
+.math-env-qed {
+  text-align: right;
+  font-size: 1.1em;
+  margin-top: 0.4em;
+  color: #999;
+}
+
+/* Size variants */
+.math-env-sm {
+  padding: 0.35em 0.75em 0.35em 0.9em;
+  font-size: 0.87em;
+  border-left-width: 2px;
+  margin: 0.7em 0;
+}
+.math-env-sm .math-env-label {
+  font-size: 0.85em;
+}
+
+.math-env-lg {
+  padding: 1.1em 1.4em 1.1em 1.4em;
+  font-size: 1.06em;
+  border-left-width: 5px;
+  margin: 2em 0;
+  border-radius: 6px;
+}
+.math-env-lg .math-env-label {
+  font-size: 1.05em;
+  letter-spacing: 0.01em;
+}
+
+/* Per-type colors */
+.math-env-theorem {
+  border-color: #569cd6;
+}
+.math-env-theorem .math-env-label {
+  color: #569cd6;
+}
+
+.math-env-lemma {
+  border-color: #4ec9b0;
+}
+.math-env-lemma .math-env-label {
+  color: #4ec9b0;
+}
+
+.math-env-corollary {
+  border-color: #9cdcfe;
+}
+.math-env-corollary .math-env-label {
+  color: #9cdcfe;
+}
+
+.math-env-proposition {
+  border-color: #ce9178;
+}
+.math-env-proposition .math-env-label {
+  color: #ce9178;
+}
+
+.math-env-definition {
+  border-color: #dcdcaa;
+  background: rgba(220, 220, 170, 0.04);
+}
+.math-env-definition .math-env-label {
+  color: #dcdcaa;
+}
+
+.math-env-example {
+  border-color: #666;
+}
+.math-env-example .math-env-label {
+  color: #999;
+}
+
+.math-env-exercise {
+  border-color: #c586c0;
+}
+.math-env-exercise .math-env-label {
+  color: #c586c0;
+}
+
+.math-env-proof {
+  border-color: #555;
+  border-style: dashed;
+}
+.math-env-proof .math-env-label {
+  color: #999;
+  font-weight: 400;
+}
+
+.math-env-remark {
+  border-color: #444;
+}
+.math-env-remark .math-env-label {
+  color: #777;
+}
+
+.math-env-note {
+  border-color: #444;
+}
+.math-env-note .math-env-label {
+  color: #777;
+}
+
+/* Callout-style environments (tip/warning/danger/...): themed left border + label */
+.math-env-tip,
+.math-env-hint {
+  border-color: #4a8;
+  background: rgba(72, 168, 128, 0.08);
+}
+.math-env-tip .math-env-label,
+.math-env-hint .math-env-label {
+  color: #6c9;
+}
+
+.math-env-info {
+  border-color: #4a8fc8;
+  background: rgba(74, 143, 200, 0.08);
+}
+.math-env-info .math-env-label {
+  color: #6bb;
+}
+
+.math-env-warning,
+.math-env-caution,
+.math-env-attention {
+  border-color: #c8a04a;
+  background: rgba(200, 160, 74, 0.08);
+}
+.math-env-warning .math-env-label,
+.math-env-caution .math-env-label,
+.math-env-attention .math-env-label {
+  color: #d4a847;
+}
+
+.math-env-important {
+  border-color: #c8654a;
+  background: rgba(200, 101, 74, 0.08);
+}
+.math-env-important .math-env-label {
+  color: #e0795a;
+}
+
+.math-env-danger,
+.math-env-error,
+.math-env-failure {
+  border-color: #c84a4a;
+  background: rgba(200, 74, 74, 0.1);
+}
+.math-env-danger .math-env-label,
+.math-env-error .math-env-label,
+.math-env-failure .math-env-label {
+  color: #e87070;
+}
+
+.math-env-success,
+.math-env-check,
+.math-env-done {
+  border-color: #4ac870;
+  background: rgba(74, 200, 112, 0.08);
+}
+.math-env-success .math-env-label,
+.math-env-check .math-env-label,
+.math-env-done .math-env-label {
+  color: #6cd690;
+}
+
+.math-env-question,
+.math-env-help,
+.math-env-faq {
+  border-color: #8c4ac8;
+  background: rgba(140, 74, 200, 0.08);
+}
+.math-env-question .math-env-label,
+.math-env-help .math-env-label,
+.math-env-faq .math-env-label {
+  color: #b88adb;
+}
+
+.math-env-quote,
+.math-env-cite,
+.math-env-abstract {
+  border-color: #555;
+  background: rgba(120, 120, 120, 0.05);
+  font-style: italic;
+}
+.math-env-quote .math-env-label,
+.math-env-cite .math-env-label,
+.math-env-abstract .math-env-label {
+  color: #999;
+}
+
+.math-env-folded {
+  border-color: #444;
+  border-style: dashed;
+  background: #1e1e1e;
+}
+.math-env-folded-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.math-env-folded-header .math-env-label {
+  color: #777;
+  font-style: italic;
+}
+.math-env-folded-toggle {
+  color: #666;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.math-env-folded-header.folded .math-env-folded-toggle {
+  transform: rotate(0deg);
+}
+.math-env-folded-header:not(.folded) .math-env-folded-toggle {
+  transform: rotate(90deg);
+}
+.math-env-body.folded {
+  display: none;
+}
+.math-env-body:not(.folded) {
+  display: block;
+}
+
+/* ── KaTeX ── */
+.preview-content .katex-display {
+  margin: 1.2em 0;
+  overflow-x: auto;
+}
+.preview-content .katex {
+  color: #d4d4d4;
+}
+.math-error {
+  color: #f48771;
+  font-family: monospace;
+  font-size: 0.85em;
+}

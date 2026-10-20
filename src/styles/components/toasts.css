@@ -1,0 +1,124 @@
+/* ── Toast notifications ── */
+.toast-container {
+  position: fixed;
+  bottom: 36px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 9px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  max-width: 360px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.2s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-success {
+  background: #1a4a2a;
+  border: 1px solid #2e7d4f;
+  color: #8de8a8;
+}
+.toast-error {
+  background: #4a1a1a;
+  border: 1px solid #7d2e2e;
+  color: #e88d8d;
+}
+.toast-info {
+  background: #1a2e4a;
+  border: 1px solid #1177bb;
+  color: #8dc9e8;
+}
+
+/* ── Drag-and-drop overlay ── */
+.editor-pane {
+  position: relative;
+}
+
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(86, 156, 214, 0.12);
+  border: 2px dashed #569cd6;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 15px;
+  color: #569cd6;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ── Vim mode status bar ── */
+.vim-statusbar {
+  height: 22px;
+  background: #252526;
+  border-top: 1px solid #333;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.vim-statusbar.hidden {
+  display: none;
+}
+
+/* ── Preview light/dark themes ── */
+.preview-light {
+  background: #fafafa;
+  color: #1a1a1a;
+}
+.preview-light .preview-content {
+  color: #1a1a1a;
+}
+
+.preview-dark {
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+/* ── Footnotes ── */
+.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+.footnote-ref a {
+  text-decoration: none;
+  color: #569cd6;
+}
+.footnote-ref a:hover {
+  text-decoration: underline;
+}
+.footnotes {
+  border-top: 1px solid #333;
+  margin-top: 2em;
+  padding-top: 1em;
+  font-size: 0.85em;
+  color: #888;
+}
+.footnotes li {
+  margin-bottom: 0.5em;
+}

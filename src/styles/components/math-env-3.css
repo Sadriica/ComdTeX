@@ -1,0 +1,49 @@
+/* ── Equations Panel ── */
+.eq-list-panel {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: 100%;
+}
+.eq-list-count {
+  font-size: 11px;
+  color: #666;
+  padding: 6px 10px;
+  border-bottom: 1px solid #2a2a2a;
+}
+.eq-list-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 1px solid #1e1e1e;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s;
+}
+.eq-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.eq-list-num {
+  color: #569cd6;
+  font-size: 11px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+.eq-list-label {
+  color: #b5cea8;
+  font-size: 10px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+.eq-list-preview {
+  color: #9cdcfe;
+  font-size: 11px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

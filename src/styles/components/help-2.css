@@ -1,0 +1,222 @@
+/* ── Help Panel ──────────────────────────────────────────────────────────── */
+
+.hp-panel {
+  overflow-y: auto;
+  height: 100%;
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* ── Collapsible sections ── */
+.hp-section {
+  border-bottom: 1px solid #252525;
+}
+
+.hp-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #999;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.hp-section-title:hover {
+  background: #1e1e1e;
+  color: #ccc;
+}
+.hp-section-open .hp-section-title {
+  color: #ccc;
+}
+
+.hp-section-chevron {
+  font-size: 10px;
+  color: #555;
+  flex-shrink: 0;
+}
+.hp-section-open .hp-section-chevron {
+  color: #888;
+}
+
+.hp-section-body {
+  padding: 6px 12px 12px;
+}
+
+/* ── Sub-labels (replace hp-sh-group-label) ── */
+.hp-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #555;
+  margin: 10px 0 3px;
+}
+
+.hp-intro {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.6;
+  margin: 4px 0 6px;
+}
+
+/* ── Shorthand rows ── */
+.hp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px solid #1e1e1e;
+  min-height: 22px;
+}
+
+.hp-code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  color: #9cdcfe;
+  background: #1a1a2e;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* Inside a row, the code cell must not overflow into the description column */
+.hp-row .hp-code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  display: block;
+}
+
+.hp-code-sm {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 9px;
+  color: #9cdcfe;
+  background: #1a1a2e;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.hp-desc {
+  font-size: 10.5px;
+  color: #888;
+}
+
+.hp-render {
+  font-size: 13px;
+  color: #e0e0e0;
+  min-width: 32px;
+  text-align: right;
+}
+
+.hp-codeblock {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 7px 10px;
+  margin: 5px 0;
+  white-space: pre;
+  color: #ce9178;
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+/* ── Environment cards ── */
+.hp-env-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.hp-env-card {
+  border: 1px solid #252525;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #161616;
+}
+
+.hp-env-syntax {
+  background: #111;
+  border-bottom: 1px solid #252525;
+  padding: 4px 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px;
+  color: #5a8fa8;
+  white-space: pre;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.hp-env-preview {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-left: 3px solid !important;
+  padding: 4px 7px !important;
+  font-size: 10px !important;
+  cursor: default;
+  background: transparent !important;
+}
+
+.hp-env-preview .math-env-header {
+  margin-bottom: 2px;
+}
+.hp-env-preview .math-env-label {
+  font-size: 9.5px !important;
+}
+.hp-env-preview .math-env-body {
+  font-size: 10px !important;
+  color: #999;
+}
+
+/* ── Greek / symbol grids ── */
+.hp-greek-grid,
+.hp-sym-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  margin: 5px 0;
+}
+
+.hp-greek-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  background: #181818;
+  border-radius: 3px;
+  border: 1px solid #252525;
+  font-size: 11px;
+  color: #ddd;
+}
+
+.hp-kbd {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-bottom: 2px solid #444;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #ccc;
+}
+
+/* unused legacy */
+.hp-env-grid,
+.hp-env-list,
+.hp-sh-group-label {
+  display: none;
+}

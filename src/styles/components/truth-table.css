@@ -1,0 +1,45 @@
+/* ── Truth Table ─────────────────────────────────────────────── */
+.truth-table-block {
+  margin: 1.2em 0;
+  overflow-x: auto;
+}
+.tt-title {
+  font-weight: 600;
+  font-size: 0.95em;
+  margin-bottom: 0.4em;
+  color: var(--accent, #7c9cbf);
+}
+.tt-table {
+  border-collapse: collapse;
+  font-size: 0.88em;
+  font-family: var(--mono, monospace);
+}
+.tt-table th,
+.tt-table td {
+  border: 1px solid var(--border, #444);
+  padding: 0.25em 0.7em;
+  text-align: center;
+}
+.tt-table thead th {
+  background: var(--surface2, #2a2a2a);
+  font-weight: 600;
+}
+.tt-table th.tt-last {
+  background: var(--accent-dim, #1e3a52);
+}
+.tt-table td.tt-result {
+  font-weight: 700;
+}
+.tt-table td.tt-true {
+  color: #6dbb8a;
+}
+.tt-table td.tt-false {
+  color: #e07070;
+}
+.tt-error {
+  color: #e07070;
+  font-size: 0.85em;
+  padding: 0.4em;
+  background: var(--surface2, #2a2a2a);
+  border-radius: 4px;
+}

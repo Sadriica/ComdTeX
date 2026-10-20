@@ -1,0 +1,199 @@
+/* ── Focus & Writing Session panel ── */
+.focus-timer-clock-section {
+  text-align: center;
+  padding: 12px 10px;
+}
+.focus-timer-phase {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.focus-timer-clock {
+  font-size: 40px;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  color: #d4d4d4;
+  margin: 4px 0 10px;
+}
+.focus-timer-controls {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.focus-timer-btn {
+  background: #2a2a2a;
+  color: #d4d4d4;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.focus-timer-btn:hover {
+  background: #333;
+}
+.focus-timer-btn-primary {
+  background: #0e639c;
+  border-color: #1177bb;
+  color: #fff;
+}
+.focus-timer-btn-primary:hover {
+  background: #1177bb;
+}
+.focus-timer-settings-toggle {
+  margin-top: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--status-fg, #aaa);
+  font-size: 12px;
+  text-align: center;
+  padding: 4px;
+}
+.focus-timer-settings-toggle:hover {
+  color: var(--fg, #d4d4d4);
+}
+.focus-timer-durations {
+  margin-top: 4px;
+  text-align: left;
+}
+.focus-timer-dur-row {
+  align-items: center;
+}
+.focus-timer-dur-input {
+  width: 56px;
+  background: var(--surface2, #2a2a2a);
+  color: var(--fg, #d4d4d4);
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.focus-timer-panel .status-goal-bar {
+  flex: 1;
+  height: 5px;
+  margin: 0 8px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.focus-timer-panel .status-goal-fill {
+  display: block;
+  height: 100%;
+  background: #0e639c;
+}
+.focus-timer-panel .status-goal-fill.completed {
+  background: #4ec9b0;
+}
+
+.app[data-theme="light"] .focus-timer-clock {
+  color: #1f1f1f;
+}
+.app[data-theme="light"] .focus-timer-btn {
+  background: var(--surface2);
+  color: var(--fg);
+  border-color: var(--border);
+}
+.app[data-theme="hc"] .focus-timer-clock {
+  color: #fff;
+}
+.app[data-theme="hc"] .focus-timer-btn {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
+/* ── Breadcrumb heading segment ── */
+.breadcrumb-heading {
+  color: #9cdcfe;
+  font-style: italic;
+}
+
+/* ── File tree filter ── */
+.tree-filter {
+  position: relative;
+  padding: 4px 6px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+}
+.tree-filter-input {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #ccc;
+  font-size: 11px;
+  padding: 3px 22px 3px 6px;
+  outline: none;
+  width: 100%;
+}
+.tree-filter-input:focus {
+  border-color: #569cd6;
+}
+.tree-filter-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.tree-filter-clear:hover {
+  color: #ccc;
+}
+
+/* ── Pinned tabs ── */
+.tab-pin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 11px;
+  color: #555;
+  line-height: 1;
+  opacity: 0.4;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+.tab-pin:hover {
+  opacity: 1;
+  color: #9cdcfe;
+}
+.tab-pin.tab-pinned {
+  opacity: 1;
+  color: #f0c040;
+}
+
+/* ── Drag-to-reorder tabs ── */
+.tab-dragging {
+  opacity: 0.4;
+}
+.tab[draggable="true"] {
+  cursor: grab;
+}
+.tab[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* ── Mermaid diagrams ── */
+.mermaid-diagram {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  margin: 1em 0;
+  padding: 1em;
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}

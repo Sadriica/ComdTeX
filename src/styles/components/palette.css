@@ -1,0 +1,107 @@
+/* ── Quick Switcher ── */
+.quick-switcher {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  max-width: 90vw;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+.quick-switcher input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #333;
+  border: none;
+  border-bottom: 1px solid #3c3c3c;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+}
+.quick-switcher input::placeholder {
+  color: #888;
+}
+.quick-switcher-results {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.quick-switcher-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.quick-switcher-item:hover,
+.quick-switcher-item.selected {
+  background: #094771;
+}
+.quick-switcher-icon {
+  font-size: 14px;
+}
+.quick-switcher-name {
+  flex: 1;
+  font-weight: 500;
+}
+.quick-switcher-path {
+  font-size: 11px;
+  color: #888;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quick-switcher-empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+.quick-switcher-footer {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #2d2d2d;
+  border-radius: 0 0 6px 6px;
+  font-size: 11px;
+  color: #666;
+}
+.katex-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+.katex-wrapper:hover::after {
+  content: "📋";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  background: #333;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.katex-wrapper:hover::after {
+  opacity: 1;
+}
+.katex-wrapper.copied::after {
+  content: "✓" !important;
+  color: #4caf50;
+}
+.status-dirty {
+  color: #ffcc00;
+}
+.status-mode {
+  font-weight: 600;
+}

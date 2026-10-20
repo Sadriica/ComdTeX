@@ -1,0 +1,222 @@
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .titlebar,
+  .menu-bar,
+  .toolbar,
+  .sidebar,
+  .resizer-v,
+  #editor-pane,
+  .status-bar,
+  .onboarding-overlay {
+    display: none !important;
+  }
+  .app {
+    display: block !important;
+  }
+  .main {
+    display: block !important;
+  }
+  #preview-pane {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  .preview-content {
+    color: #000 !important;
+    max-width: 100% !important;
+    padding: 1cm 0 !important;
+  }
+
+  /* Page numbering */
+  @page {
+    size: auto;
+    margin: 2cm 1cm;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-size: 10pt;
+      color: #666;
+    }
+    @bottom-left {
+      content: element(heading);
+      font-size: 9pt;
+      color: #888;
+    }
+  }
+  .preview-content {
+    counter-reset: page 1;
+  }
+
+  /* Custom headers from frontmatter */
+  .print-header {
+    display: running(header);
+  }
+  .print-header-left {
+    float: running(header-left);
+  }
+  .print-header-center {
+    float: running(header-center);
+    margin: 0 auto;
+  }
+  .print-header-right {
+    float: running(header-right);
+  }
+  @page {
+    @header {
+      content: element(print-header);
+    }
+  }
+
+  /* Custom footers from frontmatter */
+  .print-footer {
+    display: running(footer);
+  }
+  .print-footer-left {
+    float: running(footer-left);
+  }
+  .print-footer-center {
+    float: running(footer-center);
+    margin: 0 auto;
+  }
+  .print-footer-right {
+    float: running(footer-right);
+  }
+  @page {
+    @footer {
+      content: element(print-footer);
+    }
+  }
+  .preview-content {
+    color: #000 !important;
+    max-width: 100% !important;
+    padding: 1cm 0 !important;
+  }
+  .preview-content h1,
+  .preview-content h2,
+  .preview-content h3,
+  .preview-content h4 {
+    color: #000 !important;
+    border-color: #ccc !important;
+  }
+  .preview-content code {
+    background: #f4f4f4 !important;
+    color: #333 !important;
+    border-color: #ccc !important;
+  }
+  .preview-content pre {
+    background: #f4f4f4 !important;
+    border-color: #ccc !important;
+  }
+  .preview-content blockquote {
+    color: #444 !important;
+    border-color: #bbb !important;
+  }
+  .preview-content .katex {
+    color: #000 !important;
+  }
+  .preview-content th {
+    background: #eee !important;
+    color: #000 !important;
+  }
+  .preview-content tr:nth-child(even) td {
+    background: #f9f9f9 !important;
+  }
+
+  /* Frontmatter header */
+  .frontmatter-header {
+    border-color: #ccc !important;
+  }
+  .fm-title {
+    color: #000 !important;
+  }
+  .fm-meta,
+  .fm-author,
+  .fm-date {
+    color: #444 !important;
+  }
+  .fm-tag {
+    background: #eee !important;
+    color: #333 !important;
+    border-color: #ccc !important;
+  }
+
+  /* Math environments */
+  .math-env {
+    background: #fafafa !important;
+    border-color: #bbb !important;
+  }
+  .math-env-label {
+    color: #333 !important;
+  }
+  .math-env-theorem {
+    border-color: #4477aa !important;
+  }
+  .math-env-theorem .math-env-label {
+    color: #4477aa !important;
+  }
+  .math-env-folded {
+    border-color: #999 !important;
+  }
+  .math-env-folded-header .math-env-label {
+    color: #555 !important;
+  }
+  .math-env-folded-toggle {
+    color: #555 !important;
+  }
+  .math-env-definition {
+    border-color: #888800 !important;
+  }
+  .math-env-definition .math-env-label {
+    color: #888800 !important;
+  }
+  .math-env-proof {
+    border-color: #999 !important;
+  }
+  .math-env-proof .math-env-label {
+    color: #555 !important;
+  }
+
+  /* Equation numbering */
+  .eq-block {
+    color: #000 !important;
+  }
+  .eq-number {
+    color: #555 !important;
+  }
+  .eq-ref {
+    color: #000 !important;
+  }
+
+  /* Bibliography */
+  .bibliography {
+    border-color: #ccc !important;
+  }
+  .bibliography h2 {
+    color: #000 !important;
+  }
+  .bib-entry {
+    color: #333 !important;
+  }
+  .bib-number {
+    color: #555 !important;
+  }
+  .cite-ref {
+    color: #000 !important;
+  }
+
+  /* Page breaks */
+  .bibliography {
+    page-break-before: auto;
+  }
+  .math-env {
+    page-break-inside: avoid;
+  }
+}

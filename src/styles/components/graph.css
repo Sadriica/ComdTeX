@@ -1,0 +1,204 @@
+/* ── Graph Panel ── */
+.graph-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1a1a1a;
+}
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.graph-btn {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 1px 5px;
+  line-height: 1;
+}
+.graph-btn:hover {
+  background: #2a2a2a;
+  color: #ccc;
+}
+.graph-zoom-label {
+  font-size: 10px;
+  color: #666;
+}
+.graph-info {
+  font-size: 10px;
+  color: #555;
+  margin-left: auto;
+}
+.graph-input {
+  background: #181818;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  width: 110px;
+  outline: none;
+}
+.graph-input:focus {
+  border-color: #569cd6;
+}
+.graph-input::placeholder {
+  color: #555;
+}
+.graph-svg {
+  flex: 1;
+  display: block;
+  width: 100%;
+}
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px;
+  border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #666;
+}
+.graph-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Search highlight ── */
+.search-highlight {
+  background: #5f4f00;
+  color: #ffd700;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ── Split pane ── */
+.split-pane {
+  position: relative;
+}
+.split-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #888;
+  height: 28px;
+}
+.split-pane-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.split-pane-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.split-pane-close:hover {
+  color: #f48771;
+}
+
+/* ── Frontmatter abstract field ── */
+.fm-abstract {
+  font-size: 0.88em;
+  color: #999;
+  font-style: italic;
+  margin: 0.5em 0;
+  line-height: 1.5;
+  border-left: 2px solid #333;
+  padding-left: 0.75em;
+}
+
+/* ── Math hover widget ── */
+.math-hover-widget {
+  background: #1e1e2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transform: translateY(-110%);
+  max-width: 420px;
+  overflow: hidden;
+  white-space: nowrap;
+  z-index: 9999;
+}
+.math-hover-widget .katex {
+  font-size: 1.1em;
+}
+.math-hover-widget .katex-display {
+  margin: 0;
+}
+
+/* ── Outline active item ── */
+.outline-item-active {
+  background: rgba(86, 156, 214, 0.15);
+  color: #569cd6;
+  border-left: 2px solid #569cd6;
+}
+
+/* ── Status bar selection ── */
+.status-selection {
+  color: #dcdcaa;
+}
+
+/* ── Search & Replace ──
+   .search-replace-toggle styling is consolidated in the "Search & Replace panel"
+   block below (theme-driven, monochrome). */
+.search-replace-wrap {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px 0;
+}
+.search-replace-input {
+  flex: 1;
+}
+.search-replace-btn {
+  background: rgba(86, 156, 214, 0.18);
+  border: 1px solid #569cd6;
+  border-radius: 4px;
+  color: #569cd6;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.search-replace-btn:hover {
+  background: rgba(86, 156, 214, 0.3);
+}
+.search-replace-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── CommandPalette recent files ── */
+.palette-kind-recent {
+  background: #3d3a1e;
+  color: #d7ba7d;
+}

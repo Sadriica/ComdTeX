@@ -1,0 +1,48 @@
+/* ── Help Modal ── */
+.help-body {
+  padding: 12px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+.help-group {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #2a2a2a;
+}
+.help-group:first-child {
+  margin-top: 0;
+}
+
+.help-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.help-key {
+  min-width: 180px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: #9cdcfe;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.help-desc {
+  color: #bbb;
+}

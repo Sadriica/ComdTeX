@@ -1,0 +1,72 @@
+/* ── Comments: high-contrast theme ── */
+.app[data-theme="hc"] .comment-glyph.drifted::before {
+  color: #ffff00;
+}
+.app[data-theme="hc"] .comments-header {
+  border-bottom-color: #ffffff;
+}
+.app[data-theme="hc"] .comments-summary {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-add-btn {
+  background: #000;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-add-btn:hover {
+  background: #ffffff;
+  color: #000;
+}
+.app[data-theme="hc"] .comments-filters {
+  border-bottom-color: #ffffff;
+}
+.app[data-theme="hc"] .comments-filter {
+  border-color: #ffffff;
+  color: #ffffff;
+  background: #000;
+}
+.app[data-theme="hc"] .comments-filter.active {
+  background: #ffff00;
+  color: #000;
+  border-color: #ffff00;
+}
+.app[data-theme="hc"] .comments-file-group {
+  border-bottom-color: #ffffff;
+}
+.app[data-theme="hc"] .comments-file-name {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-item {
+  border-bottom-color: #444;
+}
+.app[data-theme="hc"] .comments-jump {
+  color: #ffff00;
+}
+.app[data-theme="hc"] .comments-resolved-toggle {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-delete {
+  color: #ff6666;
+}
+.app[data-theme="hc"] .comments-snippet {
+  color: #cccccc;
+  border-left-color: #ffffff;
+}
+.app[data-theme="hc"] .comments-body {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-edit-input {
+  background: #000;
+  border-color: #ffffff;
+  color: #ffffff;
+}
+.app[data-theme="hc"] .comments-edit-save,
+.app[data-theme="hc"] .comments-edit-cancel {
+  border-color: #ffffff;
+  color: #ffffff;
+  background: #000;
+}
+.app[data-theme="hc"] .comments-edit-save:hover {
+  background: #ffff00;
+  color: #000;
+}

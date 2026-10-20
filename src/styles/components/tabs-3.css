@@ -1,0 +1,100 @@
+/* Table editor modal */
+.table-editor-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+}
+.table-editor-dialog {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 20px;
+  min-width: 500px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.table-editor-dialog h3 {
+  margin: 0;
+  color: #ccc;
+  font-size: 14px;
+}
+.table-editor-grid {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.table-editor-row {
+  display: flex;
+  gap: 2px;
+}
+.table-editor-cell {
+  padding: 4px 8px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #ccc;
+  font-size: 12px;
+  min-width: 100px;
+  border-radius: 2px;
+}
+.table-editor-cell:first-child {
+  background: #252535;
+  font-weight: bold;
+}
+.table-editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.table-editor-actions button {
+  padding: 4px 10px;
+  background: #2a2a3a;
+  border: 1px solid #445;
+  color: #aac;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.table-editor-actions button:hover {
+  background: #3a3a4a;
+}
+.table-editor-preview {
+  background: #111;
+  border: 1px solid #333;
+  padding: 8px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #888;
+  white-space: pre;
+  overflow-x: auto;
+}
+.table-editor-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.table-editor-footer button {
+  padding: 6px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  border: 1px solid;
+}
+.table-editor-footer .btn-insert {
+  background: #2a4a2a;
+  border-color: #3a6a3a;
+  color: #8d8;
+}
+.table-editor-footer .btn-cancel {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #888;
+}
