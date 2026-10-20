@@ -300,3 +300,15 @@ What changed and why:
 - `plugin-shell` and `api/dpi` are static imports everywhere now (the dynamic ones never split anything).
 
 Still eager and worth a look later: both i18n dictionaries (~160 kB of source), `monacoSetup.ts` (needed by the palette data), `useVault`, DOMPurify and markdown-it (needed for the first preview).
+
+## 10. Stylesheet consolidation (2026-10-20)
+
+`dist/assets/index-*.css`. KaTeX is now inlined into this file as `@layer vendor` (about 27.7 kB), so compare app rules only:
+
+| | Before | After |
+|---|---|---|
+| App CSS in the index chunk | 192.0 kB | 186.4 kB |
+| KaTeX CSS | 27.7 kB (separate chunk) | 27.7 kB (inlined, woff2 only) |
+| `src/styles` | 10,515 lines, 56 files | 10,140 lines, 37 files |
+
+The 140 kB target was not reached: about 1,400 rules remain and none is unused by class, so a further cut needs shared control recipes in the components, not stylesheet surgery. The saving comes from merged duplicate rules, the `--transition-ui` token and the deleted theme overrides. The woff2-only KaTeX plugin in `vite.config.ts` now rewrites the `@import` in `src/styles/index.css`; after any change to it, check that `dist/assets` still holds 19 KaTeX font files.
