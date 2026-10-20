@@ -97,17 +97,6 @@
   border-top: 1px solid var(--border, #3c3c3c);
   text-align: right;
 }
-.deps-warning-docs {
-  background: none;
-  border: 0;
-  padding: 2px 4px;
-  margin-left: 8px;
-  font-size: 11px;
-  color: inherit;
-  opacity: 0.85;
-  cursor: pointer;
-  text-decoration: underline;
-}
 
 .settings-docs-link,
 .hp-docs-link {

@@ -275,7 +275,7 @@ for (const { name, theme } of THEMES) {
     await page
       .locator(".titlebar")
       .first()
-      .click({ position: { x: 400, y: 10 } })
+      .click({ position: { x: 700, y: 10 } })
       .catch(() => {})
     await page.keyboard.press("?")
     await page.waitForTimeout(600)

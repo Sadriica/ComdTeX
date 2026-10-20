@@ -304,9 +304,6 @@
 }
 
 /* ── Status bar selection ── */
-.status-selection {
-  color: #dcdcaa;
-}
 
 /* ── Search & Replace ──
    .search-replace-toggle styling is consolidated in the "Search & Replace panel"

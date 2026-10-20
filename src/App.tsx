@@ -47,6 +47,7 @@ import {
   type CommentMarker,
   type KeepMarkDecorationsHandle,
 } from "./monacoSetup"
+import { monacoThemeName, refreshMonacoThemes, setupMonacoTheming } from "./monacoThemes"
 import {
   loadComments,
   addComment as addCommentToVault,
@@ -2014,6 +2015,11 @@ function AppContent({
     if (setFlowchartThemeKey(key)) setMermaidVersion((v) => v + 1)
   }, [settings.theme])
 
+  // The Monaco themes are built from the CSS tokens: re-read them on a theme change.
+  useEffect(() => {
+    refreshMonacoThemes(settings.theme)
+  }, [settings.theme])
+
   // `costSink`, when passed, receives the elapsed ms of THIS call's
   // renderMarkdown + sanitize pipeline: written in a `finally` so it's
   // recorded even when rendering throws (renderErrorHtml is then what the
@@ -2373,7 +2379,10 @@ function AppContent({
   }, [settings.vimMode])
 
   // ── Editor setup ─────────────────────────────────────────────────────────
-  const handleBeforeMount: BeforeMount = useCallback((m) => setupMonaco(m), [])
+  const handleBeforeMount: BeforeMount = useCallback((m) => {
+    setupMonaco(m)
+    setupMonacoTheming(m)
+  }, [])
 
   /**
    * Put a freshly mounted editor back where the user left it: caret, scroll and
@@ -4783,12 +4792,14 @@ function AppContent({
   if (showWelcome) {
     return (
       <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
-        <TitleBar
-          filename={undefined}
-          isDirty={false}
-          onClose={handleCloseRequest}
-          onSettingsClick={() => setSettingsOpen(true)}
-        />
+        <div className="app-header">
+          <TitleBar
+            filename={undefined}
+            isDirty={false}
+            onClose={handleCloseRequest}
+            onSettingsClick={() => setSettingsOpen(true)}
+          />
+        </div>
         <WelcomeScreen
           onOpenVault={() => {
             void vault.selectVault()
@@ -4838,13 +4849,15 @@ function AppContent({
 
   return (
     <div className={`app${focusMode ? " focus-mode" : ""}`} data-theme={themeAttr}>
-      <TitleBar
-        filename={vault.openFile?.name}
-        isDirty={vault.openFile?.isDirty}
-        onClose={handleCloseRequest}
-        onSettingsClick={() => setSettingsOpen(true)}
-      />
-      <MenuBar menus={menus}>{gitBarEl}</MenuBar>
+      <div className="app-header">
+        <MenuBar menus={menus}>{gitBarEl}</MenuBar>
+        <TitleBar
+          filename={vault.openFile?.name}
+          isDirty={vault.openFile?.isDirty}
+          onClose={handleCloseRequest}
+          onSettingsClick={() => setSettingsOpen(true)}
+        />
+      </div>
       {deps && (!deps.pandoc || !deps.zip) && (
         <DepsWarning
           deps={deps}
@@ -4873,17 +4886,16 @@ function AppContent({
       <div className="main" ref={mainRef}>
         {/* ── Sidebar ── */}
         <div
-          className="sidebar"
-          style={{
-            width: sidebarCollapsed ? 0 : sidebarWidth,
-            overflow: sidebarCollapsed ? "hidden" : "auto",
-          }}
+          className={`sidebar${sidebarCollapsed ? " sidebar-collapsed" : ""}`}
+          style={sidebarCollapsed ? undefined : { width: sidebarWidth, overflow: "auto" }}
         >
           <div className="sidebar-header">
             <button
               className="sidebar-collapse-btn"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               title={sidebarCollapsed ? t.sidebar.expand : t.sidebar.collapse}
+              aria-label={sidebarCollapsed ? t.sidebar.expand : t.sidebar.collapse}
+              aria-expanded={!sidebarCollapsed}
             >
               {sidebarCollapsed ? "»" : "«"}
             </button>
@@ -5250,7 +5262,7 @@ function AppContent({
                 onChange={handleChange}
                 beforeMount={handleBeforeMount}
                 onMount={handleEditorMount}
-                theme={settings.theme}
+                theme={monacoThemeName(settings.theme)}
                 options={editorOptions}
               />
             </LazyRegion>

@@ -67,15 +67,6 @@
 }
 
 /* ── Focus mode ── */
-.focus-mode .titlebar,
-.focus-mode .menu-bar,
-.focus-mode .toolbar,
-.focus-mode .sidebar,
-.focus-mode .tab-bar,
-.focus-mode .status-bar,
-.focus-mode .resizer-v {
-  display: none !important;
-}
 
 .focus-mode #editor-pane {
   flex: none !important;
@@ -86,11 +77,6 @@
 
 .focus-mode #preview-pane {
   display: none;
-}
-
-.focus-mode .main {
-  justify-content: center;
-  background: #181818;
 }
 
 /* ── Preview images ── */

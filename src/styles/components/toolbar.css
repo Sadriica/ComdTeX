@@ -1,19 +1,6 @@
-/* ── Resizer ── */
-.resizer-v {
-  width: 4px;
-  flex-shrink: 0;
-  background: transparent;
-  cursor: col-resize;
-  transition: background 0.15s;
-  position: relative;
-  z-index: 10;
-}
-.resizer-v:hover,
-.resizer-v:active {
-  background: #569cd6;
-}
+/* ── Window shell: main row, sidebar header and collapse rail, resizer, breadcrumb,
+   status bars and the banners under the header. Chrome tokens only. ── */
 
-/* ── Main layout ── */
 .main {
   display: flex;
   flex: 1;
@@ -25,30 +12,385 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  background: #1e1e1e;
-  border-right: 1px solid #333;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
   overflow: hidden;
 }
 
+/* Header row lines up with the tab strip beside it. */
 .sidebar-header {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  padding: 4px;
-  background: #252526;
-  border-bottom: 1px solid #333;
+  height: var(--chrome-row);
+  padding: 0 var(--space-3);
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .sidebar-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  border: none;
-  color: #888;
+  color: var(--fg-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: 14px;
-  transition: color 0.15s;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.sidebar-collapse-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.sidebar-collapse-btn:active {
+  background: var(--bg-active);
 }
 
-.sidebar-collapse-btn:hover {
-  color: #fff;
+/* Collapsed: a slim rail that keeps the expand control visible. */
+.sidebar-collapsed {
+  width: 36px;
+}
+.sidebar-collapsed .sidebar-header {
+  justify-content: center;
+  padding: 0;
+  border-bottom: 0;
+  background: var(--chrome-bg);
+}
+
+/* ── Resizer: 6px hit area centred on the pane border, no layout cost ── */
+.resizer-v {
+  position: relative;
+  z-index: var(--z-sticky);
+  flex-shrink: 0;
+  width: 6px;
+  margin: 0 -3px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background-color var(--dur-med) var(--ease-standard);
+}
+.resizer-v:hover,
+.resizer-v:active {
+  background: var(--accent);
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  min-height: 24px;
+  padding: 0 var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+}
+.breadcrumb-segment {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.breadcrumb-sep {
+  padding: 0 var(--space-2);
+  color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+.breadcrumb-link {
+  max-width: 120px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-muted);
+  font-size: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breadcrumb-link:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.breadcrumb-current {
+  max-width: 160px;
+  padding: 0 var(--space-1);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breadcrumb-heading {
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breadcrumb-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.breadcrumb-nav-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.breadcrumb-nav-btn:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+}
+
+/* ── Status bar: compact, items separated by spacing ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 var(--space-5);
+  background: var(--status-bg);
+  color: var(--status-fg);
+  font-size: var(--text-xs);
+  user-select: none;
+}
+.status-left,
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+.status-item {
+  white-space: nowrap;
+}
+.status-mode {
+  font-weight: 600;
+}
+.status-dirty {
+  color: inherit;
+}
+.status-selection {
+  font-weight: 600;
+}
+.status-position {
+  height: 18px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.status-position:hover {
+  background: color-mix(in oklch, var(--status-fg) 16%, transparent);
+}
+.status-goal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.status-goal-bar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--status-fg) 25%, transparent);
+  overflow: hidden;
+}
+.status-goal-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--status-fg) 75%, transparent);
+  transition: width var(--dur-slow) var(--ease-standard);
+}
+.status-goal-fill.completed {
+  background: var(--status-fg);
+}
+.status-ai-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.status-ai-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+/* ── Vim status bar ── */
+.vim-statusbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 var(--space-5);
+  background: var(--chrome-bg);
+  border-top: 1px solid var(--border);
+  color: var(--chrome-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.vim-statusbar.hidden {
+  display: none;
+}
+
+/* ── Banner under the header: missing external tools ── */
+.deps-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-6);
+  background: var(--warn-bg);
+  border-bottom: 1px solid var(--warn-border);
+  color: var(--warn);
+  font-size: var(--text-sm);
+}
+.deps-warning-text {
+  flex: 1;
+}
+.deps-warning-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-right: var(--space-5);
+}
+.deps-warning-hint {
+  font-size: var(--text-xs);
+}
+.deps-warning-btn,
+.deps-warning-dismiss {
+  height: 20px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--warn);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.deps-warning-btn:hover,
+.deps-warning-dismiss:hover {
+  background: var(--warn-bg);
+}
+.deps-warning-dismiss {
+  margin-left: auto;
+  border-color: transparent;
+}
+.deps-warning-docs {
+  padding: var(--space-1) var(--space-2);
+  margin-left: var(--space-4);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Update available: a card pinned under the header ── */
+.update-banner {
+  position: fixed;
+  top: 76px;
+  right: var(--space-6);
+  z-index: var(--z-toast);
+  max-width: 300px;
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  color: var(--fg);
+  font-size: var(--text-sm);
+}
+.update-banner h4 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--fg);
+}
+.update-banner p {
+  margin: 0 0 var(--space-5);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+.update-banner-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+.update-banner button {
+  height: 24px;
+  padding: 0 var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.update-btn-install {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.update-btn-install:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+.update-btn-later {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--fg-muted);
+}
+.update-btn-later:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.update-banner button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Focus mode hides the shell ── */
+.focus-mode .sidebar,
+.focus-mode .status-bar,
+.focus-mode .resizer-v {
+  display: none;
+}
+.focus-mode .main {
+  justify-content: center;
+  background: var(--bg-app);
+}
+
+/* Screen-reader live region inside the status bar. */
+.status-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

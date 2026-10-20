@@ -7,88 +7,13 @@
    to tokens in your own file, delete its entry below. Delete this file (and
    its import in index.css) once it is empty. */
 
-/* Window chrome */
-.titlebar {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-}
-.titlebar-title {
-  color: var(--fg-muted);
-}
-.menu-bar,
-.toolbar,
-.sidebar-header,
-.tab-bar {
-  background: var(--chrome-bg);
-  border-color: var(--border);
-}
-.menu-btn,
-.menu-entry {
-  color: var(--chrome-fg);
-}
-.menu-btn:hover,
-.menu-btn.open {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.menu-panel {
-  background: var(--bg-raised);
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-2);
-}
-.menu-entry:hover:not(:disabled) {
-  background: var(--bg-selected);
-  color: var(--fg);
-}
-.menu-list {
-  box-shadow: var(--shadow-2);
-}
-.status-bar {
-  background: var(--status-bg);
-  color: var(--status-fg);
-}
-.status-position:hover {
-  background: var(--bg-hover);
-}
-
 /* Panes */
-.sidebar,
 .preview-pane,
-.breadcrumb,
-.pdf-preview-panel,
-.tab-active {
+.pdf-preview-panel {
   background: var(--bg-surface);
 }
-.sidebar,
-.breadcrumb,
-.tab {
-  border-color: var(--border);
-}
-.tab-active {
-  color: var(--fg);
-  border-top-color: var(--accent);
-}
-.tab {
+.tree-header {
   color: var(--fg-muted);
-}
-.tab:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.resizer-v:hover,
-.resizer-v:active {
-  background: var(--accent);
-}
-.sidebar-collapse-btn,
-.tree-header,
-.breadcrumb,
-.breadcrumb-link {
-  color: var(--fg-muted);
-}
-.sidebar-collapse-btn:hover,
-.breadcrumb-link:hover,
-.breadcrumb-current {
-  color: var(--fg);
 }
 .tree-header {
   border-bottom-color: var(--border);
@@ -184,34 +109,6 @@
   background: var(--bg-active);
 }
 
-/* Monaco: it paints its own surface from the Monaco theme; follow the tokens. */
-.monaco-editor,
-.monaco-editor .monaco-editor-background,
-.monaco-editor .margin,
-.monaco-editor .inputarea.ime-input {
-  background-color: var(--bg-surface) !important;
-}
 .fm-author {
   color: var(--link);
-}
-
-/* Welcome */
-.welcome-screen {
-  background: var(--bg-app);
-  color: var(--fg-muted);
-}
-.welcome-btn-primary {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.welcome-btn-primary:hover {
-  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
-}
-.welcome-btn-secondary {
-  background: var(--bg-raised);
-  color: var(--fg);
-  border-color: var(--border-strong);
-}
-.welcome-btn-secondary:hover {
-  background: var(--bg-hover);
 }
