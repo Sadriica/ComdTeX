@@ -16,6 +16,7 @@ import markPlugin from "markdown-it-mark"
 type Token = any
 import { preprocess } from "./preprocessor"
 import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
+import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
 import { stripKeepMarks } from "./keepMarks"
@@ -1026,7 +1027,9 @@ export function exportReveal(rawMarkdown: string, title: string): string {
   const fmTheme = parsed?.data ? (parsed.data["reveal_theme"] ?? parsed.data["theme"]) : undefined
   const theme = pickRevealTheme(fmTheme)
 
-  const slides = splitSlides(body)
+  // Reveal's markdown plugin has no `:::` syntax: number the environments and
+  // resolve their refs into plain blockquotes, as the other text exports do.
+  const slides = splitSlides(numberEnvironmentsForExport(body, "bold"))
 
   // Guard against breaking out of the <textarea data-template> wrapper: a literal
   // </textarea> in slide content would end the template early. Reveal's markdown

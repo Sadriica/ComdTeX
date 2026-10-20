@@ -16,7 +16,7 @@ describe("exportToObsidianMarkdown", () => {
   it("converts ComdTeX environments to Obsidian callouts", () => {
     const output = exportToObsidianMarkdown(":::theorem[Main]{#thm:main}\nBody\n:::")
 
-    expect(output).toContain("> [!theorem] Main")
+    expect(output).toContain("> [!theorem] Teorema 1 (Main)")
     expect(output).toContain("> Body")
     expect(output).not.toContain("{#thm:main}")
   })

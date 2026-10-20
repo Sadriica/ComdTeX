@@ -8,7 +8,7 @@ describe("exportConversion", () => {
     )
 
     expect(output).toContain("# Intro")
-    expect(output).toContain("> [!abstract] Theorem: Main")
+    expect(output).toContain("> [!abstract] Teorema 1 (Main)")
     expect(output).toContain("`sec:intro`")
     expect(output).not.toContain("{#sec:intro}")
     expect(output).not.toContain("{#thm:main}")
@@ -18,7 +18,7 @@ describe("exportConversion", () => {
     const output = toPandocMarkdownInput("# Intro {#sec:intro}\n\n:::note\nBody\n:::")
 
     expect(output).toContain("# Intro {#sec:intro}")
-    expect(output).toContain("> [!note]")
+    expect(output).toContain("> **Nota.**")
   })
 })
 
