@@ -115,7 +115,7 @@ import { buildPaletteCommands } from "./commands"
 import { buildMenus, type EditorActionId } from "./menus"
 import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
-import { setUiLanguage } from "./docLang"
+import { previewLangTag, setUiLanguage } from "./docLang"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
@@ -1433,6 +1433,17 @@ function AppContent({
     return resolveSpellLang(typeof fm === "string" ? fm : undefined, settings.language)
   }, [previewContent, settings.language])
 
+  // Language of the rendered document (frontmatter `lang`, else the UI language):
+  // goes on the preview root so hyphenation uses the right dictionary.
+  const previewLang = useMemo(
+    () =>
+      previewLangTag(
+        previewContent ? extractFrontmatter(previewContent)?.data : undefined,
+        settings.language,
+      ),
+    [previewContent, settings.language],
+  )
+
   // Keep the linter's spell refs current and force a re-lint when the
   // spell-check setting toggles, the language changes, or the message
   // formatter (i18n) changes. When the setting is OFF nothing loads: the
@@ -2135,6 +2146,10 @@ function AppContent({
   )
 
   const deferredSplitContent = useDeferredValue(splitTab?.content ?? "")
+  const splitLang = useMemo(
+    () => previewLangTag(extractFrontmatter(deferredSplitContent)?.data, settings.language),
+    [deferredSplitContent, settings.language],
+  )
 
   const splitPreviewHtml = useMemo(
     // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
@@ -5295,13 +5310,14 @@ function AppContent({
           vault.openFile?.mode !== "typ" && (
             <ErrorBoundary region="preview">
               <div
-                className={`pane preview-pane${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
+                className={`pane preview-pane doc-${settings.documentStyle}${settings.previewTheme === "light" ? " preview-light" : settings.previewTheme === "dark" ? " preview-dark" : ""}`}
                 id="preview-pane"
                 ref={previewPaneRef}
               >
                 {customCss && <style>{customCss}</style>}
                 <div
                   className="preview-content"
+                  lang={previewLang}
                   style={{ fontSize: settings.previewFontSize }}
                   onClick={handlePreviewClick}
                   onDoubleClick={handlePreviewDblClick}
@@ -5317,7 +5333,10 @@ function AppContent({
             return (
               <>
                 <Resizer onDrag={() => {}} />
-                <div className="pane preview-pane split-pane" ref={splitPreviewRef}>
+                <div
+                  className={`pane preview-pane split-pane doc-${settings.documentStyle}`}
+                  ref={splitPreviewRef}
+                >
                   <div className="split-pane-header">
                     <span className="split-pane-title">{splitTab?.name ?? ""}</span>
                     <button
@@ -5331,6 +5350,7 @@ function AppContent({
                   </div>
                   <div
                     className="preview-content"
+                    lang={splitLang}
                     style={{ fontSize: settings.previewFontSize }}
                     ref={splitContentRef}
                   />

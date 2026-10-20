@@ -1,32 +1,47 @@
-/* ── Callouts ── */
+/* ── Callouts: compact, tinted from the --callout-* token of their type ── */
 .callout {
   --callout-accent: var(--callout-note);
-  border-left: 3px solid var(--callout-accent);
-  border-radius: 4px;
+  margin: 1.1em 0;
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--callout-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: color-mix(in oklch, var(--callout-accent) 8%, transparent);
-  margin: 1em 0;
-  overflow: hidden;
+  font-size: 0.95em;
+  text-align: left;
+  hyphens: manual;
+  break-inside: avoid;
 }
 .callout-title {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-weight: 600;
-  font-size: 0.9em;
-  background: color-mix(in oklch, var(--callout-accent) 12%, transparent);
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
   color: var(--callout-accent);
+  font-weight: 600;
+  line-height: var(--leading-tight);
 }
+/* Slot for the icon (filled in the markup by the icon pass); a text glyph
+   works too. Fixed width so titles line up between callout types. */
 .callout-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
   font-style: normal;
+  line-height: 1;
+}
+.callout-icon > svg {
+  width: 1em;
+  height: 1em;
 }
 .callout-body {
-  padding: 8px 12px;
+  padding: 0;
 }
-.callout-body > *:first-child {
+.callout-body > :first-child {
   margin-top: 0;
 }
-.callout-body > *:last-child {
+.callout-body > :last-child {
   margin-bottom: 0;
 }
 

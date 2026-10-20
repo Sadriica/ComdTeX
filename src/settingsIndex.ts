@@ -43,6 +43,7 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "syncScroll", section: "preview", label: (t) => t.settings.syncScroll },
   { id: "mathPreview", section: "preview", label: (t) => t.settings.mathPreview },
   { id: "previewTheme", section: "preview", label: (t) => t.settings.previewTheme },
+  { id: "documentStyle", section: "preview", label: (t) => t.settings.documentStyle },
 
   { id: "dailyNotesEnabled", section: "dailyNotes", label: (t) => t.settings.dailyNotesEnabled },
   { id: "dailyNotesFolder", section: "dailyNotes", label: (t) => t.settings.dailyNotesFolder },

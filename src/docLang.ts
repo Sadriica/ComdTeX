@@ -63,6 +63,24 @@ export function docTermsFor(lang: DocLang) {
   return (lang === "en" ? en : es).docTerms
 }
 
+/**
+ * The BCP 47 tag to put on the preview root, so the engine hyphenates with the
+ * right dictionary. A frontmatter `lang` that already is a tag ("fr", "de-CH")
+ * is passed through even though we have no UI words for it; "english", "eng"
+ * and the like resolve to "en"; with nothing usable, the document/interface language.
+ */
+export function previewLangTag(
+  data: Record<string, unknown> | null | undefined,
+  fallback: DocLang = uiLanguage,
+): string {
+  const raw = data?.lang ?? data?.language
+  if (typeof raw === "string") {
+    const v = raw.trim().replace(/_/g, "-")
+    if (/^[A-Za-z]{2}(-[A-Za-z0-9]{2,8})*$/.test(v)) return v
+  }
+  return resolveDocLanguage(data, fallback)
+}
+
 /** Words for the language of the render in progress (the interface language outside one). */
 export function activeDocTerms() {
   return docTermsFor(pinnedLanguage ?? uiLanguage)

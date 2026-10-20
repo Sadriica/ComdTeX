@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest"
-import { morphPreviewContent, commitPreview } from "./previewMorph"
+import { morphPreviewContent, commitPreview, dropEmptyParagraphs } from "./previewMorph"
 
 function container(html: string): HTMLElement {
   const el = document.createElement("div")
@@ -206,5 +206,20 @@ describe("commitPreview", () => {
     commitPreview(el, `<p>EDITED</p><div class="diagram"><svg></svg></div>`, "EDITED")
     expect(el.children[1]).toBe(diagram)
     expect(el.children[0].textContent).toBe("EDITED")
+  })
+})
+
+describe("dropEmptyParagraphs", () => {
+  it("removes the empty paragraphs left around a block that was substituted into one", () => {
+    const f = fragment("<p>we have<br>\n</p><div>eq</div><p>\n</p><p></p><p>after</p>")
+    dropEmptyParagraphs(f)
+    expect([...f.children].map((n) => n.tagName)).toEqual(["P", "DIV", "P"])
+    expect(f.children[2].textContent).toBe("after")
+  })
+
+  it("keeps a paragraph that holds only a line break or an element", () => {
+    const f = fragment("<p><br></p><p><span class='katex'></span></p>")
+    dropEmptyParagraphs(f)
+    expect(f.children).toHaveLength(2)
   })
 })

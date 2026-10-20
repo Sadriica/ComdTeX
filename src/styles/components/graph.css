@@ -230,43 +230,41 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 10px;
-  background: #252526;
-  border-bottom: 1px solid #333;
   flex-shrink: 0;
-  font-size: 12px;
-  color: #888;
   height: 28px;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
 }
 .split-pane-title {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
 }
 .split-pane-close {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 0 4px;
-  line-height: 1;
   flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
 }
 .split-pane-close:hover {
-  color: #f48771;
+  background: var(--bg-hover);
+  color: var(--danger);
 }
-
-/* ── Frontmatter abstract field ── */
-.fm-abstract {
-  font-size: 0.88em;
-  color: #999;
-  font-style: italic;
-  margin: 0.5em 0;
-  line-height: 1.5;
-  border-left: 2px solid #333;
-  padding-left: 0.75em;
+.split-pane-close:active {
+  background: var(--bg-active);
 }
 
 /* ── Math hover widget ── (surface from modals.css) */

@@ -1,68 +1,222 @@
+/* The document preview, typeset as a paper.
+
+   Everything inside `.preview-content` is sized in em, so the previewFontSize
+   setting (an inline font-size on the element) scales the whole document. The
+   typeface comes from `--doc-font`, which the pane sets from the documentStyle
+   setting: Libertinus Serif for `.doc-paper`, the UI sans for `.doc-sans`, with
+   the same rhythm. The pane is a size container, so measure and gutters follow
+   its width (the editor split squeezes it) and not the window. */
+
 .preview-pane {
+  --doc-font: var(--font-doc);
+  /* KaTeX's 1.21em is tuned for Computer Modern; Libertinus has a smaller
+     x-height, so its math is scaled down to sit at the height of the words. */
+  --katex-scale: 1.06em;
+  --rule-strong: color-mix(in oklch, var(--fg) 78%, var(--bg-surface));
+  --rule-hair: color-mix(in oklch, var(--fg) 45%, var(--bg-surface));
   background: var(--bg-surface);
   overflow-y: auto;
+  container: preview / inline-size;
+}
+.preview-pane.doc-sans {
+  --doc-font: var(--font-ui);
+  --katex-scale: 1.16em;
 }
 
-/* ── Preview content ── */
+/* ── Page: measure, gutters, base type ── */
 .preview-content {
-  padding: 2rem 2.5rem;
+  --measure: 68ch;
+  --gutter: clamp(var(--space-6), 6cqi, 4rem);
+  width: min(100%, calc(var(--measure) + 2 * var(--gutter)));
+  margin-inline: auto;
+  padding: var(--space-8) var(--gutter) calc(var(--space-8) * 2);
   color: var(--fg);
-  font-family: "Segoe UI", system-ui, sans-serif;
-  font-size: 15px;
-  line-height: 1.75;
-  max-width: 780px;
+  font-family: var(--doc-font);
+  line-height: var(--leading-doc);
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+  text-rendering: optimizeLegibility;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  overflow-wrap: break-word;
+  tab-size: 4;
+  contain: content;
+}
+.preview-content ::selection {
+  background: var(--selection);
+  color: inherit;
 }
 
-.preview-content h1,
-.preview-content h2,
-.preview-content h3,
-.preview-content h4 {
-  color: var(--fg);
-  margin-top: 1.6em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
-  transition: background-color 0.2s;
+/* Justified text only where there is room for it and only in the paper style;
+   narrow panes stay ragged right, where justification opens rivers. */
+@container preview (min-width: 52rem) {
+  .preview-pane.doc-paper .preview-content p,
+  .preview-pane.doc-paper .preview-content li {
+    text-align: justify;
+    text-justify: inter-word;
+  }
 }
-.preview-content h1.active-heading,
-.preview-content h2.active-heading,
-.preview-content h3.active-heading,
-.preview-content h4.active-heading {
-  background-color: color-mix(in oklch, var(--accent) 15%, transparent);
-  border-radius: 4px;
-  padding-left: 4px;
-  margin-left: -4px;
-}
-.preview-content h1 {
-  font-size: 2em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.3em;
-}
-.preview-content h2 {
-  font-size: 1.4em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
-}
+
 .preview-content p {
-  margin-bottom: 1em;
-  white-space: pre-wrap;
+  margin: 0 0 0.85em;
+  text-wrap: pretty;
+  orphans: 2;
+  widows: 2;
 }
 .preview-content .md-soft-indent {
   white-space: nowrap;
 }
+.preview-content strong {
+  font-weight: 700;
+}
+.preview-content small {
+  font-size: 0.85em;
+}
+.preview-content sub,
+.preview-content sup {
+  font-size: 0.72em;
+  line-height: 0;
+}
 
-/* ── Text highlighting: ==text== → <mark>, plus colour variants ──────────── */
+/* ── Headings: modular scale, h1 to h6 ── */
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
+  margin: 1.8em 0 0.55em;
+  color: var(--fg);
+  font-family: var(--doc-font);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  text-align: left;
+  text-wrap: balance;
+  hyphens: manual;
+  break-after: avoid;
+  scroll-margin-top: var(--space-6);
+}
+.preview-content h1 {
+  --sec-w: 1.5em;
+  font-size: 1.5em;
+}
+.preview-content h2 {
+  --sec-w: 2.2em;
+  margin-top: 1.6em;
+  font-size: 1.25em;
+}
+.preview-content h3 {
+  --sec-w: 2.9em;
+  margin-top: 1.4em;
+  font-size: 1.1em;
+}
+.preview-content h4 {
+  margin-top: 1.2em;
+  font-size: 1em;
+  font-style: italic;
+}
+.preview-content h5 {
+  margin-top: 1.1em;
+  font-size: 1em;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+}
+.preview-content h6 {
+  margin-top: 1em;
+  color: var(--fg-muted);
+  font-size: 0.92em;
+  font-weight: 400;
+  font-style: italic;
+}
+/* Numbered headings hang the number, so a wrapped title lines up with the
+   first line of the title and titles at one level share a left edge. */
+.preview-content :is(h1, h2, h3):has(> .sec-num) {
+  padding-left: calc(var(--sec-w) + 0.25em);
+  text-indent: calc(-1 * (var(--sec-w) + 0.25em));
+}
+.preview-content .sec-num {
+  display: inline-block;
+  width: var(--sec-w);
+  text-indent: 0;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.preview-content :is(h1, h2, h3, h4, h5, h6).active-heading {
+  background-color: color-mix(in oklch, var(--accent) 15%, transparent);
+  box-shadow: 0 0 0 var(--space-2) color-mix(in oklch, var(--accent) 15%, transparent);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--dur-med) var(--ease-standard);
+}
+
+/* ── Lists ── */
+.preview-content ul,
+.preview-content ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.7em;
+}
+.preview-content li {
+  margin-bottom: 0.25em;
+  padding-left: 0.15em;
+}
+.preview-content li::marker {
+  color: var(--fg-muted);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+/* Task items carry their own checkbox, so they drop the bullet. */
+.preview-content li:has(> .preview-checkbox) {
+  margin-left: -1.4em;
+  list-style: none;
+}
+.preview-content li > :is(ul, ol) {
+  margin: 0.25em 0 0;
+}
+.preview-content li > p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Blockquote, rule ── */
+.preview-content blockquote {
+  margin: 1em 0 1em 0.8em;
+  padding-left: 1em;
+  border-left: 2px solid var(--border-strong);
+  color: var(--fg);
+  font-size: 0.97em;
+}
+.preview-content blockquote > :last-child {
+  margin-bottom: 0;
+}
+.preview-content hr {
+  width: 30%;
+  margin: 2em auto;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
+}
+
+/* ── Links: one colour, visited the same ── */
+.preview-content a,
+.preview-content a:visited {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-decoration-color: color-mix(in oklch, var(--link) 45%, transparent);
+  text-underline-offset: 0.18em;
+}
+.preview-content a:hover {
+  text-decoration-color: var(--link);
+}
+
+/* ── Marks ==text== and colour variants ── */
 .preview-content mark,
 .hp-render mark {
-  background: var(--mark-yellow); /* default yellow */
-  color: var(--fg);
-  border-radius: 3px;
   padding: 0.05em 0.25em;
-  /* keep math/inline-code legible if highlighted */
+  border-radius: var(--radius-sm);
+  background: var(--mark-yellow);
+  color: var(--fg);
 }
 .preview-content mark code {
+  border-color: transparent;
   background: color-mix(in oklch, var(--fg) 12%, transparent);
   color: inherit;
-  border-color: transparent;
 }
 .preview-content mark.hl-yellow,
 .hp-render mark.hl-yellow {
@@ -92,22 +246,28 @@
 .hp-render mark.hl-red {
   background: var(--mark-red);
 }
+.preview-content del {
+  color: var(--fg-muted);
+}
 
-/* ── Auto-generated table of contents ([[toc]]) ──────────────────────────── */
+/* ── Auto-generated table of contents ([[toc]]) ── */
 .preview-content nav.md-toc {
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  margin: 1.2em 0;
   padding: 0.6em 1em;
-  margin: 1em 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
+  font-size: 0.93em;
 }
 .preview-content nav.md-toc ul {
-  list-style: none;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 .preview-content nav.md-toc li {
   margin: 0.15em 0;
+  padding: 0;
+  text-align: left;
 }
 .preview-content nav.md-toc li.toc-l2 {
   padding-left: 1.2em;
@@ -116,81 +276,122 @@
   padding-left: 2.4em;
   font-size: 0.95em;
 }
-.preview-content nav.md-toc a {
-  color: var(--link);
+.preview-content nav.md-toc a,
+.preview-content nav.md-toc a:visited {
   text-decoration: none;
 }
 .preview-content nav.md-toc a:hover {
   text-decoration: underline;
 }
 
+/* ── Code: mono on --code-bg, tokens from the highlighter ── */
 .preview-content code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
   background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.15em 0.4em;
-  font-family: var(--font-mono);
-  font-size: 0.88em;
   color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  font-variant-ligatures: none;
+  hyphens: none;
 }
 .preview-content pre {
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1em 1.2em;
+  margin: 1.1em 0;
+  padding: 0.85em 1.1em;
   overflow-x: auto;
-  margin-bottom: 1em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+  font-size: 0.84em;
+  line-height: 1.55;
+  text-align: left;
 }
 .preview-content pre code {
-  background: none;
-  border: none;
   padding: 0;
+  border: 0;
+  background: none;
   color: var(--code-fg);
+  font-size: 1em;
 }
-.preview-content blockquote {
-  border-left: 3px solid var(--border-strong);
-  padding-left: 1em;
-  color: var(--fg-muted);
-  margin-bottom: 1em;
+.tok-kw {
+  color: var(--syn-keyword);
 }
-.preview-content ul,
-.preview-content ol {
-  padding-left: 1.5em;
-  margin-bottom: 1em;
+.tok-str {
+  color: var(--syn-string);
 }
-.preview-content li {
-  margin-bottom: 0.25em;
+.tok-num {
+  color: var(--syn-number);
 }
-.preview-content a {
-  color: var(--link);
+.tok-com {
+  color: var(--syn-comment);
+  font-style: italic;
 }
-.preview-content del {
-  color: var(--fg-muted);
+.tok-fn {
+  color: var(--syn-function);
 }
-.preview-content hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.5em 0;
+.tok-type {
+  color: var(--syn-type);
 }
 
-/* ── Tables ── */
+/* ── Tables: booktabs. Heavy top and bottom rules, one hairline under the
+   header, no vertical lines, no zebra. Captions sit above (see preview-3). ── */
 .preview-content table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
   border-collapse: collapse;
-  width: 100%;
-  margin-bottom: 1em;
+  border-top: 1.5px solid var(--rule-strong);
+  border-bottom: 1.5px solid var(--rule-strong);
   font-size: 0.93em;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .preview-content th,
 .preview-content td {
-  border: 1px solid var(--border);
-  padding: 0.45em 0.85em;
+  padding: 0.35em 0.9em;
+  border: 0;
   text-align: left;
+  vertical-align: baseline;
+  hyphens: manual;
 }
-.preview-content th {
-  background: var(--bg-raised);
+.preview-content thead th {
+  border-bottom: 1px solid var(--rule-hair);
   color: var(--fg);
   font-weight: 600;
 }
-.preview-content tr:nth-child(even) td {
-  background: var(--bg-sunken);
+.preview-content tbody tr:last-child td {
+  padding-bottom: 0.5em;
+}
+.preview-content thead + tbody tr:first-child td {
+  padding-top: 0.5em;
+}
+
+/* ── Images ── */
+.preview-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Pane chrome that is not typography ── */
+.preview-checkbox {
+  width: 1em;
+  height: 1em;
+  margin-right: 0.3em;
+  vertical-align: -0.1em;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+@media screen {
+  .print-header,
+  .print-footer {
+    display: none;
+  }
+}
+
+/* ── Performance: blocks far from the viewport skip layout and paint. The
+   `auto` keyword in contain-intrinsic-size remembers the real height once a
+   block has been seen, so the scrollbar settles instead of jumping. Scroll
+   sync uses scrollIntoView on elements, which works with skipped blocks. ── */
+.preview-content > :is(p, pre, ul, ol, table, blockquote, figure, .callout, .env-wrap, .eq-block) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 4em;
 }

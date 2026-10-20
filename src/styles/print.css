@@ -1,4 +1,13 @@
+/* Print: the same typeset page as on screen, on white.
+   The preview CSS is written against tokens, so printing only has to hand the
+   pane a light, ink-friendly token set (whatever theme is on screen) and drop
+   the app chrome. This is the one place hex colours belong: paper is white and
+   toner is black whatever the theme. */
 @media print {
+  :root,
+  .app {
+    color-scheme: light;
+  }
   html,
   body,
   #root {
@@ -9,6 +18,7 @@
   }
   .titlebar,
   .menu-bar,
+  .menubar,
   .toolbar,
   .sidebar,
   .resizer-v,
@@ -27,18 +37,107 @@
     width: 100% !important;
     height: auto !important;
     overflow: visible !important;
+    container-type: normal;
     background: #fff !important;
+
+    --bg-surface: #fff;
+    --bg-app: #fff;
+    --bg-raised: #f6f6f4;
+    --bg-sunken: #f4f4f1;
+    --bg-hover: #eee;
+    --bg-active: #e6e6e6;
+    --fg: #000;
+    --fg-muted: #444;
+    --fg-subtle: #666;
+    --border: #cfcfca;
+    --border-strong: #8a8a85;
+    --link: #0b4a82;
+    --accent: #1f4e79;
+    --selection: #cfe3f5;
+    --danger: #9d1c1c;
+    --danger-bg: #fbeaea;
+    --danger-border: #d9a3a3;
+    --ok: #17602c;
+    --warn: #7a5600;
+    --code-bg: #f4f4f1;
+    --code-fg: #1b1b1b;
+    --syn-keyword: #7a2a8f;
+    --syn-string: #1a6b3a;
+    --syn-number: #a14a00;
+    --syn-comment: #5d6a60;
+    --syn-function: #0b4a82;
+    --syn-type: #006a6a;
+    --syn-punct: #444;
+    --env-theorem: #1f4e79;
+    --env-lemma: #1f5f8a;
+    --env-corollary: #3a4f9a;
+    --env-proposition: #5a3a8a;
+    --env-definition: #7a5a00;
+    --env-example: #17602c;
+    --env-exercise: #17602c;
+    --env-remark: #555;
+    --env-proof: #555;
+    --env-note: #555;
+    --callout-note: #1f4e79;
+    --callout-tip: #17602c;
+    --callout-info: #0b4a82;
+    --callout-warning: #7a5600;
+    --callout-danger: #9d1c1c;
+    --callout-success: #17602c;
+    --callout-quote: #555;
+    --viz-1: #1f6fb4;
+    --viz-2: #c4601a;
+    --viz-3: #2a8a4a;
+    --viz-4: #8a3fa8;
+    --viz-5: #b08a00;
+    --viz-6: #b02a4a;
+    --mark-yellow: #fff1a8;
+    --mark-green: #cdeccd;
+    --mark-blue: #cde3f7;
+    --mark-purple: #e3d4f2;
+    --mark-orange: #fadfc2;
+    --mark-red: #f6d0d0;
+    --mark-pink: #f8d4e4;
   }
-  .preview-content {
-    color: #000 !important;
-    max-width: 100% !important;
-    padding: 1cm 0 !important;
+
+  /* The page is the paper: no screen gutters, 11pt, justified and hyphenated. */
+  #preview-pane .preview-content {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    contain: none;
+    font-size: 11pt !important;
+    line-height: 1.45;
+    orphans: 3;
+    widows: 3;
+  }
+  #preview-pane.doc-paper .preview-content :is(p, li, .math-env, .fm-abstract) {
+    text-align: justify;
+  }
+  #preview-pane .preview-content > * {
+    content-visibility: visible;
+  }
+  .preview-content pre {
+    overflow: visible;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .preview-content :is(h1, h2, h3, h4, h5, h6) {
+    break-after: avoid;
+  }
+  .preview-content :is(.math-env, figure, .eq-block, .callout, pre, table, .pseudocode-block) {
+    break-inside: avoid;
+  }
+  .preview-content a,
+  .preview-content a:visited {
+    text-decoration: none;
   }
 
   /* Page numbering */
   @page {
     size: auto;
-    margin: 2cm 1cm;
+    margin: 2cm 1.5cm;
     @bottom-right {
       content: counter(page) " / " counter(pages);
       font-size: 10pt;
@@ -54,7 +153,7 @@
     counter-reset: page 1;
   }
 
-  /* Custom headers from frontmatter */
+  /* Custom headers and footers from frontmatter */
   .print-header {
     display: running(header);
   }
@@ -73,8 +172,6 @@
       content: element(print-header);
     }
   }
-
-  /* Custom footers from frontmatter */
   .print-footer {
     display: running(footer);
   }
@@ -93,129 +190,8 @@
       content: element(print-footer);
     }
   }
-  .preview-content {
-    color: #000 !important;
-    max-width: 100% !important;
-    padding: 1cm 0 !important;
-  }
-  .preview-content h1,
-  .preview-content h2,
-  .preview-content h3,
-  .preview-content h4 {
-    color: #000 !important;
-    border-color: #ccc !important;
-  }
-  .preview-content code {
-    background: #f4f4f4 !important;
-    color: #333 !important;
-    border-color: #ccc !important;
-  }
-  .preview-content pre {
-    background: #f4f4f4 !important;
-    border-color: #ccc !important;
-  }
-  .preview-content blockquote {
-    color: #444 !important;
-    border-color: #bbb !important;
-  }
-  .preview-content .katex {
-    color: #000 !important;
-  }
-  .preview-content th {
-    background: #eee !important;
-    color: #000 !important;
-  }
-  .preview-content tr:nth-child(even) td {
-    background: #f9f9f9 !important;
-  }
 
-  /* Frontmatter header */
-  .frontmatter-header {
-    border-color: #ccc !important;
-  }
-  .fm-title {
-    color: #000 !important;
-  }
-  .fm-meta,
-  .fm-author,
-  .fm-date {
-    color: #444 !important;
-  }
-  .fm-tag {
-    background: #eee !important;
-    color: #333 !important;
-    border-color: #ccc !important;
-  }
-
-  /* Math environments */
-  .math-env {
-    background: #fafafa !important;
-    border-color: #bbb !important;
-  }
-  .math-env-label {
-    color: #333 !important;
-  }
-  .math-env-theorem {
-    border-color: #4477aa !important;
-  }
-  .math-env-theorem .math-env-label {
-    color: #4477aa !important;
-  }
-  .math-env-folded {
-    border-color: #999 !important;
-  }
-  .math-env-folded-header .math-env-label {
-    color: #555 !important;
-  }
-  .math-env-folded-toggle {
-    color: #555 !important;
-  }
-  .math-env-definition {
-    border-color: #888800 !important;
-  }
-  .math-env-definition .math-env-label {
-    color: #888800 !important;
-  }
-  .math-env-proof {
-    border-color: #999 !important;
-  }
-  .math-env-proof .math-env-label {
-    color: #555 !important;
-  }
-
-  /* Equation numbering */
-  .eq-block {
-    color: #000 !important;
-  }
-  .eq-number {
-    color: #555 !important;
-  }
-  .eq-ref {
-    color: #000 !important;
-  }
-
-  /* Bibliography */
-  .bibliography {
-    border-color: #ccc !important;
-  }
-  .bibliography h2 {
-    color: #000 !important;
-  }
-  .bib-entry {
-    color: #333 !important;
-  }
-  .bib-number {
-    color: #555 !important;
-  }
-  .cite-ref {
-    color: #000 !important;
-  }
-
-  /* Page breaks */
   .bibliography {
     page-break-before: auto;
-  }
-  .math-env {
-    page-break-inside: avoid;
   }
 }

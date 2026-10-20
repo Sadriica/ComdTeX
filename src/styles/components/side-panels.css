@@ -1,44 +1,66 @@
-/* ── Frontmatter Header ── */
+/* ── Frontmatter header: the title block of the paper ── */
 .frontmatter-header {
-  padding-bottom: 1em;
-  margin-bottom: 1.5em;
-  border-bottom: 2px solid #333;
+  margin: 0 0 2.4em;
+  text-align: center;
 }
-
-.fm-title {
-  font-size: 2em;
-  font-weight: 700;
-  color: #e8e8e8;
-  margin-bottom: 0.3em;
-  border-bottom: none !important;
-  margin-top: 0 !important;
+.preview-content .fm-title {
+  margin: 0 0 0.45em;
+  padding: 0;
+  border: 0;
+  font-size: 1.9em;
+  line-height: 1.2;
+  text-align: center;
 }
-
 .fm-meta {
-  font-size: 0.9em;
-  color: #888;
-  margin-bottom: 0.5em;
+  color: var(--fg);
+  font-size: 1em;
+  hyphens: manual;
 }
-
 .fm-author {
-  color: #9cdcfe;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
 }
 .fm-date {
-  color: #777;
+  color: var(--fg-muted);
+  font-variant-numeric: lining-nums;
+}
+.fm-papersize {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+/* Abstract: a narrower block with an "Abstract" run-in heading. */
+.fm-abstract {
+  max-width: 88%;
+  margin: 1.6em auto 0;
+  font-size: 0.93em;
+  line-height: 1.5;
+  text-align: left;
+  text-wrap: pretty;
+}
+@container preview (min-width: 52rem) {
+  .preview-pane.doc-paper .fm-abstract {
+    text-align: justify;
+  }
+}
+.fm-abstract-label {
+  margin-right: 0.4em;
+  font-weight: 700;
 }
 
 .fm-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 0.4em;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: 1.2em;
 }
-
 .fm-tag {
-  background: #0d3a5c;
-  border: 1px solid #1177bb44;
-  color: #9cdcfe;
-  border-radius: 10px;
-  padding: 1px 8px;
-  font-size: 0.8em;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: 1.7;
 }

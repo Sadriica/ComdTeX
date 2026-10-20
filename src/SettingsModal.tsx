@@ -489,6 +489,20 @@ export default function SettingsModal({
                   </select>
                 </label>
                 <p className="setting-hint">{t.settings.hints.previewTheme}</p>
+
+                <label className="setting-row" data-setting="documentStyle">
+                  <span>{t.settings.documentStyle}</span>
+                  <select
+                    value={settings.documentStyle}
+                    onChange={(e) =>
+                      onChange({ documentStyle: e.target.value as "paper" | "sans" })
+                    }
+                  >
+                    <option value="paper">{t.settings.documentStylePaper}</option>
+                    <option value="sans">{t.settings.documentStyleSans}</option>
+                  </select>
+                </label>
+                <p className="setting-hint">{t.settings.hints.documentStyle}</p>
               </>
             )}
 

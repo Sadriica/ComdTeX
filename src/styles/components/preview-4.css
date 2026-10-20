@@ -1,103 +1,192 @@
-/* ── Pseudocode blocks ── */
+/* ── Pseudocode: an algorithm float, ruled like a booktabs table ── */
 .pseudocode-block {
-  border: 1px solid #444;
-  border-radius: 4px;
-  margin: 1em 0;
-  font-family: "Fira Mono", "Consolas", monospace;
-  font-size: 0.9em;
-  overflow: hidden;
+  margin: 1.6em 0;
+  border-top: 1.5px solid var(--rule-strong);
+  border-bottom: 1.5px solid var(--rule-strong);
+  font-family: var(--doc-font);
+  font-size: 0.95em;
+  break-inside: avoid;
 }
 .pc-header {
-  background: #2a2a3a;
-  border-bottom: 1px solid #444;
-  padding: 6px 12px;
-  font-weight: bold;
-  font-style: italic;
-  color: #cdd6f4;
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--rule-hair);
+  color: var(--fg);
+  font-weight: 700;
 }
 .pc-body {
-  padding: 4px 0;
+  padding: var(--space-3) 0;
 }
 .pc-line {
   display: flex;
   align-items: baseline;
-  padding: 1px 12px 1px 0;
+  padding: 1px var(--space-5) 1px 0;
   line-height: 1.6;
 }
 .pc-line.pc-empty {
   height: 0.5em;
 }
 .pc-num {
-  min-width: 2.5em;
-  text-align: right;
-  color: #6c7086;
-  font-size: 0.8em;
-  user-select: none;
-  padding-right: 1em;
   flex-shrink: 0;
+  min-width: 2.5em;
+  padding-right: 1em;
+  color: var(--fg-muted);
+  font-size: 0.8em;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: right;
+  user-select: none;
 }
 .pc-content {
   flex: 1;
-  color: #cdd6f4;
+  color: var(--fg);
 }
 .pc-kw {
-  font-weight: bold;
-  color: #89b4fa;
+  color: var(--syn-keyword);
+  font-weight: 700;
 }
 .pc-flowchart-section {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
 }
 .pc-flowchart-toggle {
-  padding: 5px 12px;
-  cursor: pointer;
-  font-size: 0.82em;
-  color: #888;
+  padding: var(--space-3) var(--space-5);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
   list-style: none;
+  cursor: pointer;
   user-select: none;
 }
 .pc-flowchart-toggle:hover {
-  color: #cdd6f4;
+  color: var(--fg);
 }
 .pc-flowchart {
-  padding: 8px;
-  background: #1a1a2a;
   display: flex;
   justify-content: center;
+  padding: var(--space-4);
   overflow-x: auto;
 }
 .pc-flowchart .mermaid-diagram {
   max-width: 100%;
+  margin: 0;
 }
 
-/* ── Graph Visualizer ────────────────────────────────────────── */
-.graph-block {
-  margin: 1.2em 0;
+/* ── Diagram figures: no boxes, the page shows through. The title of each is
+   its caption, so it moves below the drawing like a figure caption. ── */
+.graph-block,
+.plot-block,
+.commdiag-block {
+  display: flex;
+  flex-direction: column;
+  margin: 1.6em auto;
+  break-inside: avoid;
 }
-.graph-title {
-  font-weight: 600;
-  font-size: 0.95em;
-  margin-bottom: 0.4em;
-  color: var(--accent, #7c9cbf);
+.graph-title,
+.plot-title,
+.commdiag-title {
+  order: 1;
+  max-width: 92%;
+  margin: 0.6em auto 0;
+  color: var(--fg);
+  font-size: 0.88em;
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  text-align: center;
+  text-wrap: balance;
 }
-.graph-block svg {
+.graph-block svg,
+.plot-block svg,
+.commdiag-svg-wrap svg {
   display: block;
-  border-radius: 8px;
-  background: var(--surface2, #1a1a1a);
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 0;
 }
-.graph-block text {
-  fill: var(--icon, #e0e0e0);
-  font-family: var(--mono, monospace);
+.commdiag-svg-wrap {
+  overflow-x: auto;
+}
+.graph-error,
+.plot-error,
+.commdiag-error,
+.tt-error {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.88em;
+}
+
+/* Graph (nodes and edges are drawn with fixed colours in the SVG; the
+   presentation attributes lose to these rules, so the drawing follows the
+   theme). */
+.graph-block svg line,
+.graph-block svg path.edge {
+  stroke: var(--fg-muted);
+}
+.graph-block svg marker path {
+  fill: var(--fg-muted);
+}
+.graph-block svg :is(circle, ellipse) {
+  fill: var(--bg-raised);
+  stroke: var(--border-strong);
+}
+.graph-block svg text {
+  fill: var(--fg);
+  font-family: var(--font-doc);
   dominant-baseline: central;
   text-anchor: middle;
 }
-.graph-block line,
-.graph-block path.edge {
-  stroke: #7c9cbf;
+
+/* Plot */
+.plot-block svg > rect:first-of-type {
+  fill: transparent;
 }
-.graph-error {
-  color: #e07070;
-  font-size: 0.85em;
-  padding: 0.4em;
-  background: var(--surface2, #2a2a2a);
-  border-radius: 4px;
+.plot-block svg > rect:last-of-type {
+  stroke: var(--border-strong);
+}
+.plot-block svg line {
+  stroke: var(--border);
+}
+.plot-block svg text {
+  fill: var(--fg-muted);
+  font-family: var(--font-ui);
+}
+.plot-block svg polyline:nth-of-type(1) {
+  stroke: var(--viz-1);
+}
+.plot-block svg polyline:nth-of-type(2) {
+  stroke: var(--viz-2);
+}
+.plot-block svg polyline:nth-of-type(3) {
+  stroke: var(--viz-3);
+}
+.plot-block svg polyline:nth-of-type(4) {
+  stroke: var(--viz-4);
+}
+.plot-block svg polyline:nth-of-type(5) {
+  stroke: var(--viz-5);
+}
+.plot-block svg polyline:nth-of-type(6) {
+  stroke: var(--viz-6);
+}
+.plot-block svg > rect:nth-of-type(2) {
+  fill: var(--viz-1);
+}
+.plot-block svg > rect:nth-of-type(3) {
+  fill: var(--viz-2);
+}
+.plot-block svg > rect:nth-of-type(4) {
+  fill: var(--viz-3);
+}
+.plot-block svg > rect:nth-of-type(5) {
+  fill: var(--viz-4);
+}
+.plot-block svg > rect:nth-of-type(6) {
+  fill: var(--viz-5);
+}
+.plot-block svg > rect:nth-of-type(7) {
+  fill: var(--viz-6);
+}
+.plot-block svg > rect:last-of-type {
+  fill: none;
 }

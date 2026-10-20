@@ -256,8 +256,23 @@ function longestIncreasingSubsequence(seq: number[]): number[] {
  * `dangerouslySetInnerHTML`, no `el.innerHTML = ...`); always go through
  * this function so sanitization and annotation can never be skipped.
  */
+/**
+ * Removes `<p>` elements with no content at all. A block-level construct that
+ * the renderer substitutes into a paragraph (a display equation, an
+ * environment) makes the HTML parser close that paragraph early and leave
+ * empty ones around it. They draw nothing, but each one still takes a margin
+ * (and a layout box the browser has to keep), which opens uneven gaps in the
+ * typeset page. A paragraph holding a `<br>` or any element is kept.
+ */
+export function dropEmptyParagraphs(root: ParentNode): void {
+  for (const p of root.querySelectorAll("p")) {
+    if (!p.firstElementChild && !(p.textContent ?? "").trim()) p.remove()
+  }
+}
+
 export function commitPreview(container: HTMLElement, rawHtml: string, sourceText: string): void {
   const fragment = sanitizeRenderedHtmlToFragment(rawHtml)
+  dropEmptyParagraphs(fragment)
   annotateSourceLinesIn(fragment, sourceText)
   morphPreviewContent(container, fragment)
 }

@@ -1,118 +1,181 @@
-/* ── Math Environments ── */
-.math-env {
-  margin: 1.4em 0;
-  padding: 0.8em 1.1em 0.8em 1.1em;
-  border-radius: 5px;
-  --env-accent: var(--border-strong);
-  border-left: 3px solid;
-  border-color: var(--env-accent);
-  position: relative;
-  background: color-mix(in oklch, var(--env-accent) 8%, transparent);
-  /* Prevent long display-math from expanding the box past its container width */
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-.math-env .katex-display {
-  /* Long single-line equations scroll horizontally inside the box instead of overflowing it */
-  overflow-x: auto;
-  max-width: 100%;
-}
-.math-env-body {
-  min-width: 0;
-}
+/* ── Math environments, in the amsthm tradition ──────────────────────────────
+   A run-in bold label ("Theorem 1 (Name).") followed by the body. The label
+   and the first paragraph of the body share a line (header, body and that
+   paragraph are inline); anything else in the body starts its own block. The
+   statement environments (theorem, lemma, corollary, proposition) set the body
+   in italics; definitions, examples and remarks stay upright. A thin rule in
+   the --env-* token marks the statements; there are no boxes. */
 
-.math-env-header {
-  margin-bottom: 0.4em;
+.math-env {
+  --env-accent: var(--border-strong);
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  margin: 1.1em 0;
+  text-align: left;
+  break-inside: avoid;
+}
+@container preview (min-width: 52rem) {
+  .preview-pane.doc-paper .math-env {
+    text-align: justify;
+  }
+}
+.math-env-header,
+.math-env-body {
+  display: inline;
+  min-width: 0;
+}
+.math-env-body > p:first-child {
+  display: inline;
+}
+.math-env-body > :first-child + * {
+  margin-top: 0.85em;
+}
+.math-env-body > :last-child,
+.math-env-body > p:last-child {
+  margin-bottom: 0;
 }
 
 .math-env-label {
+  margin-right: 0.35em;
+  color: var(--fg);
+  font-style: normal;
   font-weight: 700;
-  font-style: italic;
-  font-size: 0.95em;
-  color: var(--env-accent);
 }
+/* The id of a labelled environment is an authoring aid: shown in the corner on
+   hover, out of the text flow so it never changes the line. */
 .math-env-anchor {
-  margin-left: 8px;
+  position: absolute;
+  top: 0;
+  right: 0;
   color: var(--fg-muted);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 0.7em;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease-standard);
+}
+.math-env:hover .math-env-anchor {
+  opacity: 1;
+}
+
+/* Statements: a thin rule in the environment's colour, a faint tint, body in italics. */
+.math-env-theorem,
+.math-env-lemma,
+.math-env-corollary,
+.math-env-proposition,
+.math-env-definition {
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--env-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in oklch, var(--env-accent) 5%, transparent);
+}
+.math-env-theorem .math-env-body,
+.math-env-lemma .math-env-body,
+.math-env-corollary .math-env-body,
+.math-env-proposition .math-env-body {
+  font-style: italic;
+}
+/* Inside an italic statement, emphasis turns upright (as \emph does in amsthm). */
+.math-env-theorem .math-env-body :is(em, i),
+.math-env-lemma .math-env-body :is(em, i),
+.math-env-corollary .math-env-body :is(em, i),
+.math-env-proposition .math-env-body :is(em, i) {
+  font-style: normal;
+}
+.math-env-theorem .math-env-body :is(code, pre, .katex, .math-env-label),
+.math-env-lemma .math-env-body :is(code, pre, .katex, .math-env-label),
+.math-env-corollary .math-env-body :is(code, pre, .katex, .math-env-label),
+.math-env-proposition .math-env-body :is(code, pre, .katex, .math-env-label) {
   font-style: normal;
 }
 
-.math-env-body p:last-child {
-  margin-bottom: 0;
+/* Upright environments: no rule, only the bold label. */
+.math-env-example,
+.math-env-exercise,
+.math-env-remark,
+.math-env-note {
+  padding: 0;
 }
-.math-env-body p:first-child {
-  margin-top: 0;
+
+/* Proof: italic "Proof." label, upright body, a tombstone at the end. */
+.math-env-proof .math-env-label {
+  font-style: italic;
+  font-weight: 400;
+}
+.math-env-proof .math-env-label::after {
+  content: ".";
+}
+.math-env-qed {
+  float: right;
+  margin-left: 1em;
+  color: var(--fg-muted);
+  line-height: inherit;
+  font-style: normal;
+}
+
+/* Callout-like environments (tip, warning, quote, ...): a compact tinted box. */
+.math-env-tip,
+.math-env-hint,
+.math-env-info,
+.math-env-warning,
+.math-env-caution,
+.math-env-attention,
+.math-env-important,
+.math-env-danger,
+.math-env-error,
+.math-env-failure,
+.math-env-success,
+.math-env-check,
+.math-env-done,
+.math-env-question,
+.math-env-help,
+.math-env-faq,
+.math-env-quote,
+.math-env-cite,
+.math-env-abstract {
+  padding: var(--space-4) var(--space-5);
+  border-left: 2px solid var(--env-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in oklch, var(--env-accent) 8%, transparent);
+}
+.math-env-quote,
+.math-env-cite,
+.math-env-abstract {
+  font-style: italic;
 }
 
 /* Headings inside environments: scaled to fit the context */
-.math-env-body h1 {
-  font-size: 1.05em;
-  font-weight: 700;
+.math-env-body h1,
+.math-env-body h2,
+.math-env-body h3,
+.math-env-body h4 {
   margin: 0.7em 0 0.25em;
-  padding-bottom: 0.2em;
-  border-bottom: 1px solid currentColor;
-  opacity: 0.75;
-}
-.math-env-body h2 {
-  font-size: 0.98em;
-  font-weight: 700;
-  margin: 0.6em 0 0.2em;
+  padding: 0;
+  font-size: 1em;
+  font-style: normal;
 }
 .math-env-body h3 {
-  font-size: 0.93em;
-  font-weight: 600;
   font-style: italic;
-  margin: 0.5em 0 0.15em;
 }
-.math-env-body h4 {
-  font-size: 0.9em;
-  font-weight: 600;
-  margin: 0.4em 0 0.1em;
-  color: inherit;
-  opacity: 0.8;
-}
-.math-env-body h1:first-child,
-.math-env-body h2:first-child,
-.math-env-body h3:first-child,
-.math-env-body h4:first-child {
+.math-env-body :is(h1, h2, h3, h4):first-child {
   margin-top: 0;
-}
-
-.math-env-qed {
-  text-align: right;
-  font-size: 1.1em;
-  margin-top: 0.4em;
-  color: var(--fg-muted);
 }
 
 /* Size variants */
 .math-env-sm {
-  padding: 0.35em 0.75em 0.35em 0.9em;
-  font-size: 0.87em;
-  border-left-width: 2px;
   margin: 0.7em 0;
+  font-size: 0.9em;
 }
-.math-env-sm .math-env-label {
-  font-size: 0.85em;
-}
-
 .math-env-lg {
-  padding: 1.1em 1.4em 1.1em 1.4em;
-  font-size: 1.06em;
-  border-left-width: 5px;
-  margin: 2em 0;
-  border-radius: 6px;
-}
-.math-env-lg .math-env-label {
-  font-size: 1.05em;
-  letter-spacing: 0.01em;
+  margin: 1.8em 0;
+  font-size: 1.07em;
 }
 
-/* Per-type colours: a type only picks its accent token; the border, the label
-   and the 8% tint all follow it. */
+/* Per-type colours: a type only picks its accent token. */
 .math-env-theorem {
   --env-accent: var(--env-theorem);
 }
@@ -178,37 +241,28 @@
 .math-env-abstract {
   --env-accent: var(--callout-quote);
 }
-.math-env-proof {
-  border-style: dashed;
-}
-.math-env-proof .math-env-label {
-  font-weight: 400;
-}
-.math-env-quote,
-.math-env-cite,
-.math-env-abstract {
-  font-style: italic;
-}
 
+/* Collapsible environment */
 .math-env-folded {
-  --env-accent: var(--border-strong);
-  border-style: dashed;
-  background: var(--bg-surface);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 .math-env-folded-header {
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
 }
 .math-env-folded-header .math-env-label {
   color: var(--fg-muted);
   font-style: italic;
+  font-weight: 400;
 }
 .math-env-folded-toggle {
   color: var(--fg-muted);
-  font-size: 10px;
-  transition: transform 0.2s;
+  font-size: 0.8em;
+  transition: transform var(--dur-med) var(--ease-standard);
 }
 .math-env-folded-header.folded .math-env-folded-toggle {
   transform: rotate(0deg);
@@ -216,23 +270,10 @@
 .math-env-folded-header:not(.folded) .math-env-folded-toggle {
   transform: rotate(90deg);
 }
+.math-env-folded .math-env-body {
+  display: block;
+  margin-top: var(--space-3);
+}
 .math-env-body.folded {
   display: none;
-}
-.math-env-body:not(.folded) {
-  display: block;
-}
-
-/* ── KaTeX ── */
-.preview-content .katex-display {
-  margin: 1.2em 0;
-  overflow-x: auto;
-}
-.preview-content .katex {
-  color: var(--fg);
-}
-.math-error {
-  color: var(--danger);
-  font-family: var(--font-mono);
-  font-size: 0.85em;
 }
