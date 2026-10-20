@@ -1,10 +1,7 @@
 import { useRef, useId } from "react"
 import { useT } from "./i18n"
-<<<<<<< HEAD
 import { CircleX, Icon, TriangleAlert, X } from "./icons"
-=======
 import { useFocusTrap } from "./useFocusTrap"
->>>>>>> 700c509 (fix: focus trap and Escape for the quick switcher, command palette and LaTeX error dialog)
 import type { LatexDiagnostic } from "./latexErrors"
 
 interface LatexErrorModalProps {
@@ -21,19 +18,6 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
   useFocusTrap(modalRef, true, onClose)
 
   return (
-<<<<<<< HEAD
-    <div className="latex-err-overlay" onClick={onClose}>
-      <div className="latex-err-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="latex-err-header">
-          <h3>{t.latexErrors.title}</h3>
-          <button
-            className="latex-err-close"
-            onClick={onClose}
-            aria-label={t.latexErrors.close}
-            title={t.latexErrors.close}
-          >
-            <Icon icon={X} size={14} />
-=======
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
         role="dialog"
@@ -45,9 +29,13 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
       >
         <div className="modal-header">
           <span id={titleId}>{t.latexErrors.title}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.latexErrors.close}>
-            ×
->>>>>>> 700c509 (fix: focus trap and Escape for the quick switcher, command palette and LaTeX error dialog)
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.latexErrors.close}
+            title={t.latexErrors.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="modal-body">
