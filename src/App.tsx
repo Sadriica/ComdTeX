@@ -18,7 +18,12 @@ import { runGit } from "./gitApi"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath, openUrl } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
-import { MERMAID_CONFIG } from "./mermaidConfig"
+import {
+  buildMermaidConfig,
+  mermaidThemeKey,
+  setActiveMermaidConfig,
+  type MermaidThemeName,
+} from "./mermaidConfig"
 import type { CmdKAnchor } from "./CmdKEdit"
 import { setupDisplayMathPreview } from "./useDisplayMathPreview"
 import {
@@ -161,6 +166,7 @@ import {
 } from "./templates"
 import {
   setFlowchartSvg,
+  setFlowchartThemeKey,
   setExcalidrawSvg,
   getExcalidrawSvg,
   setExcalidrawPlaceholderText,
@@ -499,19 +505,32 @@ const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
 const UpdateChecker = lazy(() => import("./UpdateChecker"))
 const PdfPreviewPanel = lazy(() => import("./PdfPreviewPanel"))
 
-// Singleton mermaid loader: `import("mermaid")` is a ~600KB chunk; cache the
-// resolved module + the (idempotent) `initialize()` call so the per-keystroke
-// re-render path doesn't re-do the work.
-type MermaidModule = { render: (id: string, src: string) => Promise<{ svg: string }> }
+// Singleton mermaid loader: `import("mermaid")` is a multi-hundred-KB chunk
+// (ELK, Mermaid's default layout, is a further lazy chunk fetched on first use);
+// cache the resolved module so the per-keystroke re-render path doesn't redo
+// the import. `initialize()` is re-run only when the design-token palette
+// changed (theme switch), see `getMermaid`.
+type MermaidModule = {
+  render: (id: string, src: string) => Promise<{ svg: string }>
+  initialize: (cfg: unknown) => void
+}
 let _mermaidPromise: Promise<MermaidModule> | null = null
-function getMermaid(): Promise<MermaidModule> {
-  if (_mermaidPromise) return _mermaidPromise
-  _mermaidPromise = import("mermaid").then((mod) => {
-    const m = (mod as { default: { initialize: (cfg: unknown) => void } & MermaidModule }).default
-    m.initialize(MERMAID_CONFIG)
+let _mermaidInitKey = ""
+function mermaidThemeName(theme: string): MermaidThemeName {
+  return theme === "vs" ? "light" : theme === "hc-black" ? "hc" : "dark"
+}
+function getMermaid(themeEl: Element | null, theme: string): Promise<MermaidModule> {
+  _mermaidPromise ??= import("mermaid").then((mod) => (mod as { default: MermaidModule }).default)
+  return _mermaidPromise.then((m) => {
+    const cfg = buildMermaidConfig(themeEl, mermaidThemeName(theme))
+    const key = mermaidThemeKey(cfg)
+    if (key !== _mermaidInitKey) {
+      m.initialize(cfg)
+      setActiveMermaidConfig(cfg)
+      _mermaidInitKey = key
+    }
     return m
   })
-  return _mermaidPromise
 }
 const MonacoEditor = lazy(async () => {
   await import("./monacoRuntime")
@@ -1970,6 +1989,18 @@ function AppContent({
   // re-runs and picks up the cached SVGs (embedded inline by environments.ts).
   const [mermaidVersion, setMermaidVersion] = useState(0)
 
+  // A theme switch changes the design tokens the diagrams are drawn with. The
+  // SVG cache is keyed on source AND palette (`setFlowchartThemeKey` drops every
+  // entry drawn with another palette), so bump the version to make the embedded
+  // `:::flowchart` / pseudocode SVGs fall back to source and re-render. Raw
+  // ```mermaid fences are covered by `settings.theme` in the commit and mermaid
+  // effects' deps below.
+  useEffect(() => {
+    const el = previewPaneRef.current ?? document.querySelector(".app")
+    const key = mermaidThemeKey(buildMermaidConfig(el, mermaidThemeName(settings.theme)))
+    if (setFlowchartThemeKey(key)) setMermaidVersion((v) => v + 1)
+  }, [settings.theme])
+
   // `costSink`, when passed, receives the elapsed ms of THIS call's
   // renderMarkdown + sanitize pipeline: written in a `finally` so it's
   // recorded even when rendering throws (renderErrorHtml is then what the
@@ -2074,7 +2105,9 @@ function AppContent({
       previewCostRef.current = performance.now() - t0
     })
     return () => cancelAnimationFrame(id)
-  }, [previewHtml, deferredPreviewContent])
+    // settings.theme: diagrams are drawn with the active theme's tokens, so a
+    // switch must replace the live SVGs even when the HTML string is unchanged.
+  }, [previewHtml, deferredPreviewContent, settings.theme])
 
   const splitTab = useMemo(
     () => vault.openTabs.find((t) => t.path === splitFile) ?? null,
@@ -2136,7 +2169,7 @@ function AppContent({
       const blocks = [...container.querySelectorAll<HTMLElement>("pre code.language-mermaid")]
       if (blocks.length === 0) return
 
-      const mermaid = await getMermaid()
+      const mermaid = await getMermaid(container, settings.theme)
       if (cancelled) return
 
       let storedAny = false
@@ -2207,7 +2240,7 @@ function AppContent({
     return () => {
       cancelled = true
     }
-  }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid])
+  }, [previewHtml, splitPreviewHtml, previewNeedsMermaid, splitNeedsMermaid, settings.theme])
   // mermaidVersion participates only as a trigger for renderPreviewHtml deps
   // (read below), not as a dep of this effect; it would cause a re-render loop.
   void mermaidVersion

@@ -21,13 +21,21 @@ type RenderReport = {
 
 async function report(page: import("@playwright/test").Page) {
   await page.goto("/e2e/fixtures/mermaid-render.html")
-  await page.waitForFunction(() => (window as unknown as { __MERMAID_DONE__?: boolean }).__MERMAID_DONE__ === true, undefined, { timeout: 30_000 })
+  await page.waitForFunction(
+    () => (window as unknown as { __MERMAID_DONE__?: boolean }).__MERMAID_DONE__ === true,
+    undefined,
+    { timeout: 30_000 },
+  )
   return page.evaluate(
-    () => (window as unknown as { __MERMAID_REPORT__: Record<string, RenderReport> }).__MERMAID_REPORT__,
+    () =>
+      (window as unknown as { __MERMAID_REPORT__: Record<string, RenderReport> })
+        .__MERMAID_REPORT__,
   )
 }
 
-test("the user's decision-cycle flowchart keeps its node labels after sanitization", async ({ page }) => {
+test("the user's decision-cycle flowchart keeps its node labels after sanitization", async ({
+  page,
+}) => {
   const all = await report(page)
   const r = all.decisionCycle as RenderReport
 
@@ -57,7 +65,8 @@ test("special characters and accents survive without securityLevel loose", async
   // claimed to require. It renders fine under Mermaid's default strict level.
   expect(joined).toContain("↺")
   expect(joined).toContain("WHILE lo ≤ hi")
-  expect(joined).toContain("mid ← (lo + hi) / 2")
+  // Spaces at wrap points are lost when tspans are joined; compare without them.
+  expect(joined.replace(/\s+/g, "")).toContain("mid←(lo+hi)/2")
   expect(joined).toContain("Búsqueda")
 })
 
@@ -65,6 +74,26 @@ test("labels do not overflow their shapes with native SVG text", async ({ page }
   const all = await report(page)
   for (const [name, r] of Object.entries(all)) {
     expect((r as RenderReport).overflowing, `${name} has overflowing labels`).toEqual([])
+  }
+})
+
+test("a long unbreakable word is not split across lines inside its node", async ({ page }) => {
+  const all = await report(page)
+  const r = all.longWord as RenderReport
+  expect(r.texts).toContain("Eigendecompose")
+})
+
+test("documents can opt back to the classic look and dagre layout", async ({ page }) => {
+  await report(page)
+  const svgs = await page.evaluate(
+    () => (window as unknown as { __MERMAID_SVGS__: Record<string, string> }).__MERMAID_SVGS__,
+  )
+  // Ids differ per render; compare the markup with them removed.
+  const norm = (s: string) => s.replace(/e2e-[A-Za-z]+/g, "ID")
+  const base = norm(svgs.flowchartDefault)
+  for (const name of ["classicFrontmatter", "classicInit"]) {
+    expect(svgs[name], `${name} rendered nothing`).toBeTruthy()
+    expect(norm(svgs[name]), `${name} should differ from the neo/ELK default`).not.toBe(base)
   }
 })
 

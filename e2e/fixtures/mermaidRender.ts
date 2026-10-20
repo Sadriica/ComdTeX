@@ -17,9 +17,15 @@ export type RenderReport = {
   overflowing: string[]
 }
 
-async function renderReport(source: string, id: string): Promise<RenderReport> {
+async function renderReport(
+  source: string,
+  id: string,
+  svgs: Record<string, string>,
+  name: string,
+): Promise<RenderReport> {
   mermaid.initialize(MERMAID_CONFIG)
   const { svg } = await mermaid.render(id, source)
+  svgs[name] = svg
   const safe = sanitizeRenderedHtml(svg)
 
   const holder = document.createElement("div")
@@ -87,11 +93,34 @@ async function main() {
     ["stateDiagram", "stateDiagram-v2\n  [*] --> Idea\n  Idea --> Descartar: No viable"],
     ["erDiagram", "erDiagram\n  PROYECTO ||--o{ ESTUDIO : incluye"],
     ["mindmap", "mindmap\n  root((Proyecto))\n    Idea\n    Estudio"],
+    [
+      "gantt",
+      "gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Fase\n  Diseño :a1, 2024-01-01, 7d",
+    ],
+    // A long unbreakable word must stay on one line inside its node.
+    [
+      "longWord",
+      "flowchart LR\n  C{Connected?} -- yes --> D[Eigendecompose]\n  D --> E[Record gap]",
+    ],
+    // Mermaid 12 defaults: neo look, ELK layout.
+    ["flowchartDefault", "flowchart LR\n  A[Inicio] --> B{Decisión}\n  B -->|Sí| C[Fin]"],
+    // Documents opt back to the pre-12 look and layout with frontmatter ...
+    [
+      "classicFrontmatter",
+      "---\nconfig:\n  look: classic\n  layout: dagre\n---\nflowchart LR\n  A[Inicio] --> B{Decisión}\n  B -->|Sí| C[Fin]",
+    ],
+    // ... or with an init directive.
+    [
+      "classicInit",
+      '%%{init: {"look": "classic", "layout": "dagre"}}%%\nflowchart LR\n  A[Inicio] --> B{Decisión}\n  B -->|Sí| C[Fin]',
+    ],
   ]
 
+  const svgs: Record<string, string> = {}
+  ;(window as unknown as { __MERMAID_SVGS__: unknown }).__MERMAID_SVGS__ = svgs
   for (const [name, source] of cases) {
     try {
-      out[name] = await renderReport(source, `e2e-${name}`)
+      out[name] = await renderReport(source, `e2e-${name}`, svgs, name)
     } catch (e) {
       out[name] = { error: String(e) }
     }
