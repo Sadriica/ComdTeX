@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **The link graph and the task list now cover the whole vault.** Both panels only looked at documents open in tabs, so links and tasks in closed notes were missing. They now read every note through the same mtime-gated index vault search uses (an unchanged file is never read twice), and an open tab's unsaved text still wins over the disk copy. Ticking a task in a note that is not open edits that file safely: the line is re-checked against the file as it is now, and nothing is written if it changed.
 - **Callouts survive open and save byte for byte.** `> [!tip] Hi` was saved as `> [!tip] Tip: Hi`, because the environment name was baked into the title. The name is now written only when the callout type alone would reopen as a different environment (`Theorem: Pyth`).
 - **No more `<!--cmdx type=... -->` line in the editor.** Callouts that no environment reproduces exactly (folded ones, `[!theorem]` without a prefix, `[!NOTE]`, `[!my-type]`) now stay ordinary callouts in the editor and are saved as written. Editor text from older builds that still carries the marker loads and saves correctly.
+- **Theorems keep their numbers outside LaTeX.** DOCX, Typst, Beamer, Markdown, Obsidian and Reveal.js exports lost environment numbering and printed references as raw `@thm:x`. They now read "Teorema 2 (Title)" and "Teorema 2", the same as the preview. A reference to an environment in another note cannot be numbered there, and the pre-export notice says so.
+- **Writing statistics survive a restart.** The Focus panel kept words, active time and pomodoros only for the running session. Totals are now kept per day (up to a year), the daily goal counts the whole day, and a Today section shows today and the last seven days.
+
+### Changed
+- The vault-wide label scan behind `@eq:`/`@fig:` autocomplete runs in a background worker and only rescans notes that changed, so typing in a large vault no longer stalls on it.
+- `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 
 ## [1.29.1] - 2026-10-15
 
