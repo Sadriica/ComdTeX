@@ -7,11 +7,6 @@
    to tokens in your own file, delete its entry below. Delete this file (and
    its import in index.css) once it is empty. */
 
-/* Panes */
-.pdf-preview-panel {
-  background: var(--bg-surface);
-}
-
 .fm-author {
   color: var(--link);
 }
