@@ -3,6 +3,7 @@ import type { Comment } from "./comments"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { Icon, X } from "./icons"
+import PanelHeader from "./PanelHeader"
 
 export type CommentsFilter = "all" | "unresolved" | "resolved"
 
@@ -72,19 +73,16 @@ export default function CommentsPanel({
 
   return (
     <div className="comments-panel">
-      <div className="comments-header">
-        <span className="comments-summary">
-          {comments.length === 0 ? t.comments.noComments : t.comments.count(comments.length)}
-        </span>
+      <PanelHeader title={t.sidebar.comments} count={comments.length}>
         <button
-          className="comments-add-btn"
+          className="panel-action comments-add-btn"
           onClick={onAdd}
           aria-label={t.comments.addAriaLabel}
           title={t.comments.addAriaLabel}
         >
           + {t.comments.addAtCursor}
         </button>
-      </div>
+      </PanelHeader>
 
       <div className="comments-filters" role="tablist" aria-label={t.comments.filterAriaLabel}>
         {(["all", "unresolved", "resolved"] as const).map((f) => (

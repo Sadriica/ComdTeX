@@ -3,6 +3,7 @@ import type { FrontmatterData } from "./frontmatter"
 import { extractFrontmatter, serializeFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
 import { Icon, X } from "./icons"
+import PanelHeader from "./PanelHeader"
 
 interface FrontmatterPanelProps {
   content: string
@@ -90,6 +91,7 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
 
   return (
     <div className="fm-panel">
+      <PanelHeader title={t.sidebar.properties} />
       <div className="fm-panel-fields">
         {KNOWN_FIELD_KEYS.map(({ key, fieldKey, type }) => {
           const label = t.frontmatterPanel[fieldKey]

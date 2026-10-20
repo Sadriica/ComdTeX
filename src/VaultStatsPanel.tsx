@@ -5,6 +5,7 @@ import { useT } from "./i18n"
 import { Icon, TriangleAlert } from "./icons"
 import ContextMenu from "./ContextMenu"
 import { showToast } from "./toastService"
+import PanelHeader from "./PanelHeader"
 
 interface BrokenLink {
   file: string
@@ -164,6 +165,7 @@ export default function VaultStatsPanel({
 
   return (
     <div className="stats-panel">
+      <PanelHeader title={t.sidebar.stats} />
       <div className="stats-section">
         <div className="stats-section-title">{t.stats.vault}</div>
         <Row label={t.stats.files} value={stats.fileCount} />

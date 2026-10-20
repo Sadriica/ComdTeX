@@ -5,6 +5,7 @@ import { Icon, ScrollText } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import type { OpenFile } from "./types"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 const NUMBERED_TYPES = [
   "theorem",
@@ -86,13 +87,16 @@ export default function EnvironmentsPanel({
 
   if (items.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">
-          <Icon icon={ScrollText} size={16} />
+      <div className="env-list-panel">
+        <PanelHeader title={t.sidebar.environments} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={ScrollText} size={16} />
+          </div>
+          <p className="panel-empty-message">
+            {renderEmptyMessage(t.emptyStates.environmentsMessage)}
+          </p>
         </div>
-        <p className="panel-empty-message">
-          {renderEmptyMessage(t.emptyStates.environmentsMessage)}
-        </p>
       </div>
     )
   }
@@ -117,7 +121,7 @@ export default function EnvironmentsPanel({
 
   return (
     <div className="env-list-panel">
-      <div className="panel-header">{t.environments.count(items.length)}</div>
+      <PanelHeader title={t.sidebar.environments} count={items.length} />
       <PanelSearch
         value={query}
         onChange={setQuery}

@@ -4,6 +4,7 @@ import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
 import { Icon, Link2 } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 const NO_BACKLINKS: SearchResult[] = []
 
@@ -56,14 +57,18 @@ export default function BacklinksPanel({
   }, [currentFile, onSearch])
 
   if (!currentFile) {
-    return <div className="tree-empty">{t.backlinks.noFile}</div>
+    return (
+      <div className="backlinks-panel">
+        <PanelHeader title={t.sidebar.backlinks} />
+        <div className="panel-empty">{t.backlinks.noFile}</div>
+      </div>
+    )
   }
 
   return (
     <div className="backlinks-panel">
-      <div className="backlinks-header">
-        {loading ? t.backlinks.searching : t.backlinks.links(backlinks.length)}
-      </div>
+      <PanelHeader title={t.sidebar.backlinks} count={loading ? undefined : backlinks.length} />
+      {loading && <div className="panel-loading">{t.backlinks.searching}</div>}
       {backlinks.length === 0 && !loading && (
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
@@ -88,7 +93,7 @@ export default function BacklinksPanel({
         return (
           <div key={filePath} className="search-group">
             <div className="search-file" onClick={() => onOpenFile(node, hits[0]?.line)}>
-              <span>{hits[0].fileName}</span>
+              <span className="search-file-name">{hits[0].fileName}</span>
               <span className="search-count">{hits.length}</span>
             </div>
             {hits.map((h, i) => (

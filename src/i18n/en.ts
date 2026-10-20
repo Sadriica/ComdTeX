@@ -168,6 +168,7 @@ export const en: T = {
     count: (n) => `${n} results`,
     lineAriaLabel: (line, content) => `Line ${line}: ${content}`,
     showLess: "Show less",
+    toggleGroup: "Collapse or expand matches in this file",
     more: (n) => `+${n} more`,
     toggleReplace: "Find & replace",
     replacePlaceholder: "Replace with…",

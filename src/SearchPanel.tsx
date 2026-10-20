@@ -3,6 +3,7 @@ import type { SearchResult } from "./types"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { ArrowLeftRight, Icon, RefreshCw, TriangleAlert } from "./icons"
+import PanelHeader from "./PanelHeader"
 
 interface SearchPanelProps {
   onSearch: (
@@ -47,6 +48,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const mountedRef = useRef(true)
 
@@ -94,6 +96,15 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
     })
   }, [])
 
+  const toggleCollapse = useCallback((filePath: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(filePath)) next.delete(filePath)
+      else next.add(filePath)
+      return next
+    })
+  }, [])
+
   const grouped = results.reduce<Record<string, SearchResult[]>>((acc, r) => {
     if (!acc[r.filePath]) acc[r.filePath] = []
     acc[r.filePath].push(r)
@@ -120,6 +131,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
   return (
     <div className="search-panel" role="search">
+      <PanelHeader
+        title={t.sidebar.search}
+        count={query.trim() && !searching ? results.length : ""}
+      />
       <div className="search-input-wrap">
         <input
           autoFocus
@@ -206,7 +221,8 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
         {Object.entries(grouped).map(([filePath, hits]) => {
           const isExpanded = expanded.has(filePath)
-          const displayHits = isExpanded ? hits : hits.slice(0, 5)
+          const isCollapsed = collapsed.has(filePath)
+          const displayHits = isCollapsed ? [] : isExpanded ? hits : hits.slice(0, 5)
 
           return (
             <div key={filePath} className="search-group" role="listitem">
@@ -222,7 +238,21 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
                   (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))
                 }
               >
-                {displayBasename(filePath)}
+                <button
+                  type="button"
+                  className={`search-collapse${isCollapsed ? " collapsed" : ""}`}
+                  aria-expanded={!isCollapsed}
+                  aria-label={t.search.toggleGroup}
+                  title={t.search.toggleGroup}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleCollapse(filePath)
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  ▾
+                </button>
+                <span className="search-file-name">{displayBasename(filePath)}</span>
                 <span className="search-count" aria-label={t.search.count(hits.length)}>
                   {hits.length}
                 </span>
@@ -248,7 +278,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
                   </div>
                 )
               })}
-              {hits.length > 5 && (
+              {hits.length > 5 && !isCollapsed && (
                 <div
                   className="search-more"
                   onClick={() => toggleExpand(filePath)}

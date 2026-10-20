@@ -168,6 +168,7 @@ export const es: T = {
     count: (n) => `${n} resultados`,
     lineAriaLabel: (line, content) => `Línea ${line}: ${content}`,
     showLess: "Mostrar menos",
+    toggleGroup: "Contraer o expandir las coincidencias de este archivo",
     more: (n) => `+${n} más`,
     toggleReplace: "Buscar y reemplazar",
     replacePlaceholder: "Reemplazar con…",

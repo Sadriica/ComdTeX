@@ -14,6 +14,7 @@ import { useT } from "./i18n"
 import { Highlighter, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 import { showToast } from "./toastService"
+import PanelHeader from "./PanelHeader"
 
 interface KeepPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -76,10 +77,7 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
   if (entries.length === 0) {
     return (
       <div className="keep-panel">
-        <div className="panel-header">
-          <span className="panel-header-title">{kp.title}</span>
-          <span className="panel-header-actions">0</span>
-        </div>
+        <PanelHeader title={kp.title} count={0} />
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
             <Icon icon={Highlighter} size={16} />
@@ -94,10 +92,7 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
 
   return (
     <div className="keep-panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{kp.title}</span>
-        <span className="panel-header-actions">{kp.count(entries.length)}</span>
-      </div>
+      <PanelHeader title={kp.title} count={entries.length} />
       <div className="keep-controls">
         <input
           className="tag-filter"

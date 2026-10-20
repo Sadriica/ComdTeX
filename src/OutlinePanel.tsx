@@ -5,6 +5,7 @@ import { Icon, ListTree } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { computeSectionWordCounts } from "./sectionWordCount"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface Heading {
   level: number
@@ -66,11 +67,14 @@ export default function OutlinePanel({
 
   if (headings.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">
-          <Icon icon={ListTree} size={16} />
+      <div className="outline-panel">
+        <PanelHeader title={t.sidebar.outline} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={ListTree} size={16} />
+          </div>
+          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
         </div>
-        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
       </div>
     )
   }
@@ -89,6 +93,7 @@ export default function OutlinePanel({
 
   return (
     <div className="outline-panel">
+      <PanelHeader title={t.sidebar.outline} count={headings.length} />
       <PanelSearch
         value={query}
         onChange={setQuery}
@@ -111,7 +116,7 @@ export default function OutlinePanel({
               (isDragging ? " outline-dragging" : "") +
               (isDropTarget ? " outline-drop-before" : "")
             }
-            style={{ paddingLeft: 8 + (h.level - 1) * 14 }}
+            style={{ "--depth": h.level - 1 } as React.CSSProperties}
             draggable={canReorder}
             onClick={() => {
               if (didDragRef.current) {

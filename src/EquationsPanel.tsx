@@ -4,6 +4,7 @@ import { useT } from "./i18n"
 import { Icon, Sigma } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface Equation {
   number: number
@@ -48,11 +49,16 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
 
   if (equations.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">
-          <Icon icon={Sigma} size={16} />
+      <div className="eq-list-panel">
+        <PanelHeader title={t.sidebar.equations} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Sigma} size={16} />
+          </div>
+          <p className="panel-empty-message">
+            {renderEmptyMessage(t.emptyStates.equationsMessage)}
+          </p>
         </div>
-        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.equationsMessage)}</p>
       </div>
     )
   }
@@ -67,7 +73,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
 
   return (
     <div className="eq-list-panel">
-      <div className="panel-header">{t.equations.count(equations.length)}</div>
+      <PanelHeader title={t.sidebar.equations} count={equations.length} />
       <PanelSearch
         value={query}
         onChange={setQuery}
