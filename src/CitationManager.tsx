@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { BibEntry } from "./bibtex"
 import { parseBibtex } from "./bibtex"
 import {
@@ -75,7 +75,14 @@ export default function CitationManager({
   const [zoteroSearching, setZoteroSearching] = useState(false)
   const [zoteroFetching, setZoteroFetching] = useState(false)
 
-  useEffect(() => {
+  // Start from a clean slate whenever the dialog opens or the bib changes. Done
+  // while rendering (React's "adjust state on prop change" pattern) instead of
+  // in an effect, so the stale state never paints.
+  const [syncedWith, setSyncedWith] = useState<{ open: boolean; bibMap: typeof bibMap } | null>(
+    null,
+  )
+  if (syncedWith?.open !== open || syncedWith.bibMap !== bibMap) {
+    setSyncedWith({ open, bibMap })
     if (open) {
       setEntries(new Map(bibMap))
       setForm(DEFAULT_FORM)
@@ -88,7 +95,7 @@ export default function CitationManager({
       setZoteroSearching(false)
       setZoteroFetching(false)
     }
-  }, [open, bibMap])
+  }
 
   if (!open) return null
 

@@ -4,6 +4,8 @@ import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
+const NO_BACKLINKS: SearchResult[] = []
+
 interface BacklinksPanelProps {
   currentFile: { name: string; path: string } | null
   onOpenFile: (node: FileNode, line?: number) => void
@@ -19,8 +21,11 @@ export default function BacklinksPanel({
   onSearch,
 }: BacklinksPanelProps) {
   const t = useT()
-  const [backlinks, setBacklinks] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [foundBacklinks, setBacklinks] = useState<SearchResult[]>([])
+  const [foundLoading, setLoading] = useState(false)
+  // With no file open there is nothing to show, whatever the last scan found.
+  const backlinks = currentFile ? foundBacklinks : NO_BACKLINKS
+  const loading = currentFile ? foundLoading : false
 
   // Who links here is a search for `[[name]]`, so it goes through the vault's
   // index: every file this panel needs was already read for search, and an
@@ -28,12 +33,10 @@ export default function BacklinksPanel({
   // every file switch (what this did before) duplicated that work and scaled
   // with the vault, not with the answer.
   useEffect(() => {
-    if (!currentFile) {
-      setBacklinks([])
-      return
-    }
+    if (!currentFile) return
     const baseName = currentFile.name.replace(/\.[^.]+$/, "")
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the scan as started; the results arrive after the async search
     setLoading(true)
     onSearch(`[[${baseName}]]`)
       .then((results) => {
