@@ -338,3 +338,72 @@ for (const { name, theme } of THEMES) {
     await shot(page, name, "panel__equations", "__1024x700")
   })
 }
+
+// AI chat, symbol picker panel, running focus timer and a filled table editor.
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: ai chat, symbols, focus timer and table`, async ({ page }) => {
+    test.setTimeout(120_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    const conversation = [
+      {
+        id: "c1",
+        title: "Spectral gap",
+        updatedAt: 1,
+        messages: [
+          { role: "user", content: "Can you tighten the statement of the main theorem?" },
+          {
+            role: "assistant",
+            content:
+              "Here is a sharper version. The gap is bounded below by $\\frac{1}{2}\\lambda_2$ and the proof only uses the **Cheeger inequality**:\n\n```latex\n\\lambda_2 \\ge \\frac{h^2}{2}\n```\n\n- keep the hypothesis on regularity\n- drop the unused second assumption",
+          },
+          { role: "user", content: "Thanks. Make it shorter." },
+        ],
+      },
+    ]
+    await installFakeVault(page, {
+      settings: { theme, aiEnabled: true, aiProviderId: "anthropic", aiModel: "claude" },
+      storage: {
+        comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]),
+        comdtex_ai_conversations: JSON.stringify(conversation),
+        comdtex_ai_active: "c1",
+      },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page, { math: true })
+
+    await page.locator('.menubar-direct-btn[title="AI assistant"]').click()
+    await page.locator(".ai-messages").waitFor()
+    await settle(page)
+    await shot(page, name, "panel__ai-chat")
+
+    await palette(page, "symbol picker")
+    await page.keyboard.press("Enter")
+    await page.locator(".symbol-picker").waitFor({ timeout: 5000 })
+    await page.locator(".symbol-btn").nth(5).hover()
+    await page.waitForTimeout(300)
+    await shot(page, name, "panel__symbols")
+
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+    await page.locator(".focus-timer-ring").waitFor()
+    await page.locator(".focus-timer-btn-primary").click()
+    await page.waitForTimeout(500)
+    await shot(page, name, "popover__focus-running")
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+
+    await palette(page, "table editor")
+    await page.keyboard.press("Enter")
+    await page.locator(".table-editor-dialog").waitFor({ timeout: 5000 })
+    const cells = page.locator(".table-editor-cell")
+    await cells.nth(0).fill("Name")
+    await cells.nth(1).fill("Value")
+    await cells.nth(2).fill("Unit")
+    await cells.nth(3).fill("alpha")
+    await cells.nth(4).fill("0.05")
+    await page.locator(".table-editor-align").nth(1).locator("button").nth(2).click()
+    await page.waitForTimeout(300)
+    await shot(page, name, "modal__table-editor-filled")
+    await closeOverlays(page)
+  })
+}

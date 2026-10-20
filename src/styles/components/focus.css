@@ -1,109 +1,224 @@
-/* ── Focus & Writing Session panel ── */
+/* ── Focus & Writing Session panel (content of the focus popover) ── */
+.ft-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  color: var(--fg);
+}
+.ft-section {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+.ft-section:last-child {
+  border-bottom: none;
+}
+.ft-section-title {
+  padding: var(--space-2) var(--space-5) var(--space-3);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ft-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 26px;
+  padding: var(--space-1) var(--space-5);
+  font-size: var(--text-sm);
+}
+.ft-row:hover {
+  background: var(--bg-hover);
+}
+.ft-label {
+  color: var(--fg-muted);
+}
+.ft-value {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ft-accent .ft-value {
+  color: var(--accent);
+}
+
+/* Clock: a progress ring in the accent colour with the time inside. */
 .focus-timer-clock-section {
-  text-align: center;
-  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--space-5);
+}
+.focus-timer-ring {
+  --ft-size: 148px;
+  --ft-stroke: 6px;
+  display: grid;
+  place-items: center;
+  width: var(--ft-size);
+  height: var(--ft-size);
+  border-radius: var(--radius-pill);
+  background: conic-gradient(
+    var(--accent) calc(var(--ft-progress, 0) * 1%),
+    var(--border) calc(var(--ft-progress, 0) * 1%)
+  );
+}
+.focus-timer-ring-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: calc(var(--ft-size) - var(--ft-stroke) * 2);
+  height: calc(var(--ft-size) - var(--ft-stroke) * 2);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
 }
 .focus-timer-phase {
-  font-size: 11px;
-  color: var(--muted);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
 }
 .focus-timer-clock {
-  font-size: 40px;
-  font-family: monospace;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: calc(var(--text-2xl) * 1.5);
   font-variant-numeric: tabular-nums;
-  color: #d4d4d4;
-  margin: 4px 0 10px;
+  line-height: var(--leading-tight);
 }
 .focus-timer-controls {
   display: flex;
-  gap: 6px;
+  gap: var(--space-3);
   justify-content: center;
-  margin-bottom: 8px;
+  margin: var(--space-5) 0 var(--space-4);
 }
 .focus-timer-btn {
-  background: #2a2a2a;
-  color: #d4d4d4;
-  border: 1px solid #3a3a3a;
-  border-radius: 4px;
-  padding: 4px 12px;
-  font-size: 12px;
+  min-height: 26px;
+  padding: var(--space-2) var(--space-6);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
   cursor: pointer;
+  font-size: var(--text-sm);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
 }
 .focus-timer-btn:hover {
-  background: #333;
+  background: var(--bg-hover);
+}
+.focus-timer-btn:active {
+  background: var(--bg-active);
 }
 .focus-timer-btn-primary {
-  background: #0e639c;
-  border-color: #1177bb;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
 }
 .focus-timer-btn-primary:hover {
-  background: #1177bb;
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+.focus-timer-btn-primary:active {
+  background: color-mix(in oklch, var(--accent) 78%, var(--fg));
+}
+.focus-timer-clock-section .ft-row {
+  align-self: stretch;
 }
 .focus-timer-settings-toggle {
-  margin-top: 8px;
-  width: 100%;
+  align-self: stretch;
+  min-height: 26px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
   background: none;
   border: none;
+  color: var(--fg-muted);
   cursor: pointer;
-  color: var(--status-fg, #aaa);
-  font-size: 12px;
+  font-size: var(--text-sm);
   text-align: center;
-  padding: 4px;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
 }
 .focus-timer-settings-toggle:hover {
-  color: var(--fg, #d4d4d4);
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 .focus-timer-durations {
-  margin-top: 4px;
-  text-align: left;
-}
-.focus-timer-dur-row {
-  align-items: center;
+  align-self: stretch;
+  margin-top: var(--space-2);
 }
 .focus-timer-dur-input {
   width: 56px;
-  background: var(--surface2, #2a2a2a);
-  color: var(--fg, #d4d4d4);
-  border: 1px solid var(--border, #444);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px;
+  min-height: 24px;
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
-.focus-timer-panel .status-goal-bar {
-  flex: 1;
-  height: 5px;
-  margin: 0 8px;
-  background: #2a2a2a;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.focus-timer-panel .status-goal-fill {
-  display: block;
-  height: 100%;
-  background: #0e639c;
-}
-.focus-timer-panel .status-goal-fill.completed {
-  background: #4ec9b0;
+.focus-timer-dur-input:focus {
+  border-color: var(--accent);
 }
 
-.app[data-theme="light"] .focus-timer-clock {
-  color: #1f1f1f;
+/* Today: small stat tiles */
+.ft-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-3);
 }
-.app[data-theme="light"] .focus-timer-btn {
-  background: var(--surface2);
+.ft-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ft-tile-value {
   color: var(--fg);
-  border-color: var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
 }
-.app[data-theme="hc"] .focus-timer-clock {
-  color: #fff;
+.ft-tile.ft-accent .ft-tile-value {
+  color: var(--accent);
 }
-.app[data-theme="hc"] .focus-timer-btn {
-  background: #000;
-  color: #fff;
-  border-color: #fff;
+.ft-tile-label {
+  overflow: hidden;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Daily goal bar */
+.ft-goal-bar {
+  flex: 1;
+  height: 5px;
+  margin: 0 var(--space-3);
+  background: var(--bg-active);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.ft-goal-fill {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  background: var(--accent);
+}
+.ft-goal-fill.completed {
+  background: var(--ok);
 }
 
 /* ── Breadcrumb heading segment ── */

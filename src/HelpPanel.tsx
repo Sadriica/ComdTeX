@@ -206,24 +206,20 @@ export default function HelpPanel() {
             <EnvCard type="exercise" envLabel={hp.exercise1} body={hp.exerBody} />
           </div>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.unnumbered}
-          </div>
+          <div className="hp-label">{hp.unnumbered}</div>
           <div className="hp-env-grid2">
             <EnvCard type="proof" envLabel={hp.proofLabel} body={hp.proofBody} />
             <EnvCard type="remark" envLabel={hp.remarkLabel} body={hp.remarkBody} />
             <EnvCard type="note" envLabel={hp.noteLabel} body={hp.noteBody} />
           </div>
 
-          <p className="hp-intro" style={{ marginTop: "0.7rem" }}>
+          <p className="hp-intro">
             <strong>{hp.headingsNote}</strong> <code className="hp-code">## </code>,{" "}
             <code className="hp-code">### </code>, <code className="hp-code">#### </code>
             {hp.headingsPurpose}
           </p>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.envRefs}
-          </div>
+          <div className="hp-label">{hp.envRefs}</div>
           <Row code=":::definition[Valor absoluto]{#def:valor}" desc={hp.envRefLabelDesc} />
           <Row code="@def:valor" desc={hp.envRefLocalDesc} render="Definición 1" />
           <Row code="@gp/calendario@def:valor" desc={hp.envRefCrossDesc} render="Definición 2" />
@@ -233,111 +229,50 @@ export default function HelpPanel() {
             render="Definición 3"
           />
 
-          <p className="hp-intro" style={{ marginTop: "0.6rem" }}>
-            {hp.specialBlocksNote}
-          </p>
-          <p className="hp-intro" style={{ marginTop: "0.4rem" }}>
-            {hp.blockAutocompleteNote}
-          </p>
+          <p className="hp-intro">{hp.specialBlocksNote}</p>
+          <p className="hp-intro">{hp.blockAutocompleteNote}</p>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.pseudocode}
-          </div>
+          <div className="hp-label">{hp.pseudocode}</div>
           <p className="hp-intro">{hp.pseudocodeDesc}</p>
           <Row code={hp.pseudocodeSyntax} desc={hp.pseudocodeDesc} />
-          <p className="hp-intro" style={{ fontSize: "0.85em", color: "#888" }}>
-            {hp.pseudocodeSyntaxAlt}
-          </p>
-          <p className="hp-intro" style={{ fontSize: "0.85em", color: "#888" }}>
-            {hp.pseudocodeKeywords}
-          </p>
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.pseudocodeExample}
-          </pre>
+          <p className="hp-intro hp-intro-note">{hp.pseudocodeSyntaxAlt}</p>
+          <p className="hp-intro hp-intro-note">{hp.pseudocodeKeywords}</p>
+          <pre className="hp-code hp-code-block">{hp.pseudocodeExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.truthTable}
-          </div>
+          <div className="hp-label">{hp.truthTable}</div>
           <p className="hp-intro">{hp.truthTableDesc}</p>
           <Row code=":::truth[title]" desc={hp.truthTableDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.truthTableExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.truthTableExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.graphViz}
-          </div>
+          <div className="hp-label">{hp.graphViz}</div>
           <p className="hp-intro">{hp.graphVizDesc}</p>
           <Row code=":::graph[title]" desc={hp.graphVizDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.graphVizExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.graphVizExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.functionPlot}
-          </div>
+          <div className="hp-label">{hp.functionPlot}</div>
           <p className="hp-intro">{hp.functionPlotDesc}</p>
           <Row code=":::plot[title]" desc={hp.functionPlotDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.functionPlotExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.functionPlotExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.commDiag}
-          </div>
+          <div className="hp-label">{hp.commDiag}</div>
           <p className="hp-intro">{hp.commDiagDesc}</p>
           <Row code=":::commdiag[title]" desc={hp.commDiagDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.commDiagExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.commDiagExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.flowchart}
-          </div>
+          <div className="hp-label">{hp.flowchart}</div>
           <p className="hp-intro">{hp.flowchartDesc}</p>
           <Row code=":::flowchart[title]" desc={hp.flowchartDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.flowchartExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.flowchartExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.excalidraw}
-          </div>
+          <div className="hp-label">{hp.excalidraw}</div>
           <p className="hp-intro">{hp.excalidrawDesc}</p>
           <Row code=":::excalidraw[title]" desc={hp.excalidrawDesc} />
-          <pre
-            className="hp-code"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.8em", marginTop: "0.3em" }}
-          >
-            {hp.excalidrawExample}
-          </pre>
+          <pre className="hp-code hp-code-block">{hp.excalidrawExample}</pre>
 
-          <div className="hp-label" style={{ marginTop: "0.8rem" }}>
-            {hp.symbolPickerHelp}
-          </div>
+          <div className="hp-label">{hp.symbolPickerHelp}</div>
           <p className="hp-intro">{hp.symbolPickerDesc}</p>
 
-          <div className="hp-label" style={{ marginTop: "0.6rem" }}>
-            {hp.mathPreviewHelp}
-          </div>
+          <div className="hp-label">{hp.mathPreviewHelp}</div>
           <p className="hp-intro">{hp.mathPreviewDesc}</p>
         </Section>
 
@@ -440,7 +375,7 @@ export default function HelpPanel() {
           <Row code="ln(x)" desc={hp.hpLn} render={math("\\ln(x)")} />
           <Row code="log(x)" desc={hp.hpLog} render={math("\\log(x)")} />
 
-          <p className="hp-intro" style={{ marginTop: "0.6rem" }}>
+          <p className="hp-intro">
             <strong>{hp.nesting}</strong>{" "}
             <code className="hp-code">{"frac(sqrt(abs(x)), 1 + norm(vec(x)))"}</code>
             {" → "}
@@ -462,7 +397,7 @@ export default function HelpPanel() {
             desc={hp.inlineNumberedDesc}
             render={math("E=mc^2") + " (4)"}
           />
-          <p className="hp-intro" style={{ marginTop: "0.5em" }}>
+          <p className="hp-intro">
             {hp.inlineExample} <code className="hp-code">{"$x^2 + y^2 = r^2$"}</code>
             {" → "}
             <span dangerouslySetInnerHTML={{ __html: math("x^2+y^2=r^2") }} />
@@ -533,21 +468,13 @@ export default function HelpPanel() {
 
         {/* ── Wikilinks & backlinks ── */}
         <Section title={hp.wikilinks}>
-          <Row
-            code="[[nombre-nota]]"
-            desc={hp.wikilinkRow}
-            render='<span style="text-decoration:underline">nombre-nota</span>'
-          />
+          <Row code="[[nombre-nota]]" desc={hp.wikilinkRow} render="<u>nombre-nota</u>" />
           <Row code={hp.transclusionFile} desc={hp.transclusionFileDesc} />
           <Row code={hp.transclusionHeading} desc={hp.transclusionHeadingDesc} />
           <Row code={hp.transclusionBlock} desc={hp.transclusionBlockDesc} />
           <Row code={hp.blockIdRow} desc={hp.blockIdDesc} />
-          <p className="hp-intro" style={{ marginTop: "0.4em" }}>
-            {hp.wikilinkDesc}
-          </p>
-          <p className="hp-intro" style={{ marginTop: "0.3em" }}>
-            {hp.wikilinkHoverDesc}
-          </p>
+          <p className="hp-intro">{hp.wikilinkDesc}</p>
+          <p className="hp-intro">{hp.wikilinkHoverDesc}</p>
         </Section>
 
         {/* ── Templates ── */}
@@ -645,12 +572,8 @@ export default function HelpPanel() {
           <Row code={hp.htmlYoutube} desc={hp.htmlYoutubeDesc} />
           <Row code={hp.htmlDetails} desc={hp.htmlDetailsDesc} />
           <Row code={hp.htmlMark} desc={hp.htmlMarkDesc} />
-          <p className="hp-intro" style={{ marginTop: "0.5em", color: "#8d8" }}>
-            {hp.htmlAllowed}
-          </p>
-          <p className="hp-intro" style={{ color: "#d88" }}>
-            {hp.htmlBlocked}
-          </p>
+          <p className="hp-intro hp-intro-ok">{hp.htmlAllowed}</p>
+          <p className="hp-intro hp-intro-bad">{hp.htmlBlocked}</p>
         </Section>
 
         {/* ── Greek letters ── */}

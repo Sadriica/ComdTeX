@@ -103,17 +103,13 @@ function makeAlignments(cols: number): Alignment[] {
   return Array(cols).fill("left")
 }
 
-const ALIGN_CYCLE: Record<Alignment, Alignment> = {
-  left: "center",
-  center: "right",
-  right: "left",
-}
+const ALIGNMENTS: Alignment[] = ["left", "center", "right"]
 
-const ALIGN_LABEL: Record<Alignment, string> = {
-  left: "L",
-  center: "C",
-  right: "R",
-}
+const ALIGN_TITLE = (t: ReturnType<typeof useT>): Record<Alignment, string> => ({
+  left: t.tableEditor.alignLeft,
+  center: t.tableEditor.alignCenter,
+  right: t.tableEditor.alignRight,
+})
 
 export default function TableEditor({
   open,
@@ -158,10 +154,11 @@ export default function TableEditor({
     })
   }
 
-  const cycleAlignment = (c: number) => {
+  const setAlignment = (c: number, al: Alignment) => {
     setAlignments((prev) => {
       const next = [...prev]
-      next[c] = ALIGN_CYCLE[next[c] ?? "left"]
+      while (next.length <= c) next.push("left")
+      next[c] = al
       return next
     })
   }
@@ -219,23 +216,29 @@ export default function TableEditor({
         <h3 id={titleId}>{t.palette.tableEditor}</h3>
 
         <div className="table-editor-grid">
-          {/* Alignment row */}
+          {/* Alignment row: one segmented control per column */}
           <div className="table-editor-row">
             {rows[0]?.map((_cell, c) => (
-              <button
+              <div
                 key={c}
-                className="table-editor-align-btn"
-                onClick={() => cycleAlignment(c)}
-                title={
-                  (alignments[c] ?? "left") === "left"
-                    ? t.tableEditor.alignLeft
-                    : (alignments[c] ?? "left") === "center"
-                      ? t.tableEditor.alignCenter
-                      : t.tableEditor.alignRight
-                }
+                className="table-editor-align"
+                role="group"
+                aria-label={`${t.tableEditor.alignLeft} / ${t.tableEditor.alignCenter} / ${t.tableEditor.alignRight} ${c + 1}`}
               >
-                {ALIGN_LABEL[alignments[c] ?? "left"]}
-              </button>
+                {ALIGNMENTS.map((al) => (
+                  <button
+                    key={al}
+                    type="button"
+                    className={`table-editor-align-btn${(alignments[c] ?? "left") === al ? " active" : ""}`}
+                    aria-pressed={(alignments[c] ?? "left") === al}
+                    title={ALIGN_TITLE(t)[al]}
+                    aria-label={ALIGN_TITLE(t)[al]}
+                    onClick={() => setAlignment(c, al)}
+                  >
+                    <span className="table-editor-glyph" data-align={al} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
 
@@ -244,7 +247,7 @@ export default function TableEditor({
               {row.map((cell, c) => (
                 <input
                   key={c}
-                  className="table-editor-cell"
+                  className={`table-editor-cell${r === 0 ? " table-editor-head" : ""}`}
                   value={cell}
                   placeholder={r === 0 ? `Col ${c + 1}` : ""}
                   onChange={(e) => updateCell(r, c, e.target.value)}
@@ -269,9 +272,7 @@ export default function TableEditor({
         </div>
 
         <div>
-          <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>
-            {t.tableEditor.preview}
-          </div>
+          <div className="table-editor-label">{t.tableEditor.preview}</div>
           <div className="table-editor-preview">{preview}</div>
         </div>
 

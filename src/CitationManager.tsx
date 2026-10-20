@@ -303,36 +303,33 @@ export default function CitationManager({
         <div className="cit-manager-body">
           {/* Entry list */}
           <div className="cit-list">
-            {entries.size === 0 && (
-              <div style={{ padding: "16px 12px", color: "#555", fontSize: 12 }}>
-                {t.citationManager.noEntries}
-              </div>
-            )}
+            {entries.size === 0 && <div className="cit-empty">{t.citationManager.noEntries}</div>}
             {[...entries.entries()].map(([key, entry]) => {
               const f = entry.fields
               return (
                 <div key={key} className="cit-item">
                   <div className="cit-item-info">
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <div className="cit-item-head">
                       <span className="cit-item-key">{key}</span>
                       <span className="cit-type-badge">{entry.type}</span>
                     </div>
                     <div className="cit-item-title" title={f.title ?? ""}>
-                      {f.title || <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>}
+                      {f.title || (
+                        <em className="cit-item-untitled">{t.citationManager.noTitle}</em>
+                      )}
                     </div>
                     <div className="cit-item-meta">
                       {[f.author, f.year].filter(Boolean).join(" · ")}
                     </div>
                   </div>
                   <button
-                    className="cit-delete-btn"
+                    className={`cit-delete-btn${deleteConfirm === key ? " confirming" : ""}`}
                     title={
                       deleteConfirm === key
                         ? t.citationManager.confirmDelete
                         : t.citationManager.deleteEntry
                     }
                     onClick={() => handleDelete(key)}
-                    style={deleteConfirm === key ? { color: "#f48771" } : undefined}
                   >
                     {deleteConfirm === key ? (
                       <Icon icon={Check} size={14} />
@@ -345,187 +342,171 @@ export default function CitationManager({
             })}
           </div>
 
-          {/* Add by DOI / arXiv (on-demand network fetch) */}
-          <div
-            className="cit-add-form"
-            style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}
-          >
-            <div className="cit-add-form-row">
-              <input
-                placeholder={t.citationManager.doiPlaceholder}
-                value={doi}
-                onChange={(e) => setDoi(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleFetchDoi()
-                }}
-                disabled={fetching}
-                style={{ flex: 1 }}
-              />
-              <button
-                className="cit-add-btn"
-                onClick={handleFetchDoi}
-                disabled={fetching || !doi.trim()}
-                style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
-              >
-                {fetching ? t.citationManager.doiFetching : t.citationManager.doiAdd}
-              </button>
-            </div>
-          </div>
-
-          {/* Import from Zotero (on-demand local HTTP API; requires Zotero running) */}
-          <div
-            className="cit-add-form"
-            style={{ borderBottom: "1px solid #2a2a2a", paddingBottom: 8 }}
-          >
-            <div style={{ fontSize: 11, color: "#888", marginBottom: 2, fontWeight: 600 }}>
-              {t.citationManager.zoteroHeading}
-            </div>
-            <div className="cit-add-form-row">
-              <input
-                placeholder={t.citationManager.zoteroPlaceholder}
-                value={zoteroQuery}
-                onChange={(e) => setZoteroQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleZoteroSearch()
-                }}
-                disabled={zoteroSearching || zoteroFetching}
-                style={{ flex: 1 }}
-              />
-              <button
-                className="cit-add-btn"
-                onClick={handleZoteroSearch}
-                disabled={zoteroSearching || zoteroFetching || !zoteroQuery.trim()}
-                style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
-              >
-                {zoteroSearching
-                  ? t.citationManager.zoteroSearching
-                  : t.citationManager.zoteroSearch}
-              </button>
-            </div>
-
-            {zoteroResults !== null && zoteroResults.length === 0 && !zoteroSearching && (
-              <div style={{ padding: "4px 2px", color: "#777", fontSize: 12 }}>
-                {t.citationManager.zoteroNoResults}
+          <div className="cit-side">
+            {/* Add by DOI / arXiv (on-demand network fetch) */}
+            <div className="cit-add-form">
+              <div className="cit-add-form-row">
+                <input
+                  className="cit-field-wide"
+                  placeholder={t.citationManager.doiPlaceholder}
+                  value={doi}
+                  onChange={(e) => setDoi(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleFetchDoi()
+                  }}
+                  disabled={fetching}
+                />
+                <button
+                  className="cit-add-btn"
+                  onClick={handleFetchDoi}
+                  disabled={fetching || !doi.trim()}
+                >
+                  {fetching ? t.citationManager.doiFetching : t.citationManager.doiAdd}
+                </button>
               </div>
-            )}
+            </div>
 
-            {zoteroResults !== null && zoteroResults.length > 0 && (
-              <>
-                <div className="cit-add-form-row" style={{ justifyContent: "flex-end" }}>
-                  <button
-                    className="cit-add-btn"
-                    onClick={() => importZoteroKeys(zoteroResults.map((r) => r.citekey))}
-                    disabled={zoteroFetching}
-                    style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
-                  >
-                    {zoteroFetching
-                      ? t.citationManager.zoteroFetching
-                      : t.citationManager.zoteroImportAll}
-                  </button>
-                </div>
-                <div className="cit-list" style={{ maxHeight: 160, overflowY: "auto" }}>
-                  {zoteroResults.map((r) => (
-                    <div key={r.citekey} className="cit-item">
-                      <div className="cit-item-info">
-                        <div
-                          style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}
+            {/* Import from Zotero (on-demand local HTTP API; requires Zotero running) */}
+            <div className="cit-add-form">
+              <div className="cit-form-heading">{t.citationManager.zoteroHeading}</div>
+              <div className="cit-add-form-row">
+                <input
+                  className="cit-field-wide"
+                  placeholder={t.citationManager.zoteroPlaceholder}
+                  value={zoteroQuery}
+                  onChange={(e) => setZoteroQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleZoteroSearch()
+                  }}
+                  disabled={zoteroSearching || zoteroFetching}
+                />
+                <button
+                  className="cit-add-btn"
+                  onClick={handleZoteroSearch}
+                  disabled={zoteroSearching || zoteroFetching || !zoteroQuery.trim()}
+                >
+                  {zoteroSearching
+                    ? t.citationManager.zoteroSearching
+                    : t.citationManager.zoteroSearch}
+                </button>
+              </div>
+
+              {zoteroResults !== null && zoteroResults.length === 0 && !zoteroSearching && (
+                <div className="cit-note">{t.citationManager.zoteroNoResults}</div>
+              )}
+
+              {zoteroResults !== null && zoteroResults.length > 0 && (
+                <>
+                  <div className="cit-add-form-row cit-add-form-row-end">
+                    <button
+                      className="cit-add-btn"
+                      onClick={() => importZoteroKeys(zoteroResults.map((r) => r.citekey))}
+                      disabled={zoteroFetching}
+                    >
+                      {zoteroFetching
+                        ? t.citationManager.zoteroFetching
+                        : t.citationManager.zoteroImportAll}
+                    </button>
+                  </div>
+                  <div className="cit-list cit-list-inline">
+                    {zoteroResults.map((r) => (
+                      <div key={r.citekey} className="cit-item">
+                        <div className="cit-item-info">
+                          <div className="cit-item-head">
+                            <span className="cit-item-key">{r.citekey}</span>
+                          </div>
+                          <div className="cit-item-title" title={r.title}>
+                            {r.title || (
+                              <em className="cit-item-untitled">{t.citationManager.noTitle}</em>
+                            )}
+                          </div>
+                          <div className="cit-item-meta">
+                            {[r.author, r.year].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                        <button
+                          className="cit-add-btn cit-add-btn-icon"
+                          title={t.citationManager.zoteroHeading}
+                          onClick={() => importZoteroKeys([r.citekey])}
+                          disabled={zoteroFetching}
                         >
-                          <span className="cit-item-key">{r.citekey}</span>
-                        </div>
-                        <div className="cit-item-title" title={r.title}>
-                          {r.title || (
-                            <em style={{ color: "#555" }}>{t.citationManager.noTitle}</em>
-                          )}
-                        </div>
-                        <div className="cit-item-meta">
-                          {[r.author, r.year].filter(Boolean).join(" · ")}
-                        </div>
+                          +
+                        </button>
                       </div>
-                      <button
-                        className="cit-add-btn"
-                        title={t.citationManager.zoteroHeading}
-                        onClick={() => importZoteroKeys([r.citekey])}
-                        disabled={zoteroFetching}
-                        style={{ flex: "0 0 auto" }}
-                      >
-                        +
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
-          {/* Add entry form */}
-          <div className="cit-add-form">
-            <div style={{ fontSize: 11, color: "#888", marginBottom: 2, fontWeight: 600 }}>
-              {t.citationManager.addEntry}
-            </div>
-            <div className="cit-add-form-row">
-              <select
-                value={form.type}
-                onChange={(e) => updateForm("type", e.target.value)}
-                style={{ flex: "0 0 auto", minWidth: 110 }}
-              >
-                {ENTRY_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-              <input
-                placeholder={t.citationManager.keyPlaceholder}
-                value={form.key}
-                onChange={(e) => updateForm("key", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAdd()
-                }}
-                style={{ flex: "0 0 auto", minWidth: 100, maxWidth: 140 }}
-              />
-              <input
-                placeholder={t.citationManager.yearPlaceholder}
-                value={form.year}
-                onChange={(e) => updateForm("year", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAdd()
-                }}
-                style={{ flex: "0 0 auto", minWidth: 60, maxWidth: 80 }}
-              />
-            </div>
-            <div className="cit-add-form-row">
-              <input
-                placeholder={t.citationManager.titlePlaceholder}
-                value={form.title}
-                onChange={(e) => updateForm("title", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAdd()
-                }}
-              />
-            </div>
-            <div className="cit-add-form-row">
-              <input
-                placeholder={t.citationManager.authorPlaceholder}
-                value={form.author}
-                onChange={(e) => updateForm("author", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAdd()
-                }}
-              />
-              <input
-                placeholder={venueLabel(form.type)}
-                value={form.venue}
-                onChange={(e) => updateForm("venue", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAdd()
-                }}
-              />
-            </div>
-            <div className="cit-add-form-row">
-              {error && <span className="cit-error">{error}</span>}
-              <button className="cit-add-btn" onClick={handleAdd} style={{ marginLeft: "auto" }}>
-                {t.citationManager.add}
-              </button>
+            {/* Add entry form */}
+            <div className="cit-add-form">
+              <div className="cit-form-heading">{t.citationManager.addEntry}</div>
+              <div className="cit-add-form-row">
+                <select
+                  className="cit-field-type"
+                  value={form.type}
+                  onChange={(e) => updateForm("type", e.target.value)}
+                >
+                  {ENTRY_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="cit-field-key"
+                  placeholder={t.citationManager.keyPlaceholder}
+                  value={form.key}
+                  onChange={(e) => updateForm("key", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd()
+                  }}
+                />
+                <input
+                  className="cit-field-year"
+                  placeholder={t.citationManager.yearPlaceholder}
+                  value={form.year}
+                  onChange={(e) => updateForm("year", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd()
+                  }}
+                />
+              </div>
+              <div className="cit-add-form-row">
+                <input
+                  placeholder={t.citationManager.titlePlaceholder}
+                  value={form.title}
+                  onChange={(e) => updateForm("title", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd()
+                  }}
+                />
+              </div>
+              <div className="cit-add-form-row">
+                <input
+                  placeholder={t.citationManager.authorPlaceholder}
+                  value={form.author}
+                  onChange={(e) => updateForm("author", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd()
+                  }}
+                />
+                <input
+                  placeholder={venueLabel(form.type)}
+                  value={form.venue}
+                  onChange={(e) => updateForm("venue", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd()
+                  }}
+                />
+              </div>
+              <div className="cit-add-form-row">
+                {error && <span className="cit-error">{error}</span>}
+                <button className="cit-add-btn cit-add-btn-end" onClick={handleAdd}>
+                  {t.citationManager.add}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,13 @@
-import { useState } from "react"
+import { useState, type CSSProperties } from "react"
 import { useT } from "./i18n"
 import { ChevronDown, ChevronRight, Icon } from "./icons"
-import { type Phase, type PomodoroConfig, formatClock, sessionStats } from "./pomodoro"
+import {
+  type Phase,
+  type PomodoroConfig,
+  formatClock,
+  phaseDurationSec,
+  sessionStats,
+} from "./pomodoro"
 import { dayKey, dayStats, recentTotals } from "./writingStats"
 import { type FocusTimer, wordCount } from "./useFocusTimer"
 
@@ -14,9 +20,25 @@ const Row = ({
   value: string | number
   accent?: boolean
 }) => (
-  <div className={`stats-row${accent ? " stats-accent" : ""}`}>
-    <span className="stats-label">{label}</span>
-    <span className="stats-value">{value}</span>
+  <div className={`ft-row${accent ? " ft-accent" : ""}`}>
+    <span className="ft-label">{label}</span>
+    <span className="ft-value">{value}</span>
+  </div>
+)
+
+// Small stat tile: a value over its label.
+const Tile = ({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string | number
+  accent?: boolean
+}) => (
+  <div className={`ft-tile${accent ? " ft-accent" : ""}`}>
+    <span className="ft-tile-value">{value}</span>
+    <span className="ft-tile-label">{label}</span>
   </div>
 )
 
@@ -30,8 +52,8 @@ const DurRow = ({
   value: number
   onChange: (v: number) => void
 }) => (
-  <label className="stats-row focus-timer-dur-row">
-    <span className="stats-label">{label}</span>
+  <label className="ft-row focus-timer-dur-row">
+    <span className="ft-label">{label}</span>
     <input
       type="number"
       min={1}
@@ -84,14 +106,32 @@ export default function FocusTimerPanel({
   const todayTotals = dayStats(history, today)
   const weekTotals = recentTotals(history, today, 7)
   const goalWords = todayTotals.words
+  // Progress through the current phase, for the ring around the clock.
+  const phaseTotal = phaseDurationSec(timer.phase, config)
+  const phasePct =
+    phaseTotal > 0
+      ? Math.min(100, Math.max(0, Math.round((1 - timer.remainingSec / phaseTotal) * 100)))
+      : 0
   const goalPct =
     wordGoal > 0 ? Math.min(100, Math.round((Math.max(0, goalWords) / wordGoal) * 100)) : 0
 
   return (
-    <div className="stats-panel focus-timer-panel">
-      <div className="stats-section focus-timer-clock-section">
-        <div className="focus-timer-phase">{phaseLabel(timer.phase)}</div>
-        <div className="focus-timer-clock">{formatClock(timer.remainingSec)}</div>
+    <div className="ft-panel focus-timer-panel">
+      <div className="ft-section focus-timer-clock-section">
+        <div
+          className="focus-timer-ring"
+          role="progressbar"
+          aria-label={phaseLabel(timer.phase)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={phasePct}
+          style={{ "--ft-progress": phasePct } as CSSProperties}
+        >
+          <div className="focus-timer-ring-inner">
+            <div className="focus-timer-phase">{phaseLabel(timer.phase)}</div>
+            <div className="focus-timer-clock">{formatClock(timer.remainingSec)}</div>
+          </div>
+        </div>
         <div className="focus-timer-controls">
           {timer.running ? (
             <button className="focus-timer-btn" onClick={pauseTimer}>
@@ -141,8 +181,8 @@ export default function FocusTimerPanel({
         )}
       </div>
 
-      <div className="stats-section">
-        <div className="stats-section-title">{t.focusTimer.session}</div>
+      <div className="ft-section">
+        <div className="ft-section-title">{t.focusTimer.session}</div>
         {stats ? (
           <>
             <Row label={t.focusTimer.wordsThisSession} value={stats.wordsWritten} accent />
@@ -166,21 +206,23 @@ export default function FocusTimerPanel({
         ) : (
           <Row label={t.focusTimer.wordsThisSession} value="—" />
         )}
-        <div className="stats-section-title">{t.focusTimer.today}</div>
-        <Row label={t.focusTimer.wordsToday} value={todayTotals.words} accent />
-        <Row label={t.focusTimer.activeToday} value={formatClock(todayTotals.activeSec)} />
-        <Row label={t.focusTimer.pomodorosToday} value={todayTotals.pomodoros} />
-        <Row label={t.focusTimer.wordsLast7Days} value={weekTotals.words} />
+        <div className="ft-section-title">{t.focusTimer.today}</div>
+        <div className="ft-tiles">
+          <Tile label={t.focusTimer.wordsToday} value={todayTotals.words} accent />
+          <Tile label={t.focusTimer.activeToday} value={formatClock(todayTotals.activeSec)} />
+          <Tile label={t.focusTimer.pomodorosToday} value={todayTotals.pomodoros} />
+          <Tile label={t.focusTimer.wordsLast7Days} value={weekTotals.words} />
+        </div>
         {wordGoal > 0 && (
-          <div className="stats-row status-goal" title={`${Math.max(0, goalWords)}/${wordGoal}`}>
-            <span className="stats-label">{t.focusTimer.goalProgress}</span>
-            <span className="status-goal-bar">
+          <div className="ft-row ft-goal" title={`${Math.max(0, goalWords)}/${wordGoal}`}>
+            <span className="ft-label">{t.focusTimer.goalProgress}</span>
+            <span className="ft-goal-bar">
               <span
-                className={`status-goal-fill${goalWords >= wordGoal ? " completed" : ""}`}
+                className={`ft-goal-fill${goalWords >= wordGoal ? " completed" : ""}`}
                 style={{ width: `${goalPct}%` }}
               />
             </span>
-            <span className="stats-value">
+            <span className="ft-value">
               {Math.max(0, goalWords)}/{wordGoal}
             </span>
           </div>

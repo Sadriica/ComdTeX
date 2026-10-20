@@ -2,12 +2,12 @@
 .bibliography {
   margin-top: 2em;
   padding-top: 1em;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
 }
 
 .bibliography h2 {
   font-size: 1.2em;
-  color: #e8e8e8;
+  color: var(--fg);
   margin-bottom: 0.8em;
   font-weight: 600;
 }
@@ -16,31 +16,31 @@
   display: flex;
   gap: 0.7em;
   font-size: 0.9em;
-  color: #aaa;
+  color: var(--fg-muted);
   margin-bottom: 0.6em;
   line-height: 1.5;
 }
 
 .bib-number {
-  color: #666;
+  color: var(--fg-muted);
   flex-shrink: 0;
   min-width: 2.5em;
   text-align: right;
 }
 
 .bib-content em {
-  color: #d4d4d4;
+  color: var(--fg);
   font-style: normal;
   font-weight: 600;
 }
 
 .bib-missing {
-  color: #888;
+  color: var(--fg-muted);
   font-style: italic;
 }
 
 .cite-ref {
-  color: #9cdcfe;
+  color: var(--link);
   text-decoration: none;
   font-size: 0.85em;
   vertical-align: super;
@@ -49,5 +49,5 @@
   text-decoration: underline;
 }
 .cite-broken {
-  color: #f48771;
+  color: var(--danger);
 }
