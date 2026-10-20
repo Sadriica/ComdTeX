@@ -44,7 +44,7 @@ describe("numberEnvironmentsForExport", () => {
     const out = numberEnvironmentsForExport(DOC, "callout")
     expect(out).toContain("> [!note] Definición 1 (Group)")
     expect(out).toContain("> [!abstract] Teorema 1 (Pythagoras)")
-    expect(out).toContain("> [!lemma] Lema 1")
+    expect(out).toContain("> [!abstract] Lema 1")
     expect(out).toContain("> [!abstract] Teorema 2")
     expect(out).toContain("> [!success] Demostración")
     expect(out).not.toContain(":::")

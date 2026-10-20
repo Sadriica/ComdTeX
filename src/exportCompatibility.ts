@@ -69,7 +69,7 @@ export function analyzeExportCompatibility(markdown: string): CompatibilityRepor
 
   const obsidianIssues = collect(markdown, "obsidian", [
     [
-      /@(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+/,
+      /@(?:eq|fig|tbl|sec):[\w:.-]+/,
       "info",
       "Referencia estructural se conserva como texto/código, no como referencia dinámica Obsidian",
     ],
@@ -77,6 +77,16 @@ export function analyzeExportCompatibility(markdown: string): CompatibilityRepor
       /\{#(?:eq|fig|tbl|sec|thm|lem|cor|prop|def|ex|exc):[\w:.-]+\}/,
       "info",
       "Labels estructurales se ocultan o eliminan en Markdown Obsidian",
+    ],
+    [
+      /@(?:thm|theorem|lem|lemma|cor|corollary|prop|proposition|def|definition|ex|example|exc|exercise):[\w:.-]+/,
+      "info",
+      "Referencias a entornos se exportan como texto numerado (por ejemplo Teorema 2), sin enlace dinámico",
+    ],
+    [
+      /@(?:\[[^\]\n]+\]|[A-Za-z0-9_./-]+)@[a-zA-Z]+:[\w-]+(?:\.\w+)*/,
+      "warning",
+      "Referencias a entornos de otro documento no se pueden numerar fuera de la app; se exportan como Teorema (?)",
     ],
     [/\[@[A-Za-z0-9:_-]+(?:[,\]])/, "info", "Citas BibTeX requieren plugin externo en Obsidian"],
     [
