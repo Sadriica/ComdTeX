@@ -1917,6 +1917,72 @@ export const en: T = {
         "Safety net for vaults kept in a cloud folder. It never moves or deletes anything on its own: it only points out the conflict copies these services leave behind.",
     },
   },
+  lint: {
+    messages: {
+      displayMathUnclosed: () => "Unclosed $$ block",
+      envUnclosed: (name) => `Unclosed :::${name} environment`,
+      envStrayClose: () => "Closing ::: with no open environment",
+      envUnknownType: (name) => `Unknown block type :::${name}`,
+      refUndefined: (ref) => `Reference ${ref} is not defined in this document`,
+      refInOtherNote: (ref, file) =>
+        `${ref} is defined in ${file}, but this kind of reference only resolves inside its own document`,
+      refInOtherNoteEnv: (ref, file) =>
+        `${ref} is defined in ${file}; write @path@kind:name to reference it across files`,
+      refDocMissing: (ref, path) => `${ref}: note "${path}" was not found in the vault`,
+      refLabelMissing: (ref, path) => `${ref}: the label is not defined in "${path}"`,
+      wikilinkMissing: (target) => `Wikilink [[${target}]] not found in the vault`,
+      citeUndefined: (key) => `Citation [@${key}] not found in references.bib`,
+      shorthandUnclosed: (name) => `Unclosed parenthesis in ${name}(...)`,
+      shorthandArity: (name, expected, got) =>
+        `${name}() expects ${expected} argument${expected === 1 ? "" : "s"}, got ${got}`,
+      tableRagged: (actual, expected) =>
+        `This row has ${actual} column${actual === 1 ? "" : "s"} and the header ${expected}. ` +
+        `Use "Normalize table" to fill in the missing cells.`,
+      gapPending: (hint) =>
+        hint
+          ? `Pending gap: ${hint}. Use "Fill gap" to fill it with the AI.`
+          : `Pending gap. Use "Fill gap" to fill it with the AI.`,
+      footnoteUndefined: (id) => `Footnote [^${id}] has no definition`,
+      footnoteUnused: (id) => `Footnote [^${id}] is defined but never used`,
+      labelDuplicate: (id) => `Label ${id} is already defined in this document`,
+      imageMissing: (src) => `Image not found: ${src}`,
+      mathError: (detail) => `Math error: ${detail}`,
+      dataDuplicate: (id) => `Duplicate dataset: ${id}`,
+      dataUndeclared: (id) => `Undeclared dataset: @${id}`,
+      spellUnknown: (word) => `Possible spelling mistake: ${word}`,
+      bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
+      bibUnclosed: (type, close) => `Unclosed @${type} entry (missing '${close}')`,
+      bibUnknownType: (type) => `Unknown entry type: @${type}`,
+      bibNoKey: (type) => `@${type} entry has no citation key`,
+      bibDuplicateKey: (key) => `Duplicate key: "${key}" (already defined above)`,
+      bibMissingField: (type, key, fields) =>
+        `@${type} {${key}}: missing required field: ${fields.join(" or ")}`,
+      macroDuplicate: (name) => `Duplicate command: ${name} (already defined above)`,
+      macroBraceClose: () => "Closing brace } with no opening",
+      macroBraceOpen: () => "Unclosed brace { in macros.md",
+      macroUnknownLine: () =>
+        "Unrecognised line in macros.md (expected \\newcommand or a % comment)",
+    },
+    actions: {
+      closeMath: "Close the $$ block",
+      closeEnv: (name) => `Close the :::${name} environment`,
+      removeStrayClose: "Remove the stray :::",
+      replaceWith: (text) => `Change to "${text}"`,
+      useCrossFileRef: (ref) => `Use the cross-file form ${ref}`,
+      createNote: (name) => `Create note "${name}"`,
+      addBibStub: (key) => `Add a BibTeX entry for "${key}" to references.bib`,
+      normalizeTable: "Normalize table",
+      fillGap: "Fill gap with AI",
+      addMissingArgs: (name) => `Add the missing arguments to ${name}()`,
+      trimExtraArgs: (name, expected) =>
+        `Keep only the first ${expected} argument${expected === 1 ? "" : "s"} of ${name}()`,
+      addFootnoteDef: (id) => `Add a definition for [^${id}]`,
+      renameLabel: (id) => `Rename this label to ${id}`,
+      noteCreated: (name) => `Created note "${name}"`,
+      bibStubAdded: (key) => `Added "${key}" to references.bib`,
+      bibStubFailed: "Could not update references.bib",
+    },
+  },
   errorBoundary: {
     title: "Unexpected error",
     retry: "Retry",

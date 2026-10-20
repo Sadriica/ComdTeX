@@ -1936,6 +1936,72 @@ export const es: T = {
         "Red de seguridad para vaults guardados en una carpeta de la nube. Nunca mueve ni borra nada por su cuenta: solo señala las copias en conflicto que dejan estos servicios.",
     },
   },
+  lint: {
+    messages: {
+      displayMathUnclosed: () => "Bloque $$ sin cerrar",
+      envUnclosed: (name) => `Entorno :::${name} sin cerrar`,
+      envStrayClose: () => "Cierre ::: sin entorno abierto",
+      envUnknownType: (name) => `Tipo de bloque :::${name} desconocido`,
+      refUndefined: (ref) => `Referencia ${ref} no definida en el documento`,
+      refInOtherNote: (ref, file) =>
+        `${ref} está definida en ${file}, pero este tipo de referencia solo se resuelve dentro de su propio documento`,
+      refInOtherNoteEnv: (ref, file) =>
+        `${ref} está definida en ${file}; para cruzar archivos escribe @ruta@tipo:nombre`,
+      refDocMissing: (ref, path) => `${ref}: la nota "${path}" no existe en el vault`,
+      refLabelMissing: (ref, path) => `${ref}: la etiqueta no está definida en "${path}"`,
+      wikilinkMissing: (target) => `Wikilink [[${target}]] no encontrado en el vault`,
+      citeUndefined: (key) => `Cita [@${key}] no encontrada en references.bib`,
+      shorthandUnclosed: (name) => `Paréntesis sin cerrar en ${name}(...)`,
+      shorthandArity: (name, expected, got) =>
+        `${name}() espera ${expected} argumento${expected === 1 ? "" : "s"}, recibió ${got}`,
+      tableRagged: (actual, expected) =>
+        `Esta fila tiene ${actual} columna${actual === 1 ? "" : "s"} y la cabecera ${expected}. ` +
+        `Usa "Normalizar tabla" para rellenar las celdas que faltan.`,
+      gapPending: (hint) =>
+        hint
+          ? `Hueco pendiente: ${hint}. Usa "Completar hueco" para rellenarlo con la IA.`
+          : `Hueco pendiente. Usa "Completar hueco" para rellenarlo con la IA.`,
+      footnoteUndefined: (id) => `La nota al pie [^${id}] no tiene definición`,
+      footnoteUnused: (id) => `La nota al pie [^${id}] está definida pero no se usa`,
+      labelDuplicate: (id) => `La etiqueta ${id} ya está definida en este documento`,
+      imageMissing: (src) => `Imagen no encontrada: ${src}`,
+      mathError: (detail) => `Error de matemáticas: ${detail}`,
+      dataDuplicate: (id) => `Dataset duplicado: ${id}`,
+      dataUndeclared: (id) => `Dataset no declarado: @${id}`,
+      spellUnknown: (word) => `Posible error ortográfico: ${word}`,
+      bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
+      bibUnclosed: (type, close) => `Entrada @${type} sin cerrar (falta '${close}')`,
+      bibUnknownType: (type) => `Tipo de entrada desconocido: @${type}`,
+      bibNoKey: (type) => `Entrada @${type} sin clave de citación`,
+      bibDuplicateKey: (key) => `Clave duplicada: "${key}" (ya definida antes)`,
+      bibMissingField: (type, key, fields) =>
+        `@${type} {${key}}: campo requerido faltante: ${fields.join(" o ")}`,
+      macroDuplicate: (name) => `Comando duplicado: ${name} (ya definido antes)`,
+      macroBraceClose: () => "Llave de cierre } sin abrir",
+      macroBraceOpen: () => "Llave { sin cerrar en macros.md",
+      macroUnknownLine: () =>
+        "Línea no reconocida en macros.md (se esperaba \\newcommand o comentario %)",
+    },
+    actions: {
+      closeMath: "Cerrar el bloque $$",
+      closeEnv: (name) => `Cerrar el entorno :::${name}`,
+      removeStrayClose: "Quitar el ::: sobrante",
+      replaceWith: (text) => `Cambiar a "${text}"`,
+      useCrossFileRef: (ref) => `Usar la forma entre archivos ${ref}`,
+      createNote: (name) => `Crear la nota "${name}"`,
+      addBibStub: (key) => `Añadir una entrada BibTeX para "${key}" a references.bib`,
+      normalizeTable: "Normalizar tabla",
+      fillGap: "Completar hueco con IA",
+      addMissingArgs: (name) => `Añadir los argumentos que faltan a ${name}()`,
+      trimExtraArgs: (name, expected) =>
+        `Conservar solo ${expected === 1 ? "el primer argumento" : `los primeros ${expected} argumentos`} de ${name}()`,
+      addFootnoteDef: (id) => `Añadir la definición de [^${id}]`,
+      renameLabel: (id) => `Renombrar esta etiqueta a ${id}`,
+      noteCreated: (name) => `Nota "${name}" creada`,
+      bibStubAdded: (key) => `"${key}" añadida a references.bib`,
+      bibStubFailed: "No se pudo actualizar references.bib",
+    },
+  },
   errorBoundary: {
     title: "Error inesperado",
     retry: "Reintentar",

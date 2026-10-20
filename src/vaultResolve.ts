@@ -17,7 +17,7 @@ export interface ResolvableFile {
  * `growth.csv`), by full name, or by a trailing path fragment
  * (`data/growth.csv`). Returns null when nothing matches.
  */
-export function findVaultFile<T extends ResolvableFile>(
+export function findVaultFile<T extends Pick<ResolvableFile, "path" | "name">>(
   files: readonly T[],
   target: string,
 ): T | null {
