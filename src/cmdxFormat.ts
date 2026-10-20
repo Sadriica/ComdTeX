@@ -599,22 +599,16 @@ function findUnsupportedLatex(text: string): ConversionWarning[] {
   return warnings
 }
 
-// Round-trip metadata for a callout that CMDX syntax cannot express: the original
-// Obsidian type when no CMDX env maps back to it exactly, and the fold marker.
-// Carried as an HTML comment on the first body line, so the preview ignores it.
+// Legacy round-trip metadata. Builds up to 1.29.1 wrote the original Obsidian type
+// and fold marker as an HTML comment on the first body line of the env. Nothing
+// writes it any more (such callouts stay callouts in the editor), but editor text
+// that still carries it (drafts, old buffers) is read and stripped on save.
 interface CalloutMeta {
   type?: string
   fold?: "+" | "-"
 }
 
 const CALLOUT_META_RE = /^<!--cmdx\s+(.*?)\s*-->\s*$/
-
-function formatCalloutMeta(meta: CalloutMeta): string {
-  const parts: string[] = []
-  if (meta.type) parts.push(`type=${meta.type}`)
-  if (meta.fold) parts.push(`fold=${meta.fold}`)
-  return parts.length ? `<!--cmdx ${parts.join(" ")} -->` : ""
-}
 
 function splitCalloutMeta(body: string): { meta: CalloutMeta; body: string } {
   const nl = body.indexOf("\n")
@@ -631,15 +625,18 @@ function splitCalloutMeta(body: string): { meta: CalloutMeta; body: string } {
 
 function cmdxEnvironmentToMarkdown(envStart: CmdxEnvStart, rawBody: string): string {
   const name = envStart.rawName.toLowerCase()
+  // Older builds put a `<!--cmdx type=... fold=... -->` line in the editor text.
+  // It is still honoured (and stripped) so drafts and files written with it load.
   const { meta, body } = splitCalloutMeta(rawBody)
-  const known = OBSIDIAN_CALLOUTS[name] ?? (ENV_TITLES[name] ? "note" : undefined)
-  const callout = meta.type ?? known ?? name
+  const callout = meta.type ?? storedCalloutType(name)
   const title = envStart.title?.trim() ?? ""
-  // Known envs carry their display name in the title so the env can be recovered;
-  // callouts whose type is stored verbatim keep the title as written.
-  const verbatim = meta.type !== undefined || known === undefined
-  const defaultTitle = ENV_TITLES[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
-  const text = verbatim ? title : title ? `${defaultTitle}: ${title}` : defaultTitle
+  // The display name rides on the heading (`Theorem: Pyth`) only when the callout
+  // type alone would reopen as a different env. Otherwise the title is written
+  // exactly as typed, so `> [!tip] Hi` stays `> [!tip] Hi`.
+  const prefixed =
+    meta.type === undefined && ENV_TITLES[name] !== undefined && OBSIDIAN_TO_CMDX[callout] !== name
+  const defaultTitle = ENV_TITLES[name]
+  const text = prefixed ? (title ? `${defaultTitle}: ${title}` : defaultTitle) : title
   const label = envStart.label ? `{#${envStart.label}}` : ""
   const heading = [text, label].filter(Boolean).join(" ")
   const lines = body ? body.split("\n").map((line) => `> ${line}`) : []
@@ -734,6 +731,21 @@ function convertMarkdownTables(text: string): string {
   return out.join("\n")
 }
 
+/**
+ * Re-serialise a would-be env exactly as `toStorageMd` would. Used to prove a
+ * conversion is lossless before committing to it.
+ */
+function envBlockToMarkdown(
+  env: string,
+  title: string,
+  label: string | undefined,
+  body: string,
+): string {
+  const block = [`:::${env}${title ? `[${title}]` : ""}${label ? ` {#${label}}` : ""}`, body, ":::"]
+  const { masked, restore } = maskSpecialBlocks(block.join("\n"))
+  return restore(convertCmdxEnvironments(masked, "md"))
+}
+
 function convertMarkdownCallouts(text: string): string {
   const lines = text.split(/\r?\n/)
   const out: string[] = []
@@ -745,12 +757,13 @@ function convertMarkdownCallouts(text: string): string {
       i = end
       continue
     }
-    const start = /^>\s*\[!([\w-]+)\]([+-]?)\s*(.*)$/.exec(lines[i])
-    if (!start) {
+    const opener = /^>\s*\[!([\w-]+)\]/.exec(lines[i])
+    if (!opener) {
       out.push(lines[i])
       continue
     }
 
+    const first = i
     const bodyLines: string[] = []
     while (i + 1 < lines.length) {
       const continuation = /^>\s?(.*)$/.exec(lines[i + 1])
@@ -760,16 +773,26 @@ function convertMarkdownCallouts(text: string): string {
     }
     // Body is collected first so the recovery heuristic can inspect it.
     const body = bodyLines.join("\n")
-    const { env, title, label, meta } = obsidianCalloutToCmdx(
-      start[1],
-      start[3].trim(),
-      body,
-      start[2],
-    )
+    const start = /^> \[!([\w-]+)\]([+-]?)(?: (.*))?$/.exec(lines[first])
+    const parsed = start
+      ? obsidianCalloutToCmdx(
+          start[1],
+          start[3] ?? "",
+          body,
+          start[2],
+          lines.slice(first, i + 1).join("\n"),
+        )
+      : null
+    if (!parsed) {
+      // No environment reproduces this callout byte for byte: keep it as the
+      // callout it is. The preview renders it and a save writes it back as is.
+      out.push(...lines.slice(first, i + 1))
+      continue
+    }
 
-    out.push(`:::${env}${title ? `[${title}]` : ""}${label ? ` {#${label}}` : ""}`)
-    const metaLine = formatCalloutMeta(meta)
-    if (metaLine) out.push(metaLine)
+    out.push(
+      `:::${parsed.env}${parsed.title ? `[${parsed.title}]` : ""}${parsed.label ? ` {#${parsed.label}}` : ""}`,
+    )
     // Callouts nested inside this one convert the same way.
     if (bodyLines.length) out.push(convertMarkdownCallouts(body))
     out.push(":::")
@@ -831,17 +854,38 @@ interface ParsedCallout {
   env: string
   title: string
   label?: string
-  meta: CalloutMeta
 }
 
+/**
+ * Map an Obsidian callout to the environment that reproduces it, or null when
+ * none does (the caller then keeps the callout text as written). Every mapping
+ * is proven by writing the env back with the storage converter and comparing
+ * with the original lines, so open + save of an unchanged file is lossless.
+ * Legacy corruption of special blocks is the one deliberate exception: it is
+ * healed on open.
+ */
 function obsidianCalloutToCmdx(
   type: string,
   headingText: string,
-  body = "",
-  fold = "",
-): ParsedCallout {
-  const normalizedType = type.toLowerCase()
-  const foldMeta: CalloutMeta = fold === "+" || fold === "-" ? { fold } : {}
+  body: string,
+  fold: string,
+  original: string,
+): ParsedCallout | null {
+  const parsed = fold ? null : calloutEnvFor(type, headingText, body)
+  if (!parsed) return null
+  if (parsed.healed) return parsed
+  const written = envBlockToMarkdown(parsed.env, parsed.title, parsed.label, body.trim())
+  return written === original ? parsed : null
+}
+
+function calloutEnvFor(
+  type: string,
+  headingText: string,
+  body: string,
+): (ParsedCallout & { healed?: boolean }) | null {
+  // Only plain lowercase types map to an env name; `NOTE`, `my-type` stay callouts.
+  if (!/^[a-z][a-z0-9_]*$/.test(type)) return null
+  const normalizedType = type
   // A trailing `{#label}` on the heading is the env label (see cmdxEnvironmentToMarkdown).
   const labelMatch = /(?:^|\s)\{#([\w:.-]+)\}$/.exec(headingText)
   const label = labelMatch?.[1]
@@ -866,35 +910,27 @@ function obsidianCalloutToCmdx(
       if (!matchesPrefix) continue
       if (!hadNotePrefix && !shouldRecoverSpecial(env, body)) break // genuine note → keep
       const title = recoverTitle === prefix ? "" : recoverTitle.slice(prefix.length + 1).trim()
-      return { env, title, label, meta: foldMeta }
+      return { env, title, label, healed: true }
     }
   }
-  // `Theorem: X` style titles name the env, but only when the callout type is the
-  // one that env is stored as; otherwise the title is the user's own text.
+  // `Theorem: X` style titles name the env, but only when the callout type alone
+  // would not reopen as that env (`abstract` reopens as `lemma`, `note` as `note`).
   for (const [title, env] of Object.entries(OBSIDIAN_TITLE_TO_CMDX)) {
     if (storedCalloutType(env) !== normalizedType) continue
-    if (rawTitle === title) return { env, title: "", label, meta: foldMeta }
+    if (OBSIDIAN_TO_CMDX[normalizedType] === env) continue
+    if (rawTitle === title) return { env, title: "", label }
     if (rawTitle.startsWith(`${title}:`))
-      return { env, title: rawTitle.slice(title.length + 1).trim(), label, meta: foldMeta }
+      return { env, title: rawTitle.slice(title.length + 1).trim(), label }
   }
   const mapped = OBSIDIAN_TO_CMDX[normalizedType]
-  if (mapped) {
-    // Lossless only if the env is stored back as this very callout type.
-    const exact = storedCalloutType(mapped) === normalizedType
-    return {
-      env: mapped,
-      title: rawTitle,
-      label,
-      meta: exact ? foldMeta : { ...foldMeta, type: normalizedType },
-    }
-  }
-  // Unknown type (`danger`, `quote`, ...): keep it as its own env so it is stored
-  // back verbatim. Names that would collide with a special block, or that are not
-  // valid env names, ride on a `note` instead with the type recorded.
-  const usable =
-    /^\w+$/.test(normalizedType) && !SPECIAL_ENVS.has(normalizedType) && !ENV_TITLES[normalizedType]
-  if (usable) return { env: normalizedType, title: rawTitle, label, meta: foldMeta }
-  return { env: "note", title: rawTitle, label, meta: { ...foldMeta, type: normalizedType } }
+  if (mapped)
+    return storedCalloutType(mapped) === normalizedType
+      ? { env: mapped, title: rawTitle, label }
+      : null
+  // Unknown type (`danger`, `quote`, ...): its own env, stored back verbatim.
+  // Names that collide with a special block or a titled env stay callouts.
+  if (SPECIAL_ENVS.has(normalizedType) || ENV_TITLES[normalizedType]) return null
+  return { env: normalizedType, title: rawTitle, label }
 }
 
 function storedCalloutType(env: string): string {
@@ -1000,7 +1036,7 @@ const OBSIDIAN_TO_CMDX: Record<string, string> = {
   abstract: "lemma",
   question: "exercise",
   success: "proof",
-  info: "note",
+  info: "info",
 }
 
 const ENV_TITLES: Record<string, string> = {

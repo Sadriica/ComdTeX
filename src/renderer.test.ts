@@ -486,3 +486,17 @@ describe("cross-file environment refs (end-to-end)", () => {
     expect(html).toContain("env-ref-broken")
   })
 })
+
+describe("callouts kept as written in the editor", () => {
+  it("renders a fold marker as part of the syntax, not of the title", () => {
+    const html = renderMarkdown("> [!tip]- Hi\n> body")
+    expect(html).toContain("callout-tip")
+    expect(html).toContain("Hi</div>")
+    expect(html).not.toContain("- Hi")
+  })
+
+  it("renders a hyphenated type as a callout", () => {
+    const html = renderMarkdown("> [!my-type] Hello\n> body")
+    expect(html).toContain("callout-my-type")
+  })
+})

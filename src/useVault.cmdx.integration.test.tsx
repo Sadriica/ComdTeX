@@ -203,7 +203,7 @@ describe("useVault CMDX integration", () => {
       expect(count).toBe(1)
     })
 
-    expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Lemma: Changed")
+    expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Changed")
   })
 
   it("migrates a pending autosave across renameFile (no orphaned old file)", async () => {
