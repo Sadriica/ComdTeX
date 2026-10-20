@@ -1117,7 +1117,7 @@ function ChangesPanel({
             )}
             {status.unstaged.length > 0 && (
               <span className="git-summary-chip git-chip-changed">
-                <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />{" "}
+                <Icon icon={Circle} size={14} className="icon-filled" />{" "}
                 {g.summaryModified(status.unstaged.length)}
               </span>
             )}
@@ -1440,13 +1440,13 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
         )}
         {status && status.staged.length > 0 && (
           <span className="git-pill git-pill-staged">
-            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            <Icon icon={Circle} size={14} className="icon-filled" />
             {status.staged.length}
           </span>
         )}
         {status && total - status.staged.length > 0 && (
           <span className="git-pill git-pill-changed">
-            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            <Icon icon={Circle} size={14} className="icon-filled" />
             {total - status.staged.length}
           </span>
         )}
@@ -1498,7 +1498,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                 <Icon icon={Folder} size={16} />
               </div>
               <div className="git-empty-title">{g.notRepo}</div>
-              <div className="git-empty-desc">{g.noVault}</div>
+              <div className="git-empty-desc">{g.notRepoHint}</div>
               <button className="git-empty-btn" onClick={handleInit}>
                 {loading ? "…" : g.initGitRepo}
               </button>

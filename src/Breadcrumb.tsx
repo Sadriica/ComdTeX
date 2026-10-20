@@ -52,7 +52,7 @@ export default function Breadcrumb({
         title={t.breadcrumb.backTitle}
         aria-label={t.breadcrumb.back}
       >
-        <Icon icon={ChevronRight} size={14} style={{ transform: "scaleX(-1)" }} />
+        <Icon icon={ChevronRight} size={14} className="icon-flip" />
       </button>
       <button
         className="breadcrumb-nav-btn"

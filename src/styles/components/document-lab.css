@@ -25,9 +25,7 @@
   font-size: var(--text-sm);
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .lab-tabs button:hover {
   color: var(--fg);
@@ -155,7 +153,8 @@
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-standard);
 }
-.lab-item:hover {
+.lab-item:hover,
+.lab-nested:hover {
   background: var(--bg-hover);
 }
 .lab-item > :not(.lab-icon) {
@@ -192,9 +191,6 @@ div.lab-item:hover {
 .lab-nested {
   padding-left: var(--space-7);
   background: var(--bg-sunken);
-}
-.lab-nested:hover {
-  background: var(--bg-hover);
 }
 .lab-item:not(:has(.lab-icon)) {
   display: flex;

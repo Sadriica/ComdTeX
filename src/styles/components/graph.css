@@ -87,7 +87,8 @@
 }
 .graph-seg-btn:focus-visible,
 .graph-btn:focus-visible,
-.graph-neighbour:focus-visible {
+.graph-neighbour:focus-visible,
+.graph-canvas:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
@@ -105,10 +106,6 @@
   display: block;
   cursor: grab;
   touch-action: none;
-}
-.graph-canvas:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -2px;
 }
 .graph-status {
   position: absolute;
@@ -220,8 +217,6 @@
   color: var(--fg-muted);
 }
 
-/* ── Search highlight ── */
-
 /* ── Split pane ── */
 .split-pane {
   position: relative;
@@ -255,9 +250,7 @@
   font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .split-pane-close:hover {
   background: var(--bg-hover);
@@ -284,16 +277,12 @@
   margin: 0;
 }
 
-/* ── Outline active item ── */
-
-/* ── Status bar selection ── */
-
 /* ── Search & Replace ──
    .search-replace-toggle styling is consolidated in the "Search & Replace panel"
    block below (theme-driven, monochrome). */
 
 /* ── CommandPalette recent files ── */
 .palette-kind-recent {
-  background: #3d3a1e;
-  color: #d7ba7d;
+  background: var(--warn-bg);
+  color: var(--warn);
 }

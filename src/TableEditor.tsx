@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useT } from "./i18n"
 import { useFocusTrap } from "./useFocusTrap"
+import { AlignCenter, AlignLeft, AlignRight, Icon } from "./icons"
+import type { LucideIcon } from "./icons"
 
 interface TableEditorProps {
   open: boolean
@@ -10,6 +12,12 @@ interface TableEditorProps {
 }
 
 type Alignment = "left" | "center" | "right"
+
+const ALIGN_ICON: Record<Alignment, LucideIcon> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+}
 
 function parseMarkdownTable(md: string): { rows: string[][]; alignments: Alignment[] } | null {
   const lines = md
@@ -235,7 +243,7 @@ export default function TableEditor({
                     aria-label={ALIGN_TITLE(t)[al]}
                     onClick={() => setAlignment(c, al)}
                   >
-                    <span className="table-editor-glyph" data-align={al} aria-hidden="true" />
+                    <Icon icon={ALIGN_ICON[al]} size={14} />
                   </button>
                 ))}
               </div>

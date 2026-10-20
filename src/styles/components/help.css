@@ -62,3 +62,245 @@
 .help-desc {
   color: var(--fg);
 }
+
+/* ── Help Panel: a reference. Rows are a syntax chip plus a description; they
+   stack at sidebar width so nothing clips, and spread to columns when wide. ── */
+
+.hp-panel {
+  container-type: inline-size;
+  overflow-y: auto;
+  height: 100%;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--bg-surface);
+}
+
+/* ── Collapsible sections ── */
+.hp-section {
+  border-bottom: 1px solid var(--border);
+}
+
+.hp-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 28px;
+  padding: var(--space-3) var(--space-5);
+  background: none;
+  border: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-ui);
+}
+.hp-section-title:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.hp-section-open .hp-section-title {
+  color: var(--fg);
+}
+
+.hp-section-chevron {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+
+.hp-section-body {
+  padding: var(--space-2) var(--space-5) var(--space-5);
+}
+
+/* ── Sub-labels and prose ── */
+.hp-label {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.hp-section-body > .hp-label:first-child {
+  margin-top: var(--space-3);
+}
+
+.hp-intro {
+  margin: var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  line-height: var(--leading-normal);
+}
+.hp-intro-note {
+  font-size: var(--text-xs);
+}
+.hp-intro-ok {
+  color: var(--ok);
+}
+.hp-intro-bad {
+  color: var(--danger);
+}
+
+/* ── Syntax chips ── */
+.hp-code,
+.hp-code-sm {
+  padding: 0 var(--space-3);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* Multi-line sample under a section label */
+.hp-code-block {
+  display: block;
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  white-space: pre-wrap;
+  line-height: var(--leading-normal);
+}
+
+/* ── Reference rows ──
+   Narrow: chip on the first line (wraps, never clips), description below.
+   Wide: chip | description | rendered sample. */
+.hp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "code render"
+    "desc desc";
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.hp-row .hp-code {
+  grid-area: code;
+  justify-self: start;
+  max-width: 100%;
+  min-width: 0;
+  white-space: pre-wrap;
+}
+.hp-desc {
+  grid-area: desc;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  line-height: var(--leading-normal);
+}
+.hp-render {
+  grid-area: render;
+  min-width: 32px;
+  font-size: var(--text-md);
+  color: var(--fg);
+  text-align: right;
+}
+
+@container (min-width: 440px) {
+  .hp-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    grid-template-areas: "code desc render";
+  }
+}
+
+.hp-codeblock {
+  margin: var(--space-3) 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* ── Environment cards ── */
+.hp-env-grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.hp-env-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.hp-env-syntax {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.hp-env-card .hp-env-preview {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 0;
+  font-size: var(--text-xs);
+  cursor: default;
+}
+.hp-env-preview .math-env-header {
+  margin-bottom: var(--space-1);
+}
+.hp-env-preview .math-env-label {
+  font-size: var(--text-xs);
+}
+.hp-env-preview .math-env-body {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* ── Greek / symbol grids ── */
+.hp-greek-grid,
+.hp-sym-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.hp-greek-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--fg);
+}
+
+.hp-kbd {
+  padding: 0 var(--space-3);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg);
+}

@@ -83,9 +83,7 @@
 .math-env-theorem .math-env-body :is(em, i),
 .math-env-lemma .math-env-body :is(em, i),
 .math-env-corollary .math-env-body :is(em, i),
-.math-env-proposition .math-env-body :is(em, i) {
-  font-style: normal;
-}
+.math-env-proposition .math-env-body :is(em, i),
 .math-env-theorem .math-env-body :is(code, pre, .katex, .math-env-label),
 .math-env-lemma .math-env-body :is(code, pre, .katex, .math-env-label),
 .math-env-corollary .math-env-body :is(code, pre, .katex, .math-env-label),
@@ -111,7 +109,8 @@
 }
 .math-env-qed {
   float: right;
-  margin-left: 1em;
+  margin: 0 0 0 1em;
+  text-align: left;
   color: var(--fg-muted);
   line-height: inherit;
   font-style: normal;
@@ -141,11 +140,6 @@
   border-left: 2px solid var(--env-accent);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: color-mix(in oklch, var(--env-accent) 8%, transparent);
-}
-.math-env-quote,
-.math-env-cite,
-.math-env-abstract {
-  font-style: italic;
 }
 
 /* Headings inside environments: scaled to fit the context */
@@ -240,6 +234,7 @@
 .math-env-cite,
 .math-env-abstract {
   --env-accent: var(--callout-quote);
+  font-style: italic;
 }
 
 /* Collapsible environment */
@@ -276,4 +271,88 @@
 }
 .math-env-body.folded {
   display: none;
+}
+
+/* ── KaTeX ── */
+.preview-content .katex {
+  color: var(--fg);
+  font-size: var(--katex-scale);
+  font-variant-numeric: normal;
+  text-indent: 0;
+}
+/* Display math: centred; only an equation wider than the page scrolls. */
+.preview-content .katex-display {
+  max-width: 100%;
+  margin: 1em 0;
+  padding: 0.15em 0;
+  overflow: auto hidden;
+  text-align: center;
+}
+.preview-content .katex-display > .katex {
+  max-width: 100%;
+}
+.math-error {
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+/* ── Equation numbering: the equation is centred in the page, the number sits
+   in a fixed column at the right edge. ── */
+.eq-block {
+  display: grid;
+  grid-template-columns: 3.2em minmax(0, 1fr) 3.2em;
+  align-items: center;
+  max-width: 100%;
+  margin: 1em 0;
+  min-width: 0;
+}
+.eq-block .katex-wrapper {
+  grid-column: 2;
+  min-width: 0;
+}
+.eq-block .katex-display {
+  margin: 0;
+}
+.eq-number {
+  grid-column: 3;
+  justify-self: end;
+  color: var(--fg);
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+@container preview (max-width: 28rem) {
+  .eq-block {
+    grid-template-columns: 0 minmax(0, 1fr) 2.6em;
+  }
+}
+
+.eq-inline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+.eq-number-inline {
+  color: var(--fg);
+  font-size: 0.9em;
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+
+.eq-ref {
+  color: var(--link);
+}
+.eq-ref-broken {
+  color: var(--danger);
+}
+.preview-content a.tbl-ref,
+.preview-content a.env-ref,
+.tbl-ref,
+.env-ref {
+  color: var(--link);
+  text-decoration: none;
+}
+.tbl-ref-broken,
+.env-ref-broken {
+  color: var(--danger);
 }

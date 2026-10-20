@@ -44,6 +44,10 @@
   --dur-med: 160ms;
   --dur-slow: 240ms;
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-ui:
+    color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
 
   /* Layers */
   --z-sticky: 10;

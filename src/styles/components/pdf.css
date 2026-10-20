@@ -32,10 +32,7 @@
   line-height: 1;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .pdf-toolbar-btn:hover:not(:disabled) {
   background: var(--bg-hover);
@@ -117,7 +114,7 @@
 /* ── Comments: Monaco gutter glyph ── */
 .comment-glyph::before {
   content: "💬";
-  font-size: 12px;
+  font-size: var(--text-sm);
   display: inline-block;
   width: 100%;
   text-align: center;
@@ -130,5 +127,5 @@
 }
 .comment-glyph.drifted::before {
   content: "⚠";
-  color: #f0c040;
+  color: var(--warn);
 }

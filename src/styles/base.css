@@ -1,24 +1,6 @@
-/* Reset, document root, and the global behaviours every theme shares: focus
-   ring, selection, scrollbars, reduced motion, forced colours. Tokens come
-   from tokens.css and themes.css (imported first). */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-}
-
-/* 13px UI root: rem-based sizes (--text-*) scale chrome with browser zoom. */
-html {
-  font-size: 13px;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
+/* Document root, and the global behaviours every theme shares: focus ring,
+   selection, scrollbars. Tokens come from tokens.css and themes.css. The reset
+   is reset.css; reduced motion and forced colours live in overrides.css. */
 html,
 body,
 #root {
@@ -42,19 +24,11 @@ body,
   text-rendering: optimizeLegibility;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
 /* One focus ring for every theme. Components may restyle it but must keep
    it visible; --focus-ring is checked for 3:1 against the surfaces. */
 :focus-visible {
   outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  outline-offset: var(--focus-offset);
 }
 
 /* Mouse focus on text fields keeps the ring (typing target); buttons do not. */
@@ -71,60 +45,28 @@ textarea {
    properties; the pseudo-element rules are the fallback for older engines. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 @supports not (scrollbar-color: auto) {
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--scrollbar-track);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: var(--radius-pill);
-    border: 2px solid transparent;
+    background: var(--scrollbar-thumb);
+    border-radius: var(--scrollbar-radius);
+    border: 2px solid var(--scrollbar-edge);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
     background-clip: content-box;
   }
   ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
-}
-
-/* Reduced motion: no animation or transition durations, whatever the component. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Forced colours (Windows high contrast): let the system palette win, keep
-   the focus ring and borders visible. */
-@media (forced-colors: active) {
-  .app {
-    background: Canvas;
-    color: CanvasText;
-  }
-  :focus-visible {
-    outline-color: Highlight;
-  }
-  button,
-  input,
-  select,
-  textarea {
-    border: 1px solid ButtonBorder;
-  }
-  ::selection {
-    background: Highlight;
-    color: HighlightText;
+    background: var(--scrollbar-track);
   }
 }

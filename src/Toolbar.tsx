@@ -737,7 +737,7 @@ function Toolbar({
           }}
         >
           <span className="menubar-focus-dot" aria-hidden="true">
-            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            <Icon icon={Circle} size={14} className="icon-filled" />
           </span>
           <span className="menubar-focus-time">{focusClock.clock}</span>
         </button>

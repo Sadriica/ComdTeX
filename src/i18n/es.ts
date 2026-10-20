@@ -752,6 +752,7 @@ export const es: T = {
     summary: (done, total) => `${done}/${total} completadas`,
     markDone: "Marcar como hecha",
     markPending: "Marcar como pendiente",
+    lineTitle: (n) => `Línea ${n}`,
   },
 
   equations: {
@@ -839,6 +840,7 @@ export const es: T = {
   git: {
     noVault: "Abre un vault para usar Git.",
     notRepo: "Esta carpeta no es un repositorio Git.",
+    notRepoHint: "Crea uno para guardar el historial de tus cambios y sincronizar con un remoto.",
     gitNotFoundTitle: "Git no encontrado",
     gitNotFoundHint: "Instala Git y reinicia la aplicación.",
     statusError: (msg: string) => `Git no pudo leer el estado: ${msg}`,

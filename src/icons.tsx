@@ -6,6 +6,9 @@ import type { LucideIcon } from "lucide-react"
 // app uses stays curated in one place (and each icon is a per-file ESM import,
 // so only the ones listed below reach the bundle).
 export {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   ArrowDown,
   ArrowDownAZ,
   ArrowLeft,

@@ -18,10 +18,12 @@
   border-radius: 0;
   font-size: var(--text-lg);
 }
-.quick-switcher input::placeholder {
+.quick-switcher input::placeholder,
+.palette-input::placeholder {
   color: var(--fg-subtle);
 }
-.quick-switcher input:focus-visible {
+.quick-switcher input:focus-visible,
+.palette-input:focus-visible {
   outline: none;
   border-bottom-color: var(--accent);
 }
@@ -94,23 +96,320 @@
 .katex-wrapper {
   position: relative;
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
-.katex-wrapper:hover::after {
-  content: "📋";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 12px;
-  background: #333;
-  padding: 2px 4px;
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.2s;
+/* Click copies the expression: hover hints at it, copied confirms it. */
+.katex-wrapper:hover {
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
-.katex-wrapper:hover::after {
-  opacity: 1;
+.katex-wrapper.copied {
+  box-shadow: 0 0 0 1px var(--ok);
 }
-.katex-wrapper.copied::after {
-  content: "✓" !important;
-  color: #4caf50;
+
+/* Command palette: popover surface (modals.css), a large input, then rows with
+   an icon slot, a title, a muted secondary and right-aligned shortcut chips
+   (the shared kbd recipe). */
+.palette {
+  display: flex;
+  flex-direction: column;
+  width: 600px;
+  max-width: 100%;
+  max-height: min(520px, 100%);
+  overflow: hidden;
+}
+
+.palette-input {
+  flex: none;
+  width: 100%;
+  padding: var(--space-5) var(--space-6);
+  background: transparent;
+  color: var(--fg);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  font-size: var(--text-lg);
+}
+/* The input is always focused, so the ring is a bottom accent line instead of
+   a box around it. */
+
+.palette-list {
+  padding: var(--space-2);
+  overflow-y: auto;
+}
+.palette-empty {
+  padding: var(--space-5) var(--space-6);
+  color: var(--fg-muted);
+  font-size: var(--text-md);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-4);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: var(--text-md);
+  text-align: left;
+  cursor: pointer;
+}
+.palette-item-selected {
+  background: var(--bg-selected);
+}
+
+/* Icon slot: fixed width so titles line up whatever glyph or icon is in it. */
+.palette-kind {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+.palette-kind-file,
+.palette-kind-back {
+  color: var(--link);
+}
+.palette-item-selected .palette-kind {
+  color: var(--fg);
+}
+
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-desc {
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.palette-cat {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.palette-chevron {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+/* Right-aligned chip. Commands without a shortcut put a short description
+   here, so it may shrink and ellipsise instead of pushing the title out. */
+.cmd-shortcut {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 55%;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.palette-crumb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--link);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.palette-crumb-back:hover {
+  text-decoration: underline;
+}
+.palette-crumb-sep {
+  color: var(--fg-subtle);
+}
+.palette-crumb-here {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* Ctrl/Cmd+K inline AI edit: a floating prompt and proposal card. Popover
+   surface from modals.css; fixed position, coordinates come from JS. */
+.cmdk-edit {
+  position: fixed;
+  z-index: var(--z-popover);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(440px, 60vw);
+  max-width: 440px;
+  padding: var(--space-4);
+  font-size: var(--text-md);
+}
+.cmdk-edit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.cmdk-edit-input {
+  flex: 1;
+  min-height: 28px;
+  max-height: 120px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  resize: vertical;
+}
+.cmdk-edit-input:focus {
+  border-color: var(--accent);
+}
+.cmdk-edit-input:disabled {
+  opacity: 0.6;
+}
+.cmdk-edit-btn {
+  flex: none;
+  min-height: 28px;
+  padding: 0 var(--space-5);
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition-ui);
+}
+.cmdk-edit-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.cmdk-edit-btn:active:not(:disabled) {
+  background: var(--bg-active);
+}
+.cmdk-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cmdk-edit-btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.cmdk-edit-btn-primary:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+.cmdk-edit-btn-primary:active:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 78%, var(--fg));
+}
+.cmdk-edit-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.cmdk-edit-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.cmdk-edit-error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+}
+.cmdk-edit-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.cmdk-edit-preview,
+.cmdk-edit-diff {
+  max-height: 220px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow: auto;
+}
+.cmdk-edit-preview {
+  margin: 0;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cmdk-edit-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.cmdk-edit-diff-label {
+  display: inline-block;
+  margin-right: var(--space-3);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cmdk-edit-diff del {
+  padding: 0 var(--space-1);
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  text-decoration: line-through;
+}
+.cmdk-edit-diff ins {
+  padding: 0 var(--space-1);
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.cmdk-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }

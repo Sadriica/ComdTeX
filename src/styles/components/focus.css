@@ -30,7 +30,8 @@
   padding: var(--space-1) var(--space-5);
   font-size: var(--text-sm);
 }
-.ft-row:hover {
+.ft-row:hover,
+.focus-timer-btn:hover {
   background: var(--bg-hover);
 }
 .ft-label {
@@ -41,7 +42,8 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
-.ft-accent .ft-value {
+.ft-accent .ft-value,
+.ft-tile.ft-accent .ft-tile-value {
   color: var(--accent);
 }
 
@@ -105,12 +107,7 @@
   color: var(--fg);
   cursor: pointer;
   font-size: var(--text-sm);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
-}
-.focus-timer-btn:hover {
-  background: var(--bg-hover);
+  transition: var(--transition-ui);
 }
 .focus-timer-btn:active {
   background: var(--bg-active);
@@ -140,9 +137,7 @@
   cursor: pointer;
   font-size: var(--text-sm);
   text-align: center;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .focus-timer-settings-toggle:hover {
   background: var(--bg-hover);
@@ -191,9 +186,6 @@
   font-variant-numeric: tabular-nums;
   line-height: var(--leading-tight);
 }
-.ft-tile.ft-accent .ft-tile-value {
-  color: var(--accent);
-}
 .ft-tile-label {
   overflow: hidden;
   color: var(--fg-muted);
@@ -220,11 +212,3 @@
 .ft-goal-fill.completed {
   background: var(--ok);
 }
-
-/* ── Breadcrumb heading segment ── */
-
-/* ── File tree filter ── */
-
-/* ── Pinned tabs ── */
-
-/* ── Drag-to-reorder tabs ── */

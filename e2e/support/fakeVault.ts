@@ -362,6 +362,7 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
         }
       }
 
+      const blobUrls = new Map<string, string>()
       w.__TAURI_INTERNALS__ = {
         invoke,
         transformCallback: () => 0,
@@ -369,8 +370,16 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
         // Local images: serve vault SVGs inline so figures render in the preview.
         convertFileSrc: (path: string) => {
           const e = fs.get(norm(decodeURIComponent(path)))
-          if (e && !e.dir && path.endsWith(".svg"))
-            return `data:image/svg+xml;utf8,${encodeURIComponent(e.text)}`
+          // The sanitizer rejects data:image/svg+xml on purpose (inline SVG can
+          // carry script); a blob: URL is on its media allowlist, like Tauri's asset: URLs.
+          if (e && !e.dir && path.endsWith(".svg")) {
+            let url = blobUrls.get(path)
+            if (!url) {
+              url = URL.createObjectURL(new Blob([e.text], { type: "image/svg+xml" }))
+              blobUrls.set(path, url)
+            }
+            return url
+          }
           if (e && !e.dir && path.endsWith(".pdf"))
             return `data:application/pdf;base64,${btoa(e.text)}`
           return ""

@@ -24,10 +24,7 @@
   cursor: pointer;
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .ai-btn:hover:not(:disabled) {
   background: var(--bg-hover);
@@ -64,13 +61,6 @@
 }
 .ai-btn-stop:hover:not(:disabled) {
   background: var(--danger-bg);
-}
-.ai-btn-ghost {
-  border-color: transparent;
-  color: var(--fg-muted);
-}
-.ai-btn-ghost:hover:not(:disabled) {
-  color: var(--fg);
 }
 
 /* Disabled-state screen (AI is off): short explanation and a way to Settings. */
@@ -161,9 +151,7 @@
   cursor: pointer;
   font-size: var(--text-sm);
   line-height: 1;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .ai-history-del:hover {
   color: var(--danger);
@@ -215,7 +203,7 @@
 }
 .ai-bubble-user-text {
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .ai-bubble-body {
   font-family: var(--font-ui);
@@ -296,7 +284,7 @@
    waiting for the first token. */
 .ai-streaming-text {
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .ai-cursor {
   display: inline-block;
@@ -381,10 +369,7 @@
   color: var(--fg-muted);
   cursor: pointer;
   font-size: var(--text-xs);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .ai-chip:hover:not(:disabled) {
   background: var(--bg-hover);
@@ -414,9 +399,7 @@
   color: var(--fg);
   cursor: pointer;
   font-size: var(--text-xs);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .ai-action-item:hover {
   background: var(--bg-hover);

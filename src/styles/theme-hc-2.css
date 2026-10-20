@@ -1,4 +1,0 @@
-/* ── Comments: high-contrast theme ── */
-.app[data-theme="hc"] .comment-glyph.drifted::before {
-  color: var(--accent);
-}

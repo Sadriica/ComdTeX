@@ -68,18 +68,16 @@
 .drag-overlay {
   position: absolute;
   inset: 0;
-  z-index: 50;
-  background: rgba(86, 156, 214, 0.12);
-  border: 2px dashed #569cd6;
-  border-radius: 4px;
+  z-index: var(--z-sticky);
+  background: color-mix(in oklch, var(--accent) var(--drag-mix), transparent);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  font-size: 15px;
-  color: #569cd6;
+  font-size: var(--text-lg);
+  color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
-
-/* ── Vim mode status bar ── */

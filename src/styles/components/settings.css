@@ -105,9 +105,7 @@
   font-size: var(--text-md);
   text-align: left;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .settings-tab:hover {
   background: var(--bg-hover);
@@ -242,9 +240,7 @@
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: var(--text-md);
-  transition:
-    border-color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .setting-row input[type="text"],
 .setting-row input[type="password"],
@@ -371,9 +367,6 @@
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   cursor: pointer;
-}
-.settings-docs-link,
-.hp-docs-link {
   color: var(--link);
 }
 .settings-docs-link:hover,

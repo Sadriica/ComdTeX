@@ -1,8 +1,0 @@
-/* Rules added by the visual-harness fixes. Imported after App so they win ties. */
-
-/* The end-of-proof mark sits at the end of the last line, not in a corner block. */
-.math-env-qed {
-  float: right;
-  margin: 0 0 0 1em;
-  text-align: left;
-}

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Syntax highlighting in preview code blocks** for about 18 common languages, offline and themed with the `--syn-*` colours.
 
 ### Fixed
+- **The classic menu bar works from the keyboard.** The Archivo, Edición, Vista and Vault menus only opened on a mouse press. Enter, Space or the down arrow now opens a menu, the arrow keys move through it and across menus, Escape closes it and returns focus, and screen readers announce a menu bar with menus and items.
 - **Nested lists nest again.** An indented sub-item under a list item rendered as plain text with a leading dash.
 - **No stray blank lines around equations and environments** in the preview.
 - **A collapsed sidebar can be reopened.** Collapsing it left no visible control to bring it back. It now leaves a slim rail with the expand button.

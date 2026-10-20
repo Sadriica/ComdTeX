@@ -23,7 +23,6 @@ const THEMES = [
   { name: "hc", theme: "hc-black" },
 ].filter((t) => !process.env.VISUAL_SHOTS || process.env.VISUAL_SHOTS.split(",").includes(t.name))
 
-const PAPER = "papers/spectral-gap.md"
 const noise = ["Failed to load resource", "[vite]", "React DevTools"]
 
 /** Attach console/page error collectors; returns the live list. */
@@ -419,7 +418,7 @@ for (const { name, theme } of THEMES) {
     await page.setViewportSize({ width: 1440, height: 900 })
     await installDeterminism(page)
     await installFakeVault(page, {
-      settings: { theme },
+      settings: { theme, aiEnabled: true, aiProviderId: "anthropic", aiModel: "claude" },
       storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
     })
     await page.goto("/")
@@ -487,7 +486,8 @@ for (const { name, theme } of THEMES) {
     await shot(page, name, "modal__closed-tabs")
     await closeOverlays(page)
 
-    // Folder rules, from the file tree context menu.
+    // Folder rules, from the file tree context menu. The AI panel replaced the tree.
+    await openFromMenu(page, "Files", "Files")
     await page
       .locator(".sidebar")
       .getByText("papers", { exact: true })
