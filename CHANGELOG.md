@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Writing statistics survive a restart.** The Focus panel kept words, active time and pomodoros only for the running session. Totals are now kept per day (up to a year), the daily goal counts the whole day, and a Today section shows today and the last seven days.
 
 ### Changed
+- **Faster start.** The welcome screen no longer downloads Monaco (3.6 MB): a build helper had been parked in the Monaco chunk, so the entry preloaded it. The first load is now 1.5 MB instead of 5.3 MB. KaTeX ships woff2 only (the ttf and woff copies were dead weight in every webview we target), the export pipeline, the symbol picker and the version-control bar load on demand, and the entry chunk went from 840 kB to 621 kB.
 - The vault-wide label scan behind `@eq:`/`@fig:` autocomplete runs in a background worker and only rescans notes that changed, so typing in a large vault no longer stalls on it.
 - `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 

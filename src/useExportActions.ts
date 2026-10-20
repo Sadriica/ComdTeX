@@ -20,31 +20,21 @@ import { pathJoin, pathDirname } from "./pathUtils"
 import { MACROS_FILENAME } from "./macros"
 import type { KatexMacros } from "./macros"
 import type { BibEntry } from "./bibtex"
-import { exportToTex, exportReveal } from "./exporter"
-import {
-  exportPdf as exportPdfAction,
-  exportAnkiCardsToFile,
-  compileLatexPdf as compileLatexPdfAction,
-  importDocument as importDocumentAction,
-  exportTypst as exportTypstAction,
-  exportTypstPdf as exportTypstPdfAction,
-  compileTypstFilePdf as compileTypstFilePdfAction,
-  collectSyncTex,
-  bundleTexAssets,
-  exportTempPath,
-  warnLossyExport,
-  type SyncTexBundle,
-} from "./exportActions"
-import type { ProjectFile } from "./projectExport"
-import { toPandocMarkdownInput } from "./exportConversion"
+import type { SyncTexBundle } from "./exportActions"
+import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import type { LatexDiagnostic } from "./latexErrors"
-import { exportToObsidianMarkdown } from "./obsidianExport"
 import { extractFrontmatter } from "./frontmatter"
 import type { DepStatus } from "./checkDeps"
-import { hasRasterBlocks, replaceDiagramsForExport } from "./diagramExport"
 import { resolveDocumentContent } from "./documentResolve"
-import { composeProjectMarkdown } from "./projectExport"
 import { showToast } from "./toastService"
+
+// The export pipeline (LaTeX/Reveal/Typst/PDF/Anki/diagram export, ~100 kB)
+// is only needed once the user triggers an export, so it loads on demand.
+const loadExporter = () => import("./exporter")
+const loadActions = () => import("./exportActions")
+const loadDiagramExport = () => import("./diagramExport")
+const loadConversion = () => import("./exportConversion")
+const loadObsidian = () => import("./obsidianExport")
 import type { useVault } from "./useVault"
 import type { T } from "./i18n"
 
@@ -106,8 +96,13 @@ export function useExportActions(ctx: ExportActionsCtx) {
     })
     if (!path) return
     // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
-    warnLossyExport(editor.getValue(), "obsidian", t.app.exportLossWarning, showToast)
-    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
+    ;(await loadActions()).warnLossyExport(
+      editor.getValue(),
+      "obsidian",
+      t.app.exportLossWarning,
+      showToast,
+    )
+    await writeTextFile(path, (await loadObsidian()).exportToObsidianMarkdown(editor.getValue()))
   }, [t, editorRef])
 
   const handleExportTex = useCallback(async () => {
@@ -132,13 +127,15 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png), so
     // it compiles anywhere; on Overleaf, upload them together.
     let raw = editor.getValue()
-    if (hasRasterBlocks(raw)) {
+    if ((await loadDiagramExport()).hasRasterBlocks(raw)) {
       const outDir = pathDirname(path) || "."
       const outBase = (path.split(/[\\/]/).pop() ?? "export")
         .replace(/\.[^.]+$/, "")
         .replace(/[^A-Za-z0-9-]+/g, "-")
       try {
-        const replaced = await replaceDiagramsForExport(raw, async (i, _block, png) => {
+        const replaced = await (
+          await loadDiagramExport()
+        ).replaceDiagramsForExport(raw, async (i, _block, png) => {
           const file = `${outBase}-diag-${i}.png`
           await writeFile(`${outDir}/${file}`, png)
           return file
@@ -149,23 +146,31 @@ export function useExportActions(ctx: ExportActionsCtx) {
       }
     }
     const content = resolveDocumentContent(raw, transclusionResolver)
-    warnLossyExport(content, "latex", t.app.exportLossWarning, showToast)
+    ;(await loadActions()).warnLossyExport(content, "latex", t.app.exportLossWarning, showToast)
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const author = fm?.author as string | undefined
-    const tex = exportToTex(content, macrosText, (fm?.title as string) || titleGuess, author, {
-      headerLeft: fm?.headerLeft as string,
-      headerCenter: fm?.headerCenter as string,
-      headerRight: fm?.headerRight as string,
-      footerLeft: fm?.footerLeft as string,
-      footerCenter: fm?.footerCenter as string,
-      footerRight: fm?.footerRight as string,
-    })
+    const tex = (await loadExporter()).exportToTex(
+      content,
+      macrosText,
+      (fm?.title as string) || titleGuess,
+      author,
+      {
+        headerLeft: fm?.headerLeft as string,
+        headerCenter: fm?.headerCenter as string,
+        headerRight: fm?.headerRight as string,
+        footerLeft: fm?.footerLeft as string,
+        footerCenter: fm?.footerCenter as string,
+        footerRight: fm?.footerRight as string,
+      },
+    )
 
     // Bundle referenced images and references.bib next to the .tex, so the
     // export compiles anywhere else (Overleaf, a journal), not only here.
     const outDir = pathDirname(path) || "."
-    const { tex: bundledTex, copied } = await bundleTexAssets(
+    const { tex: bundledTex, copied } = await (
+      await loadActions()
+    ).bundleTexAssets(
       content,
       tex,
       outDir,
@@ -196,7 +201,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const fm = parsed?.data
     const title =
       (fm?.title as string) || vaultRef.current.openFile?.name.replace(/\.[^.]+$/, "") || "project"
-    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
+    const tex = (await loadExporter()).exportToTex(
+      content,
+      macrosText,
+      title,
+      fm?.author as string | undefined,
+    )
     const path = await save({
       title: t.palette.exportProjectTex,
       filters: [{ name: "LaTeX", extensions: ["tex"] }],
@@ -208,7 +218,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
 
   const handleCompileLatexPdf = useCallback(
     async (opts?: { forceWasm?: boolean }) => {
-      await compileLatexPdfAction({
+      await (
+        await loadActions()
+      ).compileLatexPdf({
         activeFile: vaultRef.current.openFile,
         vaultPath: vaultRef.current.vaultPath,
         activePath: vaultRef.current.activeTabPath,
@@ -322,10 +334,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     // rebuilt preview shows diagrams too. PNGs are cleaned after compiling.
     let sourceForTex = editorContent
     const rebuildDiagFiles: string[] = []
-    if (hasRasterBlocks(editorContent)) {
+    if ((await loadDiagramExport()).hasRasterBlocks(editorContent)) {
       const safeBase = base.replace(/[^A-Za-z0-9-]+/g, "-")
       try {
-        const replaced = await replaceDiagramsForExport(editorContent, async (i, _block, png) => {
+        const replaced = await (
+          await loadDiagramExport()
+        ).replaceDiagramsForExport(editorContent, async (i, _block, png) => {
           const file = `${safeBase}-comdtex-diag-${i}.png`
           await writeFile(`${dir}/${file}`, png)
           rebuildDiagFiles.push(`${dir}/${file}`)
@@ -340,7 +354,12 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const parsed = extractFrontmatter(content)
     const fm = parsed?.data
     const title = (fm?.title as string) || currentFile.name.replace(/\.[^.]+$/, "")
-    const tex = exportToTex(content, macrosText, title, fm?.author as string | undefined)
+    const tex = (await loadExporter()).exportToTex(
+      content,
+      macrosText,
+      title,
+      fm?.author as string | undefined,
+    )
     const jobname = `${base}.comdtex-rebuild`
     const tmpTex = `${dir}/${jobname}.tex`
     const tmpPdf = `${dir}/${jobname}.pdf`
@@ -374,7 +393,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
           const result = await Command.create(cmdName, args, { cwd: dir }).execute()
           if (result.code === 0 && (await exists(tmpPdf))) {
             await copyFile(tmpPdf, pdfPath)
-            setSyncTex?.(await collectSyncTex(dir, jobname, editorContent, tex))
+            setSyncTex?.(
+              await (await loadActions()).collectSyncTex(dir, jobname, editorContent, tex),
+            )
             // Force PdfPreviewPanel to reload by re-setting the same path with a
             // cache-busting suffix is awkward (Tauri convertFileSrc); instead we
             // toggle the path through null then back so the effect re-runs.
@@ -399,7 +420,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   }, [pdfPath, transclusionResolver, editorRef, setPdfPath, setSyncTex])
 
   const handleExportPdf = useCallback(async () => {
-    await exportPdfAction({
+    await (
+      await loadActions()
+    ).exportPdf({
       activeFile: vaultRef.current.openFile,
       vaultPath: vaultRef.current.vaultPath,
       activePath: vaultRef.current.activeTabPath,
@@ -442,7 +465,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   }, [t, deps, vaultFiles, transclusionResolver, editorRef, setLatexDiagnostics, setPdfPath])
 
   const handleExportAnki = useCallback(async () => {
-    await exportAnkiCardsToFile(
+    await (
+      await loadActions()
+    ).exportAnkiCardsToFile(
       {
         activeFile: vaultRef.current.openFile,
         readEditorContent: () => editorRef.current?.getValue() ?? null,
@@ -453,7 +478,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   }, [t, editorRef])
 
   const handleImportDocument = useCallback(async () => {
-    await importDocumentAction({
+    await (
+      await loadActions()
+    ).importDocument({
       vaultPath: vaultRef.current.vaultPath,
       deps,
       dialogTitle: t.app.importDocTitle,
@@ -484,7 +511,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   )
 
   const handleExportTypst = useCallback(async () => {
-    await exportTypstAction({
+    await (
+      await loadActions()
+    ).exportTypst({
       activeFile: vaultRef.current.openFile,
       vaultPath: vaultRef.current.vaultPath,
       deps,
@@ -496,7 +525,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   }, [deps, t, typstMessages, editorRef])
 
   const handleExportTypstPdf = useCallback(async () => {
-    await exportTypstPdfAction({
+    await (
+      await loadActions()
+    ).exportTypstPdf({
       activeFile: vaultRef.current.openFile,
       vaultPath: vaultRef.current.vaultPath,
       deps,
@@ -510,7 +541,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   // Native compile of an open .typ file: the Typst source is the document,
   // no pandoc conversion involved. Feeds the PDF preview like the LaTeX path.
   const handleCompileTypstFilePdf = useCallback(async () => {
-    await compileTypstFilePdfAction({
+    await (
+      await loadActions()
+    ).compileTypstFilePdf({
       activeFile: vaultRef.current.openFile,
       deps,
       dialogTitle: t.app.dialogExportPdf,
@@ -541,13 +574,11 @@ export function useExportActions(ctx: ExportActionsCtx) {
     let tmpPath: string | null = null
     try {
       const source = editorRef.current?.getValue() ?? file.content
-      warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
-      tmpPath = await exportTempPath(
-        vaultRef.current.vaultPath,
-        pathDirname(file.path) || ".",
-        "docx.tmp.md",
-      )
-      await writeTextFile(tmpPath, toPandocMarkdownInput(source))
+      ;(await loadActions()).warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
+      tmpPath = await (
+        await loadActions()
+      ).exportTempPath(vaultRef.current.vaultPath, pathDirname(file.path) || ".", "docx.tmp.md")
+      await writeTextFile(tmpPath, (await loadConversion()).toPandocMarkdownInput(source))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
@@ -575,13 +606,11 @@ export function useExportActions(ctx: ExportActionsCtx) {
     let tmpPath: string | null = null
     try {
       const source = editorRef.current?.getValue() ?? file.content
-      warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
-      tmpPath = await exportTempPath(
-        vaultRef.current.vaultPath,
-        pathDirname(file.path) || ".",
-        "beamer.tmp.md",
-      )
-      await writeTextFile(tmpPath, toPandocMarkdownInput(source))
+      ;(await loadActions()).warnLossyExport(source, "latex", t.app.exportLossWarning, showToast)
+      tmpPath = await (
+        await loadActions()
+      ).exportTempPath(vaultRef.current.vaultPath, pathDirname(file.path) || ".", "beamer.tmp.md")
+      await writeTextFile(tmpPath, (await loadConversion()).toPandocMarkdownInput(source))
       const cmd = Command.create("pandoc", [tmpPath, "-o", outPath, "-t", "beamer", "--standalone"])
       const result = await cmd.execute()
       if (result.code !== 0) throw new Error(result.stderr)
@@ -602,7 +631,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     if (!editor || !openFile) return
     const content = editor.getValue()
     const title = openFile.name.replace(/\.[^.]+$/, "")
-    const html = exportReveal(content, title)
+    const html = (await loadExporter()).exportReveal(content, title)
     try {
       const path = await save({
         title: t.palette.exportReveal,
@@ -693,8 +722,13 @@ ${html}
       defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
     })
     if (!path) return
-    warnLossyExport(editor.getValue(), "obsidian", t.app.exportLossWarning, showToast)
-    await writeTextFile(path, exportToObsidianMarkdown(editor.getValue()))
+    ;(await loadActions()).warnLossyExport(
+      editor.getValue(),
+      "obsidian",
+      t.app.exportLossWarning,
+      showToast,
+    )
+    await writeTextFile(path, (await loadObsidian()).exportToObsidianMarkdown(editor.getValue()))
     showToast(t.app.revealExportSuccess, "success")
   }, [t, editorRef])
 
