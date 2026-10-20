@@ -373,7 +373,10 @@ function isAnyEnvStart(line: string): boolean {
  * across the CMDX↔disk round-trip. Line-based + depth-tracked to match
  * `convertCmdxEnvironments`.
  */
-function maskSpecialBlocks(text: string): { masked: string; restore: (s: string) => string } {
+export function maskSpecialBlocks(text: string): {
+  masked: string
+  restore: (s: string) => string
+} {
   const lines = text.split("\n")
   const slots: string[] = []
   const out: string[] = []
@@ -963,7 +966,7 @@ export function toCmdxTex(text: string): string {
 
 // ── Mappings ────────────────────────────────────────────────────────────────
 
-const OBSIDIAN_CALLOUTS: Record<string, string> = {
+export const OBSIDIAN_CALLOUTS: Record<string, string> = {
   theorem: "abstract",
   lemma: "abstract",
   corollary: "abstract",

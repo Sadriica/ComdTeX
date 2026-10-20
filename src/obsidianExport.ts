@@ -7,6 +7,7 @@
  */
 
 import { stripKeepMarks } from "./keepMarks"
+import { numberEnvironmentsForExport } from "./envExport"
 
 const ENV_LABELS: Record<string, string> = {
   theorem: "theorem",
@@ -24,7 +25,7 @@ const ENV_LABELS: Record<string, string> = {
 export function exportToObsidianMarkdown(rawMarkdown: string): string {
   // Keep marks are editor-only. Strip first: `stripKeepMarks` is math/code-aware
   // and needs the document still shaped as prose. See keepMarks.ts.
-  return stripKeepMarks(rawMarkdown)
+  return numberEnvironmentsForExport(stripKeepMarks(rawMarkdown), "callout", undefined, ENV_LABELS)
     .replace(
       /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#[\w:.-]+\})?\s*\n([\s\S]*?)^:::\s*$/gm,
       (_full, rawName: string, title: string | undefined, body: string) => {
@@ -42,7 +43,7 @@ export function exportToObsidianMarkdown(rawMarkdown: string): string {
         ].join("\n")
       },
     )
-    .replace(/^(#{1,6}\s+.+?)\s*\{#sec:[\w:.-]+\}\s*$/gm, "$1")
+    .replace(/^(#{1,6}\s+.+?)[ \t]*\{#sec:[\w:.-]+\}[ \t]*$/gm, "$1")
     .replace(/\$\$([\s\S]+?)\$\$\s*\{#eq:[\w:.-]+\}/g, "$$$$ $1 $$$$")
     .replace(/(!\[[^\]]*\]\([^)]*\))\s*\{#fig:[\w:.-]+\}/g, "$1")
     .replace(/^\s*\{#tbl:[\w:.-]+\}\s*$/gm, "")

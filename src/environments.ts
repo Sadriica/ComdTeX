@@ -238,6 +238,25 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
   ].join("\n")
 }
 
+/**
+ * The visible heading of an environment, e.g. `Teorema 2 (Pitagoras)`. The
+ * preview and every non-LaTeX export build their headings here so the numbering
+ * scheme has a single definition. `title` is used as given (callers escape it
+ * for HTML when needed).
+ */
+export function envDisplayLabel(envName: string, number: string, title: string): string {
+  const info = ALL_ENVS[envName]
+  if (!info) return title
+  return [info.es, number, title ? `(${title})` : ""].filter(Boolean).join(" ")
+}
+
+/** Advances `counters` for `envName` and returns its number ("" when unnumbered). */
+export function nextEnvNumber(counters: Record<string, number>, envName: string): string {
+  if (!NUMBERED_ENVS[envName]) return ""
+  counters[envName] = (counters[envName] ?? 0) + 1
+  return String(counters[envName])
+}
+
 export function buildEnvHTML(
   envName: string,
   title: string,
@@ -263,10 +282,7 @@ export function buildEnvHTML(
   if (!info) return innerHTML
 
   const isProof = envName === "proof"
-  const safeTitle = escHtml(title)
-  const displayLabel = [info.es, number, safeTitle ? `(${safeTitle})` : ""]
-    .filter(Boolean)
-    .join(" ")
+  const displayLabel = envDisplayLabel(envName, number, escHtml(title))
   const sizeClass = size ? ` math-env-${size}` : ""
   const idAttr = label ? ` id="env-${escHtml(label)}"` : ""
 
@@ -487,11 +503,7 @@ export function extractEnvironments(
 
         if (!ALL_ENVS[envName]) return match
 
-        let number = ""
-        if (NUMBERED_ENVS[envName]) {
-          counters[envName] = (counters[envName] ?? 0) + 1
-          number = String(counters[envName])
-        }
+        const number = nextEnvNumber(counters, envName)
 
         let innerHTML: string
         try {
@@ -556,11 +568,7 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
     const envName = match[2].toLowerCase()
     const label = match[4]
     if (!ALL_ENVS[envName]) continue
-    let number = ""
-    if (NUMBERED_ENVS[envName]) {
-      localCounters[envName] = (localCounters[envName] ?? 0) + 1
-      number = String(localCounters[envName])
-    }
+    const number = nextEnvNumber(localCounters, envName)
     if (label) {
       // Preserve the first occurrence so references stay stable; warn on dupes.
       if (labels.has(label)) {
@@ -653,7 +661,11 @@ export function resolveEnvironmentRefs(
   text: string,
   labels: Map<string, EnvironmentReference>,
   resolver?: EnvironmentDocResolver,
+  format: "html" | "text" = "html",
 ): string {
+  // "text" is for exports that cannot carry the preview's links (Markdown,
+  // Pandoc inputs, Reveal): same resolved wording, no anchor markup.
+  const asText = format === "text"
   return text.replace(
     ENV_REF_RE,
     (
@@ -675,8 +687,9 @@ export function resolveEnvironmentRefs(
         // ref: a cross-ref must never throw out of the render pipeline.
         const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
         const ref = docLabels?.get(label)
-        if (!ref) return `<span class="env-ref-broken">${kind} (?)</span>`
+        if (!ref) return asText ? `${kind} (?)` : `<span class="env-ref-broken">${kind} (?)</span>`
         const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+        if (asText) return display
         const safeDoc = escHtml(docPath)
         const safeLabel = escHtml(label)
         return `<a class="env-ref env-ref-cross" data-target="${safeDoc}" data-env-label="${safeLabel}" title="${safeDoc}" href="#env-${safeLabel}">${display}</a>`
@@ -687,8 +700,13 @@ export function resolveEnvironmentRefs(
       if (!ENV_REF_PREFIXES[localPrefix]) return full
       const label = `${localPrefix}:${localId}`
       const ref = labels.get(label)
-      if (!ref) return `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
+      if (!ref) {
+        return asText
+          ? `${ENV_REF_PREFIXES[localPrefix]} (?)`
+          : `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
+      }
       const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+      if (asText) return display
       return `<a class="env-ref" href="#env-${label}">${display}</a>`
     },
   )

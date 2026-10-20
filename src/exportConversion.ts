@@ -1,6 +1,7 @@
 import { toStorageMd } from "./cmdxFormat"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { stripKeepMarks } from "./keepMarks"
+import { numberEnvironmentsForExport } from "./envExport"
 
 /**
  * Export conversion starts from CMDX editor content but does not represent a
@@ -14,7 +15,11 @@ export function toExportMarkdownContent(cmdxContent: string): string {
   // structural labels ({#sec:…}, {#eq:…}, etc.) and cross-references (@eq:…).
   // exportToObsidianMarkdown then strips those labels from visible text and
   // rewrites cross-references as backtick code spans: work not done by toStorageMd.
-  return exportToObsidianMarkdown(toStorageMd(cmdxContent, { envLabels: false }))
+  // Number environments and resolve their refs BEFORE toStorageMd, which would
+  // turn them into callouts with no numbers (see envExport.ts).
+  return exportToObsidianMarkdown(
+    toStorageMd(numberEnvironmentsForExport(cmdxContent, "callout"), { envLabels: false }),
+  )
 }
 
 // ComdTeX-only special blocks are preserved verbatim by toStorageMd (a
@@ -79,5 +84,10 @@ export function toPandocMarkdownInput(cmdxContent: string): string {
   // `^^` reaches a .docx / .typ / Beamer / PDF output. See keepMarks.ts.
   // Special blocks degrade to captioned code fences BEFORE toStorageMd so its
   // verbatim masking never sees them (export-only path; storage is untouched).
-  return toStorageMd(specialBlocksToPandoc(stripKeepMarks(cmdxContent)), { envLabels: false })
+  // Environments are numbered after the special blocks degrade (so nested ones
+  // are already fences) and before toStorageMd flattens them to callouts.
+  return toStorageMd(
+    numberEnvironmentsForExport(specialBlocksToPandoc(stripKeepMarks(cmdxContent)), "bold"),
+    { envLabels: false },
+  )
 }
