@@ -95,39 +95,57 @@ function pushLabel(
   })
 }
 
+export interface FileLabelScan {
+  labels: StructuralLabel[]
+  references: StructuralReference[]
+}
+
+/** Pure per-file scan: the unit of work the label worker runs and caches. */
+export function scanFileLabels(file: {
+  path: string
+  name: string
+  content: string
+}): FileLabelScan {
+  const labels: StructuralLabel[] = []
+  const references: StructuralReference[] = []
+  const lines = file.content.split("\n")
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1
+    const labelRe = /\{#([a-zA-Z]+:[\w:.-]+)\}/g
+    let labelMatch: RegExpExecArray | null
+    while ((labelMatch = labelRe.exec(line)) !== null) {
+      pushLabel(labels, labelMatch[1], file.path, file.name, lineNumber, line)
+    }
+
+    const refRe = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+    let refMatch: RegExpExecArray | null
+    while ((refMatch = refRe.exec(line)) !== null) {
+      const kind = normalizeKind(refMatch[1])
+      if (!kind) continue
+      const id = `${kind}:${refMatch[2]}`
+      references.push({
+        id,
+        kind,
+        filePath: file.path,
+        fileName: file.name,
+        line: lineNumber,
+        context: line.trim(),
+      })
+    }
+  })
+  return { labels, references }
+}
+
 export function scanStructuralLabels(
   files: { path: string; name: string; content: string }[],
 ): StructuralLabelIndex {
-  const labels: StructuralLabel[] = []
-  const references: StructuralReference[] = []
+  return buildLabelIndex(files.map(scanFileLabels))
+}
 
-  for (const file of files) {
-    const lines = file.content.split("\n")
-    lines.forEach((line, index) => {
-      const lineNumber = index + 1
-      const labelRe = /\{#([a-zA-Z]+:[\w:.-]+)\}/g
-      let labelMatch: RegExpExecArray | null
-      while ((labelMatch = labelRe.exec(line)) !== null) {
-        pushLabel(labels, labelMatch[1], file.path, file.name, lineNumber, line)
-      }
-
-      const refRe = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
-      let refMatch: RegExpExecArray | null
-      while ((refMatch = refRe.exec(line)) !== null) {
-        const kind = normalizeKind(refMatch[1])
-        if (!kind) continue
-        const id = `${kind}:${refMatch[2]}`
-        references.push({
-          id,
-          kind,
-          filePath: file.path,
-          fileName: file.name,
-          line: lineNumber,
-          context: line.trim(),
-        })
-      }
-    })
-  }
+/** Combine per-file scans (in file order) into the vault-wide index. */
+export function buildLabelIndex(scans: FileLabelScan[]): StructuralLabelIndex {
+  const labels = scans.flatMap((scan) => scan.labels)
+  const references = scans.flatMap((scan) => scan.references)
 
   const byId = new Map<string, StructuralLabel[]>()
   for (const label of labels) {

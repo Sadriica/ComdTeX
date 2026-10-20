@@ -145,7 +145,7 @@ import {
 } from "./searchReplace"
 import { toEditorContent, toDiskContent } from "./cmdxFormat"
 import { resolveTransclusions } from "./transclusion"
-import { scanStructuralLabels } from "./structuralLabels"
+import { LabelScanner, createDefaultLabelBackend } from "./labelScanner"
 import { showToast } from "./toastService"
 import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
@@ -1137,14 +1137,30 @@ function AppContent({
     return () => clearTimeout(timer)
   }, [vault.openTabs])
 
+  // Label scan runs in a worker (sync fallback) and only rescans changed files;
+  // results superseded by a newer vaultFiles snapshot are dropped by the scanner.
+  const labelScannerRef = useRef<LabelScanner | null>(null)
   useEffect(() => {
-    updateStructuralLabelSuggestions(
-      scanStructuralLabels(vaultFiles).labels.map((label) => ({
-        id: label.id,
-        kind: label.kind,
-        detail: `${label.fileName}:${label.line}`,
-      })),
-    )
+    const scanner = new LabelScanner(createDefaultLabelBackend())
+    labelScannerRef.current = scanner
+    return () => {
+      scanner.cancel()
+      labelScannerRef.current = null
+    }
+  }, [])
+  useEffect(() => {
+    const scanner = labelScannerRef.current
+    if (!scanner) return
+    void scanner.update(vaultFiles).then((index) => {
+      if (!index) return
+      updateStructuralLabelSuggestions(
+        index.labels.map((label) => ({
+          id: label.id,
+          kind: label.kind,
+          detail: `${label.fileName}:${label.line}`,
+        })),
+      )
+    })
   }, [vaultFiles])
 
   // Build a vault-wide text cache (used by transclusion + wikilink resolution).
