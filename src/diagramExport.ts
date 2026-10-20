@@ -22,7 +22,7 @@ import { renderGraphSVG } from "./graphViz"
 import { renderPlotHTML } from "./functionPlot"
 import { renderCommDiagSVG } from "./commDiag"
 import { buildTruthTable } from "./truthTable"
-import { MERMAID_CONFIG } from "./mermaidConfig"
+import { getActiveMermaidConfig } from "./mermaidConfig"
 
 export interface SpecialBlock {
   type: string
@@ -174,7 +174,7 @@ export async function diagramToSvg(block: SpecialBlock): Promise<string | null> 
         // so an open preview never inherits the export's palette.
         const mermaid = await loadMermaid()
         mermaid.initialize({
-          ...MERMAID_CONFIG,
+          ...getActiveMermaidConfig(),
           theme: "neutral",
           themeVariables: { background: "#ffffff" },
         } as Parameters<typeof mermaid.initialize>[0])
@@ -185,7 +185,7 @@ export async function diagramToSvg(block: SpecialBlock): Promise<string | null> 
           )
           return extractSvg(svg)
         } finally {
-          mermaid.initialize(MERMAID_CONFIG as Parameters<typeof mermaid.initialize>[0])
+          mermaid.initialize(getActiveMermaidConfig() as Parameters<typeof mermaid.initialize>[0])
         }
       }
       case "excalidraw": {

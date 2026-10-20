@@ -115,6 +115,18 @@ export function setFlowchartSvg(source: string, svg: string): void {
 export function clearFlowchartSvgCache(): void {
   flowchartSvgCache.clear()
 }
+// The cache is only valid for the palette the SVGs were drawn with. The App
+// reports the active palette's key; when it changes the entries are dropped, so
+// a theme switch can never serve an SVG drawn with the old colours. Returns
+// true when an earlier palette was replaced (callers re-render).
+let flowchartThemeKey = ""
+export function setFlowchartThemeKey(key: string): boolean {
+  if (key === flowchartThemeKey) return false
+  const hadPalette = flowchartThemeKey !== ""
+  flowchartThemeKey = key
+  flowchartSvgCache.clear()
+  return hadPalette
+}
 
 // ── Excalidraw SVG cache for `:::excalidraw` ─────────────────────────────────
 // Pre-rendered SVGs keyed by their base64 scene. The renderer is synchronous

@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Writing statistics survive a restart.** The Focus panel kept words, active time and pomodoros only for the running session. Totals are now kept per day (up to a year), the daily goal counts the whole day, and a Today section shows today and the last seven days.
 
 ### Changed
+- **Mermaid 12, with the new look.** Diagrams now use Mermaid 12's `neo` look and its ELK layout (loaded only when a diagram is drawn), coloured from the app's design tokens, so they follow the dark, light and high-contrast themes and re-draw when you switch. A note can keep the old look with `look: classic` and `layout: dagre` in its Mermaid frontmatter or an `%%{init}%%` line. Exported diagrams still use a print palette.
 - The vault-wide label scan behind `@eq:`/`@fig:` autocomplete runs in a background worker and only rescans notes that changed, so typing in a large vault no longer stalls on it.
 - `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 
