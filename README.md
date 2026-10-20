@@ -324,7 +324,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Equations panel (all numbered equations in current file)
 - Frontmatter panel (GUI editor for YAML fields)
 - Citation manager (browse and edit BibTeX entries)
-- Todo panel (collects `- [ ]` task items across open files)
+- Todo panel (collects `- [ ]` task items across the whole vault; open tabs override disk, and toggling works on closed files)
 - Vault stats panel (file count, word count, link health, equations, citations)
 - Git panel (branch, staged/unstaged changes, commit, push). Git runs with hooks, `core.fsmonitor` and the `ext::` transport disabled, so your own git hooks do not run for commits made from the app
 - Guided collaboration in plain language: share a vault with a coauthor, bring/send changes, and resolve "keep mine / use theirs" conflicts without knowing Git; see [docs/collaboration.md](docs/collaboration.md)

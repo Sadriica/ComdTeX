@@ -185,7 +185,7 @@ import {
   isGeneratedFile,
   type FolderRules,
 } from "./folderRules"
-import { runGenerator, type SourceFile } from "./generators"
+import { runGenerator, type SourceFile, type TaskItem } from "./generators"
 import "katex/dist/katex.min.css"
 import "./App.css"
 
@@ -4100,11 +4100,12 @@ function AppContent({
   )
 
   const handleTodoToggle = useCallback(
-    (path: string, newContent: string) => {
-      // writeFileSafe masks special blocks (toDiskContent), cancels the pending
-      // per-path autosave so it can't clobber this write, patches the open tab,
-      // and refreshes mtime. Surface failures instead of swallowing them.
-      vault.writeFileSafe(path, newContent).catch((e) => {
+    (task: TaskItem) => {
+      // toggleTask re-validates the task against the file as it is now (tab
+      // buffer or fresh disk read) and writes through writeFileSafe, which
+      // masks special blocks, cancels the per-path autosave and refreshes the
+      // index. Surface failures instead of swallowing them.
+      vault.toggleTask(task).catch((e) => {
         showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
       })
     },
@@ -4879,6 +4880,7 @@ function AppContent({
                     <GraphPanel
                       tree={vault.tree}
                       openTabs={vault.openTabs}
+                      loadDiskSources={vault.loadVaultSources}
                       activePath={vault.activeTabPath}
                       onOpenFile={(path) => {
                         const node = findVaultNodeByPath(path)
@@ -4891,6 +4893,8 @@ function AppContent({
                   <LazyRegion region="panel">
                     <TodoPanel
                       openTabs={vault.openTabs}
+                      loadDiskSources={vault.loadVaultSources}
+                      reloadKey={vault.contentVersion}
                       onNavigate={handleTodoNavigate}
                       onToggle={handleTodoToggle}
                     />

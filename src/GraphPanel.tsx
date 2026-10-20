@@ -4,10 +4,13 @@ import { flatFiles } from "./wikilinks"
 import { displayBasename, pathBasename, pathDirname } from "./pathUtils"
 import { extractFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
+import { useVaultSources, type LoadDiskSources } from "./vaultSources"
 
 interface GraphPanelProps {
   tree: FileNode[]
   openTabs: { path: string; content: string }[]
+  /** Reads every vault text file (shared search index); open tabs override it. */
+  loadDiskSources: LoadDiskSources
   activePath: string | null
   onOpenFile: (path: string) => void
 }
@@ -40,14 +43,39 @@ const FOLDER_COLORS = [
   "#6a9955",
 ]
 
-function buildGraph(
+const WIKI_RE = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
+
+// Per-file parse cache keyed on the content string. `sources` is rebuilt on
+// every keystroke, but only the edited tab has new text; every other note is a
+// Map lookup instead of a regex scan plus a frontmatter parse.
+const parseCache = new Map<string, { content: string; links: string[]; tags: string[] }>()
+
+function parseDoc(path: string, content: string): { links: string[]; tags: string[] } {
+  const hit = parseCache.get(path)
+  if (hit && hit.content === content) return hit
+  const links: string[] = []
+  const wikiRe = new RegExp(WIKI_RE.source, "g")
+  let m: RegExpExecArray | null
+  while ((m = wikiRe.exec(content)) !== null) links.push(m[1].trim().toLowerCase())
+  let tags: string[] = []
+  const parsed = extractFrontmatter(content)
+  if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
+    tags = parsed.data.tags.map((t) => String(t).toLowerCase())
+  }
+  const entry = { content, links, tags }
+  parseCache.set(path, entry)
+  return entry
+}
+
+/** Nodes are every vault file; edges come from the wikilinks in `sources`. */
+export function buildGraph(
   tree: FileNode[],
-  openTabs: { path: string; content: string }[],
+  sources: { path: string; content: string }[],
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const files = flatFiles(tree)
   const pathToNode = new Map<string, GraphNode>()
   const folderSet = new Set<string>()
-  const tabContent = new Map(openTabs.map((tab) => [tab.path, tab.content]))
+  const tabContent = new Map(sources.map((src) => [src.path, src.content]))
 
   // Collect unique folder names for coloring
   for (const f of files) {
@@ -61,13 +89,7 @@ function buildGraph(
   const nodes: GraphNode[] = files.map((f) => {
     const folder = pathBasename(pathDirname(f.path))
     const content = tabContent.get(f.path) ?? ""
-    let tags: string[] = []
-    if (content) {
-      const parsed = extractFrontmatter(content)
-      if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
-        tags = parsed.data.tags.map((t) => String(t).toLowerCase())
-      }
-    }
+    const tags = content ? parseDoc(f.path, content).tags : []
     return {
       id: f.path,
       label: displayBasename(f.path),
@@ -82,7 +104,7 @@ function buildGraph(
   })
   nodes.forEach((n) => pathToNode.set(n.id, n))
 
-  // Build edges from [[wikilinks]] in open tabs
+  // Build edges from the [[wikilinks]] of every source (disk + open tabs)
   const nameToPath = new Map<string, string>()
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, "").toLowerCase()
@@ -91,17 +113,15 @@ function buildGraph(
 
   const edgeSet = new Set<string>()
   const edges: GraphEdge[] = []
-  for (const tab of openTabs) {
-    const wikiRe = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
-    let m: RegExpExecArray | null
-    while ((m = wikiRe.exec(tab.content)) !== null) {
-      const target = m[1].trim().toLowerCase()
+  for (const src of sources) {
+    if (!pathToNode.has(src.path)) continue
+    for (const target of parseDoc(src.path, src.content).links) {
       const targetPath = nameToPath.get(target)
-      if (targetPath && targetPath !== tab.path) {
-        const key = [tab.path, targetPath].sort().join("→")
+      if (targetPath && targetPath !== src.path) {
+        const key = [src.path, targetPath].sort().join("→")
         if (!edgeSet.has(key)) {
           edgeSet.add(key)
-          edges.push({ source: tab.path, target: targetPath })
+          edges.push({ source: src.path, target: targetPath })
         }
       }
     }
@@ -213,22 +233,29 @@ function layoutFor(key: string, nodes: GraphNode[], edges: GraphEdge[]): GraphNo
   return lastLayout
 }
 
-export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: GraphPanelProps) {
+export default function GraphPanel({
+  tree,
+  openTabs,
+  loadDiskSources,
+  activePath,
+  onOpenFile,
+}: GraphPanelProps) {
   const t = useT()
+  const { sources } = useVaultSources(loadDiskSources, openTabs)
   // `openTabs` is a new array on every keystroke, and the layout is a
   // force simulation: 80 steps of O(nodes^2) repulsion. Rebuilding the raw
   // graph is linear and fine; laying it out again while someone types a word
   // that changes no link is not. So the simulation keys on the SHAPE of the
   // graph (its nodes and edges), and typing prose leaves the layout alone.
   const baseGraph = useMemo(() => {
-    const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, openTabs)
+    const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, sources)
     const simulated = layoutFor(graphShapeKey(rawNodes, rawEdges), rawNodes, rawEdges)
     const folders = [...new Set(simulated.map((n) => n.folder))]
     const fc = new Map(
       folders.map((f, i) => [f, FOLDER_COLORS_LIST[i % FOLDER_COLORS_LIST.length]]),
     )
     return { nodes: simulated, edges: rawEdges, folderColors: fc }
-  }, [tree, openTabs])
+  }, [tree, sources])
 
   // draggableNodes: user-dragged positions override the simulated layout.
   const [draggableNodes, setDraggableNodes] = useState<GraphNode[]>([])

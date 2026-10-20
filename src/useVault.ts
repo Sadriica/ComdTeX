@@ -20,6 +20,8 @@ import {
   buildSearchRegex,
   type SearchCandidate,
 } from "./searchIndex"
+import { loadDiskSources } from "./vaultSources"
+import { toggleTaskInContent, type TaskItem } from "./generators"
 import { forgetViewState, renameViewState } from "./editorViewState"
 import { diffLineSummary } from "./textDiff"
 import { STORAGE_KEYS } from "./storageKeys"
@@ -404,6 +406,33 @@ const BINARY_EXTS = new Set([
 const MAX_TREE_DEPTH = 10
 const IGNORED_TREE_DIRS = new Set(["node_modules"])
 
+/** Every text vault file in tree order, with lazy mtime/content readers. */
+function textCandidates(tree: FileNode[]): SearchCandidate[] {
+  const candidates: SearchCandidate[] = []
+  const collect = (nodes: FileNode[]) => {
+    for (const node of nodes) {
+      if (node.type === "dir" && node.children) collect(node.children)
+      else if (node.type === "file" && isTextVaultFile(node)) {
+        candidates.push({
+          path: node.path,
+          name: node.name,
+          ext: node.ext ?? "",
+          getMtime: async () => {
+            try {
+              return (await stat(node.path)).mtime?.getTime()
+            } catch {
+              return undefined
+            }
+          },
+          readContent: () => readTextFile(node.path),
+        })
+      }
+    }
+  }
+  collect(tree)
+  return candidates
+}
+
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
   return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "csv"
@@ -703,6 +732,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // per vault: cleared whenever the user switches vaults (selectVault /
   // createVault) so a stale path from a previous vault can never leak in.
   const searchIndexRef = useRef<VaultSearchIndex>(new VaultSearchIndex())
+  // Bumped by writes that change a file without going through a tab (todo
+  // toggle on a closed note), so panels reading the whole vault reload.
+  const [contentVersion, setContentVersion] = useState(0)
   // saveFile / flushPending are defined after the callbacks that need them
   // (restoreTabs, selectVault, createVault); these refs break the ordering.
   const saveFileRef = useRef<
@@ -1836,8 +1868,46 @@ export function useVault(options: UseVaultOptions | number = {}) {
       } else {
         searchIndexRef.current.invalidate(path)
       }
+      setContentVersion((v) => v + 1)
     },
     [patchTabContent],
+  )
+
+  /**
+   * Editor-format content of every text vault file, from the shared search
+   * index (mtime-gated: unchanged files are not re-read). Disk state only;
+   * callers layer open tabs on top (see `vaultSources.ts`). Identity changes
+   * with the tree, which is what makes the whole-vault panels reload.
+   */
+  const loadVaultSources = useCallback(
+    (isCancelled: () => boolean) =>
+      loadDiskSources(searchIndexRef.current, textCandidates(tree), { isCancelled }),
+    [tree],
+  )
+
+  /**
+   * Flip one task checkbox in any vault file, open or not. The text is
+   * re-validated against the file as it is NOW (open tab buffer, else a fresh
+   * disk read), so a stale panel can never toggle the wrong line. Goes through
+   * writeFileSafe, never a raw write. Returns false when the task is gone.
+   */
+  const toggleTask = useCallback(
+    async (task: TaskItem): Promise<boolean> => {
+      const path = task.filePath
+      const tab = openTabsRef.current.find((tb) => tb.path === path)
+      const current = tab
+        ? (pendingContent.current.get(path) ?? tab.content)
+        : toEditorContent(path, await readTextFile(path))
+      const next = toggleTaskInContent(current, task.line, task.text)
+      if (next === null) {
+        searchIndexRef.current.invalidate(path)
+        setContentVersion((v) => v + 1)
+        return false
+      }
+      await writeFileSafe(path, next)
+      return true
+    },
+    [writeFileSafe],
   )
 
   /**
@@ -1894,28 +1964,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       // order the old recursive walk visited them, so result ordering and the
       // 500-result cap behave identically. mtime/content are fetched lazily by
       // the index only for candidates it actually reaches (see searchIndex.ts).
-      const candidates: SearchCandidate[] = []
-      const collect = (nodes: FileNode[]) => {
-        for (const node of nodes) {
-          if (node.type === "dir" && node.children) collect(node.children)
-          else if (node.type === "file" && isTextVaultFile(node)) {
-            candidates.push({
-              path: node.path,
-              name: node.name,
-              ext: node.ext ?? "",
-              getMtime: async () => {
-                try {
-                  return (await stat(node.path)).mtime?.getTime()
-                } catch {
-                  return undefined
-                }
-              },
-              readContent: () => readTextFile(node.path),
-            })
-          }
-        }
-      }
-      collect(tree)
+      const candidates = textCandidates(tree)
 
       const results = await searchIndexRef.current.search(
         candidates,
@@ -2077,5 +2126,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     moveFile,
     search,
     replaceInVault,
+    loadVaultSources,
+    toggleTask,
+    contentVersion,
   }
 }

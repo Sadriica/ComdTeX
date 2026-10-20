@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **The link graph and the task list now cover the whole vault.** Both panels only looked at documents open in tabs, so links and tasks in closed notes were missing. They now read every note through the same mtime-gated index vault search uses (an unchanged file is never read twice), and an open tab's unsaved text still wins over the disk copy. Ticking a task in a note that is not open edits that file safely: the line is re-checked against the file as it is now, and nothing is written if it changed.
+
 ## [1.29.1] - 2026-10-15
 
 ### Fixed

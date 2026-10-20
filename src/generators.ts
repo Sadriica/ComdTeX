@@ -58,6 +58,22 @@ export function parseTasks(files: SourceFile[]): TaskItem[] {
   return items
 }
 
+/**
+ * Flip the checkbox on 1-based `line` of `content`, but only if that line is
+ * still the task whose text is `text`. Returns null when the file changed
+ * underneath (line moved, edited or gone), so a stale toggle never touches the
+ * wrong line.
+ */
+export function toggleTaskInContent(content: string, line: number, text: string): string | null {
+  const lines = content.split("\n")
+  const ln = lines[line - 1]
+  if (ln === undefined) return null
+  const m = TASK_RE.exec(ln)
+  if (!m || m[2].trim() !== text) return null
+  lines[line - 1] = ln.replace(/\[[ xX]\]/, m[1] === " " ? "[x]" : "[ ]")
+  return lines.join("\n")
+}
+
 /** Note name for a wikilink: basename without extension. */
 function noteName(path: string): string {
   return pathBasename(path).replace(/\.[^.]+$/, "")
