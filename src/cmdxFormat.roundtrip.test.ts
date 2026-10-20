@@ -97,12 +97,7 @@ const STORAGE_CORPUS: { name: string; md: string; keep: string[] }[] = [
   {
     name: "obsidian types with no exact env",
     md: "> [!info] Hi\n> a\n\n> [!important]+ Ho\n> b\n\n> [!question] Why\n> c\n\n> [!success]- Yes\n> d",
-    keep: [
-      "[!info] Hi",
-      "[!important]+ Remark: Ho",
-      "[!question] Exercise: Why",
-      "[!success]- Proof: Yes",
-    ],
+    keep: ["[!info] Hi", "[!important]+ Ho", "[!question] Why", "[!success]- Yes"],
   },
   {
     name: "type named like a special block",
@@ -112,7 +107,7 @@ const STORAGE_CORPUS: { name: string; md: string; keep: string[] }[] = [
   {
     name: "nested callouts",
     md: "> [!abstract] Theorem: Outer {#thm:outer}\n> text\n> > [!warning]- Inner\n> > deep",
-    keep: ["{#thm:outer}", "[!warning]- Warning: Inner"],
+    keep: ["{#thm:outer}", "[!warning]- Inner"],
   },
   {
     name: "callout with a table in the body",
@@ -145,9 +140,8 @@ const CMDX_CORPUS: string[] = [
   ":::foo\nx\n:::",
   ":::foo[Bar]\nx\n:::",
   ":::danger[Watch out]\nx\n:::",
-  ":::warning[Cuidado]\n<!--cmdx fold=- -->\nbody\n:::",
-  ":::note[Hi]\n<!--cmdx type=info -->\nbody\n:::",
-  ":::theorem[Outer] {#thm:o}\ntext\n:::warning[Inner]\n<!--cmdx fold=+ -->\ndeep\n:::\n:::",
+  ":::tip[Hi]\nbody\n:::",
+  ":::theorem[Outer] {#thm:o}\ntext\n:::warning[Inner]\ndeep\n:::\n:::",
   "table(A, B)",
   "| A | B |\n|---|---|\n| 1 | 2 |",
   "```\ntable(A, B)\n:::note\nx\n:::\n```",
@@ -194,9 +188,7 @@ describe("cmdxFormat round-trip invariants", () => {
   })
 
   it("keeps fold marker and unknown callout types", () => {
-    expect(toStorageMd(toCmdxMd("> [!warning]- Cuidado\n> b"))).toBe(
-      "> [!warning]- Warning: Cuidado\n> b",
-    )
+    expect(toStorageMd(toCmdxMd("> [!warning]- Cuidado\n> b"))).toBe("> [!warning]- Cuidado\n> b")
     expect(toStorageMd(toCmdxMd("> [!danger] D\n> b"))).toBe("> [!danger] D\n> b")
     expect(toStorageMd(":::foo\nx\n:::")).toBe("> [!foo]\n> x")
   })

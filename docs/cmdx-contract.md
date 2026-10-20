@@ -41,18 +41,24 @@ Arguments are parsed with balanced parentheses, so nested shorthands are valid.
 Markdown storage is Obsidian-compatible:
 
 - Theorem-like CMDX environments become Obsidian callouts.
-- Environment type is encoded in the callout title, e.g. `Theorem: Title`, so it
-  can be recovered on reopen.
+- The environment type rides on the callout title (`Theorem: Title`) only when the
+  callout type alone would reopen as a different environment (`abstract` reopens as
+  `lemma`, `note` as `note`). Otherwise the title is written exactly as typed:
+  `:::tip[Hi]` is `> [!tip] Hi`, never `> [!tip] Tip: Hi`.
 - The environment label is saved on the callout heading, e.g.
   `> [!abstract] Theorem: Pyth {#thm:pyth}`, so `@thm:pyth` references survive a
   save and a reopen. `toStorageMd(text, { envLabels })` controls this: storage keeps
   labels (the default); user-facing exports (Obsidian, Pandoc input) pass
   `envLabels: false` and drop them.
-- Fold markers (`[!note]-`, `[!note]+`) are preserved.
-- Callout types with no exact environment (`danger`, `quote`, and any other type the app
-  does not know) are preserved. When the type cannot be recovered from the heading, the
-  converter writes a lossless marker line, `<!--cmdx type=... fold=... -->`, right
-  after the heading and reads it back on open.
+- Open + save of an unchanged file is byte-identical. A callout becomes an
+  environment on open only when writing that environment back reproduces the
+  original lines exactly (the converter checks this for every callout). Anything
+  else stays a callout in the editor and is saved as written: fold markers
+  (`[!tip]-`, `[!tip]+`), types with no exact environment (`[!theorem]` without
+  a prefix, `[!NOTE]`, `[!my-type]`), and unusual spacing or blank-line style.
+  The editor never shows a `<!--cmdx ... -->` marker. Older builds wrote one
+  (`<!--cmdx type=... fold=... -->`); it is still read, and stripped, if it
+  appears in a draft or old buffer.
 - Tables that have body rows are left exactly as written on open. Only a bare header
   plus separator row (no body) becomes `table(A, B)`, and it is written back as that
   header and separator on save.

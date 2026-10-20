@@ -87,7 +87,7 @@ function preprocessCallouts(text: string): string {
 
   while (i < lines.length) {
     const line = lines[i]
-    const opener = /^>\s*\[!([\w]+)\](.*)$/.exec(line)
+    const opener = /^>\s*\[!([\w-]+)\][+-]?(.*)$/.exec(line)
     if (opener) {
       const type = opener[1].toLowerCase()
       const titleRest = opener[2].trim()

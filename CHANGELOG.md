@@ -3,6 +3,12 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Callouts survive open and save byte for byte.** `> [!tip] Hi` was saved as `> [!tip] Tip: Hi`, because the environment name was baked into the title. The name is now written only when the callout type alone would reopen as a different environment (`Theorem: Pyth`).
+- **No more `<!--cmdx type=... -->` line in the editor.** Callouts that no environment reproduces exactly (folded ones, `[!theorem]` without a prefix, `[!NOTE]`, `[!my-type]`) now stay ordinary callouts in the editor and are saved as written. Editor text from older builds that still carries the marker loads and saves correctly.
+
 ## [1.29.1] - 2026-10-15
 
 ### Fixed
