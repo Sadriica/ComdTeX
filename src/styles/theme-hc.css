@@ -83,38 +83,6 @@ html:has(.app[data-theme="hc"]) #root {
   background: #000000;
   border-bottom: 1px solid #ffffff;
 }
-.app[data-theme="hc"] .toolbar-btn {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .toolbar-btn:hover {
-  background: #ffff00;
-  border-color: #ffff00;
-  color: #000;
-}
-.app[data-theme="hc"] .toolbar-btn:active {
-  background: #ffd700;
-}
-.app[data-theme="hc"] .toolbar-group {
-  border-right-color: #ffffff;
-}
-.app[data-theme="hc"] .dropdown-panel {
-  background: #000000;
-  border: 1px solid #ffffff;
-}
-.app[data-theme="hc"] .dropdown-item {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .dropdown-item:hover {
-  background: #ffff00;
-  border-color: #ffff00;
-  color: #000;
-}
-.app[data-theme="hc"] .toolbar-right {
-  border-left-color: #ffffff;
-}
-.app[data-theme="hc"] .toolbar-preview-btn.active {
-  color: #ffff00;
-}
 
 /* Resizer */
 .app[data-theme="hc"] .resizer-v:hover,
@@ -127,7 +95,6 @@ html:has(.app[data-theme="hc"]) #root {
   background: #000000;
   border-right: 1px solid #ffffff;
 }
-.app[data-theme="hc"] .sidebar-tabs,
 .app[data-theme="hc"] .sidebar-header {
   background: #000000;
   border-bottom: 1px solid #ffffff;
@@ -137,17 +104,6 @@ html:has(.app[data-theme="hc"]) #root {
 }
 .app[data-theme="hc"] .sidebar-collapse-btn:hover {
   color: #ffff00;
-}
-.app[data-theme="hc"] .sidebar-tab {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .sidebar-tab:hover {
-  color: #ffff00;
-  background: #1a1a1a;
-}
-.app[data-theme="hc"] .sidebar-tab.active {
-  color: #ffff00;
-  border-bottom: 2px solid #ffff00;
 }
 .app[data-theme="hc"] .tree-header {
   color: #ffffff;
@@ -221,18 +177,6 @@ html:has(.app[data-theme="hc"]) #root {
 .app[data-theme="hc"] .tree-drop-target {
   background: rgba(255, 255, 0, 0.2);
   outline: 2px dashed #ffff00;
-}
-
-/* Tab bar / tabs */
-.app[data-theme="hc"] .editor-tab-bar {
-  background: #000000;
-  border-bottom: 1px solid #ffffff;
-}
-.app[data-theme="hc"] .editor-tab-title {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .editor-tab-title.dim {
-  color: #888888;
 }
 .app[data-theme="hc"] .tab-bar {
   background: #000000;
@@ -917,42 +861,19 @@ html:has(.app[data-theme="hc"]) #root {
   border-bottom-width: 2px;
   color: #ffff00;
 }
-
-/* Git panel: high contrast */
-.app[data-theme="hc"] .git-header {
-  background: #000;
-  border-bottom: 1px solid #ffffff;
-}
-.app[data-theme="hc"] .git-branch {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .git-refresh-btn {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .git-refresh-btn:hover:not(:disabled) {
-  color: #ffff00;
-  background: #1a1a1a;
-}
-.app[data-theme="hc"] .git-message,
-.app[data-theme="hc"] .git-not-repo {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .git-init-btn,
 .app[data-theme="hc"] .git-commit-btn,
 .app[data-theme="hc"] .git-empty-btn {
   background: #3a96dd;
   color: #ffffff;
   border: 1px solid #ffffff;
 }
-.app[data-theme="hc"] .git-init-btn:hover,
 .app[data-theme="hc"] .git-commit-btn:hover:not(:disabled),
 .app[data-theme="hc"] .git-empty-btn:hover {
   background: #ffff00;
   color: #000;
 }
 .app[data-theme="hc"] .git-commit-area,
-.app[data-theme="hc"] .git-section,
-.app[data-theme="hc"] .git-log-section {
+.app[data-theme="hc"] .git-section {
   border-color: #ffffff;
 }
 .app[data-theme="hc"] .git-commit-input {
@@ -996,12 +917,6 @@ html:has(.app[data-theme="hc"]) #root {
 }
 .app[data-theme="hc"] .git-action-discard:hover {
   color: #ff3030;
-}
-.app[data-theme="hc"] .git-log-toggle {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .git-log-toggle:hover {
-  color: #ffff00;
 }
 .app[data-theme="hc"] .git-log-entry {
   color: #ffffff;
@@ -1351,12 +1266,6 @@ html:has(.app[data-theme="hc"]) #root {
 .app[data-theme="hc"] .todo-done .todo-text {
   color: #cccccc;
 }
-
-/* Equations panel */
-.app[data-theme="hc"] .eq-list-count {
-  color: #ffffff;
-  border-bottom: 1px solid #ffffff;
-}
 .app[data-theme="hc"] .eq-list-item {
   border-bottom: 1px solid #444;
 }
@@ -1525,12 +1434,6 @@ html:has(.app[data-theme="hc"]) #root {
   border-color: #ffff00;
   color: #ffff00;
 }
-
-/* Symbol picker */
-.app[data-theme="hc"] .symbol-panel {
-  background: #000;
-  border: 2px solid #ffffff;
-}
 .app[data-theme="hc"] .symbol-tabs {
   border-bottom: 1px solid #ffffff;
 }
@@ -1617,31 +1520,6 @@ html:has(.app[data-theme="hc"]) #root {
 .app[data-theme="hc"] .welcome-version,
 .app[data-theme="hc"] .welcome-hint {
   color: #cccccc;
-}
-
-/* Onboarding */
-.app[data-theme="hc"] .onboarding-overlay {
-  background: #000;
-}
-.app[data-theme="hc"] .onboarding-logo {
-  color: #ffff00;
-}
-.app[data-theme="hc"] .onboarding-sub {
-  color: #ffffff;
-}
-.app[data-theme="hc"] .onboarding-btn {
-  background: #3a96dd;
-  color: #ffffff;
-  border: 1px solid #ffffff;
-}
-.app[data-theme="hc"] .onboarding-btn:hover {
-  background: #ffff00;
-  color: #000;
-}
-.app[data-theme="hc"] .onboarding-features li {
-  background: #000;
-  color: #ffffff;
-  border-left-color: #ffffff;
 }
 
 /* Focus mode bg */

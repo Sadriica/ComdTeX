@@ -137,30 +137,6 @@
   background: #1177bb;
 }
 
-/* ── Editor tab bar ── */
-.editor-tab-bar {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  background: #252526;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-  font-size: 13px;
-}
-
-.editor-tab-title {
-  color: #ccc;
-}
-.editor-tab-title.dim {
-  color: #555;
-}
-.dirty-dot {
-  color: #e8b450;
-  margin-left: 6px;
-  font-size: 10px;
-}
-
 /* ── Panes ── */
 .pane {
   flex: 1;

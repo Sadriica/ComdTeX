@@ -1,5 +1,6 @@
 /* ── Symbol Picker Panel ─────────────────────────────────────── */
 .symbol-picker {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -46,6 +47,9 @@
   padding: 0.4em 0 0.2em;
 }
 .symbol-grid {
+  padding: 6px;
+  max-height: 200px;
+  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 2px;

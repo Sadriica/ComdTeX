@@ -116,10 +116,6 @@
   min-width: 0;
   background: transparent; /* inherit the unified topbar bg */
 }
-.menubar-spacer {
-  flex: 1 1 0;
-  min-width: 8px;
-}
 
 .menubar-section-btn,
 .menubar-direct-btn {

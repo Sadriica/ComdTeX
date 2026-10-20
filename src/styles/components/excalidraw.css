@@ -239,12 +239,7 @@
 }
 .status-ai-spinner {
   display: inline-block;
-  animation: comdtex-spin 1s linear infinite;
-}
-@keyframes comdtex-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 1s linear infinite;
 }
 
 /* ── Focus view, detached from the top bar ──────────────────────────────── */

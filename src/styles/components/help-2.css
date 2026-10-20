@@ -213,10 +213,3 @@
   padding: 1px 5px;
   color: #ccc;
 }
-
-/* unused legacy */
-.hp-env-grid,
-.hp-env-list,
-.hp-sh-group-label {
-  display: none;
-}

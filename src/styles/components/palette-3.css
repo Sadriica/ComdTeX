@@ -87,12 +87,7 @@
   border-top-color: var(--accent, #7c9cbf);
   border-radius: 50%;
   display: inline-block;
-  animation: cmdk-spin 0.7s linear infinite;
-}
-@keyframes cmdk-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 0.7s linear infinite;
 }
 .cmdk-edit-error {
   color: #e06c75;

@@ -13,8 +13,7 @@
   .sidebar,
   .resizer-v,
   #editor-pane,
-  .status-bar,
-  .onboarding-overlay {
+  .status-bar {
     display: none !important;
   }
   .app {

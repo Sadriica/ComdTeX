@@ -119,12 +119,6 @@
   border-color: #7a2020;
   color: #fff;
 }
-.ai-streaming {
-  font-size: 11px;
-  color: var(--muted);
-  font-style: italic;
-  padding: 0 2px;
-}
 /* Live response feedback: blinking caret on the streaming text + "typing" dots
    while waiting for the first token. */
 .ai-streaming-text {

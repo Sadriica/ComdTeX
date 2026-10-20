@@ -79,39 +79,6 @@ html:has(.app[data-theme="light"]) #root {
   background: #f5f5f5;
   border-bottom-color: #e0e0e0;
 }
-.app[data-theme="light"] .toolbar-btn {
-  color: #1f1f1f;
-}
-.app[data-theme="light"] .toolbar-btn:hover {
-  background: #eaeaea;
-  border-color: #d0d0d0;
-  color: #000;
-}
-.app[data-theme="light"] .toolbar-btn:active {
-  background: #d6d6d6;
-}
-.app[data-theme="light"] .toolbar-group {
-  border-right-color: #e0e0e0;
-}
-.app[data-theme="light"] .dropdown-panel {
-  background: #ffffff;
-  border-color: #d0d0d0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-.app[data-theme="light"] .dropdown-item {
-  color: #1f1f1f;
-}
-.app[data-theme="light"] .dropdown-item:hover {
-  background: #eaeaea;
-  border-color: #d0d0d0;
-  color: #000;
-}
-.app[data-theme="light"] .toolbar-right {
-  border-left-color: #e0e0e0;
-}
-.app[data-theme="light"] .toolbar-preview-btn.active {
-  color: #0066cc;
-}
 
 /* Resizer */
 .app[data-theme="light"] .resizer-v:hover,
@@ -124,7 +91,6 @@ html:has(.app[data-theme="light"]) #root {
   background: #fafafa;
   border-right-color: #e0e0e0;
 }
-.app[data-theme="light"] .sidebar-tabs,
 .app[data-theme="light"] .sidebar-header {
   background: #f5f5f5;
   border-bottom-color: #e0e0e0;
@@ -134,20 +100,6 @@ html:has(.app[data-theme="light"]) #root {
 }
 .app[data-theme="light"] .sidebar-collapse-btn:hover {
   color: #000;
-}
-.app[data-theme="light"] .sidebar-tab {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .sidebar-tab:hover {
-  color: #1f1f1f;
-  background: #eaeaea;
-}
-.app[data-theme="light"] .sidebar-tab.active {
-  color: #000;
-  border-bottom-color: #0066cc;
-}
-.app[data-theme="light"] .sidebar-tab:focus-visible {
-  outline-color: #0066cc;
 }
 .app[data-theme="light"] .tree-header {
   color: #4a4a4a;
@@ -217,18 +169,6 @@ html:has(.app[data-theme="light"]) #root {
 .app[data-theme="light"] .tree-drop-target {
   background: rgba(0, 102, 204, 0.12);
   outline-color: #0066cc;
-}
-
-/* Editor tab bar / tabs */
-.app[data-theme="light"] .editor-tab-bar {
-  background: #f5f5f5;
-  border-bottom-color: #e0e0e0;
-}
-.app[data-theme="light"] .editor-tab-title {
-  color: #1f1f1f;
-}
-.app[data-theme="light"] .editor-tab-title.dim {
-  color: #b0b0b0;
 }
 .app[data-theme="light"] .tab-bar {
   background: #fafafa;
@@ -913,33 +853,6 @@ html:has(.app[data-theme="light"]) #root {
   border-bottom-color: #b0b0b0;
   color: #1f1f1f;
 }
-
-/* Git panel */
-.app[data-theme="light"] .git-header {
-  background: #f5f5f5;
-  border-bottom-color: #e0e0e0;
-}
-.app[data-theme="light"] .git-branch {
-  color: #1f1f1f;
-}
-.app[data-theme="light"] .git-refresh-btn {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .git-refresh-btn:hover:not(:disabled) {
-  color: #1f1f1f;
-  background: #eaeaea;
-}
-.app[data-theme="light"] .git-message,
-.app[data-theme="light"] .git-not-repo {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .git-init-btn {
-  background: #0066cc;
-  color: #fff;
-}
-.app[data-theme="light"] .git-init-btn:hover {
-  background: #0052a3;
-}
 .app[data-theme="light"] .git-commit-area {
   border-bottom-color: #e0e0e0;
 }
@@ -997,15 +910,6 @@ html:has(.app[data-theme="light"]) #root {
 }
 .app[data-theme="light"] .git-action-discard:hover {
   color: #c0392b;
-}
-.app[data-theme="light"] .git-log-section {
-  border-top-color: #e0e0e0;
-}
-.app[data-theme="light"] .git-log-toggle {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .git-log-toggle:hover {
-  color: #1f1f1f;
 }
 .app[data-theme="light"] .git-log-empty {
   color: #8a8a8a;
@@ -1186,13 +1090,6 @@ html:has(.app[data-theme="light"]) #root {
   color: #b34000;
 }
 .app[data-theme="light"] .tag-source-inline {
-  color: #0066cc;
-}
-.app[data-theme="light"] .tag-hint {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .tag-hint code {
-  background: #f0f0f0;
   color: #0066cc;
 }
 
@@ -1401,12 +1298,6 @@ html:has(.app[data-theme="light"]) #root {
 .app[data-theme="light"] .todo-done .todo-text {
   color: #8a8a8a;
 }
-
-/* Equations panel */
-.app[data-theme="light"] .eq-list-count {
-  color: #4a4a4a;
-  border-bottom-color: #e0e0e0;
-}
 .app[data-theme="light"] .eq-list-item {
   border-bottom-color: #ececec;
 }
@@ -1576,13 +1467,6 @@ html:has(.app[data-theme="light"]) #root {
   border-color: #8a8a8a;
   color: #1f1f1f;
 }
-
-/* Symbol picker */
-.app[data-theme="light"] .symbol-panel {
-  background: #ffffff;
-  border-color: #d0d0d0;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-}
 .app[data-theme="light"] .symbol-tabs {
   border-bottom-color: #e0e0e0;
 }
@@ -1670,29 +1554,6 @@ html:has(.app[data-theme="light"]) #root {
 .app[data-theme="light"] .welcome-version,
 .app[data-theme="light"] .welcome-hint {
   color: #8a8a8a;
-}
-
-/* Onboarding */
-.app[data-theme="light"] .onboarding-overlay {
-  background: #fafafa;
-}
-.app[data-theme="light"] .onboarding-logo {
-  color: #0066cc;
-}
-.app[data-theme="light"] .onboarding-sub {
-  color: #4a4a4a;
-}
-.app[data-theme="light"] .onboarding-btn {
-  background: #0066cc;
-  color: #fff;
-}
-.app[data-theme="light"] .onboarding-btn:hover {
-  background: #0052a3;
-}
-.app[data-theme="light"] .onboarding-features li {
-  background: #ffffff;
-  color: #4a4a4a;
-  border-left-color: #e0e0e0;
 }
 
 /* Focus mode bg */

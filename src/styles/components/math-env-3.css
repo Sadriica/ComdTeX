@@ -5,12 +5,6 @@
   overflow-y: auto;
   height: 100%;
 }
-.eq-list-count {
-  font-size: 11px;
-  color: #666;
-  padding: 6px 10px;
-  border-bottom: 1px solid #2a2a2a;
-}
 .eq-list-item {
   display: flex;
   align-items: baseline;
