@@ -15,6 +15,7 @@ import {
 import { Command } from "@tauri-apps/plugin-shell"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
+import calloutIconsCss from "./styles/components/callout-icons.css?inline"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 import { pathJoin, pathDirname } from "./pathUtils"
 import { MACROS_FILENAME } from "./macros"
@@ -686,6 +687,8 @@ export function useExportActions(ctx: ExportActionsCtx) {
       .eq-number{position:absolute;right:0;top:50%;transform:translateY(-50%);color:#888}
       .fig-block{text-align:center;margin:1.5em 0}figcaption{font-size:.9em;color:#555}
       .callout{border-left:4px solid #888;padding:.75em 1em;margin:1em 0;background:#f9f9f9}
+      .callout-title{display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:.4em}
+      ${calloutIconsCss}
     `
 
     const standalone = `<!DOCTYPE html>

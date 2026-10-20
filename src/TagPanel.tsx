@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { extractDetailedTags } from "./frontmatter"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { ArrowLeft, Hash, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
 interface TagPanelProps {
@@ -51,7 +52,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
     return (
       <div className="panel-empty-rich">
         <div className="panel-empty-icon" aria-hidden="true">
-          {t.emptyStates.tagsIcon}
+          <Icon icon={Hash} size={16} />
         </div>
         <p className="panel-empty-message">{t.tagPanel.noFiles}</p>
       </div>
@@ -63,7 +64,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
       <div className="tag-panel">
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
-            {t.emptyStates.tagsIcon}
+            <Icon icon={Hash} size={16} />
           </div>
           <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.tagsMessage)}</p>
         </div>
@@ -110,7 +111,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
       {selected ? (
         <>
           <button className="tag-back" onClick={() => setSelected(null)}>
-            ← #{selected}
+            <Icon icon={ArrowLeft} size={14} /> #{selected}
           </button>
           <div className="tag-file-list">
             {selectedFiles.map((f) => (

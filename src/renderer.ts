@@ -50,36 +50,39 @@ const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .enable("table")
   .enable("strikethrough")
 
+// Callout type → icon key. The key is emitted as `data-icon` on an empty span;
+// styles/components/callout-icons.css draws the matching Lucide icon with a
+// CSS mask (currentColor), so no glyph or emoji is baked into the HTML.
 const CALLOUT_ICONS: Record<string, string> = {
-  note: "ℹ",
-  info: "ℹ",
-  tip: "💡",
-  hint: "💡",
-  warning: "⚠",
-  caution: "⚠",
-  attention: "⚠",
-  important: "❗",
-  danger: "🔴",
-  failure: "✗",
-  error: "✗",
-  success: "✓",
-  check: "✓",
-  done: "✓",
-  question: "?",
-  help: "?",
-  faq: "?",
-  quote: "❝",
-  cite: "❝",
-  theorem: "∎",
-  lemma: "∎",
-  corollary: "∎",
-  proposition: "∎",
-  definition: "≝",
-  example: "▶",
-  exercise: "✏",
-  proof: "□",
-  remark: "◆",
-  abstract: "◈",
+  note: "info",
+  info: "info",
+  tip: "tip",
+  hint: "tip",
+  warning: "warning",
+  caution: "warning",
+  attention: "warning",
+  important: "important",
+  danger: "danger",
+  failure: "error",
+  error: "error",
+  success: "success",
+  check: "success",
+  done: "success",
+  question: "question",
+  help: "question",
+  faq: "question",
+  quote: "quote",
+  cite: "quote",
+  theorem: "theorem",
+  lemma: "theorem",
+  corollary: "theorem",
+  proposition: "theorem",
+  definition: "definition",
+  example: "example",
+  exercise: "exercise",
+  proof: "proof",
+  remark: "remark",
+  abstract: "abstract",
 }
 
 function preprocessCallouts(text: string): string {
@@ -93,7 +96,7 @@ function preprocessCallouts(text: string): string {
     if (opener) {
       const type = opener[1].toLowerCase()
       const titleRest = opener[2].trim()
-      const icon = CALLOUT_ICONS[type] ?? "◈"
+      const icon = CALLOUT_ICONS[type] ?? "abstract"
       const defaultTitle = type.charAt(0).toUpperCase() + type.slice(1)
       const title = titleRest || defaultTitle
 
@@ -107,7 +110,7 @@ function preprocessCallouts(text: string): string {
 
       out.push(
         `<div class="callout callout-${type}">` +
-          `<div class="callout-title"><span class="callout-icon">${icon}</span> ${escHtml(title)}</div>` +
+          `<div class="callout-title"><span class="callout-icon" data-icon="${icon}" aria-hidden="true"></span> ${escHtml(title)}</div>` +
           `<div class="callout-body">\n\n${body}\n\n</div></div>`,
       )
     } else {

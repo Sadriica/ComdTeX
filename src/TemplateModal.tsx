@@ -6,6 +6,34 @@ import {
   processTemplateVariables,
 } from "./templates"
 import { useT } from "./i18n"
+import {
+  BookOpen,
+  File,
+  FileCode,
+  FileText,
+  FlaskConical,
+  Icon,
+  Library,
+  Newspaper,
+  Notebook,
+  Pencil,
+  Sigma,
+  X,
+  type LucideIcon,
+} from "./icons"
+
+const TEMPLATE_ICONS: Record<string, LucideIcon> = {
+  file: File,
+  "file-text": FileText,
+  "file-code": FileCode,
+  notebook: Notebook,
+  pencil: Pencil,
+  sigma: Sigma,
+  "flask-conical": FlaskConical,
+  "book-open": BookOpen,
+  newspaper: Newspaper,
+  library: Library,
+}
 import { useFocusTrap } from "./useFocusTrap"
 
 interface TemplateModalProps {
@@ -49,7 +77,7 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
     const updated = saveCustomTemplate({
       name: trimmed,
       description: templateDescription.trim() || t.templateModal.defaultDescription,
-      icon: "◇",
+      icon: "file-text",
       content: templateContent,
     })
     setCustomTemplates(updated)
@@ -75,8 +103,9 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
             className="modal-close"
             onClick={onClose}
             aria-label={t.templateModal.closeAriaLabel}
+            title={t.templateModal.closeAriaLabel}
           >
-            ✕
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="modal-body template-body">
@@ -145,7 +174,9 @@ export default function TemplateModal({ open, onClose, onCreate }: TemplateModal
                             className={`template-card${selectedId === tpl.id ? " selected" : ""}`}
                             onClick={() => setSelectedId(tpl.id)}
                           >
-                            <span className="template-icon">{tpl.icon}</span>
+                            <span className="template-icon" aria-hidden="true">
+                              <Icon icon={TEMPLATE_ICONS[tpl.icon] ?? FileText} size={16} />
+                            </span>
                             <span className="template-name">{tplT?.name ?? tpl.name}</span>
                             <span className="template-desc">
                               {tplT?.description ?? tpl.description}

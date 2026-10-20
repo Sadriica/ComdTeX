@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, Sigma } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -49,7 +50,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
     return (
       <div className="panel-empty-rich">
         <div className="panel-empty-icon" aria-hidden="true">
-          {t.emptyStates.equationsIcon}
+          <Icon icon={Sigma} size={16} />
         </div>
         <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.equationsMessage)}</p>
       </div>

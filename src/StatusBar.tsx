@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useT } from "./i18n"
+import { Circle, Cloud, Icon, RefreshCw, TriangleAlert } from "./icons"
 import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 
 interface StatusBarProps {
@@ -82,7 +83,11 @@ export default function StatusBar({
             : ""}
       </span>
       <span className="status-left">
-        {isDirty && <span className="status-dirty">●</span>}
+        {isDirty && (
+          <span className="status-dirty" aria-hidden="true">
+            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+          </span>
+        )}
         {mode && (
           <span className="status-mode">
             {mode === "tex"
@@ -115,7 +120,8 @@ export default function StatusBar({
                 title={t.cloudSync.statusBadgeTitle(label, cloudSync.rootPath)}
                 onClick={onCloudSyncClick}
               >
-                {hasConflicts ? "⚠ " : "☁ "}
+                <Icon icon={hasConflicts ? TriangleAlert : Cloud} size={14} />
+
                 {t.cloudSync.statusBadge(label)}
                 {hasConflicts && ` (${cloudConflictCount})`}
               </button>
@@ -148,7 +154,7 @@ export default function StatusBar({
         {fillingGaps && (
           <span className="status-item status-ai-busy">
             <span className="status-ai-spinner" aria-hidden="true">
-              ⟳
+              <Icon icon={RefreshCw} size={14} />
             </span>{" "}
             {t.aiGaps.working}
           </span>

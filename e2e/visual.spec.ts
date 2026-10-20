@@ -67,8 +67,8 @@ async function shot(page: Page, theme: string, name: string, vp = "") {
 async function openFromMenu(page: Page, section: string, item: string) {
   await page.locator(`.menubar-section-btn[title="${section}"]`).click()
   await page
-    .locator(".menubar-popup .menu-list-item")
-    .filter({ hasText: new RegExp(`^\\s*(?:\\S\\s+)?${item}\\s*$`) })
+    .locator(".menubar-popup .menu-list-item:not(.menu-sub-trigger)")
+    .filter({ hasText: new RegExp(`^\\s*${item}\\s*$`) })
     .first()
     .click()
   await page.waitForTimeout(500)

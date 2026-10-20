@@ -2,6 +2,7 @@ import { memo, useState } from "react"
 import type { OpenFile } from "./types"
 import type { LintSummary } from "./contentLinter"
 import { useT } from "./i18n"
+import { Circle, Icon, Pin, X } from "./icons"
 
 interface TabBarProps {
   tabs: OpenFile[]
@@ -62,7 +63,11 @@ function TabBar({
             onDragEnd={() => setDragIdx(null)}
           >
             <span className="tab-name">{tab.name}</span>
-            {tab.isDirty && <span className="tab-dirty">●</span>}
+            {tab.isDirty && (
+              <span className="tab-dirty" aria-hidden="true">
+                <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+              </span>
+            )}
             {hasErrors && (
               <span className="tab-lint-error" title={`${errors} error${errors === 1 ? "" : "s"}`}>
                 {errors}
@@ -82,18 +87,19 @@ function TabBar({
               }}
               aria-label={isPinned ? t.tabBar.unpinAriaLabel : t.tabBar.pinAriaLabel}
             >
-              {isPinned ? "📌" : "·"}
+              <Icon icon={Pin} size={14} style={isPinned ? { fill: "currentColor" } : undefined} />
             </button>
             {!isPinned && (
               <button
                 className="tab-close"
                 title={t.titleBar.close}
+                aria-label={t.titleBar.close}
                 onClick={(e) => {
                   e.stopPropagation()
                   onClose(tab.path)
                 }}
               >
-                ×
+                <Icon icon={X} size={14} />
               </button>
             )}
           </div>

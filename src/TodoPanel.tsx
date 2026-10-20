@@ -4,6 +4,7 @@ import { displayBasename } from "./pathUtils"
 import { parseTasks, type TaskItem, type SourceFile } from "./generators"
 import { useVaultSources, type LoadDiskSources } from "./vaultSources"
 import { useT } from "./i18n"
+import { Check, CircleCheck, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
 type TodoItem = TaskItem
@@ -64,7 +65,7 @@ export default function TodoPanel({
     return (
       <div className="panel-empty-rich">
         <div className="panel-empty-icon" aria-hidden="true">
-          {t.emptyStates.todoIcon}
+          <Icon icon={CircleCheck} size={16} />
         </div>
         <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.todoMessage)}</p>
       </div>
@@ -103,7 +104,7 @@ export default function TodoPanel({
                 title={item.done ? t.todo.markPending : t.todo.markDone}
                 aria-label={item.done ? t.todo.markPending : t.todo.markDone}
               >
-                {item.done ? "✓" : "○"}
+                {item.done && <Icon icon={Check} size={14} />}
               </button>
               <span
                 className="todo-text"

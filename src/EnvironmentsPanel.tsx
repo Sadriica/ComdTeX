@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, ScrollText } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import type { OpenFile } from "./types"
 import { renderEmptyMessage } from "./emptyStateMessage"
@@ -87,7 +88,7 @@ export default function EnvironmentsPanel({
     return (
       <div className="panel-empty-rich">
         <div className="panel-empty-icon" aria-hidden="true">
-          {t.emptyStates.environmentsIcon}
+          <Icon icon={ScrollText} size={16} />
         </div>
         <p className="panel-empty-message">
           {renderEmptyMessage(t.emptyStates.environmentsMessage)}

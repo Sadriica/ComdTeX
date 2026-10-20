@@ -1,4 +1,5 @@
 import { useT } from "./i18n"
+import { CircleX, Icon, TriangleAlert, X } from "./icons"
 import type { LatexDiagnostic } from "./latexErrors"
 
 interface LatexErrorModalProps {
@@ -14,8 +15,13 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
       <div className="latex-err-modal" onClick={(e) => e.stopPropagation()}>
         <div className="latex-err-header">
           <h3>{t.latexErrors.title}</h3>
-          <button className="latex-err-close" onClick={onClose} aria-label={t.latexErrors.close}>
-            ×
+          <button
+            className="latex-err-close"
+            onClick={onClose}
+            aria-label={t.latexErrors.close}
+            title={t.latexErrors.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="latex-err-body">
@@ -25,7 +31,11 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
             diagnostics.map((diag, idx) => (
               <div key={idx} className={`latex-diag ${diag.severity}`}>
                 <div className="latex-diag-title">
-                  {diag.severity === "error" ? "● " : "⚠ "}
+                  {diag.severity === "error" ? (
+                    <Icon icon={CircleX} size={14} />
+                  ) : (
+                    <Icon icon={TriangleAlert} size={14} />
+                  )}{" "}
                   {diag.severity === "error"
                     ? t.latexErrors.errorLabel
                     : t.latexErrors.warningLabel}

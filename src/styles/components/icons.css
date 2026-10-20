@@ -1,0 +1,37 @@
+/* Lucide icons (see src/icons.tsx): inherit colour and size from the text. */
+.icon {
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* An icon-only button centres its icon without each component restyling it.
+   :where() keeps specificity at zero so any component rule still wins. */
+:where(button:has(> .icon:only-child)) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Chrome controls that hold a Lucide icon: centre it on the text baseline. */
+.titlebar-btn,
+.menubar-section-btn,
+.menubar-direct-btn,
+.breadcrumb-sep,
+.breadcrumb-nav-btn,
+.tab-pin,
+.tab-close,
+.tab-dirty,
+.status-dirty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.menubar-section-btn,
+.menubar-direct-btn {
+  gap: var(--space-2);
+}
+.tab-dirty .icon,
+.status-dirty .icon {
+  width: 8px;
+  height: 8px;
+}

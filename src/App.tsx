@@ -78,6 +78,7 @@ import { AiSessionProvider } from "./useAiSession"
 import { useFocusTimer } from "./useFocusTimer"
 import { useSearchReplaceState } from "./useSearchReplaceState"
 import { LanguageContext, LANGS, useT } from "./i18n"
+import { Icon, X } from "./icons"
 import {
   getFileNameSet,
   flatFiles,
@@ -2235,7 +2236,7 @@ function AppContent({
             fallback.textContent = diagram
             const button = document.createElement("button")
             button.className = "mermaid-rerender-btn"
-            button.textContent = "↻ Re-render"
+            button.textContent = "Re-render"
             button.onclick = () => setMermaidVersion((v) => v + 1)
             div.replaceChildren(button, fallback)
           }
@@ -4177,7 +4178,7 @@ function AppContent({
         saveCustomTemplate({
           name,
           description: t.templateModal.defaultDescription,
-          icon: "◇",
+          icon: "file-text",
           content: parameterizeDocument(raw, node.name),
         })
         showToast(t.folderRules.savedAsTemplate(name), "success")
@@ -5324,7 +5325,7 @@ function AppContent({
                       title={t.app.closeSplitPane}
                       aria-label={t.app.closeSplitPane}
                     >
-                      ×
+                      <Icon icon={X} size={14} />
                     </button>
                   </div>
                   <div

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useT } from "./i18n"
+import { ChevronDown, ChevronRight, Icon } from "./icons"
 import { type Phase, type PomodoroConfig, formatClock, sessionStats } from "./pomodoro"
 import { dayKey, dayStats, recentTotals } from "./writingStats"
 import { type FocusTimer, wordCount } from "./useFocusTimer"
@@ -111,7 +112,8 @@ export default function FocusTimerPanel({
           onClick={() => setShowSettings((s) => !s)}
           aria-expanded={showSettings}
         >
-          {t.focusTimer.durations} {showSettings ? "▾" : "▸"}
+          {t.focusTimer.durations}{" "}
+          <Icon icon={showSettings ? ChevronDown : ChevronRight} size={14} />
         </button>
         {showSettings && (
           <div className="focus-timer-durations">

@@ -1,5 +1,6 @@
 import { openPath } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
+import { Cloud, Icon } from "./icons"
 import { providerLabel, type CloudSyncInfo } from "./cloudSync"
 import { showToast } from "./toastService"
 
@@ -32,7 +33,7 @@ export default function CloudSyncBanner({ provider, onDismiss }: CloudSyncBanner
   return (
     <div className="cloud-sync-banner" role="status">
       <span className="cloud-sync-banner-icon" aria-hidden="true">
-        ☁
+        <Icon icon={Cloud} size={14} />
       </span>
       <span className="cloud-sync-banner-text">
         <strong>{t.cloudSync.bannerTitle(label)}</strong>: {t.cloudSync.bannerBody}

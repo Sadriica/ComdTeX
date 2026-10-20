@@ -11,6 +11,7 @@
   flex-wrap: wrap;
 }
 .cloud-sync-banner-icon {
+  display: inline-flex;
   font-size: 14px;
 }
 .cloud-sync-banner-text {
@@ -39,6 +40,9 @@
 }
 
 .status-cloud-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
@@ -52,6 +56,8 @@
 }
 
 .tree-conflict-badge {
+  display: inline-flex;
+  align-items: center;
   margin-left: auto;
   padding: 0 6px;
   color: #ffaa44;
@@ -199,6 +205,8 @@
   min-height: 0;
 }
 .panel-header-btn {
+  display: inline-flex;
+  align-items: center;
   background: none;
   border: none;
   color: #888;

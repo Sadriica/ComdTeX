@@ -4,6 +4,42 @@ import type { FileNode } from "./types"
 import ContextMenu from "./ContextMenu"
 import { displayBasename, pathDirname, keepFileExtension } from "./pathUtils"
 import { useT } from "./i18n"
+import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ChevronDown,
+  ChevronRight,
+  File,
+  FileCode,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileType,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  Icon,
+  Library,
+  Plus,
+  RefreshCw,
+  TriangleAlert,
+  X,
+  type LucideIcon,
+} from "./icons"
+
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "avif"])
+
+/** Lucide icon for a file, by extension (md, tex, bib, csv, image, pdf, ...). */
+function fileIconFor(ext: string | undefined): LucideIcon {
+  const e = (ext ?? "").toLowerCase()
+  if (e === "md" || e === "markdown" || e === "txt") return FileText
+  if (e === "tex" || e === "typ" || e === "sty" || e === "cls") return FileCode
+  if (e === "bib") return Library
+  if (e === "csv" || e === "tsv") return FileSpreadsheet
+  if (e === "pdf") return FileType
+  if (IMAGE_EXTS.has(e)) return FileImage
+  return File
+}
 
 interface FileTreeProps {
   vaultPath: string | null
@@ -116,7 +152,8 @@ function FileNodeRow({
           }}
         >
           <span className="tree-icon" aria-hidden="true">
-            {open ? "▾" : "▸"}
+            <Icon icon={open ? ChevronDown : ChevronRight} size={14} />
+            <Icon icon={open ? FolderOpen : Folder} size={14} />
           </span>
           <span className="tree-name">{node.name}</span>
         </div>
@@ -142,7 +179,7 @@ function FileNodeRow({
     )
   }
 
-  const icon = node.ext === "tex" ? "τ" : node.ext === "bib" ? "β" : node.ext === "pdf" ? "P" : "M"
+  const fileIcon = fileIconFor(node.ext)
   const hasConflict = conflictPaths?.has(node.path) ?? false
 
   return (
@@ -167,8 +204,8 @@ function FileNodeRow({
         e.dataTransfer.effectAllowed = "move"
       }}
     >
-      <span className="tree-icon" aria-hidden="true">
-        {icon}
+      <span className="tree-icon tree-icon-file" aria-hidden="true">
+        <Icon icon={fileIcon} size={14} />
       </span>
       {renaming ? (
         <input
@@ -198,7 +235,7 @@ function FileNodeRow({
             onConflictClick?.(node.path)
           }}
         >
-          ⚠
+          <Icon icon={TriangleAlert} size={14} />
         </span>
       )}
     </div>
@@ -389,28 +426,28 @@ function FileTree({
             aria-label={t.fileTree.newFileLabel}
             onClick={() => startCreate("file")}
           >
-            +
+            <Icon icon={Plus} size={14} />
           </button>
           <button
             title={t.fileTree.newFolder}
             aria-label={t.fileTree.newFolderLabel}
             onClick={() => startCreate("folder")}
           >
-            ⊞
+            <Icon icon={FolderPlus} size={14} />
           </button>
           <button
             title={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
             aria-label={sortAsc ? t.fileTree.sortZA : t.fileTree.sortAZ}
             onClick={() => setSortAsc((a) => !a)}
           >
-            {sortAsc ? "↑A" : "↓Z"}
+            <Icon icon={sortAsc ? ArrowDownAZ : ArrowUpAZ} size={14} />
           </button>
           <button
             title={t.fileTree.changeVault}
             aria-label={t.fileTree.changeVault}
             onClick={onSelectVault}
           >
-            ⊙
+            <Icon icon={FolderOpen} size={14} />
           </button>
         </div>
       </div>
@@ -431,14 +468,17 @@ function FileTree({
             title={t.fileTree.clearFilter}
             aria-label={t.fileTree.clearFilter}
           >
-            ×
+            <Icon icon={X} size={14} />
           </button>
         )}
       </div>
 
       {isLoading && (
         <div className="tree-loading" aria-live="polite">
-          <span className="tree-spinner">⟳</span> {t.fileTree.loading}
+          <span className="tree-spinner">
+            <Icon icon={RefreshCw} size={14} />
+          </span>{" "}
+          {t.fileTree.loading}
         </div>
       )}
 

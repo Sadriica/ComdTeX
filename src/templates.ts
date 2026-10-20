@@ -4,6 +4,7 @@ export interface Template {
   id: string
   name: string
   description: string
+  /** Key into the TemplateModal icon map (Lucide); unknown keys fall back to a file icon. */
   icon: string
   content: string
   custom?: boolean
@@ -51,14 +52,14 @@ export const TEMPLATES: Template[] = [
     id: "blank",
     name: "Vacío",
     description: "Archivo en blanco",
-    icon: "□",
+    icon: "file",
     content: "",
   },
   {
     id: "article",
     name: "Artículo",
     description: "Documento académico con abstract y secciones",
-    icon: "📄",
+    icon: "file-text",
     content: `---
 title: Título del artículo
 author:
@@ -85,7 +86,7 @@ Breve descripción del contenido.
     id: "notes",
     name: "Apuntes de clase",
     description: "Notas con definiciones, teoremas y ejemplos",
-    icon: "📒",
+    icon: "notebook",
     content: `---
 title:
 author:
@@ -114,7 +115,7 @@ tags: []
     id: "problemset",
     name: "Tarea / Problem set",
     description: "Hoja de ejercicios numerados",
-    icon: "✏️",
+    icon: "pencil",
     content: `---
 title: Tarea
 author:
@@ -139,7 +140,7 @@ tags: []
     id: "theoremsheet",
     name: "Hoja de teoremas",
     description: "Referencia rápida de resultados matemáticos",
-    icon: "∑",
+    icon: "sigma",
     content: `---
 title: Hoja de teoremas
 author:
@@ -164,7 +165,7 @@ tags: []
     id: "research",
     name: "Nota de investigación",
     description: "Con BibTeX y referencias",
-    icon: "🔬",
+    icon: "flask-conical",
     content: `---
 title:
 author:
@@ -193,7 +194,7 @@ Como se muestra en @eq:main...
     id: "paper-overleaf",
     name: "Paper Overleaf-ready",
     description: "Artículo con labels, figuras, tablas y estructura exportable",
-    icon: "◇",
+    icon: "file-code",
     content: `---
 title: "{{title}}"
 author: "{{author}}"
@@ -241,7 +242,7 @@ La ecuación @eq:main se usa en @thm:main.
     id: "thesis",
     name: "Tesis / documento largo",
     description: "Documento principal con transclusiones por capítulos",
-    icon: "▦",
+    icon: "book-open",
     content: `---
 title: "{{title}}"
 author: "{{author}}"
@@ -275,7 +276,7 @@ comdtex.main: true
     id: "journal-ieee",
     name: "Paper IEEE",
     description: "Conferencia IEEE (IEEEtran); exporta con la clase real",
-    icon: "Ⅰ",
+    icon: "newspaper",
     category: "journal",
     content: `---
 title: "{{title}}"
@@ -318,7 +319,7 @@ $$ {#eq:model}
     id: "journal-acm",
     name: "Paper ACM",
     description: "Conferencia ACM (acmart sigconf); exporta con la clase real",
-    icon: "Λ",
+    icon: "newspaper",
     category: "journal",
     content: `---
 title: "{{title}}"
@@ -364,7 +365,7 @@ Proof sketch.
     id: "journal-elsevier",
     name: "Paper Elsevier",
     description: "Revista Elsevier (elsarticle); exporta con la clase real",
-    icon: "Ε",
+    icon: "newspaper",
     category: "journal",
     content: `---
 title: "{{title}}"
@@ -402,7 +403,7 @@ $$ {#eq:model}
     id: "journal-apa",
     name: "Manuscrito APA",
     description: "Manuscrito estilo APA 7 (apa7); exporta con la clase real",
-    icon: "Ψ",
+    icon: "newspaper",
     category: "journal",
     content: `---
 title: "{{title}}"
@@ -438,7 +439,7 @@ One-paragraph summary (150-250 words).
     id: "lecture-notes-book",
     name: "Libro de apuntes",
     description: "Capítulo con definiciones, teoremas, ejercicios y backlinks matemáticos",
-    icon: "▤",
+    icon: "library",
     content: `---
 title: "{{title}}"
 author: "{{author}}"

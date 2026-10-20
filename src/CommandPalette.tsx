@@ -1,6 +1,22 @@
 import { useState, useEffect, useRef, type ReactNode } from "react"
 import type { FileNode } from "./types"
 import { useT } from "./i18n"
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  ChevronRight,
+  Clock,
+  Command,
+  FileText,
+  Folder,
+  Icon,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Sigma,
+  Sparkles,
+  Upload,
+} from "./icons"
 
 export type PaletteCategory =
   "Edición" | "Insertar" | "Matemáticas" | "Vista" | "Exportar" | "IA" | "Vault" | "Navegación"
@@ -32,54 +48,19 @@ interface PaletteItem {
   action: () => void
 }
 
-// Monochrome folder icon (inline SVG with currentColor; emoji folder glyphs
-// render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
-const FolderIcon = (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    style={{ verticalAlign: "-0.15em" }}
-  >
-    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-  </svg>
-)
-
-// Monochrome AI sparkle (inline SVG with currentColor; the ✦/✨-style glyphs
-// render coloured in WebKitGTK, the same bug as the folder/gear icons).
-const SparkleIcon = (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    style={{ verticalAlign: "-0.15em" }}
-  >
-    <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
-  </svg>
-)
+const FolderIcon = <Icon icon={Folder} size={14} />
+const SparkleIcon = <Icon icon={Sparkles} size={14} />
 
 // Default per-category glyph (reused for commands that omit their own icon).
 const CATEGORY_ICON: Record<PaletteCategory, ReactNode> = {
-  Edición: "✎",
-  Insertar: "＋",
-  Matemáticas: "∑",
-  Vista: "▦",
-  Exportar: "⇪",
+  Edición: <Icon icon={Pencil} size={14} />,
+  Insertar: <Icon icon={Plus} size={14} />,
+  Matemáticas: <Icon icon={Sigma} size={14} />,
+  Vista: <Icon icon={LayoutGrid} size={14} />,
+  Exportar: <Icon icon={Upload} size={14} />,
   IA: SparkleIcon,
   Vault: FolderIcon,
-  Navegación: "⇄",
+  Navegación: <Icon icon={ArrowLeftRight} size={14} />,
 }
 
 function fuzzy(query: string, text: string): boolean {
@@ -187,7 +168,12 @@ export default function CommandPalette({
 
   if (inSubLevel && parent?.children) {
     items = [
-      { kind: "back", label: t.palette.back, icon: "←", action: back },
+      {
+        kind: "back",
+        label: t.palette.back,
+        icon: <Icon icon={ArrowLeft} size={14} />,
+        action: back,
+      },
       ...parent.children
         .filter((c) =>
           commandMatches(
@@ -318,7 +304,7 @@ export default function CommandPalette({
                 back()
               }}
             >
-              ← {t.palette.back}
+              <Icon icon={ArrowLeft} size={14} /> {t.palette.back}
             </button>
             <span className="palette-crumb-sep">/</span>
             <span className="palette-crumb-here">{parent.label}</span>
@@ -352,20 +338,30 @@ export default function CommandPalette({
                   <span
                     className={`palette-kind ${item.kind === "file" ? "palette-kind-file" : item.kind === "recent" ? "palette-kind-recent" : item.kind === "back" ? "palette-kind-back" : "palette-kind-cmd"}`}
                   >
-                    {item.icon ??
-                      (item.kind === "file"
-                        ? "M"
-                        : item.kind === "recent"
-                          ? "⏱"
-                          : item.kind === "back"
-                            ? "←"
-                            : "⌘")}
+                    {item.icon ?? (
+                      <Icon
+                        icon={
+                          item.kind === "file"
+                            ? FileText
+                            : item.kind === "recent"
+                              ? Clock
+                              : item.kind === "back"
+                                ? ArrowLeft
+                                : Command
+                        }
+                        size={14}
+                      />
+                    )}
                   </span>
                   <span className="palette-label">{item.label}</span>
                   {item.description && item.kind !== "command" && (
                     <span className="palette-desc">{item.description}</span>
                   )}
-                  {item.hasChildren && <span className="palette-chevron">▸</span>}
+                  {item.hasChildren && (
+                    <span className="palette-chevron" aria-hidden="true">
+                      <Icon icon={ChevronRight} size={14} />
+                    </span>
+                  )}
                   {item.shortcut && !item.hasChildren && (
                     <span className="cmd-shortcut">{item.shortcut}</span>
                   )}

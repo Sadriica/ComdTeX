@@ -12,6 +12,7 @@ import { getSecret } from "./secretStore"
 import { searchZotero, fetchZoteroBibtex, type ZoteroItem } from "./zotero"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
+import { Check, Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 
 interface CitationManagerProps {
@@ -288,8 +289,13 @@ export default function CitationManager({
           <span className="cit-manager-title" id={titleId}>
             {t.citationManager.title}
           </span>
-          <button className="cit-manager-close" onClick={onClose} title={t.citationManager.close}>
-            ×
+          <button
+            className="cit-manager-close"
+            onClick={onClose}
+            title={t.citationManager.close}
+            aria-label={t.citationManager.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
 
@@ -328,7 +334,11 @@ export default function CitationManager({
                     onClick={() => handleDelete(key)}
                     style={deleteConfirm === key ? { color: "#f48771" } : undefined}
                   >
-                    {deleteConfirm === key ? "✓" : "✕"}
+                    {deleteConfirm === key ? (
+                      <Icon icon={Check} size={14} />
+                    ) : (
+                      <Icon icon={X} size={14} />
+                    )}
                   </button>
                 </div>
               )

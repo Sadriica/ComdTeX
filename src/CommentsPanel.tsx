@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import type { Comment } from "./comments"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 
 export type CommentsFilter = "all" | "unresolved" | "resolved"
 
@@ -147,7 +148,7 @@ export default function CommentsPanel({
                       aria-label={t.comments.deleteAriaLabel}
                       title={t.comments.deleteAriaLabel}
                     >
-                      ×
+                      <Icon icon={X} size={14} />
                     </button>
                   </div>
                   {c.lineSnippet && (

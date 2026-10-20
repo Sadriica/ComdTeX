@@ -1,6 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
 import type { DepStatus } from "./checkDeps"
 import { useT } from "./i18n"
+import { ExternalLink, Icon, TriangleAlert } from "./icons"
 import { docsUrl } from "./docsLinks"
 
 const DOCS_BASE = "https://github.com/sadriica/comdtex/blob/main/docs/installing-deps.md"
@@ -71,7 +72,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
   return (
     <div className="deps-warning" role="alert">
       <span className="deps-warning-text">
-        {t.deps.intro}{" "}
+        <Icon icon={TriangleAlert} size={14} /> {t.deps.intro}{" "}
         {missing.map((item) => (
           <span key={item.name} className="deps-warning-item">
             <strong>{item.label}</strong>: {item.feature}
@@ -99,7 +100,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
           void openUrl(docsUrl("troubleshooting")).catch(() => {})
         }}
       >
-        {t.deps.troubleshooting} ↗
+        {t.deps.troubleshooting} <Icon icon={ExternalLink} size={14} />
       </button>
     </div>
   )

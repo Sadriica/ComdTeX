@@ -18,6 +18,7 @@
   background: #333;
 }
 .closed-tab-icon {
+  display: inline-flex;
   font-size: 14px;
 }
 .closed-tab-name {
