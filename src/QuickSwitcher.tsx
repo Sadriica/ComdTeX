@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useMemo } from "react"
 import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { ArrowDown, ArrowUp, CornerDownLeft, FileText, Icon } from "./icons"
 
 interface QuickSwitcherProps {
   open: boolean
@@ -105,15 +106,22 @@ export default function QuickSwitcher({
               }}
               onMouseEnter={() => setSelected(i)}
             >
-              <span className="quick-switcher-icon">📄</span>
+              <span className="quick-switcher-icon" aria-hidden="true">
+                <Icon icon={FileText} size={14} />
+              </span>
               <span className="quick-switcher-name">{file.name}</span>
               <span className="quick-switcher-path">{displayBasename(file.path)}</span>
             </div>
           ))}
         </div>
         <div className="quick-switcher-footer">
-          <span>↑↓ {t.quickSwitcher.navigate}</span>
-          <span>↵ {t.quickSwitcher.open}</span>
+          <span>
+            <Icon icon={ArrowUp} size={14} />
+            <Icon icon={ArrowDown} size={14} /> {t.quickSwitcher.navigate}
+          </span>
+          <span>
+            <Icon icon={CornerDownLeft} size={14} /> {t.quickSwitcher.open}
+          </span>
           <span>Esc {t.quickSwitcher.close}</span>
         </div>
       </div>

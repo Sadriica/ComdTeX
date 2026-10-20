@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useId } from "react"
 import { getSecret, setSecret } from "./secretStore"
 import { useT } from "./i18n"
+import { ExternalLink, Icon, X } from "./icons"
 import type { Settings } from "./useSettings"
 import { useFocusTrap } from "./useFocusTrap"
 import { PROVIDER_PRESETS, getPreset, checkConnection, type AiCheck } from "./ai/aiProvider"
@@ -177,8 +178,13 @@ export default function SettingsModal({
       >
         <div className="modal-header">
           <span id={titleId}>{t.settings.title}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.settings.closeAriaLabel}>
-            ✕
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.settings.closeAriaLabel}
+            title={t.settings.closeAriaLabel}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
 
@@ -767,7 +773,7 @@ export default function SettingsModal({
               void openUrl(sectionDocsUrl).catch(() => {})
             }}
           >
-            {t.settings.docsLink} ↗
+            {t.settings.docsLink} <Icon icon={ExternalLink} size={14} />
           </button>
         </div>
       </div>

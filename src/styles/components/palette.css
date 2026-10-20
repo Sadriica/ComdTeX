@@ -48,6 +48,7 @@
   background: #094771;
 }
 .quick-switcher-icon {
+  display: inline-flex;
   font-size: 14px;
 }
 .quick-switcher-name {
@@ -66,6 +67,11 @@
   padding: 20px;
   text-align: center;
   color: #888;
+}
+.quick-switcher-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 .quick-switcher-footer {
   display: flex;
@@ -101,6 +107,11 @@
 }
 .status-dirty {
   color: #ffcc00;
+  display: inline-flex;
+}
+.status-dirty .icon {
+  width: 8px;
+  height: 8px;
 }
 .status-mode {
   font-weight: 600;

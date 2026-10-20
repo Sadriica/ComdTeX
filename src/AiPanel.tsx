@@ -12,6 +12,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, MessageSquare, Plus, Settings as SettingsIcon, Sparkles, Trash2, X } from "./icons"
 import type { Settings } from "./useSettings"
 import {
   sendMessage,
@@ -410,20 +411,7 @@ export default function AiPanel({
         </div>
         <div className="panel-empty-rich">
           <div className="panel-empty-icon">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
-              <path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z" />
-            </svg>
+            <Icon icon={Sparkles} size={16} />
           </div>
           <div className="panel-empty-message">
             <strong>{t.ai.disabledTitle}</strong>
@@ -444,20 +432,7 @@ export default function AiPanel({
           className="panel-header-title"
           title={`${preset.label} · ${settings.aiModel || preset.id}`}
         >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            style={{ verticalAlign: "-1px", marginRight: "4px" }}
-          >
-            <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
-          </svg>
+          <Icon icon={Sparkles} size={14} />
           {preset.label}
           {settings.aiModel ? ` · ${settings.aiModel}` : ""}
         </span>
@@ -465,83 +440,38 @@ export default function AiPanel({
           <button
             className="panel-header-btn"
             title={t.ai.newConversation}
+            aria-label={t.ai.newConversation}
             onClick={() => {
               newConversation()
               setShowHistory(false)
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{ verticalAlign: "-2px" }}
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Icon icon={Plus} size={14} />
           </button>
           <button
             className={`panel-header-btn${showHistory ? " active" : ""}`}
             title={t.ai.conversations}
+            aria-label={t.ai.conversations}
             aria-expanded={showHistory}
             onClick={() => setShowHistory((v) => !v)}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{ verticalAlign: "-2px" }}
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+            <Icon icon={MessageSquare} size={14} />
           </button>
-          <button className="panel-header-btn" title={t.ai.clearThread} onClick={clearThread}>
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{ verticalAlign: "-2px" }}
-            >
-              <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6" />
-            </svg>
+          <button
+            className="panel-header-btn"
+            title={t.ai.clearThread}
+            aria-label={t.ai.clearThread}
+            onClick={clearThread}
+          >
+            <Icon icon={Trash2} size={14} />
           </button>
           <button
             className="panel-header-btn"
             title={t.ai.settingsShortcut}
+            aria-label={t.ai.settingsShortcut}
             onClick={onOpenSettings}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{ verticalAlign: "-2px" }}
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+            <Icon icon={SettingsIcon} size={14} />
           </button>
         </div>
       </div>
@@ -572,7 +502,7 @@ export default function AiPanel({
                 aria-label={t.ai.deleteConversation}
                 onClick={() => deleteConversation(c.id)}
               >
-                ✕
+                <Icon icon={X} size={14} />
               </button>
             </div>
           ))}

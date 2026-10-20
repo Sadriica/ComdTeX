@@ -1,5 +1,6 @@
 import { useRef, useId } from "react"
 import { useT } from "./i18n"
+import { Bookmark, Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -42,15 +43,20 @@ export default function BookmarksPopup({
       >
         <div className="modal-header">
           <span id={titleId}>{t.app.bookmarks}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>
-            ✕
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.titleBar.close}
+            title={t.titleBar.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="modal-body">
           {bookmarks.length === 0 && (
             <div className="panel-empty-rich">
               <div className="panel-empty-icon" aria-hidden="true">
-                {t.emptyStates.bookmarksIcon}
+                <Icon icon={Bookmark} size={16} />
               </div>
               <p className="panel-empty-message">
                 {renderEmptyMessage(t.emptyStates.bookmarksMessage)}
@@ -77,7 +83,7 @@ export default function BookmarksPopup({
                 title={t.app.removeBookmark}
                 aria-label={t.app.removeBookmark}
               >
-                ×
+                <Icon icon={X} size={14} />
               </button>
             </div>
           ))}

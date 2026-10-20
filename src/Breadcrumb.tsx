@@ -1,5 +1,6 @@
 import { useT } from "./i18n"
 import { pathBasename } from "./pathUtils"
+import { ChevronRight, Icon } from "./icons"
 
 interface BreadcrumbProps {
   vaultPath: string | null
@@ -51,7 +52,7 @@ export default function Breadcrumb({
         title={t.breadcrumb.backTitle}
         aria-label={t.breadcrumb.back}
       >
-        ‹
+        <Icon icon={ChevronRight} size={14} style={{ transform: "scaleX(-1)" }} />
       </button>
       <button
         className="breadcrumb-nav-btn"
@@ -60,13 +61,17 @@ export default function Breadcrumb({
         title={t.breadcrumb.forwardTitle}
         aria-label={t.breadcrumb.forward}
       >
-        ›
+        <Icon icon={ChevronRight} size={14} />
       </button>
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1
         return (
           <span key={seg.path} className="breadcrumb-segment">
-            {i > 0 && <span className="breadcrumb-sep">›</span>}
+            {i > 0 && (
+              <span className="breadcrumb-sep" aria-hidden="true">
+                <Icon icon={ChevronRight} size={14} />
+              </span>
+            )}
             {isLast ? (
               <span className="breadcrumb-current">{seg.label}</span>
             ) : onNavigate ? (
@@ -87,7 +92,9 @@ export default function Breadcrumb({
       })}
       {currentHeading && (
         <>
-          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-sep" aria-hidden="true">
+            <Icon icon={ChevronRight} size={14} />
+          </span>
           <span className="breadcrumb-heading">{currentHeading}</span>
         </>
       )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import type { FileNode, SearchResult } from "./types"
 import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
+import { Icon, Link2 } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
 const NO_BACKLINKS: SearchResult[] = []
@@ -66,7 +67,7 @@ export default function BacklinksPanel({
       {backlinks.length === 0 && !loading && (
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
-            {t.emptyStates.backlinksIcon}
+            <Icon icon={Link2} size={16} />
           </div>
           <p className="panel-empty-message">
             {renderEmptyMessage(t.emptyStates.backlinksMessage)}

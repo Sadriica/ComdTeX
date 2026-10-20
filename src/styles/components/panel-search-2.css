@@ -49,6 +49,10 @@
   opacity: 0.5;
   user-select: none;
 }
+.panel-empty-rich .panel-empty-icon .icon {
+  width: 32px;
+  height: 32px;
+}
 .panel-empty-rich .panel-empty-message {
   font-size: 12px;
   line-height: 1.5;

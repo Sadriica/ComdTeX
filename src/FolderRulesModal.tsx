@@ -1,5 +1,6 @@
 import { useRef, useState, useId } from "react"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
 import { loadCustomTemplates, TEMPLATES } from "./templates"
@@ -110,8 +111,13 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
       >
         <div className="modal-header">
           <span id={titleId}>{t.folderRules.title(displayBasename(dirPath))}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.folderRules.close}>
-            ✕
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.folderRules.close}
+            title={t.folderRules.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
 
@@ -188,8 +194,9 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
                   className="folder-rules-remove"
                   aria-label={t.folderRules.removeGenerated}
                   onClick={() => setGenerated((g) => g.filter((_, n) => n !== i))}
+                  title={t.folderRules.removeGenerated}
                 >
-                  ✕
+                  <Icon icon={X} size={14} />
                 </button>
               </div>
             ))}

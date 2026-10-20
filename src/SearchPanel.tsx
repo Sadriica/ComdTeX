@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { SearchResult } from "./types"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { ArrowLeftRight, Icon, RefreshCw, TriangleAlert } from "./icons"
 
 interface SearchPanelProps {
   onSearch: (
@@ -156,14 +157,15 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
             className={`search-replace-toggle${replaceMode ? " active" : ""}`}
             onClick={() => setReplaceMode((r) => !r)}
             title={t.search.toggleReplace}
+            aria-label={t.search.toggleReplace}
             aria-pressed={replaceMode}
           >
-            ⇄
+            <Icon icon={ArrowLeftRight} size={14} />
           </button>
         )}
         {searching && (
           <span className="search-spinner" aria-live="polite" aria-label={t.search.searching}>
-            ⟳
+            <Icon icon={RefreshCw} size={14} />
           </span>
         )}
       </div>
@@ -182,7 +184,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
             disabled={!query.trim() || replacing}
             title={t.search.replaceAll}
           >
-            {replacing ? "⟳" : t.search.replaceAll}
+            {replacing ? <Icon icon={RefreshCw} size={14} /> : t.search.replaceAll}
           </button>
         </div>
       )}
@@ -196,7 +198,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
         {results.length >= 500 && (
           <div className="search-limit-banner" role="status" aria-live="polite">
             <span className="search-limit-icon" aria-hidden="true">
-              ⚠
+              <Icon icon={TriangleAlert} size={14} />
             </span>
             <span className="search-limit-text">{t.search.limit}</span>
           </div>

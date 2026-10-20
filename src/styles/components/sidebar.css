@@ -45,6 +45,8 @@
   padding: 2px 5px;
   border-radius: 3px;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
 }
 .tree-actions button:hover {
   color: #ccc;
@@ -101,6 +103,12 @@
   color: #666;
   font-size: 11px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.tree-icon-file {
+  margin-left: 16px; /* line up with the folder icon, past the chevron */
 }
 .tree-name {
   overflow: hidden;

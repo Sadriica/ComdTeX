@@ -1,7 +1,45 @@
 /* ── Git panel ───────────────────────────────────────────────────────────────*/
 
-.git-spin {
+.git-spin .icon {
   animation: spin 1s linear infinite;
+}
+
+/* Lucide icons inside these controls: centre them with their labels. */
+.git-action,
+.git-panel-header-btn,
+.git-section-toggle,
+.git-branch-chevron,
+.git-summary-clean,
+.git-summary-chip,
+.git-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.git-pill {
+  gap: 1px;
+}
+.git-pill .icon,
+.git-summary-chip .icon {
+  width: 10px;
+  height: 10px;
+}
+.git-branch-check {
+  display: inline-flex;
+  width: 14px;
+  margin-right: 4px;
+}
+.git-branch-item {
+  display: flex;
+  align-items: center;
+}
+.git-empty-icon {
+  display: flex;
+  justify-content: center;
+}
+.git-empty-icon .icon {
+  width: 28px;
+  height: 28px;
 }
 
 .git-commit-area {
@@ -352,7 +390,8 @@
 }
 
 .git-branch-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   text-align: left;
   background: none;

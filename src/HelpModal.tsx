@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useId } from "react"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 
 interface HelpModalProps {
@@ -107,8 +108,13 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
       >
         <div className="modal-header">
           <span id={titleId}>{t.help.title}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>
-            ✕
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.titleBar.close}
+            title={t.titleBar.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="help-search-row">

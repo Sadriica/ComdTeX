@@ -1,7 +1,26 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  ExternalLink,
+  Folder,
+  GitBranch,
+  Icon,
+  Minus,
+  Pencil,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Undo2,
+  X,
+} from "./icons"
 import { showToast } from "./toastService"
 import { pathBasename, pathDirname } from "./pathUtils"
 import { runGit, isNotRepo, parseStatusZ, type GitFile, type GitStatus } from "./gitApi"
@@ -108,20 +127,31 @@ function FileRow({
         </button>
         <div className="git-file-actions">
           {isStaged ? (
-            <button className="git-action" title={unstageTitle} onClick={onUnstage}>
-              −
+            <button
+              className="git-action"
+              title={unstageTitle}
+              aria-label={unstageTitle}
+              onClick={onUnstage}
+            >
+              <Icon icon={Minus} size={14} />
             </button>
           ) : (
             <>
-              <button className="git-action" title={stageTitle} onClick={onStage}>
-                +
+              <button
+                className="git-action"
+                title={stageTitle}
+                aria-label={stageTitle}
+                onClick={onStage}
+              >
+                <Icon icon={Plus} size={14} />
               </button>
               <button
                 className="git-action git-action-discard"
                 title={discardTitle}
+                aria-label={discardTitle}
                 onClick={onDiscard}
               >
-                ↩
+                <Icon icon={Undo2} size={14} />
               </button>
             </>
           )}
@@ -142,7 +172,7 @@ function GitSection({
   children,
 }: {
   title: string
-  headerAction?: { label: string; title: string; onClick: () => void }
+  headerAction?: { label: ReactNode; title: string; onClick: () => void }
   defaultOpen?: boolean
   children: React.ReactNode
 }) {
@@ -151,13 +181,16 @@ function GitSection({
     <div className="git-section">
       <div className="git-section-header">
         <button className="git-section-toggle" onClick={() => setOpen((o) => !o)}>
-          <span className="git-section-chevron">{open ? "▾" : "▸"}</span>
+          <span className="git-section-chevron" aria-hidden="true">
+            <Icon icon={open ? ChevronDown : ChevronRight} size={14} />
+          </span>
           <span className="git-section-title">{title}</span>
         </button>
         {headerAction && (
           <button
             className="git-action git-section-action"
             title={headerAction.title}
+            aria-label={headerAction.title}
             onClick={headerAction.onClick}
           >
             {headerAction.label}
@@ -242,7 +275,9 @@ function BranchDropdown({
             className={`git-branch-item ${b === currentBranch ? "active" : ""}`}
             onClick={() => b !== currentBranch && switchTo(b)}
           >
-            {b === currentBranch ? "✓ " : "  "}
+            <span className="git-branch-check" aria-hidden="true">
+              {b === currentBranch && <Icon icon={Check} size={14} />}
+            </span>
             {b}
           </button>
         ))}
@@ -350,7 +385,11 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
     <GitSection
       title={g.remotes}
       defaultOpen={false}
-      headerAction={{ label: "↺", title: g.reloadRemotes, onClick: load }}
+      headerAction={{
+        label: <Icon icon={RotateCcw} size={14} />,
+        title: g.reloadRemotes,
+        onClick: load,
+      }}
     >
       <div className="git-remotes">
         {remotes.length === 0 && <div className="git-no-changes">{g.noRemotes}</div>}
@@ -363,20 +402,22 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
                   className="git-action git-section-action"
                   style={{ opacity: 1 }}
                   title={g.editRemoteUrl}
+                  aria-label={g.editRemoteUrl}
                   onClick={() => {
                     setEditing(r.name)
                     setUrlInput(r.fetchUrl)
                   }}
                 >
-                  ✎
+                  <Icon icon={Pencil} size={14} />
                 </button>
                 <button
                   className="git-action git-action-discard"
                   style={{ opacity: 1 }}
                   title={g.removeRemote}
                   onClick={() => removeRemote(r.name)}
+                  aria-label={g.removeRemote}
                 >
-                  ×
+                  <Icon icon={X} size={14} />
                 </button>
               </div>
             </div>
@@ -395,16 +436,20 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
                 <button
                   className="git-action git-section-action"
                   style={{ opacity: 1 }}
+                  title={g.saveUrl}
+                  aria-label={g.saveUrl}
                   onClick={() => setUrl(r.name, urlInput)}
                 >
-                  ✓
+                  <Icon icon={Check} size={14} />
                 </button>
                 <button
                   className="git-action"
                   style={{ opacity: 1 }}
+                  title={g.cancel}
+                  aria-label={g.cancel}
                   onClick={() => setEditing(null)}
                 >
-                  ✕
+                  <Icon icon={X} size={14} />
                 </button>
               </div>
             ) : (
@@ -481,7 +526,7 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
       title={g.configSection}
       defaultOpen={false}
       headerAction={{
-        label: editing ? "✓" : "✎",
+        label: editing ? <Icon icon={Check} size={14} /> : <Icon icon={Pencil} size={14} />,
         title: editing ? g.saveLocal : "Edit",
         onClick: editing
           ? save
@@ -539,8 +584,13 @@ function ConfigSection({ vaultPath }: { vaultPath: string }) {
             <button className="git-panel-header-btn" style={{ color: "#4ec9b0" }} onClick={save}>
               {g.saveLocal}
             </button>
-            <button className="git-panel-header-btn" onClick={() => setEditing(false)}>
-              ✕
+            <button
+              className="git-panel-header-btn"
+              title={g.cancel}
+              aria-label={g.cancel}
+              onClick={() => setEditing(false)}
+            >
+              <Icon icon={X} size={14} />
             </button>
           </div>
         )}
@@ -609,7 +659,7 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
     <GitSection
       title={g.stashList}
       defaultOpen={false}
-      headerAction={{ label: "↓", title: g.stash, onClick: push }}
+      headerAction={{ label: <Icon icon={ArrowDown} size={14} />, title: g.stash, onClick: push }}
     >
       <div className="git-section-body">
         {stashes.length === 0 ? (
@@ -622,17 +672,19 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
                 className="git-action git-section-action"
                 style={{ opacity: 1 }}
                 title={g.stashPop}
+                aria-label={g.stashPop}
                 onClick={() => pop(i)}
               >
-                ↑
+                <Icon icon={ArrowUp} size={14} />
               </button>
               <button
                 className="git-action git-action-discard"
                 style={{ opacity: 1 }}
                 title={g.stashDrop}
                 onClick={() => drop(i)}
+                aria-label={g.stashDrop}
               >
-                ×
+                <Icon icon={X} size={14} />
               </button>
             </div>
           ))
@@ -798,7 +850,7 @@ function CollabSection({
                 openUrl("https://github.com/new").catch(() => {})
               }}
             >
-              {g.collabCreateRepo} ↗
+              {g.collabCreateRepo} <Icon icon={ExternalLink} size={14} />
             </button>
             <div className="git-collab-connect">
               <input
@@ -1056,17 +1108,21 @@ function ChangesPanel({
       {/* Status summary */}
       <div className="git-status-summary">
         {total === 0 ? (
-          <span className="git-summary-clean">✓ Sin cambios pendientes</span>
+          <span className="git-summary-clean">
+            <Icon icon={Check} size={14} /> Sin cambios pendientes
+          </span>
         ) : (
           <>
             {status.staged.length > 0 && (
               <span className="git-summary-chip git-chip-staged">
-                ↑ {status.staged.length} preparado{status.staged.length !== 1 ? "s" : ""}
+                <Icon icon={ArrowUp} size={14} /> {status.staged.length} preparado
+                {status.staged.length !== 1 ? "s" : ""}
               </span>
             )}
             {status.unstaged.length > 0 && (
               <span className="git-summary-chip git-chip-changed">
-                ● {status.unstaged.length} modificado{status.unstaged.length !== 1 ? "s" : ""}
+                <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />{" "}
+                {status.unstaged.length} modificado{status.unstaged.length !== 1 ? "s" : ""}
               </span>
             )}
             {status.untracked.length > 0 && (
@@ -1103,7 +1159,11 @@ function ChangesPanel({
       {status.staged.length > 0 && (
         <GitSection
           title={`${g.staged} (${status.staged.length})`}
-          headerAction={{ label: "−−", title: g.unstageAll, onClick: unstageAll }}
+          headerAction={{
+            label: <Icon icon={Minus} size={14} />,
+            title: g.unstageAll,
+            onClick: unstageAll,
+          }}
         >
           {status.staged.map((f) => (
             <FileRow
@@ -1337,7 +1397,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
     return (
       <div className="menu-item git-menu-item">
         <button className="menu-btn" style={{ opacity: 0.4, cursor: "default" }}>
-          ⎇ Git
+          <Icon icon={GitBranch} size={14} /> Git
         </button>
       </div>
     )
@@ -1363,19 +1423,33 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
           else openPanel()
         }}
       >
-        <span style={{ color: "#569cd6" }}>⎇</span>
+        <span style={{ color: "#569cd6" }} aria-hidden="true">
+          <Icon icon={GitBranch} size={14} />
+        </span>
         <span style={{ margin: "0 4px" }}>{branchLabel}</span>
         {(status?.ahead ?? 0) > 0 && (
-          <span className="git-pill git-pill-ahead">↑{status!.ahead}</span>
+          <span className="git-pill git-pill-ahead">
+            <Icon icon={ArrowUp} size={14} />
+            {status!.ahead}
+          </span>
         )}
         {(status?.behind ?? 0) > 0 && (
-          <span className="git-pill git-pill-behind">↓{status!.behind}</span>
+          <span className="git-pill git-pill-behind">
+            <Icon icon={ArrowDown} size={14} />
+            {status!.behind}
+          </span>
         )}
         {status && status.staged.length > 0 && (
-          <span className="git-pill git-pill-staged">●{status.staged.length}</span>
+          <span className="git-pill git-pill-staged">
+            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            {status.staged.length}
+          </span>
         )}
         {status && total - status.staged.length > 0 && (
-          <span className="git-pill git-pill-changed">●{total - status.staged.length}</span>
+          <span className="git-pill git-pill-changed">
+            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
+            {total - status.staged.length}
+          </span>
         )}
       </button>
 
@@ -1384,12 +1458,13 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
         <button
           className="git-branch-chevron"
           title={g.switchBranch}
+          aria-label={g.switchBranch}
           onMouseDown={(e) => {
             e.preventDefault()
             setBranchOpen((o) => !o)
           }}
         >
-          ▾
+          <Icon icon={ChevronDown} size={14} />
         </button>
       )}
 
@@ -1412,13 +1487,17 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
         >
           {gitMissing ? (
             <div className="git-empty-state">
-              <div className="git-empty-icon">⎇</div>
+              <div className="git-empty-icon" aria-hidden="true">
+                <Icon icon={GitBranch} size={16} />
+              </div>
               <div className="git-empty-title">{g.gitNotFoundTitle}</div>
               <div className="git-empty-desc">{g.gitNotFoundHint}</div>
             </div>
           ) : notRepo ? (
             <div className="git-empty-state">
-              <div className="git-empty-icon">📁</div>
+              <div className="git-empty-icon" aria-hidden="true">
+                <Icon icon={Folder} size={16} />
+              </div>
               <div className="git-empty-title">{g.notRepo}</div>
               <div className="git-empty-desc">{g.noVault}</div>
               <button className="git-empty-btn" onClick={handleInit}>
@@ -1431,7 +1510,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                 disabled={loading}
                 onClick={refresh}
               >
-                ⟳ {g.recheckRepo}
+                <Icon icon={RefreshCw} size={14} /> {g.recheckRepo}
               </button>
             </div>
           ) : (
@@ -1443,14 +1522,14 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                   disabled={!!remoteOp}
                   onClick={() => handleRemote("fetch")}
                 >
-                  ↻ {g.fetch}
+                  <Icon icon={RefreshCw} size={14} /> {g.fetch}
                 </button>
                 <button
                   className={`git-panel-header-btn${remoteOp === "push" ? " git-op-loading" : ""}`}
                   disabled={!!remoteOp}
                   onClick={() => handleRemote("push")}
                 >
-                  ↑ {g.push}
+                  <Icon icon={ArrowUp} size={14} /> {g.push}
                   {status?.ahead ? ` (${status.ahead})` : ""}
                 </button>
                 <button
@@ -1458,7 +1537,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                   disabled={!!remoteOp}
                   onClick={() => handleRemote("pull")}
                 >
-                  ↓ {g.pull}
+                  <Icon icon={ArrowDown} size={14} /> {g.pull}
                   {status?.behind ? ` (${status.behind})` : ""}
                 </button>
                 <button
@@ -1466,8 +1545,9 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                   title={g.refresh}
                   disabled={loading}
                   onClick={refresh}
+                  aria-label={g.refresh}
                 >
-                  ⟳
+                  <Icon icon={RefreshCw} size={14} />
                 </button>
               </div>
 

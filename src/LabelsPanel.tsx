@@ -6,6 +6,7 @@ import {
 } from "./structuralLabels"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { Icon, Tag } from "./icons"
 import { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -52,7 +53,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
         </div>
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
-            {t.emptyStates.labelsIcon}
+            <Icon icon={Tag} size={16} />
           </div>
           <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.labelsMessage)}</p>
         </div>

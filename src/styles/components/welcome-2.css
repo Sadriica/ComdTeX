@@ -96,6 +96,8 @@
 
 /* ── Breadcrumb nav buttons ── */
 .breadcrumb-nav-btn {
+  display: inline-flex;
+  align-items: center;
   background: none;
   border: none;
   color: #666;

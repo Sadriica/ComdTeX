@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
 import { renderMarkdown, annotateSourceLines, buildParagraphLineMap } from "./renderer"
+import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 
 describe("renderMarkdown", () => {
   it("numbers headings without exposing internal anchor text", () => {
@@ -498,5 +499,23 @@ describe("callouts kept as written in the editor", () => {
   it("renders a hyphenated type as a callout", () => {
     const html = renderMarkdown("> [!my-type] Hello\n> body")
     expect(html).toContain("callout-my-type")
+  })
+
+  it("marks the icon with a data-icon hook instead of baking in a glyph", () => {
+    const html = renderMarkdown("> [!tip] Hi\n> body")
+    expect(html).toContain('<span class="callout-icon" data-icon="tip" aria-hidden="true"></span>')
+    expect(html).not.toMatch(/\u{1F4A1}|\u2139|\u26A0/u)
+  })
+
+  it("maps aliases to one icon key and falls back for unknown types", () => {
+    expect(renderMarkdown("> [!caution] x\n> b")).toContain('data-icon="warning"')
+    expect(renderMarkdown("> [!lemma] x\n> b")).toContain('data-icon="theorem"')
+    expect(renderMarkdown("> [!my-type] x\n> b")).toContain('data-icon="abstract"')
+  })
+
+  it("keeps the icon hook through the sanitizer", () => {
+    const html = sanitizeRenderedHtml(renderMarkdown("> [!note] Hi\n> body"))
+    expect(html).toContain('class="callout-icon"')
+    expect(html).toContain('data-icon="info"')
   })
 })

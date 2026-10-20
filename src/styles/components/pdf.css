@@ -18,6 +18,8 @@
   flex: 0 0 auto;
 }
 .pdf-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   border: 1px solid transparent;
   color: #ccc;

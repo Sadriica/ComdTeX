@@ -11,6 +11,7 @@ import {
 } from "./keepMarks"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { Highlighter, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 import { showToast } from "./toastService"
 
@@ -81,7 +82,7 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
         </div>
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
-            {kp.emptyIcon}
+            <Icon icon={Highlighter} size={16} />
           </div>
           <p className="panel-empty-message">{renderEmptyMessage(kp.emptyMessage)}</p>
         </div>

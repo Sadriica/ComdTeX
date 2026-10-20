@@ -3,6 +3,20 @@ import type * as monaco from "monaco-editor"
 import type { T } from "./i18n"
 import { useT } from "./i18n"
 import { insertSnippet } from "./editorInsert"
+import {
+  Icon,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  Cloud,
+  CircleHelp,
+  Folder,
+  LayoutGrid,
+  Pencil,
+  Sigma,
+  Sparkles,
+  Timer,
+} from "./icons"
 
 // ── Symbol groups ─────────────────────────────────────────────────────────────
 
@@ -155,7 +169,7 @@ interface ToolbarProps {
 // ── Menu item model ───────────────────────────────────────────────────────────
 
 type MenuItem =
-  | { kind: "action"; label: string; title?: string; snippet: string }
+  | { kind: "action"; label: string; title?: string; snippet: string; swatch?: string }
   | { kind: "panel"; label: string; mode: PanelMode }
   | { kind: "submenu"; label: string; items: MenuItem[] }
   | { kind: "symbols" } // special: embeds the SymbolPicker grid
@@ -168,24 +182,7 @@ interface MenuSection {
   items: MenuItem[]
 }
 
-// Monochrome folder icon (inline SVG with currentColor; emoji folder glyphs
-// render coloured in WebKitGTK, the same bug that forced the settings gear to SVG).
-const FolderIcon = (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    style={{ verticalAlign: "-0.15em" }}
-  >
-    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-  </svg>
-)
+const FolderIcon = <Icon icon={Folder} size={14} />
 
 // All panel modes contained (recursively) in a section's items; used to mark
 // the section button active when one of its panels is the active sidebar mode.
@@ -202,11 +199,12 @@ function collectPanelModes(items: MenuItem[]): PanelMode[] {
 
 function getSections(t: T): MenuSection[] {
   const p = (label: string, mode: PanelMode): MenuItem => ({ kind: "panel", label, mode })
-  const a = (label: string, snippet: string, title?: string): MenuItem => ({
+  const a = (label: string, snippet: string, title?: string, swatch?: string): MenuItem => ({
     kind: "action",
     label,
     snippet,
     title,
+    swatch,
   })
 
   return [
@@ -226,7 +224,7 @@ function getSections(t: T): MenuSection[] {
     // 2. Textos
     {
       id: "texts",
-      icon: "✎",
+      icon: <Icon icon={Pencil} size={14} />,
       label: t.toolbar.secTexts,
       items: [
         a(t.toolbar.bold, "**${1:texto}**", t.toolbar.bold),
@@ -239,13 +237,13 @@ function getSections(t: T): MenuSection[] {
           kind: "submenu",
           label: t.toolbar.highlight,
           items: [
-            a(`🟨 ${t.toolbar.hlDefault}`, "==${1:texto}=="),
-            a(`🟩 ${t.toolbar.hlGreen}`, '<mark class="hl-green">${1:texto}</mark>'),
-            a(`🟦 ${t.toolbar.hlBlue}`, '<mark class="hl-blue">${1:texto}</mark>'),
-            a(`🟪 ${t.toolbar.hlPurple}`, '<mark class="hl-purple">${1:texto}</mark>'),
-            a(`🟧 ${t.toolbar.hlOrange}`, '<mark class="hl-orange">${1:texto}</mark>'),
-            a(`🟥 ${t.toolbar.hlRed}`, '<mark class="hl-red">${1:texto}</mark>'),
-            a(`🌸 ${t.toolbar.hlPink}`, '<mark class="hl-pink">${1:texto}</mark>'),
+            a(t.toolbar.hlDefault, "==${1:texto}==", undefined, "yellow"),
+            a(t.toolbar.hlGreen, '<mark class="hl-green">${1:texto}</mark>', undefined, "green"),
+            a(t.toolbar.hlBlue, '<mark class="hl-blue">${1:texto}</mark>', undefined, "blue"),
+            a(t.toolbar.hlPurple, '<mark class="hl-purple">${1:texto}</mark>', undefined, "purple"),
+            a(t.toolbar.hlOrange, '<mark class="hl-orange">${1:texto}</mark>', undefined, "orange"),
+            a(t.toolbar.hlRed, '<mark class="hl-red">${1:texto}</mark>', undefined, "red"),
+            a(t.toolbar.hlPink, '<mark class="hl-pink">${1:texto}</mark>', undefined, "pink"),
           ],
         },
         {
@@ -281,7 +279,7 @@ function getSections(t: T): MenuSection[] {
     // 3. Matemáticas
     {
       id: "math",
-      icon: "∑",
+      icon: <Icon icon={Sigma} size={14} />,
       label: t.toolbar.secMath,
       items: [
         a(t.toolbar.mathInline, "\\$${1}\\$", t.toolbar.mathInline),
@@ -366,7 +364,7 @@ function getSections(t: T): MenuSection[] {
     // 4. Vistas
     {
       id: "views",
-      icon: "▦",
+      icon: <Icon icon={LayoutGrid} size={14} />,
       label: t.toolbar.secViews,
       items: [
         p(t.sidebar.keep, "keep"),
@@ -380,30 +378,14 @@ function getSections(t: T): MenuSection[] {
 // Direct (no-dropdown) buttons on the right.
 function getDirectButtons(t: T): { mode: PanelMode; icon: ReactNode; label: string }[] {
   return [
-    { mode: "focusTimer", icon: "◷", label: t.sidebar.focusTimer },
+    { mode: "focusTimer", icon: <Icon icon={Timer} size={14} />, label: t.sidebar.focusTimer },
     {
       mode: "ai",
-      // Monochrome sparkle SVG: the ✦/✨ glyphs render coloured in WebKitGTK.
-      icon: (
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          style={{ verticalAlign: "-0.15em" }}
-        >
-          <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
-        </svg>
-      ),
+      icon: <Icon icon={Sparkles} size={14} />,
       label: t.sidebar.ai,
     },
-    { mode: "cloudSync", icon: "☁", label: t.sidebar.cloudSync },
-    { mode: "help", icon: "?", label: t.sidebar.help },
+    { mode: "cloudSync", icon: <Icon icon={Cloud} size={14} />, label: t.sidebar.cloudSync },
+    { mode: "help", icon: <Icon icon={CircleHelp} size={14} />, label: t.sidebar.help },
   ]
 }
 
@@ -517,7 +499,14 @@ function MenuList({
                 closeAll()
               }}
             >
-              {item.label}
+              {item.swatch ? (
+                <span className="menu-item-swatch-label">
+                  <span className={`hl-swatch hl-swatch-${item.swatch}`} aria-hidden="true" />
+                  {item.label}
+                </span>
+              ) : (
+                item.label
+              )}
             </button>
           )
         }
@@ -556,7 +545,9 @@ function MenuList({
               }}
             >
               <span>{item.label}</span>
-              <span className="menu-sub-arrow">▸</span>
+              <span className="menu-sub-arrow">
+                <Icon icon={ChevronRight} size={14} />
+              </span>
             </button>
             {isOpen && (
               <div
@@ -626,7 +617,9 @@ function SectionMenu({
       >
         <span className="menubar-section-icon">{section.icon}</span>
         <span className="menubar-section-label">{section.label}</span>
-        <span className="menubar-section-arrow">▾</span>
+        <span className="menubar-section-arrow">
+          <Icon icon={ChevronDown} size={14} />
+        </span>
       </button>
       {open && (
         <div
@@ -744,7 +737,7 @@ function Toolbar({
           }}
         >
           <span className="menubar-focus-dot" aria-hidden="true">
-            ●
+            <Icon icon={Circle} size={14} style={{ fill: "currentColor" }} />
           </span>
           <span className="menubar-focus-time">{focusClock.clock}</span>
         </button>

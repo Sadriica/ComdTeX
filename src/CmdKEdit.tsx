@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { monaco as monacoRt } from "./monacoRuntime"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 import type { Settings } from "./useSettings"
 import { sendInlineEdit, AiError } from "./ai/aiProvider"
 
@@ -264,8 +265,9 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
           onMouseDown={(e) => e.preventDefault()}
           onClick={close}
           title={t.ai.cmdk.cancel}
+          aria-label={t.ai.cmdk.cancel}
         >
-          ✕
+          <Icon icon={X} size={14} />
         </button>
       </div>
 

@@ -1,0 +1,13 @@
+/* Lucide icons (see src/icons.tsx): inherit colour and size from the text. */
+.icon {
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* An icon-only button centres its icon without each component restyling it.
+   :where() keeps specificity at zero so any component rule still wins. */
+:where(button:has(> .icon:only-child)) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

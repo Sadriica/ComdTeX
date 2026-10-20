@@ -1,6 +1,7 @@
 import { useRef, useId } from "react"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { FileText, Icon, Undo2, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 import { renderEmptyMessage } from "./emptyStateMessage"
 
@@ -31,15 +32,20 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
       >
         <div className="modal-header">
           <span id={titleId}>{t.vault.recentlyClosed}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.titleBar.close}>
-            ✕
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.titleBar.close}
+            title={t.titleBar.close}
+          >
+            <Icon icon={X} size={14} />
           </button>
         </div>
         <div className="modal-body" style={{ maxHeight: "300px", overflowY: "auto" }}>
           {paths.length === 0 ? (
             <div className="panel-empty-rich">
               <div className="panel-empty-icon" aria-hidden="true">
-                {t.emptyStates.closedTabsIcon}
+                <Icon icon={Undo2} size={16} />
               </div>
               <p className="panel-empty-message">
                 {renderEmptyMessage(t.emptyStates.closedTabsMessage)}
@@ -55,7 +61,9 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
                   onClose()
                 }}
               >
-                <span className="closed-tab-icon">📄</span>
+                <span className="closed-tab-icon" aria-hidden="true">
+                  <Icon icon={FileText} size={14} />
+                </span>
                 <span className="closed-tab-name">{displayBasename(path)}</span>
                 <span className="closed-tab-path">{path}</span>
               </button>

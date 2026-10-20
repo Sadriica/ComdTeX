@@ -52,12 +52,16 @@
 }
 .tab-dirty {
   color: #ff6b6b;
-  font-size: 10px;
+  display: inline-flex;
   margin-left: 4px;
   /* Static dot: the previous infinite `pulse` animation forced the GPU
      compositor to repaint continuously even when the app was idle (~5%
      sustained CPU on the WebKit compositor thread). The red dot alone
      is enough signal that there's unsaved work. */
+}
+.tab-dirty .icon {
+  width: 8px;
+  height: 8px;
 }
 .tab-lint-error,
 .tab-lint-warning {
@@ -86,6 +90,8 @@
   line-height: 1;
   flex-shrink: 0;
   border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
 }
 .tab-close:hover {
   background: #3a3a3a;

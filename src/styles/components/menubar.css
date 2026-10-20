@@ -132,7 +132,6 @@
   font-family: inherit;
   cursor: pointer;
   line-height: 1.3;
-  font-variant-emoji: text;
 }
 .menubar-section-btn:hover,
 .menubar-direct-btn:hover {
@@ -156,18 +155,17 @@
   outline-offset: -2px;
 }
 .menubar-section-icon {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 14px;
-  text-align: center;
-  /* Force flat (text) presentation so any glyph with a text variant renders
-     monochrome and inherits `color` (--icon/--fg) instead of a colored emoji. */
-  font-variant-emoji: text;
 }
 .menubar-section-label {
   font-weight: 500;
 }
 .menubar-section-arrow {
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
   opacity: 0.7;
 }
 
@@ -227,8 +225,40 @@
   position: relative;
 }
 .menu-sub-arrow {
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
   opacity: 0.7;
+}
+/* Highlight colour swatches in the Textos > Highlight submenu. */
+.menu-item-swatch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hl-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--mark-yellow, #ffe066);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 25%, transparent);
+}
+.hl-swatch-green {
+  background: var(--mark-green, #a6e3a1);
+}
+.hl-swatch-blue {
+  background: var(--mark-blue, #89c4f4);
+}
+.hl-swatch-purple {
+  background: var(--mark-purple, #d0bfff);
+}
+.hl-swatch-orange {
+  background: var(--mark-orange, #ffc078);
+}
+.hl-swatch-red {
+  background: var(--mark-red, #f5a9a9);
+}
+.hl-swatch-pink {
+  background: var(--mark-pink, #f5a9d0);
 }
 .menu-sub-panel {
   position: fixed; /* coords set inline from the trigger rect → flyout right */

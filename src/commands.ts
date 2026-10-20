@@ -2,7 +2,7 @@
 // data built from handlers + translations: moved verbatim (no behavior
 // change) to keep App.tsx smaller. See CLAUDE.md: App.tsx is a documented
 // refactor target.
-import type { RefObject } from "react"
+import { createElement, type RefObject } from "react"
 import type { PaletteCommand } from "./CommandPalette"
 import type { SidebarMode } from "./App"
 import type { T } from "./i18n"
@@ -12,6 +12,10 @@ import type { useExportActions } from "./useExportActions"
 import type { UpdateInfo } from "./useUpdater"
 import { showToast } from "./toastService"
 import { COMPLETIONS } from "./monacoSetup"
+
+/** Small coloured highlight swatch (CSS, `--mark-*` tokens) for the palette. */
+const swatch = (colour: string) =>
+  createElement("span", { className: `hl-swatch hl-swatch-${colour}`, "aria-hidden": true })
 
 export interface PaletteCommandsCtx {
   t: T
@@ -194,49 +198,49 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
           id: "hl:yellow",
           label: t.toolbar.hlDefault,
           category: "Edición",
-          icon: "🟨",
+          icon: swatch("yellow"),
           action: () => palInsert("==${1:texto}=="),
         },
         {
           id: "hl:green",
           label: t.toolbar.hlGreen,
           category: "Edición",
-          icon: "🟩",
+          icon: swatch("green"),
           action: () => palInsert('<mark class="hl-green">${1:texto}</mark>'),
         },
         {
           id: "hl:blue",
           label: t.toolbar.hlBlue,
           category: "Edición",
-          icon: "🟦",
+          icon: swatch("blue"),
           action: () => palInsert('<mark class="hl-blue">${1:texto}</mark>'),
         },
         {
           id: "hl:purple",
           label: t.toolbar.hlPurple,
           category: "Edición",
-          icon: "🟪",
+          icon: swatch("purple"),
           action: () => palInsert('<mark class="hl-purple">${1:texto}</mark>'),
         },
         {
           id: "hl:orange",
           label: t.toolbar.hlOrange,
           category: "Edición",
-          icon: "🟧",
+          icon: swatch("orange"),
           action: () => palInsert('<mark class="hl-orange">${1:texto}</mark>'),
         },
         {
           id: "hl:red",
           label: t.toolbar.hlRed,
           category: "Edición",
-          icon: "🟥",
+          icon: swatch("red"),
           action: () => palInsert('<mark class="hl-red">${1:texto}</mark>'),
         },
         {
           id: "hl:pink",
           label: t.toolbar.hlPink,
           category: "Edición",
-          icon: "🌸",
+          icon: swatch("pink"),
           action: () => palInsert('<mark class="hl-pink">${1:texto}</mark>'),
         },
       ],

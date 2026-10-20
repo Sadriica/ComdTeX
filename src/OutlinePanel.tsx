@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, ListTree } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { computeSectionWordCounts } from "./sectionWordCount"
 import { renderEmptyMessage } from "./emptyStateMessage"
@@ -67,7 +68,7 @@ export default function OutlinePanel({
     return (
       <div className="panel-empty-rich">
         <div className="panel-empty-icon" aria-hidden="true">
-          {t.emptyStates.outlineIcon}
+          <Icon icon={ListTree} size={16} />
         </div>
         <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
       </div>

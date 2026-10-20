@@ -19,6 +19,8 @@
   min-width: 0;
 }
 .breadcrumb-sep {
+  display: inline-flex;
+  align-items: center;
   padding: 0 3px;
   color: #555;
   flex-shrink: 0;

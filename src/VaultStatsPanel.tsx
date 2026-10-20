@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import type { OpenFile, FileNode } from "./types"
 import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
+import { Icon, TriangleAlert } from "./icons"
 import ContextMenu from "./ContextMenu"
 import { showToast } from "./toastService"
 
@@ -180,7 +181,7 @@ export default function VaultStatsPanel({
       {stats.brokenLinks.length > 0 && (
         <div className="stats-section stats-broken">
           <div className="stats-section-title stats-broken-title">
-            ⚠ {t.stats.broken(stats.brokenLinks.length)}
+            <Icon icon={TriangleAlert} size={14} /> {t.stats.broken(stats.brokenLinks.length)}
           </div>
           {stats.brokenLinks.map((b, i) => (
             <div

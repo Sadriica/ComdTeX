@@ -63,6 +63,7 @@
   border-radius: 4px;
 }
 .search-limit-icon {
+  display: inline-flex;
   font-size: 14px;
   line-height: 1;
 }

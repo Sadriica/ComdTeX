@@ -1,4 +1,5 @@
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 
 interface PanelSearchProps {
   value: string
@@ -47,7 +48,7 @@ export default function PanelSearch({
             title={t.panelSearch.clear}
             aria-label={t.panelSearch.clear}
           >
-            ×
+            <Icon icon={X} size={14} />
           </button>
         </>
       )}

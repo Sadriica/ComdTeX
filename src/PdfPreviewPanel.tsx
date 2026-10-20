@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useT } from "./i18n"
+import { ArrowLeftRight, Icon } from "./icons"
 import { parseSyncTex, inverseSync, type SyncTexData } from "./synctex"
 
 // Lazy module loader: keep pdfjs out of the initial bundle and behind a
@@ -470,7 +471,7 @@ export default function PdfPreviewPanel({
           title={t.pdfPreview.fitWidth}
           aria-label={t.pdfPreview.fitWidth}
         >
-          ↔
+          <Icon icon={ArrowLeftRight} size={14} />
         </button>
         <button
           type="button"

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react"
 import type { FrontmatterData } from "./frontmatter"
 import { extractFrontmatter, serializeFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 
 interface FrontmatterPanelProps {
   content: string
@@ -145,8 +146,9 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
               className="fm-remove"
               onClick={() => removeField(key)}
               title={t.frontmatterPanel.removeField}
+              aria-label={t.frontmatterPanel.removeField}
             >
-              ×
+              <Icon icon={X} size={14} />
             </button>
           </div>
         ))}

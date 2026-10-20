@@ -1,5 +1,6 @@
-import { useRef, useState, useId } from "react"
+import { useRef, useState, useId, type ReactNode } from "react"
 import { useT } from "./i18n"
+import { Command, Icon, Menu, Pencil, Settings } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 
 interface OnboardingTourProps {
@@ -16,11 +17,27 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
 
   if (!open) return null
 
-  const steps: Array<{ icon: string; title: string; text: string }> = [
-    { icon: "☰", title: t.onboarding.step1Title, text: t.onboarding.step1Text },
-    { icon: "✎", title: t.onboarding.step2Title, text: t.onboarding.step2Text },
-    { icon: "⌘", title: t.onboarding.step3Title, text: t.onboarding.step3Text },
-    { icon: "⚙", title: t.onboarding.step4Title, text: t.onboarding.step4Text },
+  const steps: Array<{ icon: ReactNode; title: string; text: string }> = [
+    {
+      icon: <Icon icon={Menu} size={16} />,
+      title: t.onboarding.step1Title,
+      text: t.onboarding.step1Text,
+    },
+    {
+      icon: <Icon icon={Pencil} size={16} />,
+      title: t.onboarding.step2Title,
+      text: t.onboarding.step2Text,
+    },
+    {
+      icon: <Icon icon={Command} size={16} />,
+      title: t.onboarding.step3Title,
+      text: t.onboarding.step3Text,
+    },
+    {
+      icon: <Icon icon={Settings} size={16} />,
+      title: t.onboarding.step4Title,
+      text: t.onboarding.step4Text,
+    },
   ]
 
   const total = steps.length

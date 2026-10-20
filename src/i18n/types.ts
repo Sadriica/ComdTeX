@@ -342,23 +342,14 @@ export interface T {
   }
 
   emptyStates: {
-    todoIcon: string
     todoMessage: string
-    backlinksIcon: string
     backlinksMessage: string
-    equationsIcon: string
     equationsMessage: string
-    environmentsIcon: string
     environmentsMessage: string
-    labelsIcon: string
     labelsMessage: string
-    tagsIcon: string
     tagsMessage: string
-    outlineIcon: string
     outlineMessage: string
-    bookmarksIcon: string
     bookmarksMessage: string
-    closedTabsIcon: string
     closedTabsMessage: string
   }
 
@@ -616,7 +607,6 @@ export interface T {
     exportDialogTitle: string
     exported: string
     glossaryTitle: string
-    emptyIcon: string
     emptyMessage: string
   }
 
@@ -841,6 +831,8 @@ export interface T {
     reloadRemotes: string
     noRemotes: string
     editRemoteUrl: string
+    saveUrl: string
+    cancel: string
     removeRemote: string
     addRemote: string
     remoteNamePlaceholder: string
