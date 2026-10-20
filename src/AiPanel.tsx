@@ -408,8 +408,8 @@ export default function AiPanel({
         <div className="panel-header">
           <span className="panel-header-title">{t.ai.title}</span>
         </div>
-        <div className="panel-empty-rich">
-          <div className="panel-empty-icon">
+        <div className="ai-off">
+          <div className="ai-off-icon">
             <svg
               width="32"
               height="32"
@@ -425,7 +425,7 @@ export default function AiPanel({
               <path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z" />
             </svg>
           </div>
-          <div className="panel-empty-message">
+          <div className="ai-off-message">
             <strong>{t.ai.disabledTitle}</strong>
             <p>{t.ai.disabledBody}</p>
             <button className="ai-btn ai-btn-primary" onClick={onOpenSettings}>
@@ -627,69 +627,71 @@ export default function AiPanel({
         })}
       </div>
 
-      <div className="ai-context-chips">
-        <button
-          className={`ai-chip ${includeFile ? "active" : ""}`}
-          onClick={() => setIncludeFile((v) => !v)}
-        >
-          {t.ai.ctxCurrentFile}
-        </button>
-        <button
-          className={`ai-chip ${includeSelection ? "active" : ""}`}
-          onClick={() => setIncludeSelection((v) => !v)}
-          disabled={selectionLines === 0}
-        >
-          {t.ai.ctxSelection(selectionLines)}
-        </button>
-      </div>
-
-      {showActions && (
-        <div className="ai-actions-menu" role="menu">
-          {QUICK_ACTIONS.map((a) => (
-            <button
-              key={a.label}
-              className="ai-action-item"
-              role="menuitem"
-              onClick={() => runQuickAction(a.instr)}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="ai-input-row">
-        <textarea
-          ref={inputRef}
-          className="ai-input"
-          rows={3}
-          value={input}
-          placeholder={t.ai.inputPlaceholder}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onInputKeyDown}
-        />
-        <div className="ai-input-actions">
+      <div className="ai-composer">
+        <div className="ai-context-chips">
           <button
-            className="ai-btn"
-            title={t.ai.quickActions}
-            onClick={() => setShowActions((v) => !v)}
+            className={`ai-chip ${includeFile ? "active" : ""}`}
+            onClick={() => setIncludeFile((v) => !v)}
           >
-            /
+            {t.ai.ctxCurrentFile}
           </button>
-          {streaming ? (
-            <button className="ai-btn ai-btn-stop" onClick={stop}>
-              {t.ai.stop}
-            </button>
-          ) : (
+          <button
+            className={`ai-chip ${includeSelection ? "active" : ""}`}
+            onClick={() => setIncludeSelection((v) => !v)}
+            disabled={selectionLines === 0}
+          >
+            {t.ai.ctxSelection(selectionLines)}
+          </button>
+        </div>
+
+        {showActions && (
+          <div className="ai-actions-menu" role="menu">
+            {QUICK_ACTIONS.map((a) => (
+              <button
+                key={a.label}
+                className="ai-action-item"
+                role="menuitem"
+                onClick={() => runQuickAction(a.instr)}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="ai-input-row">
+          <textarea
+            ref={inputRef}
+            className="ai-input"
+            rows={3}
+            value={input}
+            placeholder={t.ai.inputPlaceholder}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onInputKeyDown}
+          />
+          <div className="ai-input-actions">
             <button
-              className="ai-btn ai-btn-primary"
-              title={t.ai.sendHint}
-              onClick={() => void run(input)}
-              disabled={!input.trim()}
+              className="ai-btn"
+              title={t.ai.quickActions}
+              onClick={() => setShowActions((v) => !v)}
             >
-              {t.ai.send}
+              /
             </button>
-          )}
+            {streaming ? (
+              <button className="ai-btn ai-btn-stop" onClick={stop}>
+                {t.ai.stop}
+              </button>
+            ) : (
+              <button
+                className="ai-btn ai-btn-primary"
+                title={t.ai.sendHint}
+                onClick={() => void run(input)}
+                disabled={!input.trim()}
+              >
+                {t.ai.send}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
