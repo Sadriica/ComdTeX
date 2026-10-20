@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseExpr, parsePlotBlock, renderPlotHTML } from "./functionPlot"
+import { autoYRange, parseExpr, parsePlotBlock, renderPlotHTML } from "./functionPlot"
 
 describe("parseExpr, evaluator", () => {
   it("evaluates polynomials", () => {
@@ -227,5 +227,40 @@ describe("renderPlotHTML", () => {
     const html = renderPlotHTML("<script>", "x", "1")
     expect(html).toContain("&lt;script&gt;")
     expect(html).not.toContain("<script>")
+  })
+})
+
+describe("autoYRange", () => {
+  it("keeps the whole curve of a decay inside the frame", () => {
+    const spec = parsePlotBlock("", "f(x) = 1/x\nrange: [4, 12]")
+    // 1/x runs from 0.25 down to 0.083: the axis must start below the minimum.
+    const [lo, hi] = autoYRange(spec.fns, spec.xMin, spec.xMax, spec.series)
+    expect(lo).toBeLessThan(1 / 12)
+    expect(hi).toBeGreaterThan(0.25)
+  })
+
+  it("includes the exact minimum of a gently decaying curve", () => {
+    const spec = parsePlotBlock("", "f(x) = exp(-x)\nrange: [0, 3]")
+    const [lo] = autoYRange(spec.fns, spec.xMin, spec.xMax, spec.series)
+    expect(lo).toBeLessThan(Math.exp(-3))
+  })
+
+  it("still ignores an asymptote", () => {
+    const spec = parsePlotBlock("", "f(x) = tan(x)\nrange: [-3, 3]")
+    const [lo, hi] = autoYRange(spec.fns, spec.xMin, spec.xMax, spec.series)
+    expect(hi - lo).toBeLessThan(200)
+  })
+})
+
+describe("plot legend", () => {
+  it("draws the swatch beside the label and uses a legible font size", () => {
+    const html = renderPlotHTML("", "f(x) = x\ng(x) = x^2", "1")
+    const tick = /text-anchor="end" font-size="(\d+)" fill="#888"/.exec(html)
+    const legend = /font-size="(\d+)" fill="#ccc"/.exec(html)
+    expect(Number(legend![1])).toBeGreaterThanOrEqual(Number(tick![1]))
+    const rect = /<rect x="([\d.]+)" y="[\d.]+" width="14" height="3"/.exec(html)
+    const text = /<text x="([\d.]+)"[^>]*fill="#ccc"/.exec(html)
+    // text ends before the swatch begins
+    expect(Number(text![1])).toBeLessThan(Number(rect![1]))
   })
 })
