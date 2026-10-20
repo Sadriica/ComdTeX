@@ -87,8 +87,6 @@
 .palette,
 .quick-switcher,
 .latex-err-modal,
-.table-editor-dialog,
-.onboarding-modal,
 .wikilink-hover-card {
   background: var(--bg-raised);
   color: var(--fg);
