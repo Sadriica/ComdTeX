@@ -12,13 +12,6 @@
 .pdf-preview-panel {
   background: var(--bg-surface);
 }
-.btn-create {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.btn-create:hover:not(:disabled) {
-  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
-}
 
 /* Preview */
 .preview-content {
@@ -39,31 +32,6 @@
 }
 .preview-content tr:nth-child(even) td {
   background: var(--bg-sunken);
-}
-
-/* Overlays */
-.modal,
-.palette,
-.quick-switcher,
-.latex-err-modal,
-.wikilink-hover-card {
-  background: var(--bg-raised);
-  color: var(--fg);
-  border-color: var(--border-strong);
-}
-.palette-item-selected,
-.quick-switcher-item:hover,
-.quick-switcher-item.selected {
-  background: var(--bg-selected);
-}
-.quick-switcher-footer {
-  background: var(--bg-hover);
-}
-.settings-tab:hover {
-  background: var(--bg-hover);
-}
-.settings-tab.active {
-  background: var(--bg-active);
 }
 
 .fm-author {

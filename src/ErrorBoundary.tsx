@@ -37,53 +37,14 @@ class Boundary extends Component<Props, State> {
 
     if (region) {
       return (
-        <div
-          role="alert"
-          data-error-region={region}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            margin: 8,
-            padding: "8px 12px",
-            boxSizing: "border-box",
-            background: "rgba(244,71,71,0.08)",
-            border: "1px solid rgba(244,71,71,0.4)",
-            borderRadius: 4,
-            fontSize: 12,
-            color: "inherit",
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>
+        <div role="alert" data-error-region={region} className="error-region">
+          <span className="error-region-title">
             {strings.regionFailed(
               strings.regions[region as keyof T["errorBoundary"]["regions"]] ?? region,
             )}
           </span>
-          <span
-            style={{
-              opacity: 0.7,
-              flex: "1 1 120px",
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {error.message}
-          </span>
-          <button
-            onClick={this.reset}
-            style={{
-              padding: "3px 12px",
-              background: "#0e639c",
-              border: "none",
-              borderRadius: 3,
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
+          <span className="error-region-message">{error.message}</span>
+          <button className="btn-create" onClick={this.reset}>
             {strings.retry}
           </button>
         </div>
@@ -91,49 +52,10 @@ class Boundary extends Component<Props, State> {
     }
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          gap: 16,
-          fontFamily: "monospace",
-          background: "#1e1e1e",
-          color: "#d4d4d4",
-          padding: 32,
-          boxSizing: "border-box",
-        }}
-      >
-        <h2 style={{ color: "#f44747", margin: 0 }}>{strings.title}</h2>
-        <pre
-          style={{
-            maxWidth: 600,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-            background: "#252526",
-            padding: 16,
-            borderRadius: 4,
-            fontSize: 13,
-            color: "#ce9178",
-            border: "1px solid #3c3c3c",
-          }}
-        >
-          {error.message}
-        </pre>
-        <button
-          onClick={this.reset}
-          style={{
-            padding: "6px 18px",
-            background: "#0e639c",
-            border: "none",
-            borderRadius: 3,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: 13,
-          }}
-        >
+      <div className="error-screen">
+        <h2 className="error-screen-title">{strings.title}</h2>
+        <pre className="error-screen-message">{error.message}</pre>
+        <button className="btn-create" onClick={this.reset}>
           {strings.retry}
         </button>
       </div>

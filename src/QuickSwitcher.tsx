@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react"
+import { useState, useRef, useCallback, useMemo, useEffect } from "react"
 import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
@@ -22,18 +22,20 @@ export default function QuickSwitcher({
   const t = useT()
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState(0)
-  const [inputKey, setInputKey] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   // Escape is handled by the input keydown; the trap only restores focus on close.
   useFocusTrap(dialogRef, open)
 
-  const handleOpen = useCallback(() => {
-    setInputKey((k) => k + 1)
-    setQuery("")
+  // Start from a clean query each time it opens. The focus trap above moves
+  // focus into the input; re-keying the input on focus (as this used to)
+  // remounted it in a loop and dropped keystrokes, Escape included.
+  useEffect(() => {
+    if (!open) return
+    // Intentional: reset input and selection each time it opens.
+    setQuery("") // eslint-disable-line react-hooks/set-state-in-effect
     setSelected(0)
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }, [])
+  }, [open])
 
   const filteredFiles = useMemo(() => {
     return query
@@ -72,7 +74,7 @@ export default function QuickSwitcher({
   if (!open) return null
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
+    <div className="modal-overlay modal-overlay-top" onMouseDown={onClose}>
       <div
         className="quick-switcher"
         ref={dialogRef}
@@ -82,13 +84,11 @@ export default function QuickSwitcher({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <input
-          key={inputKey}
           ref={inputRef}
           type="text"
           placeholder={t.quickSwitcher.placeholder}
           aria-label={t.quickSwitcher.placeholder}
           value={query}
-          onFocus={handleOpen}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
         />
@@ -116,13 +116,21 @@ export default function QuickSwitcher({
         </div>
         <div className="quick-switcher-footer">
           <span>
-            <Icon icon={ArrowUp} size={14} />
-            <Icon icon={ArrowDown} size={14} /> {t.quickSwitcher.navigate}
+            <kbd>
+              <Icon icon={ArrowUp} size={14} />
+              <Icon icon={ArrowDown} size={14} />
+            </kbd>{" "}
+            {t.quickSwitcher.navigate}
           </span>
           <span>
-            <Icon icon={CornerDownLeft} size={14} /> {t.quickSwitcher.open}
+            <kbd>
+              <Icon icon={CornerDownLeft} size={14} />
+            </kbd>{" "}
+            {t.quickSwitcher.open}
           </span>
-          <span>Esc {t.quickSwitcher.close}</span>
+          <span>
+            <kbd>Esc</kbd> {t.quickSwitcher.close}
+          </span>
         </div>
       </div>
     </div>

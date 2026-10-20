@@ -14,13 +14,11 @@
 @import "./components/panel-search.css";
 @import "./components/outline.css";
 @import "./components/tabs-2.css";
-@import "./components/layout.css";
 @import "./components/palette.css";
 @import "./components/preview-2.css";
 @import "./components/palette-2.css";
 @import "./components/modals.css";
 @import "./components/settings.css";
-@import "./components/modals-2.css";
 @import "./components/sidebar-2.css";
 @import "./components/help.css";
 @import "./components/side-panels.css";
@@ -28,7 +26,6 @@
 @import "./components/citation-manager.css";
 @import "./components/welcome.css";
 @import "./components/toasts.css";
-@import "./components/layout-2.css";
 @import "./print.css";
 @import "./components/help-2.css";
 @import "./components/git.css";
@@ -39,7 +36,6 @@
 @import "./components/graph.css";
 @import "./components/symbol-picker.css";
 @import "./components/focus.css";
-@import "./components/settings-2.css";
 @import "./components/welcome-2.css";
 @import "./components/citation-manager-2.css";
 @import "./components/math-env-4.css";

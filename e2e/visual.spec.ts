@@ -407,3 +407,162 @@ for (const { name, theme } of THEMES) {
     await closeOverlays(page)
   })
 }
+
+// Overlays and floating UI: the states the main walk does not reach. The ones
+// that need app internals (LaTeX diagnostics, toast kinds, hover cards, the
+// error fallback) are rendered by injecting the real markup into .app, so the
+// shipped CSS is what gets photographed.
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: overlays and floating UI`, async ({ page }) => {
+    test.setTimeout(180_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page, { math: true })
+
+    await page.locator('.menubar-direct-btn[title="AI assistant"]').click()
+    await page.locator(".ai-messages").waitFor()
+    await settle(page)
+    await shot(page, name, "panel__ai-chat")
+
+    await palette(page, "symbol picker")
+    await page.keyboard.press("Enter")
+    await page.locator(".symbol-picker").waitFor({ timeout: 5000 })
+    await page.locator(".symbol-btn").nth(5).hover()
+    await page.waitForTimeout(300)
+    await shot(page, name, "panel__symbols")
+
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+    await page.locator(".focus-timer-ring").waitFor()
+    await page.locator(".focus-timer-btn-primary").click()
+    await page.waitForTimeout(500)
+    await shot(page, name, "popover__focus-running")
+    await page.locator('.menubar-direct-btn[title="Focus"]').click()
+
+    await palette(page, "table editor")
+    await page.keyboard.press("Enter")
+    await page.locator(".table-editor-dialog").waitFor({ timeout: 5000 })
+    const cells = page.locator(".table-editor-cell")
+    await cells.nth(0).fill("Name")
+    await cells.nth(1).fill("Value")
+    await cells.nth(2).fill("Unit")
+    await cells.nth(3).fill("alpha")
+    await cells.nth(4).fill("0.05")
+    await page.locator(".table-editor-align").nth(1).locator("button").nth(2).click()
+    await page.waitForTimeout(300)
+    await shot(page, name, "modal__table-editor-filled")
+    await closeOverlays(page)
+
+    // Quick switcher.
+    await page.keyboard.press("Control+;")
+    await page.locator(".quick-switcher").waitFor({ timeout: 5000 })
+    await page.waitForTimeout(400)
+    await shot(page, name, "overlay__quick-switcher")
+    await closeOverlays(page)
+    // Older builds did not close the switcher on Escape; fall back to the backdrop.
+    if (await page.locator(".quick-switcher").count()) await page.mouse.click(5, 5)
+
+    // Bookmarks (one set from the editor) and recently closed tabs.
+    await page
+      .locator(".monaco-editor")
+      .first()
+      .click({ position: { x: 200, y: 80 } })
+    await page.keyboard.press("Control+Shift+1")
+    await page.waitForTimeout(300)
+    await page.keyboard.press("Control+Shift+b")
+    await page.waitForTimeout(500)
+    await shot(page, name, "modal__bookmarks")
+    await closeOverlays(page)
+    // Close the active tab, then reopen-from-list (Ctrl+Shift+T).
+    await page.keyboard.press("Control+w")
+    await page.waitForTimeout(400)
+    await page.keyboard.press("Control+Shift+t")
+    await page.waitForTimeout(500)
+    await shot(page, name, "modal__closed-tabs")
+    await closeOverlays(page)
+
+    // Folder rules, from the file tree context menu.
+    await page
+      .locator(".sidebar")
+      .getByText("papers", { exact: true })
+      .first()
+      .click({ button: "right" })
+    await page.waitForTimeout(300)
+    await page
+      .getByText(/Folder rules/)
+      .first()
+      .click()
+    await page.locator(".folder-rules-body").waitFor({ timeout: 5000 })
+    await page.waitForTimeout(400)
+    await shot(page, name, "modal__folder-rules")
+    await closeOverlays(page)
+
+    // Settings search.
+    await page.locator(".titlebar-settings-btn").click()
+    await page.locator(".settings-search input").fill("font")
+    await page.waitForTimeout(400)
+    await shot(page, name, "settings__search-results")
+    await closeOverlays(page)
+
+    // Markup that needs app state: inject it into .app.
+    await page.evaluate(() => {
+      const app = document.querySelector(".app") as HTMLElement
+      const host = document.createElement("div")
+      host.id = "visual-inject"
+      host.innerHTML = `
+        <div class="toast-container">
+          <div class="toast toast-success">Saved paper.md</div>
+          <div class="toast toast-info">Autosave is on</div>
+          <div class="toast toast-error">Could not write the file: permission denied</div>
+        </div>
+        <div class="wikilink-hover-card" style="left: 520px; top: 180px">
+          <h3>Mixing times</h3><p>The time a chain needs to get close to stationarity.</p>
+        </div>
+        <div class="math-hover-widget" style="position: fixed; left: 520px; top: 420px">
+          <span class="katex">x = y + z</span>
+        </div>
+        <div class="error-region" style="position: fixed; left: 40px; top: 640px; width: 520px">
+          <span class="error-region-title">The preview failed</span>
+          <span class="error-region-message">Cannot read properties of undefined</span>
+          <button class="btn-create">Retry</button>
+        </div>`
+      app.appendChild(host)
+    })
+    await page.waitForTimeout(600)
+    await shot(page, name, "toast__kinds-and-hover-cards")
+    await page.evaluate(() => document.getElementById("visual-inject")?.remove())
+
+    await page.evaluate(() => {
+      const app = document.querySelector(".app") as HTMLElement
+      const host = document.createElement("div")
+      host.id = "visual-inject"
+      host.innerHTML = `
+        <div class="modal-overlay">
+          <div class="modal modal-wide" role="dialog" aria-modal="true">
+            <div class="modal-header"><span>LaTeX compilation failed</span><button class="modal-close">×</button></div>
+            <div class="modal-body">
+              <div class="latex-diag error">
+                <div class="latex-diag-title">● Error (line 42)</div>
+                <div>Undefined control sequence.</div>
+                <div><span class="latex-diag-context-label">Context: </span><code class="latex-diag-context">\\foo{x}</code></div>
+                <div class="latex-diag-suggestion">Check the spelling or load the package that defines it.</div>
+              </div>
+              <div class="latex-diag warning">
+                <div class="latex-diag-title">⚠ Warning (line 77)</div>
+                <div>Overfull \\hbox (3.2pt too wide).</div>
+              </div>
+            </div>
+          </div>
+        </div>`
+      app.appendChild(host)
+    })
+    await page.waitForTimeout(600)
+    await shot(page, name, "modal__latex-error")
+    await page.evaluate(() => document.getElementById("visual-inject")?.remove())
+  })
+}

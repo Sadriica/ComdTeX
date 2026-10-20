@@ -26,7 +26,7 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="modal"
+        className="modal modal-compact"
         ref={modalRef}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -41,7 +41,7 @@ export default function ClosedTabsPopup({ open, paths, onSelect, onClose }: Clos
             <Icon icon={X} size={14} />
           </button>
         </div>
-        <div className="modal-body" style={{ maxHeight: "300px", overflowY: "auto" }}>
+        <div className="modal-body modal-list">
           {paths.length === 0 ? (
             <div className="panel-empty-rich">
               <div className="panel-empty-icon" aria-hidden="true">

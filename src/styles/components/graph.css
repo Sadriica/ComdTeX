@@ -269,19 +269,15 @@
   padding-left: 0.75em;
 }
 
-/* ── Math hover widget ── */
+/* ── Math hover widget ── (surface from modals.css) */
 .math-hover-widget {
-  background: #1e1e2e;
-  border: 1px solid #3a3a5a;
-  border-radius: 6px;
-  padding: 8px 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  transform: translateY(-110%);
   max-width: 420px;
+  padding: var(--space-4) var(--space-5);
   overflow: hidden;
   white-space: nowrap;
-  z-index: 9999;
+  pointer-events: none;
+  transform: translateY(-110%);
+  z-index: var(--z-tooltip);
 }
 .math-hover-widget .katex {
   font-size: 1.1em;

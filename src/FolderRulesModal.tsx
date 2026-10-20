@@ -207,7 +207,9 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
         </div>
 
         <div className="modal-footer">
-          <button onClick={onClose}>{t.folderRules.cancel}</button>
+          <button className="btn-cancel" onClick={onClose}>
+            {t.folderRules.cancel}
+          </button>
           <button className="btn-create" onClick={handleSave}>
             {t.folderRules.save}
           </button>

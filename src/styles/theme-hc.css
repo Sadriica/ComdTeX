@@ -20,107 +20,6 @@
   background: var(--bg-surface);
 }
 
-/* Modals */
-.app[data-theme="hc"] .modal-overlay {
-  background: color-mix(in oklch, var(--bg-surface) 85%, transparent);
-}
-.app[data-theme="hc"] .modal {
-  background: var(--bg-surface);
-  border: 2px solid var(--border-strong);
-  box-shadow:
-    0 0 0 1px var(--bg-surface),
-    var(--shadow-3);
-}
-.app[data-theme="hc"] .modal-header {
-  color: var(--accent);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .modal-close {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .modal-close:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .modal-footer {
-  border-top: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .setting-row {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .setting-value {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .setting-row select,
-.app[data-theme="hc"] .setting-row input[type="range"],
-.app[data-theme="hc"] .setting-input-num {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .setting-row input[type="checkbox"] {
-  accent-color: var(--accent);
-}
-.app[data-theme="hc"] .btn-cancel {
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-  background: transparent;
-}
-.app[data-theme="hc"] .btn-cancel:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .btn-create {
-  background: var(--link);
-  color: var(--fg);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .btn-create:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-
-/* Template modal */
-.app[data-theme="hc"] .template-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .template-card:hover {
-  border-color: var(--accent);
-  background: var(--bg-raised);
-}
-.app[data-theme="hc"] .template-card.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.app[data-theme="hc"] .template-name {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .template-desc {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .template-filename-label {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .template-filename-input,
-.app[data-theme="hc"] .template-content-input {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .template-vars-hint {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .template-create-toggle {
-  background: var(--bg-surface);
-  color: var(--link);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .template-custom-badge {
-  color: var(--ok);
-  border-color: var(--ok);
-}
-
 /* Search panel */
 
 /* Search & replace */
@@ -129,141 +28,7 @@
 
 /* Backlinks */
 
-/* Command palette */
-.app[data-theme="hc"] .palette-overlay {
-  background: color-mix(in oklch, var(--bg-surface) 80%, transparent);
-}
-.app[data-theme="hc"] .palette {
-  background: var(--bg-surface);
-  border: 2px solid var(--border-strong);
-}
-.app[data-theme="hc"] .palette-input {
-  color: var(--fg);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .palette-empty {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .palette-item {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .palette-item-selected {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .palette-kind-file {
-  color: var(--link);
-}
-.app[data-theme="hc"] .palette-kind-cmd {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .palette-item-selected .palette-kind-file,
-.app[data-theme="hc"] .palette-item-selected .palette-kind-cmd {
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .palette-kind-recent {
-  background: var(--bg-raised);
-  color: var(--accent);
-}
-.app[data-theme="hc"] .palette-desc {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .palette-item-selected .palette-desc {
-  color: var(--accent-fg);
-}
-
-/* Quick switcher */
-.app[data-theme="hc"] .quick-switcher {
-  background: var(--bg-surface);
-  border: 2px solid var(--border-strong);
-}
-.app[data-theme="hc"] .quick-switcher input {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .quick-switcher input::placeholder {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .quick-switcher-item:hover,
-.app[data-theme="hc"] .quick-switcher-item.selected {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .quick-switcher-path {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .quick-switcher-item:hover .quick-switcher-path,
-.app[data-theme="hc"] .quick-switcher-item.selected .quick-switcher-path {
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .quick-switcher-empty {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .quick-switcher-footer {
-  background: var(--bg-surface);
-  color: var(--fg-muted);
-  border-top: 1px solid var(--border-strong);
-}
-
-/* Closed tabs popup */
-.app[data-theme="hc"] .closed-tab-item {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .closed-tab-item:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .closed-tab-path {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .closed-tab-item:hover .closed-tab-path {
-  color: var(--accent-fg);
-}
-
-/* Bookmarks */
-.app[data-theme="hc"] .bookmark-item {
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .bookmark-slot {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .bookmark-line {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .bookmark-line:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .bookmark-remove {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .bookmark-remove:hover {
-  color: var(--danger);
-}
-
 /* Context menu */
-
-/* Toasts */
-.app[data-theme="hc"] .toast {
-  box-shadow: var(--shadow-3);
-  border-width: 2px;
-}
-.app[data-theme="hc"] .toast-success {
-  background: var(--bg-surface);
-  border: 2px solid var(--ok);
-  color: var(--ok);
-}
-.app[data-theme="hc"] .toast-error {
-  background: var(--bg-surface);
-  border: 2px solid var(--danger);
-  color: var(--danger);
-}
-.app[data-theme="hc"] .toast-info {
-  background: var(--bg-surface);
-  border: 2px solid var(--link);
-  color: var(--link);
-}
 
 /* Drag overlay */
 .app[data-theme="hc"] .drag-overlay {
@@ -273,15 +38,7 @@
 }
 
 /* Wikilinks / cross-refs */
-.app[data-theme="hc"] .wikilink-hover-card {
-  background: var(--bg-surface);
-  color: var(--fg);
-  border: 2px solid var(--link);
-  box-shadow: none;
-}
-.app[data-theme="hc"] .wikilink-hover-card .wikilink-hover-empty {
-  color: var(--accent);
-}
+
 .app[data-theme="hc"] .transclusion {
   border: 2px solid var(--link);
   background: transparent;
@@ -537,13 +294,6 @@
 /* Environments panel */
 
 /* Panel header / empty */
-
-/* Math hover widget */
-.app[data-theme="hc"] .math-hover-widget {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-}
 
 /* Mermaid diagram bg in HC */
 .app[data-theme="hc"] .mermaid-diagram {

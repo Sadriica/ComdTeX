@@ -17,105 +17,6 @@
 
 /* Preview content (default: when previewTheme is "same") */
 
-/* Modals */
-.app[data-theme="light"] .modal-overlay {
-  background: color-mix(in oklch, var(--fg) 25%, transparent);
-}
-.app[data-theme="light"] .modal {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-2);
-}
-.app[data-theme="light"] .modal-header {
-  color: var(--fg);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .modal-close {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .modal-close:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .modal-footer {
-  border-top-color: var(--border);
-}
-.app[data-theme="light"] .setting-row {
-  color: var(--fg);
-}
-.app[data-theme="light"] .setting-value {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .setting-row select,
-.app[data-theme="light"] .setting-row input[type="range"],
-.app[data-theme="light"] .setting-input-num {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .setting-row input[type="checkbox"] {
-  accent-color: var(--accent);
-}
-.app[data-theme="light"] .btn-cancel {
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .btn-cancel:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .btn-create {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .btn-create:hover:not(:disabled) {
-  background: var(--accent);
-}
-
-/* Template modal */
-.app[data-theme="light"] .template-card {
-  background: var(--bg-surface);
-  border-color: var(--border);
-}
-.app[data-theme="light"] .template-card:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.app[data-theme="light"] .template-card.selected {
-  border-color: var(--accent);
-  background: var(--bg-selected);
-}
-.app[data-theme="light"] .template-name {
-  color: var(--fg);
-}
-.app[data-theme="light"] .template-desc {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .template-filename-label {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .template-filename-input,
-.app[data-theme="light"] .template-content-input {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .template-filename-input:focus {
-  border-color: var(--accent);
-}
-.app[data-theme="light"] .template-vars-hint {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .template-create-toggle {
-  background: var(--chrome-bg);
-  color: var(--accent);
-  border-color: var(--border);
-}
-.app[data-theme="light"] .template-custom-badge {
-  color: var(--ok);
-  border-color: #0a8d5e55;
-}
-
 /* Search panel */
 
 /* Search & replace */
@@ -124,127 +25,7 @@
 
 /* Backlinks */
 
-/* Command palette */
-.app[data-theme="light"] .palette-overlay {
-  background: color-mix(in oklch, var(--fg) 30%, transparent);
-}
-.app[data-theme="light"] .palette {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-2);
-}
-.app[data-theme="light"] .palette-input {
-  color: var(--fg);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .palette-empty {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .palette-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .palette-item-selected {
-  background: var(--bg-selected);
-  color: var(--accent);
-}
-.app[data-theme="light"] .palette-kind-file {
-  color: var(--accent);
-}
-.app[data-theme="light"] .palette-kind-cmd {
-  color: var(--warn);
-}
-.app[data-theme="light"] .palette-kind-recent {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
-.app[data-theme="light"] .palette-desc {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .palette-item-selected .palette-desc {
-  color: var(--accent);
-}
-
-/* Quick switcher */
-.app[data-theme="light"] .quick-switcher {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-2);
-}
-.app[data-theme="light"] .quick-switcher input {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-  color: var(--fg);
-}
-.app[data-theme="light"] .quick-switcher input::placeholder {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .quick-switcher-item:hover,
-.app[data-theme="light"] .quick-switcher-item.selected {
-  background: var(--bg-selected);
-}
-.app[data-theme="light"] .quick-switcher-path {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .quick-switcher-empty {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .quick-switcher-footer {
-  background: var(--chrome-bg);
-  color: var(--fg-muted);
-}
-
-/* Closed tabs popup */
-.app[data-theme="light"] .closed-tab-item {
-  color: var(--fg);
-}
-.app[data-theme="light"] .closed-tab-item:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .closed-tab-path {
-  color: var(--fg-muted);
-}
-
-/* Bookmarks */
-.app[data-theme="light"] .bookmark-item {
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .bookmark-slot {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .bookmark-line {
-  color: var(--fg);
-}
-.app[data-theme="light"] .bookmark-line:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .bookmark-remove {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .bookmark-remove:hover {
-  color: var(--danger);
-}
-
 /* Context menu */
-
-/* Toasts */
-.app[data-theme="light"] .toast {
-  box-shadow: var(--shadow-1);
-}
-.app[data-theme="light"] .toast-success {
-  background: var(--ok-bg);
-  border-color: var(--ok);
-  color: var(--ok);
-}
-.app[data-theme="light"] .toast-error {
-  background: var(--danger-bg);
-  border-color: var(--danger);
-  color: var(--danger);
-}
-.app[data-theme="light"] .toast-info {
-  background: var(--bg-selected);
-  border-color: var(--accent);
-  color: var(--accent);
-}
 
 /* Drag overlay */
 .app[data-theme="light"] .drag-overlay {
@@ -258,15 +39,7 @@
   color: var(--accent);
   border-bottom-color: color-mix(in oklch, var(--accent) 40%, transparent);
 }
-.app[data-theme="light"] .wikilink-hover-card {
-  background: var(--bg-surface);
-  color: var(--fg);
-  border-color: var(--border);
-  box-shadow: var(--shadow-2);
-}
-.app[data-theme="light"] .wikilink-hover-card .wikilink-hover-empty {
-  color: var(--fg-muted);
-}
+
 .app[data-theme="light"] .transclusion {
   border-color: var(--border);
   border-left-color: var(--ok);
@@ -553,14 +326,6 @@
 /* Environments panel */
 
 /* Panel header / empty */
-
-/* Math hover widget */
-.app[data-theme="light"] .math-hover-widget {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-1);
-  color: var(--fg);
-}
 
 /* Mermaid diagram bg in light */
 .app[data-theme="light"] .mermaid-diagram {

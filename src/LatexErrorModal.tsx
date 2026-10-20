@@ -1,5 +1,7 @@
+import { useRef, useId } from "react"
 import { useT } from "./i18n"
 import { CircleX, Icon, TriangleAlert, X } from "./icons"
+import { useFocusTrap } from "./useFocusTrap"
 import type { LatexDiagnostic } from "./latexErrors"
 
 interface LatexErrorModalProps {
@@ -9,14 +11,26 @@ interface LatexErrorModalProps {
 
 export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModalProps) {
   const t = useT()
+  const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  // The modal is mounted only while open; the trap focuses it, closes on Escape
+  // and gives focus back to whatever opened it.
+  useFocusTrap(modalRef, true, onClose)
 
   return (
-    <div className="latex-err-overlay" onClick={onClose}>
-      <div className="latex-err-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="latex-err-header">
-          <h3>{t.latexErrors.title}</h3>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal modal-wide"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <span id={titleId}>{t.latexErrors.title}</span>
           <button
-            className="latex-err-close"
+            className="modal-close"
             onClick={onClose}
             aria-label={t.latexErrors.close}
             title={t.latexErrors.close}
@@ -24,9 +38,9 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
             <Icon icon={X} size={14} />
           </button>
         </div>
-        <div className="latex-err-body">
+        <div className="modal-body">
           {diagnostics.length === 0 ? (
-            <p style={{ color: "#aaa", margin: 0 }}>{t.latexErrors.noDetails}</p>
+            <p className="latex-err-empty">{t.latexErrors.noDetails}</p>
           ) : (
             diagnostics.map((diag, idx) => (
               <div key={idx} className={`latex-diag ${diag.severity}`}>
@@ -44,9 +58,7 @@ export default function LatexErrorModal({ diagnostics, onClose }: LatexErrorModa
                 <div>{diag.message}</div>
                 {diag.context && (
                   <div>
-                    <span style={{ color: "#aaa", fontSize: "0.85em" }}>
-                      {t.latexErrors.context}:{" "}
-                    </span>
+                    <span className="latex-diag-context-label">{t.latexErrors.context}: </span>
                     <code className="latex-diag-context">{diag.context}</code>
                   </div>
                 )}
