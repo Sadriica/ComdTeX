@@ -1,6 +1,6 @@
 // Finding a setting without knowing which tab it lives in.
 //
-// Settings holds 34 options across seven tabs, and the tabs are grouped by
+// Settings holds 35 options across seven tabs, and the tabs are grouped by
 // what the option belongs to, not by the word someone has in their head. A
 // person looking for "autosave" should not have to open Editor, Preview and
 // General to discover it. This is the list the search box reads: one entry
@@ -52,6 +52,7 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "useWasmTex", section: "pdf", label: (t) => t.settings.useWasmTex },
   { id: "texliveUrl", section: "pdf", label: (t) => t.settings.texliveUrl },
   { id: "autoRebuildPdf", section: "pdf", label: (t) => t.settings.autoRebuildPdf },
+  { id: "pdfDarkMode", section: "pdf", label: (t) => t.settings.pdfDarkMode },
 
   {
     id: "cloudSyncBannerEnabled",

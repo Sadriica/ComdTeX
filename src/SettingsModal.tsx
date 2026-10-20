@@ -582,6 +582,17 @@ export default function SettingsModal({
                     onChange={() => onChange({ autoRebuildPdf: !settings.autoRebuildPdf })}
                   />
                 </label>
+                <label className="setting-row" data-setting="pdfDarkMode">
+                  <span>
+                    {t.settings.pdfDarkMode}
+                    <span className="setting-help">: {t.settings.pdfDarkModeDesc}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.pdfDarkMode}
+                    onChange={() => onChange({ pdfDarkMode: !settings.pdfDarkMode })}
+                  />
+                </label>
               </>
             )}
 
