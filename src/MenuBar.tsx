@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import React from "react"
 
 export interface MenuAction {
@@ -23,46 +23,168 @@ function isSep(e: MenuEntry): e is MenuSeparatorItem {
   return "separator" in e
 }
 
-function MenuDropdown({ label, entries }: MenuDef) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+type Focus = "first" | "last"
 
+interface DropdownProps extends MenuDef {
+  open: boolean
+  /** Where keyboard focus should land once the panel is open (null: leave it). */
+  focusTarget: Focus | null
+  onOpen: (focus: Focus | null) => void
+  onClose: (returnFocus: boolean) => void
+  /** Move to the previous (-1) or next (1) top-level menu, opened. */
+  onStep: (dir: -1 | 1) => void
+  onFocusTop: (dir: -1 | 1) => void
+  triggerRef: (el: HTMLButtonElement | null) => void
+}
+
+function MenuDropdown({
+  label,
+  entries,
+  open,
+  focusTarget,
+  onOpen,
+  onClose,
+  onStep,
+  onFocusTop,
+  triggerRef,
+}: DropdownProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const items = useCallback(
+    () =>
+      Array.from(
+        panelRef.current?.querySelectorAll<HTMLButtonElement>("button.menu-entry:not(:disabled)") ??
+          [],
+      ),
+    [],
+  )
+
+  // Keyboard-opened menus move focus into the panel; mouse-opened ones keep it
+  // where it was (the editor), as before.
   useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    if (!open || !focusTarget) return
+    const list = items()
+    if (!list.length) return
+    list[focusTarget === "first" ? 0 : list.length - 1].focus()
+  }, [open, focusTarget, items])
+
+  const onTriggerKey = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault()
+        onOpen("first")
+        break
+      case "ArrowUp":
+        e.preventDefault()
+        onOpen("last")
+        break
+      case "ArrowRight":
+        e.preventDefault()
+        onFocusTop(1)
+        break
+      case "ArrowLeft":
+        e.preventDefault()
+        onFocusTop(-1)
+        break
+      case "Escape":
+        if (open) {
+          e.preventDefault()
+          onClose(true)
+        }
+        break
     }
-    document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
-  }, [open])
+  }
+
+  const onPanelKey = (e: React.KeyboardEvent) => {
+    const list = items()
+    const at = list.indexOf(document.activeElement as HTMLButtonElement)
+    const go = (i: number) => {
+      e.preventDefault()
+      list[(i + list.length) % list.length]?.focus()
+    }
+    switch (e.key) {
+      case "ArrowDown":
+        go(at + 1)
+        break
+      case "ArrowUp":
+        go(at < 0 ? -1 : at - 1)
+        break
+      case "Home":
+        go(0)
+        break
+      case "End":
+        go(-1)
+        break
+      case "ArrowRight":
+        e.preventDefault()
+        onStep(1)
+        break
+      case "ArrowLeft":
+        e.preventDefault()
+        onStep(-1)
+        break
+      case "Escape":
+        e.preventDefault()
+        onClose(true)
+        break
+      case "Tab":
+        onClose(false)
+        break
+    }
+  }
 
   return (
-    <div className="menu-item" ref={ref}>
+    <div className="menu-item">
       <button
+        ref={triggerRef}
         className={`menu-btn${open ? " open" : ""}`}
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onMouseDown={(e) => {
           e.preventDefault()
-          setOpen((o) => !o)
+          if (open) onClose(false)
+          else onOpen(null)
         }}
+        // Keyboard activation (Enter/Space) arrives as a click with detail 0;
+        // a mouse click was already handled on mousedown.
+        onClick={(e) => {
+          if (e.detail !== 0) return
+          if (open) onClose(true)
+          else onOpen("first")
+        }}
+        onKeyDown={onTriggerKey}
       >
         {label}
       </button>
       {open && (
-        <div className="menu-panel">
+        <div
+          className="menu-panel"
+          role="menu"
+          aria-label={label}
+          ref={panelRef}
+          onKeyDown={onPanelKey}
+        >
           {entries.map((entry, i) =>
             isSep(entry) ? (
-              <div key={i} className="menu-sep" />
+              <div key={i} className="menu-sep" role="separator" />
             ) : (
               <button
                 key={i}
                 className="menu-entry"
+                role="menuitem"
                 disabled={entry.disabled}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   if (!entry.disabled) {
                     entry.action()
-                    setOpen(false)
+                    onClose(false)
                   }
+                }}
+                onClick={(e) => {
+                  if (e.detail !== 0 || entry.disabled) return
+                  entry.action()
+                  onClose(true)
                 }}
               >
                 <span className="menu-entry-label">{entry.label}</span>
@@ -77,10 +199,57 @@ function MenuDropdown({ label, entries }: MenuDef) {
 }
 
 function MenuBar({ menus, children }: { menus: MenuDef[]; children?: React.ReactNode }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+  const [focusTarget, setFocusTarget] = useState<Focus | null>(null)
+  const barRef = useRef<HTMLDivElement>(null)
+  const triggers = useRef<(HTMLButtonElement | null)[]>([])
+
+  useEffect(() => {
+    if (openIdx === null) return
+    const close = (e: MouseEvent) => {
+      if (!barRef.current?.contains(e.target as Node)) setOpenIdx(null)
+    }
+    document.addEventListener("mousedown", close)
+    return () => document.removeEventListener("mousedown", close)
+  }, [openIdx])
+
+  const open = (i: number, focus: Focus | null) => {
+    setFocusTarget(focus)
+    setOpenIdx(i)
+  }
+  const close = (returnFocus: boolean) => {
+    const was = openIdx
+    setOpenIdx(null)
+    setFocusTarget(null)
+    if (returnFocus && was !== null) triggers.current[was]?.focus()
+  }
+  const wrap = (i: number, dir: -1 | 1) => (i + dir + menus.length) % menus.length
+
   return (
-    <div className="menu-bar">
-      {menus.map((m) => (
-        <MenuDropdown key={m.label} {...m} />
+    <div className="menu-bar" role="menubar" ref={barRef}>
+      {menus.map((m, i) => (
+        <MenuDropdown
+          key={m.label}
+          {...m}
+          open={openIdx === i}
+          focusTarget={openIdx === i ? focusTarget : null}
+          onOpen={(f) => open(i, f)}
+          onClose={close}
+          onStep={(dir) => {
+            const next = wrap(i, dir)
+            triggers.current[next]?.focus()
+            open(next, "first")
+          }}
+          onFocusTop={(dir) => {
+            const next = wrap(i, dir)
+            triggers.current[next]?.focus()
+            // With a menu open, the neighbour opens too (menubar convention).
+            if (openIdx !== null) open(next, null)
+          }}
+          triggerRef={(el) => {
+            triggers.current[i] = el
+          }}
+        />
       ))}
       {children}
     </div>
