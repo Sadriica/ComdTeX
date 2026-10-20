@@ -22,6 +22,7 @@ import { preprocessFigureLabels } from "./figures"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
+import { resolveDocLanguage } from "./docLang"
 
 interface LatexMacro {
   command: string
@@ -1043,7 +1044,10 @@ export function exportReveal(rawMarkdown: string, title: string): string {
 
   // Reveal's markdown plugin has no `:::` syntax: number the environments and
   // resolve their refs into plain blockquotes, as the other text exports do.
-  const slides = splitSlides(numberEnvironmentsForExport(body, "bold"))
+  const docLang = resolveDocLanguage(parsed?.data)
+  const slides = splitSlides(
+    numberEnvironmentsForExport(body, "bold", undefined, undefined, docLang),
+  )
 
   // Guard against breaking out of the <textarea data-template> wrapper: a literal
   // </textarea> in slide content would end the template early. Reveal's markdown

@@ -53,21 +53,6 @@ const KIND_ALIASES: Record<string, StructuralLabelKind> = {
   exercise: "exc",
 }
 
-export const LABEL_KIND_TITLES: Record<StructuralLabelKind, string> = {
-  sec: "Secciones",
-  eq: "Ecuaciones",
-  fig: "Figuras",
-  tbl: "Tablas",
-  thm: "Teoremas",
-  lem: "Lemas",
-  cor: "Corolarios",
-  prop: "Proposiciones",
-  def: "Definiciones",
-  ex: "Ejemplos",
-  exc: "Ejercicios",
-  data: "Datos",
-}
-
 function normalizeKind(kind: string): StructuralLabelKind | null {
   return KIND_ALIASES[kind] ?? null
 }

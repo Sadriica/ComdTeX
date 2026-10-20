@@ -109,6 +109,7 @@ import { buildPaletteCommands } from "./commands"
 import { buildMenus, type EditorActionId } from "./menus"
 import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
+import { setUiLanguage } from "./docLang"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
@@ -521,6 +522,10 @@ const MonacoEditor = lazy(async () => {
 
 export default function App() {
   const { settings, update: updateSettings } = useSettings()
+  // The words a document prints ("Theorem 2", "References") follow the
+  // interface language unless the document names its own. Set during render,
+  // before any child renders the preview, so the first paint is already right.
+  setUiLanguage(settings.language)
   return (
     <LanguageContext.Provider value={LANGS[settings.language]}>
       <ErrorBoundary>
@@ -2021,6 +2026,7 @@ function AppContent({
       transclusionResolver,
       envRefResolver,
       imageExists,
+      settings.language,
       mermaidVersion,
       excalidrawVersion,
     ],

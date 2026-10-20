@@ -15,6 +15,8 @@
  *   :::
  */
 
+import { activeDocLanguage, activeDocTerms, envTitle, type DocLang } from "./docLang"
+
 export const NUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
   theorem: { es: "Teorema", latex: "theorem" },
   lemma: { es: "Lema", latex: "lemma" },
@@ -244,10 +246,17 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
  * scheme has a single definition. `title` is used as given (callers escape it
  * for HTML when needed).
  */
-export function envDisplayLabel(envName: string, number: string, title: string): string {
+export function envDisplayLabel(
+  envName: string,
+  number: string,
+  title: string,
+  lang?: DocLang,
+): string {
   const info = ALL_ENVS[envName]
   if (!info) return title
-  return [info.es, number, title ? `(${title})` : ""].filter(Boolean).join(" ")
+  return [envTitle(envName, lang) || info.es, number, title ? `(${title})` : ""]
+    .filter(Boolean)
+    .join(" ")
 }
 
 /** Advances `counters` for `envName` and returns its number ("" when unnumbered). */
@@ -295,7 +304,7 @@ export function buildEnvHTML(
     return [
       `<div class="math-env math-env-folded">`,
       `<div class="math-env-header math-env-folded-header" onclick="this.parentElement.querySelector('.math-env-body').classList.toggle('folded'); this.classList.toggle('folded')">`,
-      `<span class="math-env-label">${escHtml(title) || "Contenido colapsado"}</span>`,
+      `<span class="math-env-label">${escHtml(title) || activeDocTerms().collapsed}</span>`,
       `<span class="math-env-folded-toggle">▸</span>`,
       `</div>`,
       `<div class="math-env-body folded">${innerHTML}</div>`,
@@ -564,22 +573,24 @@ export function extractEnvironments(
   return { text: current, slots }
 }
 
+/** Reference prefix (`@thm:x`) to the environment type it points at. */
 const ENV_REF_PREFIXES: Record<string, string> = {
-  thm: "Teorema",
-  theorem: "Teorema",
-  lem: "Lema",
-  lemma: "Lema",
-  cor: "Corolario",
-  prop: "Proposición",
-  def: "Definición",
-  definition: "Definición",
-  ex: "Ejemplo",
-  example: "Ejemplo",
-  exc: "Ejercicio",
-  exercise: "Ejercicio",
+  thm: "theorem",
+  theorem: "theorem",
+  lem: "lemma",
+  lemma: "lemma",
+  cor: "corollary",
+  prop: "proposition",
+  def: "definition",
+  definition: "definition",
+  ex: "example",
+  example: "example",
+  exc: "exercise",
+  exercise: "exercise",
 }
 
 export interface EnvironmentReference {
+  /** Environment type (`theorem`), not its title: the title depends on the language at display time. */
   kind: string
   number: string
   label: string
@@ -600,7 +611,7 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
       if (labels.has(label)) {
         console.warn(`Duplicate environment label: ${label}`)
       } else {
-        labels.set(label, { kind: ALL_ENVS[envName].es, number, label })
+        labels.set(label, { kind: envName, number, label })
       }
     }
   }
@@ -688,6 +699,7 @@ export function resolveEnvironmentRefs(
   labels: Map<string, EnvironmentReference>,
   resolver?: EnvironmentDocResolver,
   format: "html" | "text" = "html",
+  lang: DocLang = activeDocLanguage(),
 ): string {
   // "text" is for exports that cannot carry the preview's links (Markdown,
   // Pandoc inputs, Reveal): same resolved wording, no anchor markup.
@@ -705,8 +717,9 @@ export function resolveEnvironmentRefs(
     ) => {
       // ── Cross-file: `@doc@prefix:id` / `@[doc with spaces]@prefix:id` ────────
       if (crossPrefix !== undefined && crossId !== undefined) {
-        const kind = ENV_REF_PREFIXES[crossPrefix]
-        if (!kind) return full
+        const kindName = ENV_REF_PREFIXES[crossPrefix]
+        if (!kindName) return full
+        const kind = envTitle(kindName, lang)
         const docPath = (bracketPath ?? barePath ?? "").trim()
         const label = `${crossPrefix}:${crossId}`
         // Missing file and missing label degrade identically to a broken LOCAL
@@ -714,7 +727,8 @@ export function resolveEnvironmentRefs(
         const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
         const ref = docLabels?.get(label)
         if (!ref) return asText ? `${kind} (?)` : `<span class="env-ref-broken">${kind} (?)</span>`
-        const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+        const refKind = envTitle(ref.kind, lang)
+        const display = ref.number ? `${refKind} ${ref.number}` : refKind
         if (asText) return display
         const safeDoc = escHtml(docPath)
         const safeLabel = escHtml(label)
@@ -727,11 +741,11 @@ export function resolveEnvironmentRefs(
       const label = `${localPrefix}:${localId}`
       const ref = labels.get(label)
       if (!ref) {
-        return asText
-          ? `${ENV_REF_PREFIXES[localPrefix]} (?)`
-          : `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
+        const kind = envTitle(ENV_REF_PREFIXES[localPrefix], lang)
+        return asText ? `${kind} (?)` : `<span class="env-ref-broken">${kind} (?)</span>`
       }
-      const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+      const refKind = envTitle(ref.kind, lang)
+      const display = ref.number ? `${refKind} ${ref.number}` : refKind
       if (asText) return display
       return `<a class="env-ref" href="#env-${label}">${display}</a>`
     },

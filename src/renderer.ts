@@ -26,6 +26,7 @@ import {
 } from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
 import { resolveImagePath } from "./imagePaths"
+import { resolveDocLanguage, withDocLanguage, type DocLang } from "./docLang"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import {
@@ -636,7 +637,7 @@ function maskCodeRegions(text: string): { masked: string; restore: (s: string) =
   return { masked, restore }
 }
 
-export function renderMarkdown(
+function renderMarkdownImpl(
   raw: string,
   macros: KatexMacros = {},
   vaultPath?: string,
@@ -661,6 +662,12 @@ export function renderMarkdown(
     docPath?: string
     /** Sync existence check (forward-slash absolute paths) used to pick between those two. */
     fileExists?: (absPath: string) => boolean
+    /**
+     * Language of the words the document prints ("Theorem 2", "Figure 1",
+     * "References"). The document's own `lang`/`language` frontmatter wins;
+     * without either, the interface language (docLang.ts).
+     */
+    lang?: DocLang
   },
 ): string {
   resetEnvCounters()
@@ -783,6 +790,12 @@ export function renderMarkdown(
   if (opts?.annotate !== false) html = annotateSourceLines(html, raw)
 
   return frontmatterHtml + html + bibHtml
+}
+
+export function renderMarkdown(...args: Parameters<typeof renderMarkdownImpl>): string {
+  const [raw, , , , , , , opts] = args
+  const data = raw.startsWith("---") ? extractFrontmatter(raw)?.data : undefined
+  return withDocLanguage(resolveDocLanguage(data, opts?.lang), () => renderMarkdownImpl(...args))
 }
 
 // Process file includes synchronously - for export use

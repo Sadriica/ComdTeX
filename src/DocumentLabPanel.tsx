@@ -68,7 +68,10 @@ export default function DocumentLabPanel({
       }),
     [files, bibKeys, assetPaths, vaultPath, t],
   )
-  const compatibility = useMemo(() => analyzeExportCompatibility(activeContent), [activeContent])
+  const compatibility = useMemo(
+    () => analyzeExportCompatibility(activeContent, t.documentLab.compat),
+    [activeContent, t],
+  )
   const project = useMemo(() => buildProjectPlan(files, activePath), [files, activePath])
   const mathlinks = useMemo(() => scanMathBacklinks(files), [files])
   const structureIssues = diagnostics.issues.filter((issue) => issue.category === "structure")

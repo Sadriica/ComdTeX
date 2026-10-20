@@ -22,6 +22,7 @@
  * `prescanTables` recognises both sources, so the two passes stay in agreement.
  */
 import { stripCodeFences } from "./equations"
+import { activeDocTerms } from "./docLang"
 
 const TABLE_ROW_RE = /^\s*\|.+\|\s*$/
 const TABLE_DELIM_RE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/
@@ -64,14 +65,15 @@ export function prescanTables(text: string): Map<string, number> {
 }
 
 export function resolveTableRefs(text: string, labels: Map<string, number>): string {
+  const word = activeDocTerms().table
   return text.replace(/@tbl:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     if (/^\d+$/.test(ref)) {
-      return `<a class="tbl-ref" href="#${tableAnchorId(ref)}">Tabla ${ref}</a>`
+      return `<a class="tbl-ref" href="#${tableAnchorId(ref)}">${word} ${ref}</a>`
     }
     const n = labels.get(`tbl:${ref}`)
     return n != null
-      ? `<a class="tbl-ref" href="#${tableAnchorId(ref)}">Tabla ${n}</a>`
-      : `<span class="tbl-ref-broken">Tabla (?)</span>`
+      ? `<a class="tbl-ref" href="#${tableAnchorId(ref)}">${word} ${n}</a>`
+      : `<span class="tbl-ref-broken">${word} (?)</span>`
   })
 }
 
@@ -81,6 +83,7 @@ const LAZY_LABEL_ROW_RE =
   /\s*<tr>\s*<td[^>]*>\s*\{#tbl:([\w:.-]+)\}\s*<\/td>(?:\s*<td[^>]*>\s*<\/td>)*\s*<\/tr>(?=\s*(?:<\/tbody>)?\s*$)/
 
 export function wrapTables(html: string, labels: Map<string, number>): string {
+  const word = activeDocTerms().table
   let n = 0
   return html.replace(
     /<table>([\s\S]*?)<\/table>(?:\s*<p>\{#tbl:([\w:.-]+)\}<\/p>)?/g,
@@ -100,7 +103,7 @@ export function wrapTables(html: string, labels: Map<string, number>): string {
       const id = tableAnchorId(label ?? String(tableNumber))
       return `<figure class="tbl-block" id="${id}">
 <table>${tableInner}</table>
-<figcaption><span class="tbl-number">Tabla ${tableNumber}</span></figcaption>
+<figcaption><span class="tbl-number">${word} ${tableNumber}</span></figcaption>
 </figure>`
     },
   )

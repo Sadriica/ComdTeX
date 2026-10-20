@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import {
-  LABEL_KIND_TITLES,
   scanStructuralLabels,
   type StructuralLabel,
   type StructuralLabelKind,
@@ -82,7 +81,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
           <option value="all">{lp.allTypes}</option>
           {KIND_ORDER.map((item) => (
             <option key={item} value={item}>
-              {LABEL_KIND_TITLES[item]}
+              {lp.kindTitles[item]}
             </option>
           ))}
         </select>
@@ -118,7 +117,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
       <div className="labels-list">
         {KIND_ORDER.filter((item) => grouped[item]?.length).map((item) => (
           <div key={item} className="labels-section">
-            <div className="labels-section-title">{LABEL_KIND_TITLES[item]}</div>
+            <div className="labels-section-title">{lp.kindTitles[item]}</div>
             {grouped[item].map((label, i) => {
               const duplicate = (index.duplicates.get(label.id)?.length ?? 0) > 1
               const unused = index.unused.includes(label)

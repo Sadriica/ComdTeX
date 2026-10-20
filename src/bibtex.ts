@@ -1,4 +1,5 @@
 import { CITE_STYLES, type CiteStyle } from "./citeStyles"
+import { activeDocTerms } from "./docLang"
 /**
  * Minimal BibTeX parser and citation renderer.
  *
@@ -130,7 +131,7 @@ export function resolveCitations(
     const cls = entry ? "cite-ref" : "cite-ref cite-broken"
     const title = entry
       ? `${entry.fields.author ?? ""} (${entry.fields.year ?? "?"})`
-      : `Clave no encontrada: ${key}`
+      : activeDocTerms().bibliography.keyNotFound(key)
     return `<a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">${esc(body)}</a>`
   }
   const markerFor = (key: string, n: number) => {
@@ -209,7 +210,7 @@ function formatEntryDefault(entry: BibEntry, n: number): string {
   const f = entry.fields
   const authors = f.author ? formatAuthors(f.author) : "?"
   const year = f.year ? `(${f.year})` : ""
-  const title = f.title ?? "Sin título"
+  const title = f.title ?? activeDocTerms().bibliography.untitled
 
   let source = ""
   if (entry.type === "article") {
@@ -239,16 +240,17 @@ export function renderBibliography(
   style: CiteStyle = CITE_STYLES.default,
 ): string {
   if (citedKeys.length === 0) return ""
+  const terms = activeDocTerms().bibliography
   const items = citedKeys
     .map((key, i) => {
       const entry = bibMap.get(key)
       if (!entry)
-        return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] Referencia no encontrada: <code>${key}</code></div>`
+        return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] ${esc(terms.missing)}: <code>${key}</code></div>`
       return formatEntry(entry, i + 1, style)
     })
     .join("\n")
 
-  return `<div class="bibliography"><h2>Referencias</h2>${items}</div>`
+  return `<div class="bibliography"><h2>${esc(terms.heading)}</h2>${items}</div>`
 }
 
 // ── LaTeX cite commands ───────────────────────────────────────────────────────
