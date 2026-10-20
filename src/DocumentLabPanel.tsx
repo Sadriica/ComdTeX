@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, type CSSProperties } from "react"
 import { analyzeExportCompatibility } from "./exportCompatibility"
 import { diagnoseDocuments, type DiagnosticIssue } from "./documentDiagnostics"
 import { buildProjectPlan } from "./projectExport"
@@ -20,17 +20,50 @@ interface DocumentLabPanelProps {
 
 type LabTab = "diagnostics" | "compatibility" | "project" | "structure" | "mathlinks"
 
-const severityLabel: Record<DiagnosticIssue["severity"], string> = {
-  error: "error",
-  warning: "warn",
-  info: "info",
+const SEVERITIES = ["error", "warning", "info"] as const
+
+/** The severity marker: its shape (disc, diamond, ring) carries the meaning, colour reinforces it. */
+function SeverityIcon({ label }: { label: string }) {
+  return <span className="lab-icon" role="img" aria-label={label} title={label} />
+}
+
+/** One export target's score as a small meter: width and colour come from the value. */
+function CompatMeter({ label, score }: { label: string; score: number }) {
+  const level = score >= 80 ? "high" : score >= 50 ? "mid" : "low"
+  return (
+    <div className="compat-target" data-level={level}>
+      <span className="compat-name">{label}</span>
+      <span className="compat-value">{score}%</span>
+      <span
+        className="compat-meter"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={score}
+      >
+        <span className="compat-meter-fill" style={{ "--value": score } as CSSProperties} />
+      </span>
+    </div>
+  )
+}
+
+function GroupTitle({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="lab-group-title">
+      <span>{label}</span>
+      <span className="lab-group-count">{count}</span>
+    </div>
+  )
 }
 
 function IssueRow({
   issue,
+  severityText,
   onOpenFile,
 }: {
   issue: DiagnosticIssue
+  severityText: string
   onOpenFile: (path: string, line?: number) => void
 }) {
   return (
@@ -38,9 +71,10 @@ function IssueRow({
       className={`lab-item lab-${issue.severity}`}
       onClick={() => onOpenFile(issue.filePath, issue.line)}
     >
+      <SeverityIcon label={severityText} />
       <span className="lab-item-title">{issue.message}</span>
       <span className="lab-item-meta">
-        {severityLabel[issue.severity]} · {displayBasename(issue.filePath)}:{issue.line}
+        {displayBasename(issue.filePath)}:{issue.line}
       </span>
       {issue.context && <span className="lab-item-context">{issue.context}</span>}
     </button>
@@ -76,6 +110,11 @@ export default function DocumentLabPanel({
   const mathlinks = useMemo(() => scanMathBacklinks(files), [files])
   const structureIssues = diagnostics.issues.filter((issue) => issue.category === "structure")
 
+  const severityText: Record<DiagnosticIssue["severity"], string> = {
+    error: t.documentLab.errors,
+    warning: t.documentLab.warnings,
+    info: t.documentLab.info,
+  }
   const TAB_LABELS: Record<LabTab, string> = {
     diagnostics: t.documentLab.diagnostics,
     compatibility: t.documentLab.compatibility,
@@ -102,27 +141,26 @@ export default function DocumentLabPanel({
 
       {tab === "diagnostics" && (
         <div className="lab-list">
-          <div className="lab-score-row">
-            <span>
-              {t.documentLab.errors} {diagnostics.errors}
-            </span>
-            <span>
-              {t.documentLab.warnings} {diagnostics.warnings}
-            </span>
-            <span>
-              {t.documentLab.info} {diagnostics.info}
-            </span>
-          </div>
           {diagnostics.issues.length === 0 ? (
             <div className="panel-empty">{t.documentLab.noIssues}</div>
           ) : (
-            diagnostics.issues.map((issue, i) => (
-              <IssueRow
-                key={`${issue.filePath}-${issue.line}-${i}`}
-                issue={issue}
-                onOpenFile={onOpenFile}
-              />
-            ))
+            SEVERITIES.map((sev) => {
+              const group = diagnostics.issues.filter((issue) => issue.severity === sev)
+              if (group.length === 0) return null
+              return (
+                <section key={sev} className={`lab-group lab-${sev}`}>
+                  <GroupTitle label={severityText[sev]} count={group.length} />
+                  {group.map((issue, i) => (
+                    <IssueRow
+                      key={`${issue.filePath}-${issue.line}-${i}`}
+                      issue={issue}
+                      severityText={severityText[sev]}
+                      onOpenFile={onOpenFile}
+                    />
+                  ))}
+                </section>
+              )
+            })
           )}
         </div>
       )}
@@ -130,16 +168,10 @@ export default function DocumentLabPanel({
       {tab === "compatibility" && (
         <div className="lab-list">
           <div className="compat-score">
-            <div>
-              <strong>{compatibility.latexScore}%</strong>
-              <span>Overleaf/LaTeX</span>
-            </div>
-            <div>
-              <strong>{compatibility.obsidianScore}%</strong>
-              <span>Obsidian MD</span>
-            </div>
+            <CompatMeter label="Overleaf/LaTeX" score={compatibility.latexScore} />
+            <CompatMeter label="Obsidian MD" score={compatibility.obsidianScore} />
           </div>
-          <div className="labels-section-title">LaTeX</div>
+          <GroupTitle label="LaTeX" count={compatibility.latexIssues.length} />
           {compatibility.latexIssues.length === 0 ? (
             <div className="panel-empty">{t.documentLab.noIssuesCompat}</div>
           ) : (
@@ -149,6 +181,7 @@ export default function DocumentLabPanel({
                 className={`lab-item lab-${issue.severity}`}
                 onClick={() => activePath && onOpenFile(activePath, issue.line)}
               >
+                <SeverityIcon label={severityText[issue.severity]} />
                 <span className="lab-item-title">{issue.message}</span>
                 <span className="lab-item-meta">
                   {t.documentLab.line} {issue.line}
@@ -156,7 +189,7 @@ export default function DocumentLabPanel({
               </button>
             ))
           )}
-          <div className="labels-section-title">Obsidian</div>
+          <GroupTitle label="Obsidian" count={compatibility.obsidianIssues.length} />
           {compatibility.obsidianIssues.length === 0 ? (
             <div className="panel-empty">{t.documentLab.noIssuesCompat}</div>
           ) : (
@@ -166,6 +199,7 @@ export default function DocumentLabPanel({
                 className={`lab-item lab-${issue.severity}`}
                 onClick={() => activePath && onOpenFile(activePath, issue.line)}
               >
+                <SeverityIcon label={severityText[issue.severity]} />
                 <span className="lab-item-title">{issue.message}</span>
                 <span className="lab-item-meta">
                   {t.documentLab.line} {issue.line}
@@ -187,14 +221,14 @@ export default function DocumentLabPanel({
                 </button>
               </div>
               <div className="lab-score-row">
-                <span>
-                  {t.documentLab.included} {project.included.length}
+                <span className="lab-chip">
+                  {t.documentLab.included} <strong>{project.included.length}</strong>
                 </span>
-                <span>
-                  {t.documentLab.missingEmbeds} {project.missingEmbeds.length}
+                <span className="lab-chip">
+                  {t.documentLab.missingEmbeds} <strong>{project.missingEmbeds.length}</strong>
                 </span>
               </div>
-              <div className="labels-section-title">{t.documentLab.includedFiles}</div>
+              <GroupTitle label={t.documentLab.includedFiles} count={project.included.length} />
               {project.included.map((file) => (
                 <button
                   key={file.path}
@@ -207,6 +241,7 @@ export default function DocumentLabPanel({
               ))}
               {project.missingEmbeds.map((item) => (
                 <div key={item} className="lab-item lab-warning">
+                  <SeverityIcon label={severityText.warning} />
                   <span className="lab-item-title">{t.documentLab.missingEmbed(item)}</span>
                 </div>
               ))}
@@ -226,6 +261,7 @@ export default function DocumentLabPanel({
               <IssueRow
                 key={`${issue.filePath}-${issue.line}-${i}`}
                 issue={issue}
+                severityText={severityText[issue.severity]}
                 onOpenFile={onOpenFile}
               />
             ))
