@@ -241,3 +241,41 @@ The render debounce is 150-700 ms by document size, and the linter has its own
   form controls, out-of-flow `position`, large `z-index` and `url()` in inline
   styles. This adds a pass over the parsed fragment; it runs inside the same
   single parse described in section 1.
+
+## 8. Keyed preview morph (Unreleased)
+
+`morphPreviewContent` used to compare top-level blocks by position with
+`isEqualNode`, so one block inserted or deleted near the top shifted every
+block below it and all of them were re-created (KaTeX spans, SVG diagrams,
+images laid out again). It is now a keyed diff:
+
+1. **Fast path.** The common prefix and suffix are trimmed with the native
+   `isEqualNode`, tolerating a changed `data-source-line` on the block itself
+   (updated in place). Typing inside one block and most top insertions or
+   deletions finish here at the same native cost as before.
+2. **Keyed middle.** Whatever is left is keyed by a structural hash (two 32-bit
+   lanes plus node count, a read-only tree walk, no serialization) that ignores
+   every `data-source-line` attribute. Identical blocks are paired by key plus
+   occurrence order. The longest increasing subsequence of the paired live
+   indices stays put; other paired blocks are moved (same node), unpaired new
+   blocks are inserted, unpaired live blocks are removed. Kept blocks only get
+   their `data-source-line` attributes synced, nested ones included (skipped
+   when a second hash of the line attributes says nothing shifted).
+
+Live signatures are recomputed on every commit and never cached, because other
+effects mutate committed blocks (Mermaid replaces its placeholder in place);
+a mutated block must stop matching and be replaced, as before.
+
+Measured (jsdom, 400 KaTeX-like blocks, one block inserted at the top, ms are
+jsdom-only and exclude browser layout):
+
+| Case | Before | After |
+|---|---|---|
+| Blocks re-created after a top insertion | 401 | **1** |
+| Top insertion, blocks with only a top-level line attribute | ~125 ms | ~37 ms |
+| Top insertion, blocks with nested line attributes (hash path) | ~125 ms | ~250 ms (jsdom walk is slow; in a browser this replaces 401 re-layouts) |
+| Edit inside one block | ~30 ms | ~33 ms (unchanged) |
+
+`previewMorph.test.ts` asserts node identity for a top insertion, a middle
+deletion, a move, duplicates and nested line sync, plus a 400-block case that
+requires exactly one new element.

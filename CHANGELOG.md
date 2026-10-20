@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Writing statistics survive a restart.** The Focus panel kept words, active time and pomodoros only for the running session. Totals are now kept per day (up to a year), the daily goal counts the whole day, and a Today section shows today and the last seven days.
 
 ### Changed
+- **Inserting or deleting a block no longer redraws everything below it.** The preview matched blocks by position, so a new paragraph near the top re-created every equation, diagram and image after it. Blocks are now matched by content (ignoring their source line), unchanged ones keep their live element and only a minimal set is moved or inserted.
 - The vault-wide label scan behind `@eq:`/`@fig:` autocomplete runs in a background worker and only rescans notes that changed, so typing in a large vault no longer stalls on it.
 - `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 
