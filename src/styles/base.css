@@ -1,53 +1,22 @@
-* {
+/* Reset, document root, and the global behaviours every theme shares: focus
+   ring, selection, scrollbars, reduced motion, forced colours. Tokens come
+   from tokens.css and themes.css (imported first). */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+* {
   margin: 0;
   padding: 0;
 }
 
-/* ── Theme variable palette ──
-   These custom properties are consumed across App.css (graph/truth-table/plot
-   blocks, symbol picker, latex-error modal, status bar, etc.). Previously they
-   were only referenced via var(--x, fallback) and never defined, so every
-   theme resolved to the dark fallback. Defined once per theme below. */
-:root,
-.app[data-theme="dark"] {
-  --bg: #1e1e1e;
-  --fg: #d4d4d4;
-  --surface: #1e1e1e;
-  --surface2: #2a2a2a;
-  --border: #444;
-  --accent: #7c9cbf;
-  --accent-dim: #1e3a52;
-  --icon: #d4d4d4;
-  --status-fg: #aaa;
-  --muted: #888;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-}
-
-.app[data-theme="light"] {
-  --bg: #ffffff;
-  --fg: #1f1f1f;
-  --surface: #ffffff;
-  --surface2: #f0f0f0;
-  --border: #d0d0d0;
-  --accent: #0066cc;
-  --accent-dim: #cce4ff;
-  --icon: #3a3a3a;
-  --status-fg: #6a6a6a;
-  --muted: #6a6a6a;
-}
-
-.app[data-theme="hc"] {
-  --bg: #000000;
-  --fg: #ffffff;
-  --surface: #000000;
-  --surface2: #1a1a1a;
-  --border: #ffffff;
-  --accent: #ffff00;
-  --accent-dim: #1a1a00;
-  --icon: #ffffff;
-  --status-fg: #ffffff;
-  --muted: #cccccc;
+/* 13px UI root: rem-based sizes (--text-*) scale chrome with browser zoom. */
+html {
+  font-size: 13px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html,
@@ -55,8 +24,8 @@ body,
 #root {
   height: 100%;
   overflow: hidden;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-app);
+  color: var(--fg);
 }
 
 .app {
@@ -64,4 +33,98 @@ body,
   flex-direction: column;
   height: 100vh;
   width: 100vw;
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* One focus ring for every theme. Components may restyle it but must keep
+   it visible; --focus-ring is checked for 3:1 against the surfaces. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Mouse focus on text fields keeps the ring (typing target); buttons do not. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: var(--selection);
+  color: inherit;
+}
+
+/* Scrollbars: thin, token coloured. WebKitGTK 2.46 reads the standard
+   properties; the pseudo-element rules are the fallback for older engines. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-pill);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* Reduced motion: no animation or transition durations, whatever the component. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Forced colours (Windows high contrast): let the system palette win, keep
+   the focus ring and borders visible. */
+@media (forced-colors: active) {
+  .app {
+    background: Canvas;
+    color: CanvasText;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonBorder;
+  }
+  ::selection {
+    background: Highlight;
+    color: HighlightText;
+  }
 }

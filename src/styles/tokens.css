@@ -1,0 +1,55 @@
+/* Theme-independent design tokens. Colours live in themes.css. Contract:
+   docs/design-tokens.md. */
+:root,
+.app {
+  /* Type */
+  --font-ui:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    "JetBrains Mono Variable", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --font-doc: "Libertinus Serif", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+
+  /* The UI root is 13px (set on .app), so rem here scales chrome with zoom. */
+  --text-xs: 0.846rem; /* 11px */
+  --text-sm: 0.923rem; /* 12px */
+  --text-md: 1rem; /* 13px */
+  --text-lg: 1.154rem; /* 15px */
+  --text-xl: 1.385rem; /* 18px */
+  --text-2xl: 1.692rem; /* 22px */
+  --leading-tight: 1.25;
+  --leading-normal: 1.45;
+  --leading-doc: 1.6;
+
+  /* Space */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --dur-fast: 100ms;
+  --dur-med: 160ms;
+  --dur-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Layers */
+  --z-sticky: 10;
+  --z-dropdown: 1000;
+  --z-popover: 1100;
+  --z-modal: 1500;
+  --z-toast: 2000;
+  --z-tooltip: 2100;
+}

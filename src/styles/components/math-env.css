@@ -3,9 +3,11 @@
   margin: 1.4em 0;
   padding: 0.8em 1.1em 0.8em 1.1em;
   border-radius: 5px;
+  --env-accent: var(--border-strong);
   border-left: 3px solid;
+  border-color: var(--env-accent);
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in oklch, var(--env-accent) 8%, transparent);
   /* Prevent long display-math from expanding the box past its container width */
   min-width: 0;
   max-width: 100%;
@@ -28,11 +30,12 @@
   font-weight: 700;
   font-style: italic;
   font-size: 0.95em;
+  color: var(--env-accent);
 }
 .math-env-anchor {
   margin-left: 8px;
-  color: #666;
-  font-family: "JetBrains Mono", monospace;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-style: normal;
 }
@@ -82,7 +85,7 @@
   text-align: right;
   font-size: 1.1em;
   margin-top: 0.4em;
-  color: #999;
+  color: var(--fg-muted);
 }
 
 /* Size variants */
@@ -108,172 +111,89 @@
   letter-spacing: 0.01em;
 }
 
-/* Per-type colors */
+/* Per-type colours: a type only picks its accent token; the border, the label
+   and the 8% tint all follow it. */
 .math-env-theorem {
-  border-color: #569cd6;
+  --env-accent: var(--env-theorem);
 }
-.math-env-theorem .math-env-label {
-  color: #569cd6;
-}
-
 .math-env-lemma {
-  border-color: #4ec9b0;
+  --env-accent: var(--env-lemma);
 }
-.math-env-lemma .math-env-label {
-  color: #4ec9b0;
-}
-
 .math-env-corollary {
-  border-color: #9cdcfe;
+  --env-accent: var(--env-corollary);
 }
-.math-env-corollary .math-env-label {
-  color: #9cdcfe;
-}
-
 .math-env-proposition {
-  border-color: #ce9178;
+  --env-accent: var(--env-proposition);
 }
-.math-env-proposition .math-env-label {
-  color: #ce9178;
-}
-
 .math-env-definition {
-  border-color: #dcdcaa;
-  background: rgba(220, 220, 170, 0.04);
+  --env-accent: var(--env-definition);
 }
-.math-env-definition .math-env-label {
-  color: #dcdcaa;
-}
-
 .math-env-example {
-  border-color: #666;
+  --env-accent: var(--env-example);
 }
-.math-env-example .math-env-label {
-  color: #999;
-}
-
 .math-env-exercise {
-  border-color: #c586c0;
+  --env-accent: var(--env-exercise);
 }
-.math-env-exercise .math-env-label {
-  color: #c586c0;
-}
-
 .math-env-proof {
-  border-color: #555;
-  border-style: dashed;
+  --env-accent: var(--env-proof);
 }
-.math-env-proof .math-env-label {
-  color: #999;
-  font-weight: 400;
-}
-
 .math-env-remark {
-  border-color: #444;
+  --env-accent: var(--env-remark);
 }
-.math-env-remark .math-env-label {
-  color: #777;
-}
-
 .math-env-note {
-  border-color: #444;
+  --env-accent: var(--env-note);
 }
-.math-env-note .math-env-label {
-  color: #777;
-}
-
-/* Callout-style environments (tip/warning/danger/...): themed left border + label */
 .math-env-tip,
 .math-env-hint {
-  border-color: #4a8;
-  background: rgba(72, 168, 128, 0.08);
+  --env-accent: var(--callout-tip);
 }
-.math-env-tip .math-env-label,
-.math-env-hint .math-env-label {
-  color: #6c9;
-}
-
 .math-env-info {
-  border-color: #4a8fc8;
-  background: rgba(74, 143, 200, 0.08);
+  --env-accent: var(--callout-info);
 }
-.math-env-info .math-env-label {
-  color: #6bb;
-}
-
 .math-env-warning,
 .math-env-caution,
 .math-env-attention {
-  border-color: #c8a04a;
-  background: rgba(200, 160, 74, 0.08);
+  --env-accent: var(--callout-warning);
 }
-.math-env-warning .math-env-label,
-.math-env-caution .math-env-label,
-.math-env-attention .math-env-label {
-  color: #d4a847;
-}
-
 .math-env-important {
-  border-color: #c8654a;
-  background: rgba(200, 101, 74, 0.08);
+  --env-accent: var(--env-proposition);
 }
-.math-env-important .math-env-label {
-  color: #e0795a;
-}
-
 .math-env-danger,
 .math-env-error,
 .math-env-failure {
-  border-color: #c84a4a;
-  background: rgba(200, 74, 74, 0.1);
+  --env-accent: var(--callout-danger);
 }
-.math-env-danger .math-env-label,
-.math-env-error .math-env-label,
-.math-env-failure .math-env-label {
-  color: #e87070;
-}
-
 .math-env-success,
 .math-env-check,
 .math-env-done {
-  border-color: #4ac870;
-  background: rgba(74, 200, 112, 0.08);
+  --env-accent: var(--callout-success);
 }
-.math-env-success .math-env-label,
-.math-env-check .math-env-label,
-.math-env-done .math-env-label {
-  color: #6cd690;
-}
-
 .math-env-question,
 .math-env-help,
 .math-env-faq {
-  border-color: #8c4ac8;
-  background: rgba(140, 74, 200, 0.08);
+  --env-accent: var(--env-corollary);
 }
-.math-env-question .math-env-label,
-.math-env-help .math-env-label,
-.math-env-faq .math-env-label {
-  color: #b88adb;
-}
-
 .math-env-quote,
 .math-env-cite,
 .math-env-abstract {
-  border-color: #555;
-  background: rgba(120, 120, 120, 0.05);
-  font-style: italic;
+  --env-accent: var(--callout-quote);
 }
-.math-env-quote .math-env-label,
-.math-env-cite .math-env-label,
-.math-env-abstract .math-env-label {
-  color: #999;
+.math-env-proof {
+  border-style: dashed;
+}
+.math-env-proof .math-env-label {
+  font-weight: 400;
+}
+.math-env-quote,
+.math-env-cite,
+.math-env-abstract {
+  font-style: italic;
 }
 
 .math-env-folded {
-  border-color: #444;
+  --env-accent: var(--border-strong);
   border-style: dashed;
-  background: #1e1e1e;
+  background: var(--bg-surface);
 }
 .math-env-folded-header {
   cursor: pointer;
@@ -282,11 +202,11 @@
   justify-content: space-between;
 }
 .math-env-folded-header .math-env-label {
-  color: #777;
+  color: var(--fg-muted);
   font-style: italic;
 }
 .math-env-folded-toggle {
-  color: #666;
+  color: var(--fg-muted);
   font-size: 10px;
   transition: transform 0.2s;
 }
@@ -309,10 +229,10 @@
   overflow-x: auto;
 }
 .preview-content .katex {
-  color: #d4d4d4;
+  color: var(--fg);
 }
 .math-error {
-  color: #f48771;
-  font-family: monospace;
+  color: var(--danger);
+  font-family: var(--font-mono);
   font-size: 0.85em;
 }

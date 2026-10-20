@@ -1,72 +1,72 @@
 /* ── Comments: high-contrast theme ── */
 .app[data-theme="hc"] .comment-glyph.drifted::before {
-  color: #ffff00;
+  color: var(--accent);
 }
 .app[data-theme="hc"] .comments-header {
-  border-bottom-color: #ffffff;
+  border-bottom-color: var(--border-strong);
 }
 .app[data-theme="hc"] .comments-summary {
-  color: #ffffff;
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-add-btn {
-  background: #000;
-  border-color: #ffffff;
-  color: #ffffff;
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-add-btn:hover {
-  background: #ffffff;
-  color: #000;
+  background: var(--fg);
+  color: var(--accent-fg);
 }
 .app[data-theme="hc"] .comments-filters {
-  border-bottom-color: #ffffff;
+  border-bottom-color: var(--border-strong);
 }
 .app[data-theme="hc"] .comments-filter {
-  border-color: #ffffff;
-  color: #ffffff;
-  background: #000;
+  border-color: var(--border-strong);
+  color: var(--fg);
+  background: var(--bg-surface);
 }
 .app[data-theme="hc"] .comments-filter.active {
-  background: #ffff00;
-  color: #000;
-  border-color: #ffff00;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
 }
 .app[data-theme="hc"] .comments-file-group {
-  border-bottom-color: #ffffff;
+  border-bottom-color: var(--border-strong);
 }
 .app[data-theme="hc"] .comments-file-name {
-  color: #ffffff;
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-item {
-  border-bottom-color: #444;
+  border-bottom-color: var(--border);
 }
 .app[data-theme="hc"] .comments-jump {
-  color: #ffff00;
+  color: var(--accent);
 }
 .app[data-theme="hc"] .comments-resolved-toggle {
-  color: #ffffff;
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-delete {
-  color: #ff6666;
+  color: var(--danger);
 }
 .app[data-theme="hc"] .comments-snippet {
-  color: #cccccc;
-  border-left-color: #ffffff;
+  color: var(--fg-muted);
+  border-left-color: var(--border-strong);
 }
 .app[data-theme="hc"] .comments-body {
-  color: #ffffff;
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-edit-input {
-  background: #000;
-  border-color: #ffffff;
-  color: #ffffff;
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  color: var(--fg);
 }
 .app[data-theme="hc"] .comments-edit-save,
 .app[data-theme="hc"] .comments-edit-cancel {
-  border-color: #ffffff;
-  color: #ffffff;
-  background: #000;
+  border-color: var(--border-strong);
+  color: var(--fg);
+  background: var(--bg-surface);
 }
 .app[data-theme="hc"] .comments-edit-save:hover {
-  background: #ffff00;
-  color: #000;
+  background: var(--accent);
+  color: var(--accent-fg);
 }

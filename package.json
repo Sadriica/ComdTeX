@@ -17,10 +17,14 @@
     "test:visual": "VISUAL=1 playwright test -c playwright.visual.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "format:check": "prettier --check src/"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/libertinus-serif": "^5.3.0",
     "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.3",

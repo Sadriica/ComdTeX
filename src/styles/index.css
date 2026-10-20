@@ -1,6 +1,9 @@
 /* Entry point for the app styles. Parts are imported in the exact order the
    rules had in the former App.css so the plain cascade is unchanged; where a
    section was interleaved with others it is split into numbered parts. */
+@import "./tokens.css";
+@import "./themes.css";
+@import "./fonts.css";
 @import "./base.css";
 @import "./components/titlebar.css";
 @import "./components/menubar.css";
@@ -65,3 +68,4 @@
 @import "./components/ai.css";
 @import "./components/palette-3.css";
 @import "./components/excalidraw.css";
+@import "./skin.css";

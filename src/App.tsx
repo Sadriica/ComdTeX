@@ -863,7 +863,7 @@ function AppContent({
       minimap: { enabled: minimapEnabled },
       scrollBeyondLastLine: false,
       renderWhitespace: "none",
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      fontFamily: '"JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
       padding: { top: 16, bottom: 16 },
       readOnly: editorReadOnly,
       // Keep prose typing cheap. Math/editor shorthands still expand with Tab

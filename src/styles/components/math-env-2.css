@@ -26,7 +26,7 @@
 
 .eq-number {
   font-size: 0.9em;
-  color: #777;
+  color: var(--fg-muted);
   white-space: nowrap;
   flex-shrink: 0;
   min-width: 3em;
@@ -41,23 +41,23 @@
 
 .eq-number-inline {
   font-size: 0.85em;
-  color: #777;
+  color: var(--fg-muted);
   white-space: nowrap;
 }
 
 .eq-ref {
-  color: #9cdcfe;
+  color: var(--link);
 }
 .eq-ref-broken {
-  color: #f48771;
+  color: var(--danger);
 }
 .tbl-ref,
 .env-ref {
-  color: #9cdcfe;
+  color: var(--link);
   text-decoration: none;
-  border-bottom: 1px dotted rgba(156, 220, 254, 0.4);
+  border-bottom: 1px dotted color-mix(in oklch, var(--link) 40%, transparent);
 }
 .tbl-ref-broken,
 .env-ref-broken {
-  color: #f48771;
+  color: var(--danger);
 }
