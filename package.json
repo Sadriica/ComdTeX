@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:visual": "VISUAL=1 playwright test -c playwright.visual.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check src/"
