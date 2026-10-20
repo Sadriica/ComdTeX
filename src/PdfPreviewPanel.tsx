@@ -130,6 +130,7 @@ export default function PdfPreviewPanel({
   // Load document whenever the path changes.
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new document clears the previous pages and render tasks before loading
     setError(null)
     setPages([])
     setCurrentPage(1)
@@ -322,6 +323,7 @@ export default function PdfPreviewPanel({
   useEffect(() => {
     if (!focusPage || pages.length === 0) return
     const page = Math.min(Math.max(1, focusPage.page), pages.length)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- applies an external scroll request (forward sync) to the page indicator
     setCurrentPage(page)
     scrollToPage(page)
   }, [focusPage, pages.length, scrollToPage])
@@ -415,6 +417,7 @@ export default function PdfPreviewPanel({
   // completes (keeps virtualisation predictable).
   const placeholders = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- the placeholder size needs the container width, a DOM measurement taken on purpose
       pages.map((p) => {
         const scale = computeScale(p)
         return { ...p, displayWidth: p.width * scale, displayHeight: p.height * scale }

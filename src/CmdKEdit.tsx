@@ -104,6 +104,7 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
   }, [editor, anchor])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- measures the editor DOM (an external system) to place the floating widget
     computePosition()
     const subs = [
       editor.onDidScrollChange(computePosition),

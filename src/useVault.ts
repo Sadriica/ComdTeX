@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
 import { readDir, readTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
@@ -637,7 +637,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // Keep the latest onAfterSave in a ref so saveFile (memoised) always fires the
   // current callback even if the host re-renders with a new function identity.
   const onAfterSaveRef = useRef<UseVaultOptions["onAfterSave"]>(opts.onAfterSave)
-  onAfterSaveRef.current = opts.onAfterSave
+  useLayoutEffect(() => {
+    onAfterSaveRef.current = opts.onAfterSave
+  })
   const t = useT()
 
   const validate = useCallback(
@@ -682,7 +684,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // skipped for these until the user decides reload / overwrite / cancel.
   const conflictPaths = useRef<Set<string>>(new Set())
   const activeTabPathRef = useRef<string | null>(null)
-  activeTabPathRef.current = activeTabPath
+  useLayoutEffect(() => {
+    activeTabPathRef.current = activeTabPath
+  })
   // Latest openTabs, mirrored into a ref so callbacks that only NEED to read the
   // current tabs (saveFile, closeTab) don't have to list `openTabs` in their deps.
   // Without this, every keystroke (which mutates an open tab) recreates saveFile →
@@ -1347,7 +1351,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
     [t],
   )
 
-  saveFileRef.current = saveFile
+  useLayoutEffect(() => {
+    saveFileRef.current = saveFile
+  })
 
   const updateContent = useCallback(
     (content: string) => {
@@ -1867,7 +1873,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
     }
   }, [saveFile])
 
-  flushPendingRef.current = flushPending
+  useLayoutEffect(() => {
+    flushPendingRef.current = flushPending
+  })
 
   // Search with result limit and cancellation
   const searchAbortRef = useRef<{ cancelled: boolean }>({ cancelled: false })

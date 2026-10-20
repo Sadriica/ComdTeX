@@ -144,12 +144,10 @@ export default function AiPanel({
 
   // Number of lines currently selected (for the context chip). Tracked via a
   // selection-change listener so the chip stays live as the user selects text.
-  const [selectionLines, setSelectionLines] = useState(0)
+  const [trackedSelectionLines, setSelectionLines] = useState(0)
+  const selectionLines = editor ? trackedSelectionLines : 0
   useEffect(() => {
-    if (!editor) {
-      setSelectionLines(0)
-      return
-    }
+    if (!editor) return
     const compute = () => {
       const sel = editor.getSelection()
       setSelectionLines(!sel || sel.isEmpty() ? 0 : sel.endLineNumber - sel.startLineNumber + 1)

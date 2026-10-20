@@ -541,6 +541,11 @@ function AppContent({
     },
   })
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  // The same editor as state, for JSX that hands it to a child (reading the ref
+  // during render would not re-render when a new editor mounts).
+  const [editorInstance, setEditorInstance] = useState<monaco.editor.IStandaloneCodeEditor | null>(
+    null,
+  )
   // Last content the editor model is known to hold (the user's last keystroke
   // value, or the last value we pushed). Lets the external-sync effect skip the
   // common case (the user's own typing) with an O(1) reference compare instead
@@ -753,7 +758,9 @@ function AppContent({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Read inside togglePanel's updater, which must not close over a stale mode.
   const sidebarModeRef = useRef(sidebarMode)
-  sidebarModeRef.current = sidebarMode
+  useLayoutEffect(() => {
+    sidebarModeRef.current = sidebarMode
+  })
   // Shared panel opener: switching the panel is useless if the sidebar is
   // collapsed (the panel changes but nothing renders), so every panel-open path
   // must also un-collapse. Use this everywhere instead of bare setSidebarMode.
@@ -830,13 +837,17 @@ function AppContent({
   // Mirrors vault.openFile?.path so closures inside debounced timers can read the
   // current path at execution time (avoids stale-closure data bugs on tab switch).
   const activeFilePathRef = useRef<string | null>(null)
-  activeFilePathRef.current = vault.openFile?.path ?? null
+  useLayoutEffect(() => {
+    activeFilePathRef.current = vault.openFile?.path ?? null
+  })
   // vault gets a new identity on every keystroke (its state lives in the returned
   // object). Handlers that only run on explicit user actions read the CURRENT
   // vault through this ref and stay identity-stable, so the menus/palette memos
   // below don't recompute per keystroke.
   const vaultRef = useRef(vault)
-  vaultRef.current = vault
+  useLayoutEffect(() => {
+    vaultRef.current = vault
+  })
   const previewPaneRef = useRef<HTMLDivElement>(null)
   // The .preview-content divs are committed imperatively (block-level morph) so a
   // one-block edit doesn't blow away every diagram SVG; see commitPreview.
@@ -886,6 +897,7 @@ function AppContent({
     // ref so typing does not force a vault-wide map on every keystroke.
     void openTabsShapeKey
     void vaultFilesContentVersion
+    // eslint-disable-next-line react-hooks/refs -- the memo is keyed on the tab shape plus a debounced version; typing must not recompute it, so the live tabs are read through the ref
     const openContent = new Map(openTabsRef.current.map((tab) => [tab.path, tab.content]))
     return vaultFileNodes
       .filter((file) => file.ext === "md" || file.ext === "tex")
@@ -927,6 +939,7 @@ function AppContent({
     let cancelled = false
     const paths = vaultCsvPathsKey ? vaultCsvPathsKey.split("\x00") : []
     if (paths.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no CSV files: clear the list loaded for the previous set; the file reads below are the external sync
       setVaultCsvFiles([])
       return
     }
@@ -1048,6 +1061,7 @@ function AppContent({
     let cancelled = false
     const path = vault.vaultPath
     if (!path) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no vault: reset to the empty state before the async cloud lookup
       setCloudInfo(null)
       setCloudSuggestion(null)
       return
@@ -1082,6 +1096,7 @@ function AppContent({
     let cancelled = false
     const path = vault.vaultPath
     if (!path) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no vault: reset to the empty state before the async git lookup
       setGitFacts({ isRepo: false, hasRemote: false })
       return
     }
@@ -1441,7 +1456,9 @@ function AppContent({
   // explicitly only if confirmed. Registered once; reuses confirmClose so both
   // close paths share one implementation.
   const confirmCloseRef = useRef(confirmClose)
-  confirmCloseRef.current = confirmClose
+  useLayoutEffect(() => {
+    confirmCloseRef.current = confirmClose
+  })
   useEffect(() => {
     const win = currentTauriWindow()
     if (!win) return
@@ -1811,6 +1828,7 @@ function AppContent({
 
   useEffect(() => {
     if (!vault.vaultPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no vault: reset the loaded macros and bib before the early return; loading below is async file I/O
       setMacros({})
       setBibMap(new Map())
       setMacrosReady(true)
@@ -1828,6 +1846,7 @@ function AppContent({
 
   useEffect(() => {
     if (vault.openFile?.name === MACROS_FILENAME && !vault.openFile.isDirty && vault.vaultPath)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reloads macros.md after the user saves it; the setState happens after async file I/O
       loadMacros(vault.vaultPath)
     if (vault.openFile?.name === BIBTEX_FILENAME && !vault.openFile.isDirty && vault.vaultPath)
       loadBib(vault.vaultPath)
@@ -1837,6 +1856,7 @@ function AppContent({
   // ── Per-line comments: load on vault change ──────────────────────────────
   useEffect(() => {
     if (!vault.vaultPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no vault: clear the comments loaded for the previous vault
       setComments([])
       return
     }
@@ -1961,6 +1981,7 @@ function AppContent({
   // Previously this ran on every (debounced) keystroke regardless of visibility,
   // so drafting with the preview collapsed still paid the whole render cost.
   const previewHtml = useMemo(
+    // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
     () => (settings.previewVisible ? renderPreviewHtml(deferredPreviewContent, renderCostRef) : ""),
     [settings.previewVisible, renderPreviewHtml, deferredPreviewContent],
   )
@@ -1996,6 +2017,7 @@ function AppContent({
   const deferredSplitContent = useDeferredValue(splitTab?.content ?? "")
 
   const splitPreviewHtml = useMemo(
+    // eslint-disable-next-line react-hooks/refs -- renderPreviewHtml reads vault files through refs on purpose so its identity stays stable while typing
     () => (splitTab ? renderPreviewHtml(deferredSplitContent) : ""),
     [renderPreviewHtml, splitTab, deferredSplitContent],
   )
@@ -2192,15 +2214,18 @@ function AppContent({
   const previousTabPathRef = useRef<string | null>(null)
   {
     const nextPath = vault.activeTabPath ?? null
+    /* eslint-disable react-hooks/refs -- deliberate render-phase snapshot, see the comment above */
     if (previousTabPathRef.current !== nextPath) {
       const outgoing = previousTabPathRef.current
       previousTabPathRef.current = nextPath
       if (outgoing && editorRef.current) saveViewState(outgoing, editorRef.current)
     }
+    /* eslint-enable react-hooks/refs */
   }
 
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- shows the newly opened file at once; paired with the debounce cancel below so a stale timer cannot overwrite it
     setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
     // Cancel a pending preview debounce from the PREVIOUS file. Otherwise,
     // typing in file A and switching to file B within the debounce window lets
@@ -2274,6 +2299,7 @@ function AppContent({
   const handleEditorMount: OnMount = useCallback(
     (editor, monaco) => {
       editorRef.current = editor
+      setEditorInstance(editor)
       setupEditorCommands(editor, monaco, () => listContinuationRef.current)
       // Note: Monaco has built-in spell-check via browser (no config needed)
       linterDisposableRef.current?.dispose()
@@ -4462,6 +4488,7 @@ function AppContent({
   // be wasted work.
   const paletteCommands: PaletteCommand[] = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- openCmdkRef is only stored by the builder and read when a command runs, never during render
       buildPaletteCommands({
         t,
         deps,
@@ -5021,7 +5048,7 @@ function AppContent({
                   <LazyRegion region="panel">
                     <AiPanel
                       settings={settings}
-                      editor={editorRef.current}
+                      editor={editorInstance}
                       fileContent={vault.openFile?.content ?? null}
                       fileName={vault.openFile?.name ?? null}
                       renderHtml={aiRenderHtml}
@@ -5098,11 +5125,11 @@ function AppContent({
             </LazyRegion>
           )}
           {/* Ctrl/Cmd+K inline AI edit: floating prompt anchored at the selection. */}
-          {cmdkAnchor && editorRef.current && (
+          {cmdkAnchor && editorInstance && (
             <LazyRegion region="dialog">
               <CmdKEdit
                 settings={settings}
-                editor={editorRef.current}
+                editor={editorInstance}
                 anchor={cmdkAnchor}
                 onClose={() => setCmdkAnchor(null)}
               />

@@ -58,6 +58,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
   useEffect(() => {
     if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- an emptied query clears the results owned by this async search
       setResults([])
       setSearching(false)
       return

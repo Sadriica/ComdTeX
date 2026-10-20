@@ -290,6 +290,7 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
   }, [git])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and on vault change; state is set after the await
     load()
   }, [load])
 
@@ -564,6 +565,7 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
   }, [git])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and on vault change; state is set after the await
     void load()
   }, [load])
 
@@ -1262,6 +1264,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
   }, [vaultPath, g])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and on vault change; state is set after the await
     refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vaultPath])

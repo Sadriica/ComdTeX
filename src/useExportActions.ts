@@ -1,7 +1,7 @@
 // Extracted from App.tsx: the export/import/compile handlers. These are thin
 // wrappers over exportActions.ts, moved verbatim (no behavior change) to keep
 // App.tsx smaller. See CLAUDE.md: App.tsx is a documented refactor target.
-import { useCallback, useMemo, useRef, type RefObject } from "react"
+import { useCallback, useLayoutEffect, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"
 import {
@@ -92,7 +92,9 @@ export function useExportActions(ctx: ExportActionsCtx) {
   // ref and stay identity-stable; keeping the returned object (and the host's
   // menus/palette memos) stable across keystrokes.
   const vaultRef = useRef(vault)
-  vaultRef.current = vault
+  useLayoutEffect(() => {
+    vaultRef.current = vault
+  })
 
   const handleExportMd = useCallback(async () => {
     const editor = editorRef.current
