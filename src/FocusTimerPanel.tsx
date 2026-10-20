@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useT } from "./i18n"
 import { type Phase, type PomodoroConfig, formatClock, sessionStats } from "./pomodoro"
+import { dayKey, dayStats, recentTotals } from "./writingStats"
 import { type FocusTimer, wordCount } from "./useFocusTimer"
 
 const Row = ({
@@ -66,7 +67,7 @@ export default function FocusTimerPanel({
   focusTimer,
 }: FocusTimerPanelProps) {
   const t = useT()
-  const { timer, session, now, startTimer, pauseTimer, resetTimer } = focusTimer
+  const { timer, session, now, history, startTimer, pauseTimer, resetTimer } = focusTimer
   const [showSettings, setShowSettings] = useState(false)
 
   const phaseLabel = (phase: Phase): string =>
@@ -77,7 +78,11 @@ export default function FocusTimerPanel({
         : t.focusTimer.phaseLongBreak
 
   const stats = session ? sessionStats(session, now, wordCount(content)) : null
-  const goalWords = stats ? stats.wordsWritten : 0
+  // Daily goal tracks today's persisted total, so it survives an app restart.
+  const today = dayKey(now)
+  const todayTotals = dayStats(history, today)
+  const weekTotals = recentTotals(history, today, 7)
+  const goalWords = todayTotals.words
   const goalPct =
     wordGoal > 0 ? Math.min(100, Math.round((Math.max(0, goalWords) / wordGoal) * 100)) : 0
 
@@ -159,6 +164,11 @@ export default function FocusTimerPanel({
         ) : (
           <Row label={t.focusTimer.wordsThisSession} value="—" />
         )}
+        <div className="stats-section-title">{t.focusTimer.today}</div>
+        <Row label={t.focusTimer.wordsToday} value={todayTotals.words} accent />
+        <Row label={t.focusTimer.activeToday} value={formatClock(todayTotals.activeSec)} />
+        <Row label={t.focusTimer.pomodorosToday} value={todayTotals.pomodoros} />
+        <Row label={t.focusTimer.wordsLast7Days} value={weekTotals.words} />
         {wordGoal > 0 && (
           <div className="stats-row status-goal" title={`${Math.max(0, goalWords)}/${wordGoal}`}>
             <span className="stats-label">{t.focusTimer.goalProgress}</span>

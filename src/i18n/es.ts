@@ -820,6 +820,11 @@ export const es: T = {
     elapsed: "Tiempo transcurrido",
     wpm: "Palabras/min",
     goalProgress: "Meta diaria",
+    today: "Hoy",
+    wordsToday: "Palabras hoy",
+    activeToday: "Tiempo activo hoy",
+    pomodorosToday: "Pomodoros hoy",
+    wordsLast7Days: "Palabras, últimos 7 días",
     phaseDone: (phase) => `Fase completada: ${phase}`,
   },
 

@@ -17,7 +17,9 @@ import {
   countPomodoro,
   touchFile,
   recordPeak,
+  sessionStats,
 } from "./pomodoro"
+import { type StatsHistory, addToDay, loadHistory, saveHistory, dayKey } from "./writingStats"
 
 /**
  * Word-count rule shared with the StatusBar live count, so the writing-session
@@ -36,6 +38,8 @@ export interface FocusTimer {
   session: WritingSession | null
   /** `Date.now()` of the last tick: drives the live session stats clock. */
   now: number
+  /** Persisted per-day aggregates; survives app restarts. */
+  history: StatsHistory
   startTimer: () => void
   pauseTimer: () => void
   resetTimer: () => void
@@ -61,6 +65,10 @@ export function useFocusTimer(
   const [timer, setTimer] = useState<PomodoroState>(() => createState(config))
   const [session, setSession] = useState<WritingSession | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [history, setHistory] = useState<StatsHistory>(loadHistory)
+  // What the current session has already contributed to the history, so each
+  // beat credits only the increase (a session may span midnight).
+  const creditedRef = useRef({ words: 0, activeSec: 0, pomodoros: 0 })
 
   // Latest content/config/t for the interval closure without re-arming on every
   // keystroke or language change. Updated in an effect (not during render) per
@@ -133,6 +141,33 @@ export function useFocusTimer(
     setTimer((prev) => (prev.running ? prev : reset(configRef.current)))
   }, [config.workMin, config.breakMin, config.longBreakMin, config.cyclesBeforeLongBreak])
 
+  // Credit session progress to today's persisted totals. Peak words are used
+  // (monotonic), so deleting text never lowers what was already written.
+  useEffect(() => {
+    if (!session) {
+      creditedRef.current = { words: 0, activeSec: 0, pomodoros: 0 }
+      return
+    }
+    const st = sessionStats(session, now, session.baselineWords + session.peakWordsWritten)
+    const prev = creditedRef.current
+    const delta = {
+      words: Math.max(0, st.peakWordsWritten - prev.words),
+      activeSec: Math.max(0, st.activeSec - prev.activeSec),
+      pomodoros: Math.max(0, st.pomodorosCompleted - prev.pomodoros),
+    }
+    if (delta.words === 0 && delta.activeSec === 0 && delta.pomodoros === 0) return
+    creditedRef.current = {
+      words: prev.words + delta.words,
+      activeSec: prev.activeSec + delta.activeSec,
+      pomodoros: prev.pomodoros + delta.pomodoros,
+    }
+    setHistory((h) => {
+      const next = addToDay(h, dayKey(now), delta)
+      if (next !== h) saveHistory(next)
+      return next
+    })
+  }, [session, now])
+
   const startTimer = useCallback(() => {
     setTimer((prev) => start(prev))
     const ts = Date.now()
@@ -152,5 +187,5 @@ export function useFocusTimer(
     setSession(null)
   }, [])
 
-  return { timer, session, now, startTimer, pauseTimer, resetTimer }
+  return { timer, session, now, history, startTimer, pauseTimer, resetTimer }
 }
