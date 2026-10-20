@@ -170,6 +170,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
       tex,
       outDir,
       vaultRef.current.vaultPath,
+      vaultRef.current.activeTabPath,
     )
     await writeTextFile(path, bundledTex)
     if (copied > 0) showToast(t.app.texAssetsCopied(copied), "success")
@@ -638,7 +639,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
           bibMap,
           transclusionResolver,
           undefined,
-          { annotate: false },
+          { annotate: false, docPath: openFile.path },
         ),
       )
     } catch {

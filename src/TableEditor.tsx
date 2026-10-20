@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useT } from "./i18n"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface TableEditorProps {
   open: boolean
@@ -121,6 +122,8 @@ export default function TableEditor({
   onInsert,
 }: TableEditorProps) {
   const t = useT()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const [rows, setRows] = useState<string[][]>(() => makeEmpty(DEFAULT_ROWS, DEFAULT_COLS))
   const [alignments, setAlignments] = useState<Alignment[]>(() => makeAlignments(DEFAULT_COLS))
   const [latexCopied, setLatexCopied] = useState(false)
@@ -199,12 +202,21 @@ export default function TableEditor({
       })
   }
 
+  // Focus moves into the dialog, Tab stays inside it and Escape closes it.
+  useFocusTrap(dialogRef, open, onClose)
+
   if (!open) return null
 
   return (
     <div className="table-editor-modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="table-editor-dialog">
-        <h3>{t.palette.tableEditor}</h3>
+      <div
+        className="table-editor-dialog"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <h3 id={titleId}>{t.palette.tableEditor}</h3>
 
         <div className="table-editor-grid">
           {/* Alignment row */}

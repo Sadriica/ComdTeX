@@ -474,7 +474,7 @@ function escHtml(s: string): string {
 
 // ── Y-range auto-detection ────────────────────────────────────────────────────
 
-function autoYRange(
+export function autoYRange(
   fns: PlotFn[],
   xMin: number,
   xMax: number,
@@ -522,8 +522,16 @@ function autoYRange(
   values.sort((a, b) => a - b)
   const p5 = values[Math.floor(values.length * 0.05)]
   const p95 = values[Math.floor(values.length * 0.95)]
-  const pad = (p95 - p5) * 0.1 || 1
-  return [p5 - pad, p95 + pad]
+  // The percentile band keeps an asymptote (tan, 1/x) from flattening the
+  // plot, but on a well-behaved curve it cut the tails off: a decay down to
+  // 0.057 got an axis that started at 0.1. An extreme that sits close to the
+  // band is real data and is included; one far outside it is an asymptote.
+  const band = p95 - p5
+  const tolerance = band * 0.25
+  const lo = values[0] >= p5 - tolerance ? values[0] : p5
+  const hi = values[values.length - 1] <= p95 + tolerance ? values[values.length - 1] : p95
+  const pad = (hi - lo) * 0.1 || 1
+  return [lo - pad, hi + pad]
 }
 
 // ── SVG renderer ──────────────────────────────────────────────────────────────
@@ -605,7 +613,7 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
           ? xv.toExponential(1)
           : parseFloat(xv.toPrecision(4)).toString()
     svgLines.push(
-      `<text x="${sx.toFixed(1)}" y="${(plotTop + plotHeight + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#888">${escHtml(label)}</text>`,
+      `<text x="${sx.toFixed(1)}" y="${(plotTop + plotHeight + 14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${escHtml(label)}</text>`,
     )
   }
 
@@ -623,7 +631,7 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
           ? yv.toExponential(1)
           : parseFloat(yv.toPrecision(4)).toString()
     svgLines.push(
-      `<text x="${(plotLeft - 5).toFixed(1)}" y="${(sy + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#888">${escHtml(label)}</text>`,
+      `<text x="${(plotLeft - 5).toFixed(1)}" y="${(sy + 3).toFixed(1)}" text-anchor="end" font-size="10" fill="#888">${escHtml(label)}</text>`,
     )
   }
 
@@ -750,13 +758,13 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
   // Axis titles, now that the data knows what its columns are called.
   if (spec.xLabel) {
     svgLines.push(
-      `<text x="${(plotLeft + plotWidth / 2).toFixed(1)}" y="${SVG_H - 6}" text-anchor="middle" font-size="10" fill="#bbb">${escHtml(spec.xLabel)}</text>`,
+      `<text x="${(plotLeft + plotWidth / 2).toFixed(1)}" y="${SVG_H - 6}" text-anchor="middle" font-size="11" fill="#bbb">${escHtml(spec.xLabel)}</text>`,
     )
   }
   if (spec.yLabel) {
     const cy = plotTop + plotHeight / 2
     svgLines.push(
-      `<text x="12" y="${cy.toFixed(1)}" text-anchor="middle" font-size="10" fill="#bbb" transform="rotate(-90 12 ${cy.toFixed(1)})">${escHtml(spec.yLabel)}</text>`,
+      `<text x="12" y="${cy.toFixed(1)}" text-anchor="middle" font-size="11" fill="#bbb" transform="rotate(-90 12 ${cy.toFixed(1)})">${escHtml(spec.yLabel)}</text>`,
     )
   }
 
@@ -766,18 +774,18 @@ export function renderPlotHTML(title: string, content: string, number = ""): str
     ...series.map((s, i) => ({ label: s.label, color: COLORS[(fns.length + i) % COLORS.length] })),
   ]
   const legendX = plotLeft + plotWidth - 8
-  let legendY = plotTop + plotHeight - 8 - (legendEntries.length - 1) * 16
+  let legendY = plotTop + plotHeight - 8 - (legendEntries.length - 1) * 18
   if (legendY < plotTop + 8) legendY = plotTop + 8
 
   for (let fi = 0; fi < legendEntries.length; fi++) {
     const { color, label } = legendEntries[fi]
-    const ly = legendY + fi * 16
+    const ly = legendY + fi * 18
     const displayLabel = label.length > 22 ? label.slice(0, 20) + "…" : label
     svgLines.push(
-      `<rect x="${(legendX - 18).toFixed(1)}" y="${(ly - 7).toFixed(1)}" width="10" height="3" fill="${color}" rx="1"/>`,
+      `<rect x="${(legendX - 14).toFixed(1)}" y="${(ly - 5).toFixed(1)}" width="14" height="3" fill="${color}" rx="1"/>`,
     )
     svgLines.push(
-      `<text x="${(legendX - 5).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="9" fill="#ccc">${escHtml(displayLabel)}</text>`,
+      `<text x="${(legendX - 20).toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="end" font-size="11" fill="#ccc">${escHtml(displayLabel)}</text>`,
     )
   }
 

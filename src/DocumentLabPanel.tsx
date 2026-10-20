@@ -10,6 +10,11 @@ interface DocumentLabPanelProps {
   files: { path: string; name: string; content: string }[]
   activePath: string | null
   activeContent: string
+  /** Citation keys of the vault bibliography (what the preview resolves). */
+  bibKeys?: ReadonlySet<string>
+  /** Paths of the non-document vault files (images and other assets). */
+  assetPaths?: readonly string[]
+  vaultPath?: string | null
   onOpenFile: (path: string, line?: number) => void
 }
 
@@ -46,12 +51,27 @@ export default function DocumentLabPanel({
   files,
   activePath,
   activeContent,
+  bibKeys,
+  assetPaths,
+  vaultPath,
   onOpenFile,
 }: DocumentLabPanelProps) {
   const t = useT()
   const [tab, setTab] = useState<LabTab>("diagnostics")
-  const diagnostics = useMemo(() => diagnoseDocuments(files), [files])
-  const compatibility = useMemo(() => analyzeExportCompatibility(activeContent), [activeContent])
+  const diagnostics = useMemo(
+    () =>
+      diagnoseDocuments(files, {
+        bibKeys,
+        assetPaths,
+        vaultPath: vaultPath ?? undefined,
+        messages: t.documentLab.diag,
+      }),
+    [files, bibKeys, assetPaths, vaultPath, t],
+  )
+  const compatibility = useMemo(
+    () => analyzeExportCompatibility(activeContent, t.documentLab.compat),
+    [activeContent, t],
+  )
   const project = useMemo(() => buildProjectPlan(files, activePath), [files, activePath])
   const mathlinks = useMemo(() => scanMathBacklinks(files), [files])
   const structureIssues = diagnostics.issues.filter((issue) => issue.category === "structure")

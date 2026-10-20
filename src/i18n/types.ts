@@ -1432,6 +1432,23 @@ export interface T {
     brokenSection: string
     duplicateChip: string
     unusedChip: string
+    /** Section headings, keyed by label kind (sec, eq, fig, ...). */
+    kindTitles: Record<string, string>
+  }
+
+  /** Words the document itself prints (preview and non-LaTeX exports). */
+  docTerms: {
+    /** Heading of each environment type, keyed by environment name. */
+    env: Record<string, string>
+    collapsed: string
+    figure: string
+    table: string
+    bibliography: {
+      heading: string
+      untitled: string
+      missing: string
+      keyNotFound: (key: string) => string
+    }
   }
 
   citationManager: {
@@ -1558,6 +1575,36 @@ export interface T {
   }
 
   documentLab: {
+    /** Messages produced by documentDiagnostics.ts. */
+    diag: {
+      brokenRef: (id: string) => string
+      duplicateLabel: (id: string) => string
+      unusedLabel: (id: string) => string
+      citationNotFound: (key: string) => string
+      imageNotFound: (src: string) => string
+      unclosedMath: string
+      tableColumns: (cells: number, expected: number) => string
+      exportHtml: string
+      exportMermaid: string
+      exportCallout: string
+      exportTransclusion: string
+      noTitle: string
+      theoremNoProof: string
+    }
+    /** Messages produced by exportCompatibility.ts. */
+    compat: {
+      html: string
+      mermaid: string
+      callout: string
+      wikilink: string
+      label: string
+      structuralRef: string
+      structuralLabel: string
+      envRef: string
+      crossEnvRef: string
+      bibtex: string
+      macros: string
+    }
     diagnostics: string
     compatibility: string
     project: string

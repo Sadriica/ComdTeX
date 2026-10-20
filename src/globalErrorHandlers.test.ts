@@ -46,6 +46,18 @@ describe("installGlobalErrorHandlers", () => {
     expect(toasts).toHaveLength(2)
   })
 
+  it("ignores the benign ResizeObserver loop notices", () => {
+    const target = fakeTarget()
+    installGlobalErrorHandlers(target as unknown as Window, () => 1000)
+    target.fire("error", {
+      message: "ResizeObserver loop completed with undelivered notifications.",
+    })
+    target.fire("error", { message: "ResizeObserver loop limit exceeded" })
+    expect(toasts).toHaveLength(0)
+    target.fire("error", { message: "real failure" })
+    expect(toasts).toHaveLength(1)
+  })
+
   it("uninstalls its listeners", () => {
     const target = fakeTarget()
     const off = installGlobalErrorHandlers(target as unknown as Window)

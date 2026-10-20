@@ -14,6 +14,8 @@
  * callouts (which would lose the numbers).
  */
 
+import { resolveDocLanguage, type DocLang } from "./docLang"
+import { extractFrontmatter } from "./frontmatter"
 import {
   ALL_ENVS,
   envDisplayLabel,
@@ -79,6 +81,7 @@ interface Walk {
   calloutTypes: Record<string, string>
   counters: Record<string, number>
   labels: Map<string, EnvironmentReference>
+  lang: DocLang
 }
 
 function quote(lines: string[]): string[] {
@@ -105,9 +108,9 @@ function renderNodes(nodes: CmdxNode[], walk: Walk): string {
     // Number first, then recurse: document order, like the preview's counters.
     const number = nextEnvNumber(walk.counters, node.name)
     if (node.label && !walk.labels.has(node.label)) {
-      walk.labels.set(node.label, { kind: info.es, number, label: node.label })
+      walk.labels.set(node.label, { kind: node.name, number, label: node.label })
     }
-    const heading = envDisplayLabel(node.name, number, node.title?.trim() ?? "")
+    const heading = envDisplayLabel(node.name, number, node.title?.trim() ?? "", walk.lang)
     const body = renderNodes(node.children, walk).trim()
     const bodyLines = body ? body.split("\n") : []
     if (walk.style === "callout") {
@@ -134,22 +137,26 @@ export function numberEnvironmentsForExport(
   style: EnvExportStyle,
   resolver?: EnvironmentDocResolver,
   calloutTypes: Record<string, string> = OBSIDIAN_CALLOUTS,
+  lang?: DocLang,
 ): string {
   // Cheap exit: nothing to number and no reference to resolve.
   if (!/^:::/m.test(markdown) && !/@[A-Za-z]+:/.test(markdown)) return markdown
 
   const frontmatter = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(markdown)?.[0] ?? ""
   const body = markdown.slice(frontmatter.length)
+  // The document's own language when its frontmatter names one, else the
+  // caller's, else the interface language (docLang.ts).
+  const docLang = resolveDocLanguage(extractFrontmatter(markdown)?.data, lang)
 
   const fences = maskFences(body)
   const specials = maskSpecialBlocks(fences.masked)
-  const walk: Walk = { style, calloutTypes, counters: {}, labels: new Map() }
+  const walk: Walk = { style, calloutTypes, counters: {}, labels: new Map(), lang: docLang }
   const converted = /^:::/m.test(specials.masked)
     ? renderNodes(parseCmdxDocument(specials.masked), walk)
     : specials.masked
 
   const inline = maskInlineCode(converted)
-  const resolved = resolveEnvironmentRefs(inline.masked, walk.labels, resolver, "text")
+  const resolved = resolveEnvironmentRefs(inline.masked, walk.labels, resolver, "text", docLang)
 
   return frontmatter + fences.restore(specials.restore(inline.restore(resolved)))
 }

@@ -15,6 +15,8 @@
  *   :::
  */
 
+import { activeDocLanguage, activeDocTerms, envTitle, type DocLang } from "./docLang"
+
 export const NUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
   theorem: { es: "Teorema", latex: "theorem" },
   lemma: { es: "Lema", latex: "lemma" },
@@ -244,10 +246,17 @@ function buildPseudocodeHTML(title: string, number: string, content: string): st
  * scheme has a single definition. `title` is used as given (callers escape it
  * for HTML when needed).
  */
-export function envDisplayLabel(envName: string, number: string, title: string): string {
+export function envDisplayLabel(
+  envName: string,
+  number: string,
+  title: string,
+  lang?: DocLang,
+): string {
   const info = ALL_ENVS[envName]
   if (!info) return title
-  return [info.es, number, title ? `(${title})` : ""].filter(Boolean).join(" ")
+  return [envTitle(envName, lang) || info.es, number, title ? `(${title})` : ""]
+    .filter(Boolean)
+    .join(" ")
 }
 
 /** Advances `counters` for `envName` and returns its number ("" when unnumbered). */
@@ -255,6 +264,31 @@ export function nextEnvNumber(counters: Record<string, number>, envName: string)
   if (!NUMBERED_ENVS[envName]) return ""
   counters[envName] = (counters[envName] ?? 0) + 1
   return String(counters[envName])
+}
+
+const QED_SPAN = `<span class="math-env-qed" aria-hidden="true">□</span>`
+
+/**
+ * Puts the end-of-proof mark at the end of the last line of the body, not in a
+ * block of its own below it. A proof body that does not end in a paragraph
+ * (a list, a display equation) gets the mark appended after it.
+ */
+function withQedMark(innerHTML: string): string {
+  const trimmed = innerHTML.trimEnd()
+  if (trimmed.endsWith("</p>")) return `${trimmed.slice(0, -4)}${QED_SPAN}</p>`
+  return `${trimmed}${QED_SPAN}`
+}
+
+/**
+ * A proof gets its end mark from the environment, so a QED symbol the author
+ * typed at the end of the body (`$\square$`, `\blacksquare`, `□`, `∎`) would
+ * show up twice. It is removed here and the environment's mark stands in for it.
+ */
+const TRAILING_QED_RE =
+  /(?:\$\s*\\(?:square|blacksquare|Box|qed|qedsymbol|qedhere)\s*\$|\\(?:square|blacksquare|Box|qed)(?![A-Za-z])|[□■∎◻◼▫▪])\s*$/
+
+export function stripTrailingQed(content: string): string {
+  return content.replace(TRAILING_QED_RE, "").trimEnd()
 }
 
 export function buildEnvHTML(
@@ -270,7 +304,7 @@ export function buildEnvHTML(
     return [
       `<div class="math-env math-env-folded">`,
       `<div class="math-env-header math-env-folded-header" onclick="this.parentElement.querySelector('.math-env-body').classList.toggle('folded'); this.classList.toggle('folded')">`,
-      `<span class="math-env-label">${escHtml(title) || "Contenido colapsado"}</span>`,
+      `<span class="math-env-label">${escHtml(title) || activeDocTerms().collapsed}</span>`,
       `<span class="math-env-folded-toggle">▸</span>`,
       `</div>`,
       `<div class="math-env-body folded">${innerHTML}</div>`,
@@ -289,8 +323,7 @@ export function buildEnvHTML(
   return [
     `<div class="math-env math-env-${envName}${sizeClass}"${idAttr}>`,
     `<div class="math-env-header"><span class="math-env-label">${displayLabel}${isProof ? "" : "."}</span>${label ? `<span class="math-env-anchor">${escHtml(label)}</span>` : ""}</div>`,
-    `<div class="math-env-body">${innerHTML}</div>`,
-    isProof ? `<div class="math-env-qed">□</div>` : "",
+    `<div class="math-env-body">${isProof ? withQedMark(innerHTML) : innerHTML}</div>`,
     `</div>`,
   ]
     .filter(Boolean)
@@ -507,7 +540,9 @@ export function extractEnvironments(
 
         let innerHTML: string
         try {
-          innerHTML = renderFn(content.trim())
+          innerHTML = renderFn(
+            envName === "proof" ? stripTrailingQed(content.trim()) : content.trim(),
+          )
         } catch (e) {
           const msg = String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
           innerHTML = `<pre class="math-error">Error in environment: ${msg}</pre>`
@@ -538,22 +573,24 @@ export function extractEnvironments(
   return { text: current, slots }
 }
 
+/** Reference prefix (`@thm:x`) to the environment type it points at. */
 const ENV_REF_PREFIXES: Record<string, string> = {
-  thm: "Teorema",
-  theorem: "Teorema",
-  lem: "Lema",
-  lemma: "Lema",
-  cor: "Corolario",
-  prop: "Proposición",
-  def: "Definición",
-  definition: "Definición",
-  ex: "Ejemplo",
-  example: "Ejemplo",
-  exc: "Ejercicio",
-  exercise: "Ejercicio",
+  thm: "theorem",
+  theorem: "theorem",
+  lem: "lemma",
+  lemma: "lemma",
+  cor: "corollary",
+  prop: "proposition",
+  def: "definition",
+  definition: "definition",
+  ex: "example",
+  example: "example",
+  exc: "exercise",
+  exercise: "exercise",
 }
 
 export interface EnvironmentReference {
+  /** Environment type (`theorem`), not its title: the title depends on the language at display time. */
   kind: string
   number: string
   label: string
@@ -574,7 +611,7 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
       if (labels.has(label)) {
         console.warn(`Duplicate environment label: ${label}`)
       } else {
-        labels.set(label, { kind: ALL_ENVS[envName].es, number, label })
+        labels.set(label, { kind: envName, number, label })
       }
     }
   }
@@ -662,6 +699,7 @@ export function resolveEnvironmentRefs(
   labels: Map<string, EnvironmentReference>,
   resolver?: EnvironmentDocResolver,
   format: "html" | "text" = "html",
+  lang: DocLang = activeDocLanguage(),
 ): string {
   // "text" is for exports that cannot carry the preview's links (Markdown,
   // Pandoc inputs, Reveal): same resolved wording, no anchor markup.
@@ -679,8 +717,9 @@ export function resolveEnvironmentRefs(
     ) => {
       // ── Cross-file: `@doc@prefix:id` / `@[doc with spaces]@prefix:id` ────────
       if (crossPrefix !== undefined && crossId !== undefined) {
-        const kind = ENV_REF_PREFIXES[crossPrefix]
-        if (!kind) return full
+        const kindName = ENV_REF_PREFIXES[crossPrefix]
+        if (!kindName) return full
+        const kind = envTitle(kindName, lang)
         const docPath = (bracketPath ?? barePath ?? "").trim()
         const label = `${crossPrefix}:${crossId}`
         // Missing file and missing label degrade identically to a broken LOCAL
@@ -688,7 +727,8 @@ export function resolveEnvironmentRefs(
         const docLabels = resolver && docPath ? labelsForDoc(docPath, resolver) : null
         const ref = docLabels?.get(label)
         if (!ref) return asText ? `${kind} (?)` : `<span class="env-ref-broken">${kind} (?)</span>`
-        const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+        const refKind = envTitle(ref.kind, lang)
+        const display = ref.number ? `${refKind} ${ref.number}` : refKind
         if (asText) return display
         const safeDoc = escHtml(docPath)
         const safeLabel = escHtml(label)
@@ -701,11 +741,11 @@ export function resolveEnvironmentRefs(
       const label = `${localPrefix}:${localId}`
       const ref = labels.get(label)
       if (!ref) {
-        return asText
-          ? `${ENV_REF_PREFIXES[localPrefix]} (?)`
-          : `<span class="env-ref-broken">${ENV_REF_PREFIXES[localPrefix]} (?)</span>`
+        const kind = envTitle(ENV_REF_PREFIXES[localPrefix], lang)
+        return asText ? `${kind} (?)` : `<span class="env-ref-broken">${kind} (?)</span>`
       }
-      const display = ref.number ? `${ref.kind} ${ref.number}` : ref.kind
+      const refKind = envTitle(ref.kind, lang)
+      const display = ref.number ? `${refKind} ${ref.number}` : refKind
       if (asText) return display
       return `<a class="env-ref" href="#env-${label}">${display}</a>`
     },
@@ -729,7 +769,7 @@ export function envToLatex(
 
   if (latex === "proof") {
     // amsthm provides proof natively
-    return `\\begin{proof}${optTitle}${labelLine}\n${content}\n\\end{proof}`
+    return `\\begin{proof}${optTitle}${labelLine}\n${stripTrailingQed(content)}\n\\end{proof}`
   }
 
   return `\\begin{${latex}}${optTitle}${labelLine}\n${content}\n\\end{${latex}}`

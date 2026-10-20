@@ -18,6 +18,7 @@ import type { LatexDiagnostic } from "./latexErrors"
 import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversion"
 import { escTex, exportReveal, exportToTex } from "./exporter"
 import { collectLocalImagePaths } from "./exportBundle"
+import { imageCandidates } from "./imagePaths"
 import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
 import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
@@ -235,6 +236,7 @@ export async function bundleTexAssets(
   tex: string,
   outDir: string,
   vaultPath: string | null,
+  docPath?: string | null,
 ): Promise<{ tex: string; copied: number }> {
   let finalTex = tex
   let copied = 0
@@ -242,8 +244,16 @@ export async function bundleTexAssets(
 
   for (const assetPath of collectLocalImagePaths(resolvedContent)) {
     try {
-      const srcPath = assetPath.startsWith("/") ? assetPath : await pathJoin(vaultPath, assetPath)
-      if (!(await exists(srcPath))) continue
+      // Same rule as the preview (imagePaths.ts): the document's folder
+      // first, then the vault root.
+      let srcPath: string | null = null
+      for (const candidate of imageCandidates(assetPath, docPath, vaultPath)) {
+        if (await exists(candidate)) {
+          srcPath = candidate
+          break
+        }
+      }
+      if (!srcPath) continue
       const base = pathBasename(assetPath)
       await copyFile(srcPath, `${outDir}/${base}`)
       // escTex mirrors exactly how exporter.ts embedded the src, so this is
@@ -359,6 +369,7 @@ export async function exportLatex(ctx: ExportActionsContext) {
     tex,
     outDir,
     ctx.vaultPath,
+    ctx.activePath,
   )
   await writeTextFile(outPathEarly, bundledTex)
   if (copied > 0 && ctx.messages.texAssetsCopied) {
@@ -388,7 +399,13 @@ export async function exportProjectLatex(ctx: ExportActionsContext) {
   // `content` is already resolved (composeProjectMarkdown + resolveDocumentContent
   // above), so it can go straight into the asset scan.
   const outDir = pathDirname(path) || "."
-  const { tex: bundledTex, copied } = await bundleTexAssets(content, tex, outDir, ctx.vaultPath)
+  const { tex: bundledTex, copied } = await bundleTexAssets(
+    content,
+    tex,
+    outDir,
+    ctx.vaultPath,
+    ctx.activePath,
+  )
   await writeTextFile(path, bundledTex)
   if (copied > 0 && ctx.messages.texAssetsCopied) {
     ctx.toast(ctx.messages.texAssetsCopied(copied), "success")

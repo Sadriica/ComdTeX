@@ -7,6 +7,8 @@ import BookmarksPopup from "./BookmarksPopup"
 import ClosedTabsPopup from "./ClosedTabsPopup"
 import QuickSwitcher from "./QuickSwitcher"
 import OnboardingTour from "./OnboardingTour"
+import CitationManager from "./CitationManager"
+import TableEditor from "./TableEditor"
 import ToastContainer from "./Toast"
 import { showToast } from "./toastService"
 import { useFocusTrap } from "./useFocusTrap"
@@ -52,6 +54,34 @@ describe("modal dialog semantics", () => {
   it("OnboardingTour", () => {
     render(<OnboardingTour open onClose={() => {}} />)
     expectLabelledDialog()
+  })
+})
+
+describe("Escape closes the editors", () => {
+  it("CitationManager", () => {
+    const onClose = vi.fn()
+    render(
+      <CitationManager
+        open
+        bibMap={new Map()}
+        onSave={() => {}}
+        onPersist={() => {}}
+        onClose={onClose}
+      />,
+    )
+    expectLabelledDialog()
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true)
+    fireEvent.keyDown(document.activeElement as Element, { key: "Escape" })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("TableEditor", () => {
+    const onClose = vi.fn()
+    render(<TableEditor open onClose={onClose} onInsert={() => {}} />)
+    expectLabelledDialog()
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true)
+    fireEvent.keyDown(document.activeElement as Element, { key: "Escape" })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
 
