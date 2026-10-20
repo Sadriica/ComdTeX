@@ -71,7 +71,7 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
         </div>
         <div className="onboarding-actions">
           <button onClick={handleClose}>{t.onboarding.skip}</button>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="onboarding-actions-main">
             {step > 0 && <button onClick={handleBack}>{t.onboarding.back}</button>}
             <button className="primary" onClick={handleNext}>
               {isLast ? t.onboarding.done : t.onboarding.next}
