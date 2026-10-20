@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { expect, test, type Page } from "@playwright/test"
+import { installDeterminism, quiesce, waitForGraphLayout } from "./support/deterministic"
 import { installFakeVault } from "./support/fakeVault"
 
 // Visual harness: full-window PNGs of every reachable UI state, per theme, so
@@ -57,6 +58,8 @@ async function settle(page: Page, opts: { math?: boolean; mermaid?: boolean } = 
 
 async function shot(page: Page, theme: string, name: string, vp = "") {
   mkdirSync(OUT, { recursive: true })
+  await waitForGraphLayout(page)
+  await quiesce(page)
   await page.screenshot({ path: resolve(OUT, `${theme}__${name}${vp}.png`) })
 }
 
@@ -105,6 +108,7 @@ for (const { name, theme } of THEMES) {
     mkdirSync(OUT, { recursive: true })
     const errors = watchErrors(page, name)
     await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
     await installFakeVault(page, { open: false, settings: { theme } })
     await page.goto("/")
     await page.locator(".welcome-logo").waitFor()
@@ -117,6 +121,7 @@ for (const { name, theme } of THEMES) {
     test.setTimeout(240_000)
     const errors = watchErrors(page, name)
     await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
     await installFakeVault(page, {
       settings: { theme },
       storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
@@ -319,6 +324,7 @@ for (const { name, theme } of THEMES) {
 
   test(`visual ${name}: dependency banner and narrow window`, async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 700 })
+    await installDeterminism(page)
     await installFakeVault(page, { settings: { theme } })
     await page.goto("/")
     await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
