@@ -1,0 +1,121 @@
+/* ── Document Lab Panel ── */
+.document-lab-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.lab-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #252525;
+}
+.lab-tabs button {
+  border: 1px solid #333;
+  background: #1d1d1d;
+  color: #aaa;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lab-tabs button.active {
+  color: #fff;
+  border-color: #569cd6;
+  background: #12344d;
+}
+.lab-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.lab-score-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  color: #aaa;
+  font-size: 11px;
+  border-bottom: 1px solid #252525;
+}
+.compat-score {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+}
+.compat-score div {
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  background: #1f1f1f;
+}
+.compat-score strong {
+  display: block;
+  font-size: 22px;
+  color: #b5cea8;
+}
+.compat-score span {
+  font-size: 11px;
+  color: #aaa;
+}
+.lab-card {
+  margin: 10px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  background: #1f1f1f;
+}
+.lab-link {
+  display: block;
+  border: 0;
+  background: transparent;
+  color: #9cdcfe;
+  padding: 6px 0 0;
+  cursor: pointer;
+  text-align: left;
+}
+.lab-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 0;
+  border-bottom: 1px solid #252525;
+  background: transparent;
+  color: #d4d4d4;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.lab-item:hover {
+  background: #2a2a2a;
+}
+.lab-error .lab-item-title {
+  color: #f48771;
+}
+.lab-warning .lab-item-title {
+  color: #dcdcaa;
+}
+.lab-info .lab-item-title {
+  color: #9cdcfe;
+}
+.lab-item-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+.lab-item-meta {
+  color: #858585;
+  font-size: 10px;
+}
+.lab-item-context {
+  color: #aaa;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lab-nested {
+  padding-left: 22px;
+  background: #1c1c1c;
+}

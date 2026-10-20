@@ -187,8 +187,7 @@ import {
   type FolderRules,
 } from "./folderRules"
 import { runGenerator, type SourceFile, type TaskItem } from "./generators"
-import "katex/dist/katex.min.css"
-import "./App.css"
+import "./styles/index.css"
 
 const RECENT_KEY = STORAGE_KEYS.RECENT_FILES
 const BOOKMARKS_KEY = STORAGE_KEYS.BOOKMARKS

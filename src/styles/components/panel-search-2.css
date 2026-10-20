@@ -1,0 +1,64 @@
+/* ── Unified panel header ── */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  min-height: 26px;
+}
+.panel-header-title {
+  font-weight: 600;
+}
+.panel-header-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ── Unified panel empty state ── */
+.panel-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: #555;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Friendlier "rich" empty states with icon + message */
+.panel-empty-rich {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  text-align: center;
+  color: #888;
+  gap: 10px;
+  min-height: 120px;
+}
+.panel-empty-rich .panel-empty-icon {
+  font-size: 36px;
+  line-height: 1;
+  opacity: 0.5;
+  user-select: none;
+}
+.panel-empty-rich .panel-empty-message {
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 240px;
+  margin: 0;
+}
+.panel-empty-rich .panel-empty-message code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}

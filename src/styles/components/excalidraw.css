@@ -1,0 +1,266 @@
+/* ── Excalidraw embed (:::excalidraw) ─────────────────────────────────────── */
+.excalidraw-block {
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  margin: 1em 0;
+  background: var(--surface, #1e1e1e);
+  overflow: hidden;
+}
+.excalidraw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--surface2, #2a2a2a);
+  border-bottom: 1px solid var(--border, #444);
+  font-size: 0.85em;
+  color: var(--status-fg, #aaa);
+}
+.excalidraw-title {
+  font-weight: 600;
+}
+.excalidraw-edit {
+  background: transparent;
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  color: var(--accent, #7c9cbf);
+  cursor: pointer;
+  padding: 1px 8px;
+  font-size: 1em;
+  line-height: 1.4;
+}
+.excalidraw-edit:hover {
+  background: var(--accent-dim, #1e3a52);
+  border-color: var(--accent, #7c9cbf);
+}
+.excalidraw-canvas {
+  padding: 8px;
+  text-align: center;
+}
+.excalidraw-canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+.excalidraw-placeholder {
+  padding: 2em 1em;
+  text-align: center;
+  color: var(--status-fg, #888);
+  font-style: italic;
+  cursor: pointer;
+}
+
+/* ── Excalidraw editor modal ──────────────────────────────────────────────── */
+.excalidraw-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.excalidraw-modal {
+  width: 92vw;
+  height: 88vh;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* anchors .excalidraw-confirm-overlay */
+  background: var(--bg, #1e1e1e);
+  border: 1px solid var(--border, #444);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.excalidraw-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--surface2, #2a2a2a);
+  border-bottom: 1px solid var(--border, #444);
+}
+.excalidraw-modal-title {
+  font-weight: 600;
+  color: var(--fg, #d4d4d4);
+}
+.excalidraw-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+.excalidraw-modal-actions button {
+  padding: 4px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #444);
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.excalidraw-modal-cancel {
+  background: transparent;
+  color: var(--fg, #d4d4d4);
+}
+.excalidraw-modal-save {
+  background: var(--accent, #7c9cbf);
+  border-color: var(--accent, #7c9cbf);
+  color: #fff;
+}
+.excalidraw-modal-save:hover {
+  filter: brightness(1.1);
+}
+.excalidraw-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 10;
+}
+.excalidraw-confirm {
+  background: var(--panel-bg, #252526);
+  border: 1px solid var(--border, #3c3c3c);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  max-width: 26rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.excalidraw-confirm-text {
+  color: var(--fg, #d4d4d4);
+  margin: 0 0 0.8rem;
+}
+.excalidraw-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.excalidraw-confirm-actions button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #3c3c3c);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.excalidraw-confirm-discard {
+  background: transparent;
+  color: var(--error-fg, #f48771);
+  border-color: var(--error-fg, #f48771);
+}
+.excalidraw-modal-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.excalidraw-modal-canvas .excalidraw,
+.excalidraw-modal-canvas .excalidraw-container {
+  height: 100%;
+}
+.excalidraw-modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--status-fg, #aaa);
+}
+.app[data-theme="hc"] .excalidraw-modal-save {
+  color: #000;
+}
+
+/* ── Panel filter box (PanelSearch) ─────────────────────────────────────── */
+.panel-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-search-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.panel-search-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.panel-search-clear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.panel-search-clear:hover {
+  color: var(--fg);
+}
+
+/* ── Focus-session clock in the top bar ─────────────────────────────────── */
+.menubar-focus-clock {
+  /* Pinned right: the section menus flow from the left, this is a readout. */
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.menubar-focus-clock:hover {
+  background: var(--surface2);
+}
+.menubar-focus-dot {
+  font-size: 8px;
+  line-height: 1;
+}
+.menubar-focus-clock.running .menubar-focus-dot {
+  color: #4caf50;
+}
+.menubar-focus-clock.paused .menubar-focus-dot {
+  color: var(--muted);
+}
+
+/* AI gap-filling progress chip in the status bar. */
+.status-ai-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-ai-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+/* ── Focus view, detached from the top bar ──────────────────────────────── */
+/* Anchored to the top-right rather than rendered in the sidebar: the timer is
+   glanced at and clicked, and it should not displace the file tree. The `top`
+   offset clears the title bar + both menu rows; matching the popup z-index
+   above keeps it over the editor but under modals. */
+.focus-popover {
+  position: fixed;
+  top: 78px;
+  right: 12px;
+  z-index: 1000;
+  width: 300px;
+  max-height: min(70vh, 620px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.app[data-theme="light"] .focus-popover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}

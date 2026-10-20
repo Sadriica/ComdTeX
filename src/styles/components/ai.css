@@ -1,0 +1,313 @@
+/* AI conversation history dropdown */
+.ai-history {
+  max-height: 220px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ai-history-item.active {
+  background: var(--surface2);
+}
+.ai-history-title {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-history-item.active .ai-history-title {
+  color: var(--accent);
+  font-weight: 500;
+}
+.ai-history-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ai-history-del:hover {
+  color: var(--fg);
+  background: var(--surface2);
+}
+.ai-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ai-bubble-role {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.ai-bubble-body {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #2a2a2a;
+  color: #ddd;
+  overflow-x: auto;
+}
+.ai-bubble-user .ai-bubble-body {
+  background: #1f3a5f;
+}
+.ai-bubble-user-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ai-bubble-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ai-btn {
+  background: #2f2f2f;
+  border: 1px solid #3c3c3c;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.ai-btn:hover:not(:disabled) {
+  background: #383838;
+  color: #fff;
+}
+.ai-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ai-btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.ai-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+.ai-btn-stop {
+  background: #7a2020;
+  border-color: #7a2020;
+  color: #fff;
+}
+/* Live response feedback: blinking caret on the streaming text + "typing" dots
+   while waiting for the first token. */
+.ai-streaming-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ai-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: ai-blink 1s step-start infinite;
+}
+@keyframes ai-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ai-typing-wrap {
+  padding: 2px 0;
+}
+.ai-typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.ai-typing > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: ai-bounce 1.2s infinite ease-in-out both;
+}
+.ai-typing > span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.ai-typing > span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes ai-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  35% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-cursor,
+  .ai-typing > span {
+    animation: none;
+  }
+  .ai-typing > span {
+    opacity: 0.6;
+  }
+}
+.ai-context-chips {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid #2a2a2a;
+}
+.ai-chip {
+  background: #262626;
+  border: 1px solid #3c3c3c;
+  color: #999;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+.ai-chip.active {
+  background: #1f3a5f;
+  border-color: #2563eb;
+  color: #cfe0ff;
+}
+.ai-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ai-actions-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 10px;
+  border-top: 1px solid #2a2a2a;
+}
+.ai-action-item {
+  background: #2a2a2a;
+  border: 1px solid #3c3c3c;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+.ai-action-item:hover {
+  background: #383838;
+  color: #fff;
+}
+.ai-input-row {
+  padding: 8px 10px;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #2a2a2a;
+  color: #ddd;
+  border: 1px solid #3c3c3c;
+}
+.ai-input-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.app[data-theme="light"] .ai-bubble-body {
+  background: #f0f0f0;
+  color: #222;
+}
+.app[data-theme="light"] .ai-bubble-user .ai-bubble-body {
+  background: #dbeafe;
+}
+.app[data-theme="light"] .ai-input {
+  background: #fff;
+  color: #222;
+  border-color: #ccc;
+}
+.app[data-theme="light"] .ai-chip {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #555;
+}
+.app[data-theme="light"] .ai-chip.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1e40af;
+}
+.app[data-theme="light"] .ai-btn {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--fg);
+}
+.app[data-theme="light"] .ai-action-item {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+.app[data-theme="hc"] .ai-bubble-body {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+}
+.app[data-theme="hc"] .ai-bubble-user .ai-bubble-body {
+  background: #1a1a00;
+}
+.app[data-theme="hc"] .ai-input {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+.app[data-theme="hc"] .ai-chip {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}
+.app[data-theme="hc"] .ai-btn {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}
+.app[data-theme="hc"] .ai-action-item {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}

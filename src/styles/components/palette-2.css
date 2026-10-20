@@ -1,0 +1,228 @@
+/* ── Command Palette ── */
+.palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 35vh;
+}
+
+.palette {
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 8px;
+  width: 560px;
+  max-height: calc(65vh - 24px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.palette-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #3a3a3a;
+  color: #d4d4d4;
+  padding: 12px 16px;
+  font-size: 14px;
+  outline: none;
+}
+
+.palette-list {
+  overflow-y: auto;
+  max-height: min(50vh, 400px);
+}
+.palette-empty {
+  padding: 12px 16px;
+  color: #555;
+  font-size: 13px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.palette-item-selected {
+  background: #094771;
+  color: #fff;
+}
+
+.palette-kind {
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+  opacity: 0.6;
+}
+.palette-kind-file {
+  color: #9cdcfe;
+}
+.palette-kind-cmd {
+  color: #dcdcaa;
+}
+
+.palette-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.palette-desc {
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}
+.palette-item-selected .palette-desc {
+  color: #aaa;
+}
+
+/* ── Enriched command palette: categories, chevrons, shortcut chips ── */
+.palette-cat {
+  padding: 6px 14px 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+  pointer-events: none;
+}
+
+.palette-chevron {
+  font-size: 11px;
+  color: #8a8a8a;
+  margin-left: 4px;
+}
+.palette-item-selected .palette-chevron {
+  color: #cde6ff;
+}
+
+.cmd-shortcut {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: #8a8a8a;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+.palette-item-selected .cmd-shortcut {
+  color: #e6f1ff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.palette-kind-back {
+  color: #9cdcfe;
+}
+
+.palette-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: #9a9a9a;
+  border-bottom: 1px solid #3a3a3a;
+}
+.palette-crumb-back {
+  background: transparent;
+  border: none;
+  color: #9cdcfe;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+.palette-crumb-back:hover {
+  text-decoration: underline;
+}
+.palette-crumb-sep {
+  color: #555;
+}
+.palette-crumb-here {
+  color: #d4d4d4;
+  font-weight: 600;
+}
+
+/* Light theme */
+.app[data-theme="light"] .palette-cat {
+  color: #8a8a8a;
+}
+.app[data-theme="light"] .palette-chevron {
+  color: #888;
+}
+.app[data-theme="light"] .palette-item-selected .palette-chevron {
+  color: #0a3d77;
+}
+.app[data-theme="light"] .cmd-shortcut {
+  color: #6a6a6a;
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.app[data-theme="light"] .palette-item-selected .cmd-shortcut {
+  color: #0a3d77;
+  background: rgba(10, 61, 119, 0.12);
+  border-color: rgba(10, 61, 119, 0.25);
+}
+.app[data-theme="light"] .palette-breadcrumb {
+  color: #6a6a6a;
+  border-bottom-color: #e0e0e0;
+}
+.app[data-theme="light"] .palette-crumb-back {
+  color: #0a3d77;
+}
+.app[data-theme="light"] .palette-crumb-here {
+  color: #1f1f1f;
+}
+.app[data-theme="light"] .palette-kind-back {
+  color: #0a3d77;
+}
+
+/* High-contrast theme */
+.app[data-theme="hc"] .palette-cat {
+  color: #ffff00;
+}
+.app[data-theme="hc"] .palette-chevron {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .cmd-shortcut {
+  color: #ffffff;
+  background: #000;
+  border: 1px solid #ffffff;
+}
+.app[data-theme="hc"] .palette-item-selected .cmd-shortcut {
+  color: #000;
+  background: #ffff00;
+  border-color: #000;
+}
+.app[data-theme="hc"] .palette-item-selected .palette-chevron {
+  color: #000;
+}
+.app[data-theme="hc"] .palette-breadcrumb {
+  color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+.app[data-theme="hc"] .palette-crumb-back {
+  color: #3a96dd;
+}
+.app[data-theme="hc"] .palette-crumb-here {
+  color: #ffffff;
+}
+.app[data-theme="hc"] .palette-kind-back {
+  color: #3a96dd;
+}

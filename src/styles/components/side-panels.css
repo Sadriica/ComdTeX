@@ -1,0 +1,44 @@
+/* ── Frontmatter Header ── */
+.frontmatter-header {
+  padding-bottom: 1em;
+  margin-bottom: 1.5em;
+  border-bottom: 2px solid #333;
+}
+
+.fm-title {
+  font-size: 2em;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 0.3em;
+  border-bottom: none !important;
+  margin-top: 0 !important;
+}
+
+.fm-meta {
+  font-size: 0.9em;
+  color: #888;
+  margin-bottom: 0.5em;
+}
+
+.fm-author {
+  color: #9cdcfe;
+}
+.fm-date {
+  color: #777;
+}
+
+.fm-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.4em;
+}
+
+.fm-tag {
+  background: #0d3a5c;
+  border: 1px solid #1177bb44;
+  color: #9cdcfe;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.8em;
+}

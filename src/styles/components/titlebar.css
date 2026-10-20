@@ -1,0 +1,63 @@
+/* ── Title Bar ── */
+.titlebar {
+  height: 32px;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  user-select: none;
+  border-bottom: 1px solid #222;
+}
+
+.titlebar-title {
+  flex: 1;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar-controls {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.titlebar-btn {
+  background: transparent;
+  border: none;
+  /* Monochrome, theme-driven. Slightly dimmed --icon so idle controls read as
+     subtle; full --icon/--fg on hover. No hardcoded colors. */
+  color: var(--icon, #d4d4d4);
+  opacity: 0.6;
+  width: 40px;
+  height: 32px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Force flat (text) presentation so glyphs never render as colored emoji. */
+  font-variant-emoji: text;
+  transition:
+    background 0.1s,
+    opacity 0.1s,
+    color 0.1s;
+}
+.titlebar-btn:hover {
+  background: var(--surface2, #2a2a2a);
+  color: var(--fg, #ccc);
+  opacity: 1;
+}
+.titlebar-close:hover {
+  background: #c0392b;
+  color: #fff;
+  opacity: 1;
+}
+/* The gear is a monochrome glyph (⚙︎, text variation selector), same family
+   as the min/max/close controls; sized to match their optical weight. */
+.titlebar-settings-btn {
+  font-size: 14px;
+}

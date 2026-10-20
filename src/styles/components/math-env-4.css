@@ -1,0 +1,78 @@
+/* ── Environments Panel ── */
+.env-list-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+.env-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #1e1e1e;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.env-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.env-list-row1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.env-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+.env-badge-theorem,
+.env-badge-lemma,
+.env-badge-corollary,
+.env-badge-proposition {
+  background: rgba(86, 156, 214, 0.2);
+  color: #569cd6;
+}
+.env-badge-definition {
+  background: rgba(78, 201, 176, 0.2);
+  color: #4ec9b0;
+}
+.env-badge-example,
+.env-badge-exercise {
+  background: rgba(220, 220, 170, 0.2);
+  color: #dcdcaa;
+}
+.env-badge-proof,
+.env-badge-remark,
+.env-badge-note {
+  background: rgba(150, 150, 150, 0.15);
+  color: #888;
+}
+.env-list-title {
+  font-size: 12px;
+  color: #ccc;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.env-list-num {
+  font-size: 11px;
+  color: #569cd6;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+/* Checkboxes in preview */
+.preview-checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: middle;
+}

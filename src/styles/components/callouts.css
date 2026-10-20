@@ -1,0 +1,108 @@
+/* ── Callouts ── */
+.callout {
+  border-left: 3px solid #569cd6;
+  border-radius: 4px;
+  background: rgba(86, 156, 214, 0.08);
+  margin: 1em 0;
+  overflow: hidden;
+}
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 0.9em;
+  background: rgba(86, 156, 214, 0.12);
+  color: #9cdcfe;
+}
+.callout-icon {
+  font-style: normal;
+}
+.callout-body {
+  padding: 8px 12px;
+}
+.callout-body > *:first-child {
+  margin-top: 0;
+}
+.callout-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Type colors */
+.callout-warning,
+.callout-caution,
+.callout-attention {
+  border-color: #d7ba7d;
+  background: rgba(215, 186, 125, 0.08);
+}
+.callout-warning .callout-title,
+.callout-caution .callout-title,
+.callout-attention .callout-title {
+  background: rgba(215, 186, 125, 0.12);
+  color: #d7ba7d;
+}
+.callout-danger,
+.callout-error,
+.callout-failure {
+  border-color: #f44747;
+  background: rgba(244, 71, 71, 0.08);
+}
+.callout-danger .callout-title,
+.callout-error .callout-title,
+.callout-failure .callout-title {
+  background: rgba(244, 71, 71, 0.12);
+  color: #f48771;
+}
+.callout-success,
+.callout-check,
+.callout-done {
+  border-color: #6a9955;
+  background: rgba(106, 153, 85, 0.08);
+}
+.callout-success .callout-title,
+.callout-check .callout-title,
+.callout-done .callout-title {
+  background: rgba(106, 153, 85, 0.12);
+  color: #6a9955;
+}
+.callout-tip,
+.callout-hint {
+  border-color: #4ec9b0;
+  background: rgba(78, 201, 176, 0.08);
+}
+.callout-tip .callout-title,
+.callout-hint .callout-title {
+  background: rgba(78, 201, 176, 0.12);
+  color: #4ec9b0;
+}
+.callout-theorem,
+.callout-lemma,
+.callout-corollary,
+.callout-proposition {
+  border-color: #c586c0;
+  background: rgba(197, 134, 192, 0.08);
+}
+.callout-theorem .callout-title,
+.callout-lemma .callout-title,
+.callout-corollary .callout-title,
+.callout-proposition .callout-title {
+  background: rgba(197, 134, 192, 0.12);
+  color: #c586c0;
+}
+.callout-definition {
+  border-color: #ce9178;
+  background: rgba(206, 145, 120, 0.08);
+}
+.callout-definition .callout-title {
+  background: rgba(206, 145, 120, 0.12);
+  color: #ce9178;
+}
+.callout-proof {
+  border-color: #888;
+  background: rgba(136, 136, 136, 0.06);
+}
+.callout-proof .callout-title {
+  background: rgba(136, 136, 136, 0.1);
+  color: #aaa;
+}

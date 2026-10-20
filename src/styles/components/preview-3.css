@@ -1,0 +1,110 @@
+.transclusion {
+  border: 1px solid #333;
+  border-left: 4px solid #4ec9b0;
+  border-radius: 6px;
+  padding: 8px 14px 10px;
+  margin: 1em 0 1em 12px;
+  background: rgba(78, 201, 176, 0.06);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.transclusion:hover {
+  background: rgba(78, 201, 176, 0.12);
+}
+.transclusion-header {
+  font-size: 11px;
+  color: #4ec9b0;
+  margin-bottom: 6px;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  user-select: none;
+}
+.transclusion-missing {
+  border-left-color: #d16969;
+  background: rgba(209, 105, 105, 0.06);
+}
+.transclusion-missing .transclusion-header {
+  color: #d16969;
+}
+.xref {
+  color: #9cdcfe;
+  border-bottom: 1px dotted #9cdcfe66;
+  text-decoration: none;
+}
+
+/* ── Figures ── */
+.fig-block {
+  margin: 1.5em auto;
+  text-align: center;
+  max-width: 100%;
+}
+.fig-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.fig-block figcaption {
+  margin-top: 6px;
+  font-size: 0.85em;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+}
+.fig-number {
+  font-style: normal;
+  font-weight: 600;
+  color: #9cdcfe;
+}
+.fig-ref {
+  color: #9cdcfe;
+  text-decoration: none;
+}
+.fig-ref:hover {
+  text-decoration: underline;
+}
+.fig-ref-broken {
+  color: #f48771;
+}
+.tbl-block {
+  margin: 1.5em auto;
+  overflow-x: auto;
+}
+.tbl-block table {
+  margin: 0 auto;
+}
+.tbl-block figcaption {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 0.85em;
+  color: #888;
+}
+.tbl-number {
+  color: #9cdcfe;
+  font-weight: 600;
+}
+
+/* ── Footnotes (markdown-it-footnote) ── */
+.footnotes {
+  border-top: 1px solid #333;
+  margin-top: 2em;
+  padding-top: 1em;
+  font-size: 0.85em;
+  color: #888;
+}
+.footnotes ol {
+  padding-left: 1.5em;
+}
+.footnotes li {
+  margin: 0.25em 0;
+}
+.footnote-ref a,
+.footnote-backref {
+  color: #9cdcfe;
+  text-decoration: none;
+  font-size: 0.8em;
+}
+.footnote-ref a:hover,
+.footnote-backref:hover {
+  text-decoration: underline;
+}

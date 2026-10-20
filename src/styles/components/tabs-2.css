@@ -1,0 +1,98 @@
+/* ── Tab Bar ── */
+.tab-bar {
+  display: flex;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+.tab-bar::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 2px;
+}
+.tab-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 32px;
+  min-width: 90px;
+  max-width: 180px;
+  font-size: 12px;
+  color: #888;
+  cursor: pointer;
+  border-right: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+.tab:hover {
+  background: #252526;
+  color: #ccc;
+}
+.tab-active {
+  background: #1e1e1e;
+  color: #fff;
+  border-top: 1px solid #569cd6;
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.tab-dirty {
+  color: #ff6b6b;
+  font-size: 10px;
+  margin-left: 4px;
+  /* Static dot: the previous infinite `pulse` animation forced the GPU
+     compositor to repaint continuously even when the app was idle (~5%
+     sustained CPU on the WebKit compositor thread). The red dot alone
+     is enough signal that there's unsaved work. */
+}
+.tab-lint-error,
+.tab-lint-warning {
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 0 3px;
+  line-height: 13px;
+  flex-shrink: 0;
+}
+.tab-lint-error {
+  background: #c72e2e;
+  color: #fff;
+}
+.tab-lint-warning {
+  background: #7a6010;
+  color: #f0c060;
+}
+.tab-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+.tab-close:hover {
+  background: #3a3a3a;
+  color: #ccc;
+}
+.tab:focus-visible,
+.tab-close:focus-visible {
+  outline: 1px solid #569cd6;
+  outline-offset: -2px;
+}

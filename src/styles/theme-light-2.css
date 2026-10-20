@@ -1,0 +1,96 @@
+/* ── Comments: light theme ── */
+.app[data-theme="light"] .comments-header {
+  border-bottom-color: #e0e0e0;
+}
+.app[data-theme="light"] .comments-summary {
+  color: #4a4a4a;
+}
+.app[data-theme="light"] .comments-add-btn {
+  background: rgba(0, 102, 204, 0.08);
+  border-color: #b8d4ee;
+  color: #0066cc;
+}
+.app[data-theme="light"] .comments-add-btn:hover {
+  background: rgba(0, 102, 204, 0.18);
+  border-color: #0066cc;
+}
+.app[data-theme="light"] .comments-filters {
+  border-bottom-color: #e0e0e0;
+}
+.app[data-theme="light"] .comments-filter {
+  border-color: #d0d0d0;
+  color: #4a4a4a;
+}
+.app[data-theme="light"] .comments-filter:hover {
+  border-color: #8a8a8a;
+  color: #1f1f1f;
+}
+.app[data-theme="light"] .comments-filter.active {
+  border-color: #0066cc;
+  color: #0066cc;
+  background: rgba(0, 102, 204, 0.08);
+}
+.app[data-theme="light"] .comments-file-group {
+  border-bottom-color: #e0e0e0;
+}
+.app[data-theme="light"] .comments-file-name {
+  color: #6a6a6a;
+}
+.app[data-theme="light"] .comments-file-name.active {
+  color: #0066cc;
+}
+.app[data-theme="light"] .comments-item {
+  border-bottom-color: #ececec;
+}
+.app[data-theme="light"] .comments-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.app[data-theme="light"] .comments-jump {
+  color: #0066cc;
+}
+.app[data-theme="light"] .comments-jump:hover {
+  color: #003a80;
+}
+.app[data-theme="light"] .comments-resolved-toggle {
+  color: #4a4a4a;
+}
+.app[data-theme="light"] .comments-delete {
+  color: #888;
+}
+.app[data-theme="light"] .comments-delete:hover {
+  color: #c33;
+}
+.app[data-theme="light"] .comments-snippet {
+  color: #777;
+  border-left-color: #ddd;
+}
+.app[data-theme="light"] .comments-body {
+  color: #1f1f1f;
+}
+.app[data-theme="light"] .comments-empty-body {
+  color: #888;
+}
+.app[data-theme="light"] .comments-edit-input {
+  background: #fff;
+  border-color: #d0d0d0;
+  color: #1f1f1f;
+}
+.app[data-theme="light"] .comments-edit-input:focus {
+  border-color: #0066cc;
+}
+.app[data-theme="light"] .comments-edit-save {
+  border-color: #b8d4ee;
+  color: #0066cc;
+  background: rgba(0, 102, 204, 0.08);
+}
+.app[data-theme="light"] .comments-edit-save:hover {
+  background: rgba(0, 102, 204, 0.18);
+}
+.app[data-theme="light"] .comments-edit-cancel {
+  border-color: #d0d0d0;
+  color: #4a4a4a;
+}
+.app[data-theme="light"] .comments-edit-cancel:hover {
+  border-color: #8a8a8a;
+  color: #1f1f1f;
+}

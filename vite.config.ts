@@ -69,7 +69,7 @@ export default defineConfig(async () => ({
   build: {
     // Vite 8 defaults the CSS minifier to lightningcss, which rejects the
     // paged-media `@page { @header ... }` / `running()` rules used for the
-    // print/PDF export headers in App.css. Keep esbuild (the Vite 7 default).
+    // print/PDF export headers in src/styles/print.css. Keep esbuild (the Vite 7 default).
     cssMinify: "esbuild",
     rollupOptions: {
       output: {

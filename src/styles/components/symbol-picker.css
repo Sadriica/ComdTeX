@@ -1,0 +1,28 @@
+.symbol-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+}
+.symbol-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+.symbol-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ccc;
+}
+.symbol-tab.active {
+  background: rgba(86, 156, 214, 0.15);
+  color: #569cd6;
+  border-bottom: 2px solid #569cd6;
+}
+.symbol-btn:hover {
+  background: rgba(86, 156, 214, 0.15);
+  border-color: #569cd6;
+  color: #cce4ff;
+}

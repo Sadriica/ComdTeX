@@ -1,0 +1,196 @@
+.preview-pane {
+  background: #1e1e1e;
+  overflow-y: auto;
+}
+
+/* ── Preview content ── */
+.preview-content {
+  padding: 2rem 2.5rem;
+  color: #d4d4d4;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  max-width: 780px;
+}
+
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4 {
+  color: #e8e8e8;
+  margin-top: 1.6em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+.preview-content h1.active-heading,
+.preview-content h2.active-heading,
+.preview-content h3.active-heading,
+.preview-content h4.active-heading {
+  background-color: rgba(86, 156, 214, 0.15);
+  border-radius: 4px;
+  padding-left: 4px;
+  margin-left: -4px;
+}
+.preview-content h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.3em;
+}
+.preview-content h2 {
+  font-size: 1.4em;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 0.2em;
+}
+.preview-content p {
+  margin-bottom: 1em;
+  white-space: pre-wrap;
+}
+.preview-content .md-soft-indent {
+  white-space: nowrap;
+}
+
+/* ── Text highlighting: ==text== → <mark>, plus colour variants ──────────── */
+.preview-content mark,
+.hp-render mark {
+  background: #ffe066; /* default yellow */
+  color: #1a1a1a;
+  border-radius: 3px;
+  padding: 0.05em 0.25em;
+  /* keep math/inline-code legible if highlighted */
+}
+.preview-content mark code {
+  background: rgba(0, 0, 0, 0.12);
+  color: inherit;
+  border-color: transparent;
+}
+.preview-content mark.hl-yellow,
+.hp-render mark.hl-yellow {
+  background: #ffe066;
+}
+.preview-content mark.hl-green,
+.hp-render mark.hl-green {
+  background: #a6e3a1;
+}
+.preview-content mark.hl-blue,
+.hp-render mark.hl-blue {
+  background: #89c4f4;
+}
+.preview-content mark.hl-pink,
+.hp-render mark.hl-pink {
+  background: #f5a9d0;
+}
+.preview-content mark.hl-orange,
+.hp-render mark.hl-orange {
+  background: #ffc078;
+}
+.preview-content mark.hl-purple,
+.hp-render mark.hl-purple {
+  background: #d0bfff;
+}
+.preview-content mark.hl-red,
+.hp-render mark.hl-red {
+  background: #f5a9a9;
+}
+
+/* ── Auto-generated table of contents ([[toc]]) ──────────────────────────── */
+.preview-content nav.md-toc {
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.6em 1em;
+  margin: 1em 0;
+  background: #232323;
+}
+.preview-content nav.md-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.preview-content nav.md-toc li {
+  margin: 0.15em 0;
+}
+.preview-content nav.md-toc li.toc-l2 {
+  padding-left: 1.2em;
+}
+.preview-content nav.md-toc li.toc-l3 {
+  padding-left: 2.4em;
+  font-size: 0.95em;
+}
+.preview-content nav.md-toc a {
+  color: #9cdcfe;
+  text-decoration: none;
+}
+.preview-content nav.md-toc a:hover {
+  text-decoration: underline;
+}
+
+.preview-content code {
+  background: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88em;
+  color: #ce9178;
+}
+.preview-content pre {
+  background: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 1em 1.2em;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+.preview-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #d4d4d4;
+}
+.preview-content blockquote {
+  border-left: 3px solid #555;
+  padding-left: 1em;
+  color: #999;
+  margin-bottom: 1em;
+}
+.preview-content ul,
+.preview-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+.preview-content li {
+  margin-bottom: 0.25em;
+}
+.preview-content a {
+  color: #569cd6;
+}
+.preview-content del {
+  color: #888;
+}
+.preview-content hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 1.5em 0;
+}
+
+/* ── Tables ── */
+.preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+  font-size: 0.93em;
+}
+.preview-content th,
+.preview-content td {
+  border: 1px solid #3a3a3a;
+  padding: 0.45em 0.85em;
+  text-align: left;
+}
+.preview-content th {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  font-weight: 600;
+}
+.preview-content tr:nth-child(even) td {
+  background: #252525;
+}
