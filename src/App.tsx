@@ -314,6 +314,20 @@ function currentTauriWindow() {
   }
 }
 
+// Tauri's unlisten functions are async and throw (as a rejected promise) when
+// the event plugin internals are missing, e.g. a partial runtime stub in a plain
+// browser or an e2e run. Tearing a listener down must never surface as an
+// unhandled rejection, so this swallows both sync and async failures.
+function safeUnlisten(fn: (() => void) | undefined) {
+  if (!fn) return
+  try {
+    const result: unknown = fn()
+    if (result instanceof Promise) result.catch(() => {})
+  } catch {
+    /* nothing left to unregister */
+  }
+}
+
 const BIB_TEMPLATE = `% references.bib: BibTeX references for ComdTeX
 % Cite with [@key] in your markdown, e.g. [@knuth84]
 
@@ -1478,14 +1492,14 @@ function AppContent({
       })
       .then((fn) => {
         if (cancelled) {
-          fn()
+          safeUnlisten(fn)
           return
         }
         unlisten = fn
       })
     return () => {
       cancelled = true
-      unlisten?.()
+      safeUnlisten(unlisten)
     }
   }, [])
 
@@ -1508,14 +1522,14 @@ function AppContent({
         // If the effect was cleaned up before the listener finished registering,
         // immediately tear down the listener instead of leaking it.
         if (cancelled) {
-          fn()
+          safeUnlisten(fn)
           return
         }
         unlisten = fn
       })
     return () => {
       cancelled = true
-      unlisten?.()
+      safeUnlisten(unlisten)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vault.vaultPath])
@@ -1585,18 +1599,18 @@ function AppContent({
     void restore()
 
     win.onResized(scheduleSave).then((fn) => {
-      if (cancelled) fn()
+      if (cancelled) safeUnlisten(fn)
       else unlisteners.push(fn)
     })
     win.onMoved(scheduleSave).then((fn) => {
-      if (cancelled) fn()
+      if (cancelled) safeUnlisten(fn)
       else unlisteners.push(fn)
     })
 
     return () => {
       cancelled = true
       if (saveTimer) clearTimeout(saveTimer)
-      unlisteners.forEach((u) => u())
+      unlisteners.forEach(safeUnlisten)
       // Save final state on unmount
       void saveState()
     }
