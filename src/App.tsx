@@ -15,6 +15,7 @@ import { save, confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { readTextFile, exists, mkdir, copyFile, writeFile, readDir } from "@tauri-apps/plugin-fs"
 import { Command } from "@tauri-apps/plugin-shell"
 import { runGit } from "./gitApi"
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { openPath, openUrl } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
@@ -98,7 +99,6 @@ import SearchPanel from "./SearchPanel"
 import OutlinePanel from "./OutlinePanel"
 import { reorderSection } from "./outlineReorder"
 import BacklinksPanel from "./BacklinksPanel"
-import GitBar from "./GitBar"
 import Resizer from "./Resizer"
 import Breadcrumb from "./Breadcrumb"
 import TagPanel from "./TagPanel"
@@ -106,7 +106,6 @@ import LabelsPanel from "./LabelsPanel"
 import KeepPanel from "./KeepPanel"
 import DocumentLabPanel from "./DocumentLabPanel"
 import FrontmatterPanel from "./FrontmatterPanel"
-import SymbolPickerPanel from "./SymbolPickerPanel"
 import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand } from "./CommandPalette"
@@ -118,7 +117,6 @@ import { setUiLanguage } from "./docLang"
 import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
-import { exportToTex } from "./exporter"
 import type { LatexDiagnostic } from "./latexErrors"
 import LatexErrorModal from "./LatexErrorModal"
 import { extractFrontmatter } from "./frontmatter"
@@ -486,7 +484,9 @@ La bibliografía completa se genera al final del preview.
 const SIDEBAR_MIN = 150
 const SIDEBAR_MAX = 450
 const EDITOR_MIN = 280
+const GitBar = lazy(() => import("./GitBar"))
 const HelpPanel = lazy(() => import("./HelpPanel"))
+const SymbolPickerPanel = lazy(() => import("./SymbolPickerPanel"))
 const GraphPanel = lazy(() => import("./GraphPanel"))
 const TodoPanel = lazy(() => import("./TodoPanel"))
 const EquationsPanel = lazy(() => import("./EquationsPanel"))
@@ -532,11 +532,25 @@ function getMermaid(themeEl: Element | null, theme: string): Promise<MermaidModu
     return m
   })
 }
-const MonacoEditor = lazy(async () => {
-  await import("./monacoRuntime")
-  const mod = await import("@monaco-editor/react")
-  return { default: mod.default }
-})
+// Monaco (about 3.6 MB) is only fetched when an editor mounts, so the welcome
+// screen never pays for it. A returning user (a vault is remembered) will mount
+// the editor right after startup, so start the fetch at module load instead of
+// waiting for the React tree to reach the lazy boundary.
+let monacoPromise: Promise<{ default: typeof import("@monaco-editor/react").default }> | null = null
+function loadMonacoEditor() {
+  monacoPromise ??= (async () => {
+    const react = import("@monaco-editor/react")
+    await import("./monacoRuntime")
+    return { default: (await react).default }
+  })()
+  return monacoPromise
+}
+const MonacoEditor = lazy(loadMonacoEditor)
+try {
+  if (localStorage.getItem(STORAGE_KEYS.VAULT_PATH)) void loadMonacoEditor()
+} catch {
+  /* storage unavailable: the lazy boundary loads it on demand */
+}
 
 export default function App() {
   const { settings, update: updateSettings } = useSettings()
@@ -1637,7 +1651,6 @@ function AppContent({
           y?: number
           maximized?: boolean
         }
-        const { PhysicalSize, PhysicalPosition } = await import("@tauri-apps/api/dpi")
         if (cancelled) return
         if (
           typeof state.width === "number" &&
@@ -3604,7 +3617,7 @@ function AppContent({
       const parsed = extractFrontmatter(file.content)
       const fm = parsed?.data
       const author = fm?.author as string | undefined
-      const tex = exportToTex(
+      const tex = (await import("./exporter")).exportToTex(
         resolveTransclusions(file.content, transclusionResolver),
         macrosText,
         (fm?.title as string) || title,
@@ -4756,7 +4769,11 @@ function AppContent({
   // telling them where to click.
   const [gitOpenSignal, setGitOpenSignal] = useState(0)
   const gitBarEl = useMemo(
-    () => <GitBar vaultPath={vault.vaultPath} openSignal={gitOpenSignal} />,
+    () => (
+      <LazyRegion region="git-bar">
+        <GitBar vaultPath={vault.vaultPath} openSignal={gitOpenSignal} />
+      </LazyRegion>
+    ),
     [vault.vaultPath, gitOpenSignal],
   )
 
@@ -5102,14 +5119,16 @@ function AppContent({
                   </LazyRegion>
                 )}
                 {sidebarMode === "symbols" && (
-                  <SymbolPickerPanel
-                    onInsert={(latex) => {
-                      const editor = editorRef.current
-                      if (!editor) return
-                      editor.focus()
-                      editor.trigger("keyboard", "type", { text: latex })
-                    }}
-                  />
+                  <LazyRegion region="panel">
+                    <SymbolPickerPanel
+                      onInsert={(latex) => {
+                        const editor = editorRef.current
+                        if (!editor) return
+                        editor.focus()
+                        editor.trigger("keyboard", "type", { text: latex })
+                      }}
+                    />
+                  </LazyRegion>
                 )}
                 {sidebarMode === "pdfPreview" && (
                   <LazyRegion region="panel">

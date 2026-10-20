@@ -1,16 +1,32 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { defineConfig, type Plugin } from "vite"
+import react from "@vitejs/plugin-react"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 /// <reference types="vitest" />
 
 // @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
-const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"));
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"),
+)
+
+// KaTeX's stylesheet lists woff2, woff and ttf for every face, and the bundler
+// emits all three. Every webview Tauri targets (WebKitGTK, WKWebView, WebView2)
+// supports woff2, so keep only that source and skip ~40 redundant font files.
+function katexWoff2Only(): Plugin {
+  return {
+    name: "comdtex:katex-woff2-only",
+    enforce: "pre",
+    transform(code, id) {
+      if (!/katex[\\/]dist[\\/]katex(\.min)?\.css/.test(id.split("?")[0])) return null
+      return code.replace(/,url\([^)]*\.(?:woff|ttf)\) format\("(?:woff|truetype)"\)/g, "")
+    },
+  }
+}
 
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [react(), katexWoff2Only()],
 
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
@@ -21,9 +37,7 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     host: host || false,
-    hmr: host
-      ? { protocol: "ws", host, port: 1421 }
-      : undefined,
+    hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],
     },
@@ -78,6 +92,10 @@ export default defineConfig(async () => ({
         // `[\\/]` keeps the separator Windows-safe.
         codeSplitting: {
           groups: [
+            // Vite's dynamic-import preload helper is imported by every
+            // lazy boundary. Without its own group, rolldown parks it in the
+            // monaco chunk and the entry then preloads ~3.7 MB of Monaco.
+            { name: "preload-helper", test: /vite[\\/]preload-helper/, priority: 100 },
             // Monaco is huge — split it so the initial chunk loads faster
             { name: "monaco-editor", test: /[\\/]node_modules[\\/]monaco-editor/ },
             // Keep react in its own chunk
@@ -89,4 +107,4 @@ export default defineConfig(async () => ({
       },
     },
   },
-}));
+}))

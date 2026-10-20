@@ -17,6 +17,7 @@
 // `keyring` commands, with a namespaced localStorage fallback when the
 // keychain is unavailable), not on `settings.aiApiKey` directly.
 
+import { Command } from "@tauri-apps/plugin-shell"
 import type { Settings } from "../useSettings"
 // Built-in ComdTeX system prompt. Imported as a raw string (Vite `?raw`) and
 // prepended to every request so any provider knows ComdTeX's syntax deeply and
@@ -445,7 +446,6 @@ class CliProvider {
     const args = [...tokens.slice(1), "--", prompt]
 
     // Lazy import so the shell plugin isn't pulled in unless the CLI is used.
-    const { Command } = await import("@tauri-apps/plugin-shell")
     const cmd = Command.create(name, args)
 
     let full = ""

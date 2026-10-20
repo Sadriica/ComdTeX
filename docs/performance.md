@@ -279,3 +279,24 @@ jsdom-only and exclude browser layout):
 `previewMorph.test.ts` asserts node identity for a top insertion, a middle
 deletion, a move, duplicates and nested line sync, plus a 400-block case that
 requires exactly one new element.
+## 9. Startup payload (2026-10-20)
+
+Measured on the production build served by `vite preview`, Chrome, fake vault harness (decoded bytes, no compression):
+
+| | Before | After |
+|---|---|---|
+| Entry chunk | 840 kB (281 kB gz) | 621 kB (211 kB gz) |
+| Welcome screen: JS files / total transferred | 12 / 5299 kB | 13 / 1483 kB |
+| Welcome screen: Monaco fetched | yes (3.6 MB) | no |
+| Open vault with a note: total transferred | 6533 kB | 6476 kB (Monaco is needed here) |
+| `dist/` | 19.9 MB, 281 files | 19.1 MB, 251 files |
+| KaTeX font files in `dist/` | 59 (ttf+woff+woff2) | 19 (woff2) |
+
+What changed and why:
+- **Monaco in the modulepreload list.** Rolldown placed Vite's `preload-helper` (imported by every lazy boundary) in the `monaco-editor` code-splitting group, so the entry imported that chunk and preloaded all of it. `vite.config.ts` now gives the helper its own higher-priority group. Check after any chunking change: `dist/index.html` must not list `monaco-editor-*.js`.
+- **Monaco prefetch for returning users.** `App.tsx` starts the Monaco import at module load when a vault path is remembered, so it does not wait for React to reach the lazy boundary. First-run users see the welcome screen without it.
+- **KaTeX fonts.** A small Vite plugin (`katexWoff2Only`) strips the `woff`/`ttf` sources from katex.css. Every Tauri webview supports woff2.
+- **Lazy export pipeline.** `useExportActions.ts` and the copy-LaTeX handler load `exporter`, `exportActions`, `diagramExport`, `exportConversion` and `obsidianExport` on first use. `SymbolPickerPanel` and `GitBar` are `lazy`.
+- `plugin-shell` and `api/dpi` are static imports everywhere now (the dynamic ones never split anything).
+
+Still eager and worth a look later: both i18n dictionaries (~160 kB of source), `monacoSetup.ts` (needed by the palette data), `useVault`, DOMPurify and markdown-it (needed for the first preview).
