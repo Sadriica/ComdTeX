@@ -1475,7 +1475,15 @@ function AppContent({
   // identity-stable until a note's labels change), image paths, macros and the
   // message table. The active document's path is added at call time.
   const [lintVaultIndex] = useState(() => new LintVaultIndex())
-  const lintDocs = useMemo(() => lintVaultIndex.update(vaultFiles), [lintVaultIndex, vaultFiles])
+  // Until the vault's text cache has loaded every note reads as empty, which
+  // would flag every cross-file reference; `undefined` keeps those rules quiet.
+  const lintDocs = useMemo(
+    () =>
+      vaultTextCache.size > 0 || vaultFiles.length === 0
+        ? lintVaultIndex.update(vaultFiles)
+        : undefined,
+    [lintVaultIndex, vaultFiles, vaultTextCache],
+  )
   const lintShared = useMemo<Omit<LintContext, "docPath">>(
     () => ({
       vaultFileNames: wikiNames,
