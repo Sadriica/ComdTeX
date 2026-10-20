@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useId, useRef, useState } from "react"
 import type { BibEntry } from "./bibtex"
 import { parseBibtex } from "./bibtex"
 import {
@@ -12,6 +12,7 @@ import { getSecret } from "./secretStore"
 import { searchZotero, fetchZoteroBibtex, type ZoteroItem } from "./zotero"
 import { showToast } from "./toastService"
 import { useT } from "./i18n"
+import { useFocusTrap } from "./useFocusTrap"
 
 interface CitationManagerProps {
   open: boolean
@@ -63,6 +64,8 @@ export default function CitationManager({
   onClose,
 }: CitationManagerProps) {
   const t = useT()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const [entries, setEntries] = useState<Map<string, BibEntry>>(new Map(bibMap))
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [error, setError] = useState<string | null>(null)
@@ -96,6 +99,10 @@ export default function CitationManager({
       setZoteroFetching(false)
     }
   }
+
+  // Focus moves into the dialog, Tab stays inside it and Escape closes it
+  // (the same helper every other modal uses).
+  useFocusTrap(dialogRef, open, onClose)
 
   if (!open) return null
 
@@ -269,10 +276,18 @@ export default function CitationManager({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="cit-manager">
+      <div
+        className="cit-manager"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         {/* Header */}
         <div className="cit-manager-header">
-          <span className="cit-manager-title">{t.citationManager.title}</span>
+          <span className="cit-manager-title" id={titleId}>
+            {t.citationManager.title}
+          </span>
           <button className="cit-manager-close" onClick={onClose} title={t.citationManager.close}>
             ×
           </button>

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Escape closes the citation manager and the table editor.** Both ignored the key. They now behave like the other dialogs: focus moves in, Tab stays inside, Escape closes them and focus goes back to where it was.
 - **Plots no longer clip the curve, and the legend is readable.** The automatic y range dropped the lowest and highest few percent of a curve, so a decay ending at 0.057 was cut off at 0.1. A curve's real extremes are now inside the frame (an asymptote is still ignored). The legend swatch no longer sits on top of its label, and its text is at least as large as the tick labels.
 - **A proof shows one end mark.** The proof environment added its own box in the corner, so a note that also ended with `$\square$` showed two. The mark the author typed is dropped (also in the LaTeX export, where `proof` adds its own) and the single mark now sits at the end of the last line.
 - **Images load from the note's own folder.** `![](../figures/x.svg)` in `papers/doc.md` did not load because every relative image path was read from the vault root. The note's folder is now tried first and the vault root stays as the fallback, in the preview, in Document Lab and when a LaTeX export copies its images.
