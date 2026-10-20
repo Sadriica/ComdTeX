@@ -6,13 +6,7 @@
 
 /* An icon-only button centres its icon without each component restyling it.
    :where() keeps specificity at zero so any component rule still wins. */
-:where(button:has(> .icon:only-child)) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Chrome controls that hold a Lucide icon: centre it on the text baseline. */
+:where(button:has(> .icon:only-child)),
 .titlebar-btn,
 .menubar-section-btn,
 .menubar-direct-btn,
@@ -26,6 +20,8 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Chrome controls that hold a Lucide icon: centre it on the text baseline. */
 .menubar-section-btn,
 .menubar-direct-btn {
   gap: var(--space-2);
@@ -34,4 +30,17 @@
 .status-dirty .icon {
   width: 8px;
   height: 8px;
+}
+
+/* Utility modifiers: a solid dot, a mirrored chevron, a Suspense placeholder
+   that fills its flex parent. */
+.icon-filled {
+  fill: currentColor;
+}
+.icon-flip {
+  transform: scaleX(-1);
+}
+.region-fallback {
+  flex: 1;
+  min-height: 0;
 }

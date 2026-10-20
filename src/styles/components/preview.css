@@ -170,7 +170,8 @@
 .preview-content li > :is(ul, ol) {
   margin: 0.25em 0 0;
 }
-.preview-content li > p:last-child {
+.preview-content li > p:last-child,
+.preview-content blockquote > :last-child {
   margin-bottom: 0;
 }
 
@@ -181,9 +182,6 @@
   border-left: 2px solid var(--border-strong);
   color: var(--fg);
   font-size: 0.97em;
-}
-.preview-content blockquote > :last-child {
-  margin-bottom: 0;
 }
 .preview-content hr {
   width: 30%;
@@ -280,7 +278,9 @@
 .preview-content nav.md-toc a:visited {
   text-decoration: none;
 }
-.preview-content nav.md-toc a:hover {
+.preview-content nav.md-toc a:hover,
+.preview-content :is(a.xref, a.fig-ref, a.tbl-ref, a.env-ref, a.cite-ref):hover,
+.preview-content :is(.footnote-ref a, a.footnote-backref):hover {
   text-decoration: underline;
 }
 
@@ -366,17 +366,18 @@
 }
 
 /* ── Images ── */
-.preview-content img {
+.preview-content img,
+.fig-block img {
   max-width: 100%;
   height: auto;
 }
 
 /* ── Pane chrome that is not typography ── */
 .preview-checkbox {
-  width: 1em;
-  height: 1em;
-  margin-right: 0.3em;
-  vertical-align: -0.1em;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: middle;
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -394,4 +395,551 @@
 .preview-content > :is(p, pre, ul, ol, table, blockquote, figure, .callout, .env-wrap, .eq-block) {
   content-visibility: auto;
   contain-intrinsic-size: auto 4em;
+}
+
+/* ── Wikilinks ── */
+.preview-content a.wikilink,
+.wikilink {
+  border-bottom: 1px solid color-mix(in oklch, var(--link) 35%, transparent);
+  color: var(--link);
+  text-decoration: none;
+  cursor: pointer;
+}
+.wikilink:hover {
+  border-bottom-color: var(--link);
+  background: color-mix(in oklch, var(--link) 8%, transparent);
+}
+.preview-content a.wikilink-broken,
+.wikilink-broken {
+  border-bottom-color: color-mix(in oklch, var(--fg-muted) 35%, transparent);
+  color: var(--fg-muted);
+}
+.wikilink-broken:hover {
+  border-bottom-color: var(--fg-muted);
+}
+
+/* ── Wikilink hover preview card ── (surface from modals.css) */
+.wikilink-hover-card {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  max-width: 400px;
+  max-height: 300px;
+  padding: var(--space-5) var(--space-6);
+  overflow: auto;
+  font-family: var(--font-doc);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  pointer-events: none;
+}
+.wikilink-hover-card h1,
+.wikilink-hover-card h2,
+.wikilink-hover-card h3,
+.wikilink-hover-card h4,
+.wikilink-hover-card h5,
+.wikilink-hover-card h6 {
+  margin: 0.2em 0 0.4em;
+  padding: 0;
+  border: none;
+  font-size: 1em;
+}
+.wikilink-hover-card p {
+  margin: 0.4em 0;
+}
+.wikilink-hover-card .wikilink-hover-empty {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+/* ── Frontmatter header: the title block of the paper ── */
+.frontmatter-header {
+  margin: 0 0 2.4em;
+  text-align: center;
+}
+.preview-content .fm-title {
+  margin: 0 0 0.45em;
+  padding: 0;
+  border: 0;
+  font-size: 1.9em;
+  line-height: 1.2;
+  text-align: center;
+}
+.fm-meta {
+  color: var(--fg);
+  font-size: 1em;
+  hyphens: manual;
+}
+.fm-author {
+  color: var(--link);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+}
+.fm-date {
+  color: var(--fg-muted);
+  font-variant-numeric: lining-nums;
+}
+.fm-papersize {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+/* Abstract: a narrower block with an "Abstract" run-in heading. */
+.fm-abstract {
+  max-width: 88%;
+  margin: 1.6em auto 0;
+  font-size: 0.93em;
+  line-height: 1.5;
+  text-align: left;
+  text-wrap: pretty;
+}
+@container preview (min-width: 52rem) {
+  .preview-pane.doc-paper .fm-abstract {
+    text-align: justify;
+  }
+}
+.fm-abstract-label {
+  margin-right: 0.4em;
+  font-weight: 700;
+}
+
+.fm-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: 1.2em;
+}
+.fm-tag {
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+}
+
+/* ── Transclusion ![[note]]: quoted from another note, so set apart by a thin
+   rule rather than a box ── */
+.transclusion {
+  --transclusion-accent: var(--ok);
+  margin: 1.2em 0 1.2em 0.4em;
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-left: 2px solid var(--transclusion-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in oklch, var(--transclusion-accent) 6%, transparent);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.transclusion:hover {
+  background: color-mix(in oklch, var(--transclusion-accent) 11%, transparent);
+}
+.transclusion-header {
+  margin-bottom: var(--space-3);
+  color: var(--transclusion-accent);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.transclusion-missing {
+  --transclusion-accent: var(--danger);
+}
+
+/* ── Cross references: the link colour, no underline until hover ── */
+.xref {
+  border-bottom: 1px dotted color-mix(in oklch, var(--link) 45%, transparent);
+}
+.preview-content :is(a.xref, a.fig-ref, a.tbl-ref, a.env-ref, a.cite-ref) {
+  text-decoration: none;
+}
+.xref-broken,
+.fig-ref-broken {
+  color: var(--danger);
+}
+
+/* ── Figures: centred, caption below in a smaller size ── */
+.fig-block {
+  max-width: 100%;
+  margin: 1.6em auto;
+  text-align: center;
+  break-inside: avoid;
+}
+.fig-block figcaption,
+.tbl-block figcaption {
+  max-width: 92%;
+  margin: 0.6em auto 0;
+  color: var(--fg);
+  font-size: 0.88em;
+  line-height: var(--leading-normal);
+  text-wrap: balance;
+  hyphens: manual;
+}
+.fig-number,
+.tbl-number {
+  color: var(--fg);
+  font-style: normal;
+  font-weight: 600;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.03em;
+}
+.tbl-number::after {
+  content: ".";
+}
+.fig-ref:hover {
+  text-decoration: underline;
+}
+
+/* ── Tables are figures too, but the caption goes above (booktabs) ── */
+.tbl-block {
+  display: flex;
+  flex-direction: column;
+  margin: 1.6em auto;
+  overflow-x: auto;
+  break-inside: avoid;
+}
+.tbl-block table {
+  margin: 0 auto;
+}
+.tbl-block figcaption {
+  order: -1;
+  margin: 0 auto 0.5em;
+}
+
+/* ── Footnotes (markdown-it-footnote) ── */
+.footnotes-sep {
+  display: none;
+}
+.footnotes {
+  margin-top: 2.5em;
+  color: var(--fg);
+  font-size: 0.86em;
+  line-height: 1.5;
+}
+.footnotes::before {
+  content: "";
+  display: block;
+  width: 8em;
+  margin-bottom: 0.9em;
+  border-top: 1px solid var(--border-strong);
+}
+.footnotes ol {
+  margin: 0;
+  padding-left: 2em;
+}
+.footnotes li {
+  margin: 0 0 0.4em;
+  padding-left: 0.2em;
+}
+.footnotes li::marker {
+  color: var(--fg-muted);
+}
+.footnotes li p {
+  display: inline;
+  margin: 0;
+  text-wrap: auto;
+}
+.footnote-ref {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: super;
+}
+.preview-content :is(.footnote-ref a, a.footnote-backref) {
+  text-decoration: none;
+}
+.preview-content a.footnote-backref {
+  margin-left: 0.3em;
+  font-family: var(--font-ui);
+  font-size: 0.9em;
+  font-variant-emoji: text;
+}
+
+/* ── Pseudocode: an algorithm float, ruled like a booktabs table ── */
+.pseudocode-block {
+  margin: 1.6em 0;
+  border-top: 1.5px solid var(--rule-strong);
+  border-bottom: 1.5px solid var(--rule-strong);
+  font-family: var(--doc-font);
+  font-size: 0.95em;
+  break-inside: avoid;
+}
+.pc-header {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--rule-hair);
+  color: var(--fg);
+  font-weight: 700;
+}
+.pc-body {
+  padding: var(--space-3) 0;
+}
+.pc-line {
+  display: flex;
+  align-items: baseline;
+  padding: 1px var(--space-5) 1px 0;
+  line-height: 1.6;
+}
+.pc-line.pc-empty {
+  height: 0.5em;
+}
+.pc-num {
+  flex-shrink: 0;
+  min-width: 2.5em;
+  padding-right: 1em;
+  color: var(--fg-muted);
+  font-size: 0.8em;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+.pc-content {
+  flex: 1;
+  color: var(--fg);
+}
+.pc-kw {
+  color: var(--syn-keyword);
+  font-weight: 700;
+}
+.pc-flowchart-section {
+  border-top: 1px solid var(--border);
+}
+.pc-flowchart-toggle {
+  padding: var(--space-3) var(--space-5);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.pc-flowchart-toggle:hover {
+  color: var(--fg);
+}
+.pc-flowchart {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  overflow-x: auto;
+}
+.pc-flowchart .mermaid-diagram {
+  max-width: 100%;
+  margin: 0;
+}
+
+/* ── Diagram figures: no boxes, the page shows through. The title of each is
+   its caption, so it moves below the drawing like a figure caption. ── */
+.graph-block,
+.plot-block,
+.commdiag-block {
+  display: flex;
+  flex-direction: column;
+  margin: 1.6em auto;
+  break-inside: avoid;
+}
+.graph-title,
+.plot-title,
+.commdiag-title {
+  order: 1;
+  max-width: 92%;
+  margin: 0.6em auto 0;
+  color: var(--fg);
+  font-size: 0.88em;
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  text-align: center;
+  text-wrap: balance;
+}
+.graph-block svg,
+.plot-block svg,
+.commdiag-svg-wrap svg {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 0;
+}
+.commdiag-svg-wrap {
+  overflow-x: auto;
+}
+.graph-error,
+.plot-error,
+.commdiag-error,
+.tt-error {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.88em;
+}
+
+/* Graph (nodes and edges are drawn with fixed colours in the SVG; the
+   presentation attributes lose to these rules, so the drawing follows the
+   theme). */
+.graph-block svg line,
+.graph-block svg path.edge {
+  stroke: var(--fg-muted);
+}
+.graph-block svg marker path {
+  fill: var(--fg-muted);
+}
+.graph-block svg :is(circle, ellipse) {
+  fill: var(--bg-raised);
+  stroke: var(--border-strong);
+}
+.graph-block svg text {
+  fill: var(--fg);
+  font-family: var(--font-doc);
+  dominant-baseline: central;
+  text-anchor: middle;
+}
+
+/* Plot */
+.plot-block svg > rect:first-of-type {
+  fill: transparent;
+}
+.plot-block svg line {
+  stroke: var(--border);
+}
+.plot-block svg text {
+  fill: var(--fg-muted);
+  font-family: var(--font-ui);
+}
+.plot-block svg polyline:nth-of-type(1) {
+  stroke: var(--viz-1);
+}
+.plot-block svg polyline:nth-of-type(2) {
+  stroke: var(--viz-2);
+}
+.plot-block svg polyline:nth-of-type(3) {
+  stroke: var(--viz-3);
+}
+.plot-block svg polyline:nth-of-type(4) {
+  stroke: var(--viz-4);
+}
+.plot-block svg polyline:nth-of-type(5) {
+  stroke: var(--viz-5);
+}
+.plot-block svg polyline:nth-of-type(6) {
+  stroke: var(--viz-6);
+}
+.plot-block svg > rect:nth-of-type(2) {
+  fill: var(--viz-1);
+}
+.plot-block svg > rect:nth-of-type(3) {
+  fill: var(--viz-2);
+}
+.plot-block svg > rect:nth-of-type(4) {
+  fill: var(--viz-3);
+}
+.plot-block svg > rect:nth-of-type(5) {
+  fill: var(--viz-4);
+}
+.plot-block svg > rect:nth-of-type(6) {
+  fill: var(--viz-5);
+}
+.plot-block svg > rect:nth-of-type(7) {
+  fill: var(--viz-6);
+}
+.plot-block svg > rect:last-of-type {
+  stroke: var(--border-strong);
+  fill: none;
+}
+
+/* ── Commutative diagram (the SVG carries fixed colours; these rules win) ── */
+.commdiag-svg-wrap svg > rect:first-of-type {
+  fill: transparent;
+}
+.commdiag-svg-wrap svg :is(ellipse, circle) {
+  fill: var(--bg-raised);
+  stroke: var(--border-strong);
+}
+.commdiag-svg-wrap svg line {
+  stroke: var(--fg-muted);
+}
+.commdiag-svg-wrap svg marker :is(path, line) {
+  fill: var(--fg-muted);
+  stroke: var(--fg-muted);
+}
+.commdiag-svg-wrap svg rect[opacity] {
+  fill: var(--bg-surface);
+}
+.commdiag-svg-wrap svg text {
+  fill: var(--fg);
+  font-family: var(--font-doc);
+}
+
+/* ── Mermaid diagrams: figures with no frame ── */
+.mermaid-diagram {
+  margin: 1.6em auto;
+  overflow-x: auto;
+  text-align: center;
+  break-inside: avoid;
+}
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Flowchart (:::flowchart, native through mermaid) ── */
+.flowchart-block {
+  margin: 1.6em 0;
+  border-top: 1.5px solid var(--rule-strong);
+  border-bottom: 1.5px solid var(--rule-strong);
+  break-inside: avoid;
+}
+.flowchart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--rule-hair);
+}
+.flowchart-title {
+  color: var(--fg);
+  font-size: 0.95em;
+  font-weight: 700;
+}
+.flowchart-block .mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--space-5);
+}
+.flowchart-block pre {
+  margin: 0;
+}
+.mermaid-rerender-btn {
+  align-self: center;
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: var(--transition-ui);
+}
+.mermaid-rerender-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.mermaid-rerender-btn:active {
+  background: var(--bg-active);
+}
+
+/* ── Source-line wrapper for environment blocks: a real box, so scrollIntoView
+   from the editor has something to target. It is also the block that skips
+   rendering off screen (content-visibility, see preview.css), which makes it
+   a formatting context: the spacing therefore lives on the wrapper and not on
+   the block inside, or the two margins would add instead of collapsing. ── */
+.env-wrap {
+  display: block;
+  margin: 1.3em 0;
+}
+/* :is() lifts the specificity above a block's own margin rule. */
+.env-wrap > :is(*, .truth-table-block) {
+  margin-block: 0;
 }

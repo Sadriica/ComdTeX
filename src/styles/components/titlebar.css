@@ -60,9 +60,7 @@
   cursor: pointer;
   /* Flat (text) presentation so glyphs never render as coloured emoji. */
   font-variant-emoji: text;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .titlebar-btn:hover {
   background: var(--bg-hover);

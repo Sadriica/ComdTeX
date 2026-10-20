@@ -8,7 +8,7 @@
 }
 .keep-mark-glyph::before {
   content: "❰";
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--accent);
   display: inline-block;
   width: 100%;
@@ -20,5 +20,3 @@
 .keep-mark-glyph:hover::before {
   opacity: 1;
 }
-
-/* ── Keep Panel ── */

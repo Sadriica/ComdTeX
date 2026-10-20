@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
-import { readFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 /// <reference types="vitest" />
 
@@ -14,13 +14,37 @@ const pkg = JSON.parse(
 // KaTeX's stylesheet lists woff2, woff and ttf for every face, and the bundler
 // emits all three. Every webview Tauri targets (WebKitGTK, WKWebView, WebView2)
 // supports woff2, so keep only that source and skip ~40 redundant font files.
+// src/styles/index.css pulls KaTeX in with `@import "katex/dist/katex.min.css"
+// layer(vendor)`. The CSS inliner reads that file before any plugin sees it, so
+// the plugin writes a stripped copy (fonts rebased to where they really live)
+// to node_modules/.cache and points the import at it.
+const KATEX_CSS = fileURLToPath(new URL("./node_modules/katex/dist/katex.min.css", import.meta.url))
+const KATEX_CACHE_DIR = fileURLToPath(new URL("./node_modules/.cache/comdtex/", import.meta.url))
+const KATEX_IMPORT = '@import "katex/dist/katex.min.css" layer(vendor);'
+const stripLegacyFonts = (css: string) =>
+  css.replace(/,url\([^)]*\.(?:woff|ttf)\) format\("(?:woff|truetype)"\)/g, "")
+
 function katexWoff2Only(): Plugin {
+  const cached = `${KATEX_CACHE_DIR}katex-woff2.css`
   return {
     name: "comdtex:katex-woff2-only",
     enforce: "pre",
+    buildStart() {
+      mkdirSync(KATEX_CACHE_DIR, { recursive: true })
+      writeFileSync(
+        cached,
+        stripLegacyFonts(readFileSync(KATEX_CSS, "utf-8")).replaceAll(
+          "url(fonts/",
+          "url(../../katex/dist/fonts/",
+        ),
+      )
+    },
     transform(code, id) {
-      if (!/katex[\\/]dist[\\/]katex(\.min)?\.css/.test(id.split("?")[0])) return null
-      return code.replace(/,url\([^)]*\.(?:woff|ttf)\) format\("(?:woff|truetype)"\)/g, "")
+      const file = id.split("?")[0]
+      if (/katex[\\/]dist[\\/]katex(\.min)?\.css/.test(file)) return stripLegacyFonts(code)
+      if (/styles[\\/]index\.css$/.test(file) && code.includes(KATEX_IMPORT))
+        return code.replace(KATEX_IMPORT, `@import "${cached}" layer(vendor);`)
+      return null
     },
   }
 }

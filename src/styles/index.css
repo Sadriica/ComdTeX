@@ -1,62 +1,48 @@
-/* Entry point for the app styles. Parts are imported in the exact order the
-   rules had in the former App.css so the plain cascade is unchanged; where a
-   section was interleaved with others it is split into numbered parts. */
-@import "./tokens.css";
-@import "./themes.css";
-@import "./fonts.css";
-@import "./base.css";
-@import "./components/titlebar.css";
-@import "./components/menubar.css";
-@import "./components/toolbar.css";
-@import "./components/sidebar.css";
-@import "./components/preview.css";
-@import "./components/math-env.css";
-@import "./components/panel-search.css";
-@import "./components/outline.css";
-@import "./components/tabs-2.css";
-@import "./components/palette.css";
-@import "./components/preview-2.css";
-@import "./components/palette-2.css";
-@import "./components/modals.css";
-@import "./components/settings.css";
-@import "./components/sidebar-2.css";
-@import "./components/help.css";
-@import "./components/side-panels.css";
-@import "./components/math-env-2.css";
-@import "./components/citation-manager.css";
-@import "./components/welcome.css";
-@import "./components/toasts.css";
-@import "./print.css";
-@import "./components/help-2.css";
-@import "./components/git.css";
-@import "./components/layout-3.css";
-@import "./components/callouts.css";
-@import "./components/preview-3.css";
-@import "./components/document-lab.css";
-@import "./components/graph.css";
-@import "./components/symbol-picker.css";
-@import "./components/focus.css";
-@import "./components/welcome-2.css";
-@import "./components/citation-manager-2.css";
-@import "./components/math-env-4.css";
-@import "./components/tabs-3.css";
-@import "./components/modals-3.css";
-@import "./components/preview-4.css";
-@import "./components/truth-table.css";
-@import "./components/preview-5.css";
-@import "./components/symbol-picker-2.css";
-@import "./components/latex-error.css";
-@import "./theme-light.css";
-@import "./theme-hc.css";
-@import "./components/pdf.css";
-@import "./components/layout-4.css";
-@import "./theme-light-2.css";
-@import "./theme-hc-2.css";
-@import "./components/cloud-sync.css";
-@import "./components/ai.css";
-@import "./components/palette-3.css";
-@import "./components/excalidraw.css";
-@import "./components/icons.css";
-@import "./components/callout-icons.css";
-@import "./components/panels.css";
-@import "./skin.css";
+/* Entry point for the app styles. One cascade order, declared once: the reset,
+   then vendor CSS (KaTeX; after the reset so the reset's `* { margin: 0 }`
+   cannot undo the library's own spacing), then the app layers, so a component
+   never needs a specificity trick to beat a library or a base rule. Layer
+   contract and file layout: docs/design-tokens.md. */
+@layer reset, vendor, tokens, base, components, utilities, overrides, print;
+
+@import "./reset.css" layer(reset);
+@import "katex/dist/katex.min.css" layer(vendor);
+@import "./tokens.css" layer(tokens);
+@import "./themes.css" layer(tokens);
+@import "./fonts.css" layer(base);
+@import "./base.css" layer(base);
+/* Within `components` order is source order, and equal-specificity ties exist:
+   math-env.css precedes preview.css so the preview's `.env-wrap > *` margin
+   reset wins over `.math-env`; truth-table.css follows it so its table rules
+   win over the generic preview table rules. */
+@import "./components/titlebar.css" layer(components);
+@import "./components/menubar.css" layer(components);
+@import "./components/shell.css" layer(components);
+@import "./components/math-env.css" layer(components);
+@import "./components/preview.css" layer(components);
+@import "./components/truth-table.css" layer(components);
+@import "./components/tabs.css" layer(components);
+@import "./components/palette.css" layer(components);
+@import "./components/modals.css" layer(components);
+@import "./components/settings.css" layer(components);
+@import "./components/help.css" layer(components);
+@import "./components/citation-manager.css" layer(components);
+@import "./components/welcome.css" layer(components);
+@import "./components/toasts.css" layer(components);
+@import "./components/git.css" layer(components);
+@import "./components/callouts.css" layer(components);
+@import "./components/document-lab.css" layer(components);
+@import "./components/graph.css" layer(components);
+@import "./components/symbol-picker.css" layer(components);
+@import "./components/focus.css" layer(components);
+@import "./components/latex-error.css" layer(components);
+@import "./components/pdf.css" layer(components);
+@import "./components/keep.css" layer(components);
+@import "./components/cloud-sync.css" layer(components);
+@import "./components/ai.css" layer(components);
+@import "./components/excalidraw.css" layer(components);
+@import "./components/callout-icons.css" layer(components);
+@import "./components/panels.css" layer(components);
+@import "./components/icons.css" layer(utilities);
+@import "./overrides.css" layer(overrides);
+@import "./print.css" layer(print);

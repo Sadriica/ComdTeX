@@ -62,7 +62,8 @@
   z-index: var(--z-sticky);
 }
 .panel-header-title,
-.tree-vault-name {
+.tree-vault-name,
+.tag-file-item > span:first-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -117,10 +118,7 @@
   line-height: 1;
   text-transform: none;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .tree-actions button:hover,
 .panel-action:hover {
@@ -253,9 +251,7 @@
   font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .panel-search-clear:hover,
 .tree-filter-clear:hover {
@@ -285,10 +281,7 @@
   font-size: var(--text-sm);
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .search-replace-btn:hover:not(:disabled),
 .search-replace-btns button:hover:not(:disabled),
@@ -356,10 +349,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .search-opt-btn:hover,
 .search-replace-toggle:hover {
@@ -390,10 +380,7 @@
   color: var(--fg-muted);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .todo-filter:hover,
 .comments-filter:hover {
@@ -590,7 +577,8 @@
 }
 
 /* ── File tree ───────────────────────────────────────────────────────────── */
-.tree-vault-name {
+.tree-vault-name,
+.search-replace-btns button {
   flex: 1;
 }
 .tree-list {
@@ -842,9 +830,6 @@
   gap: var(--space-3);
   padding: 0 var(--space-4) var(--space-4);
 }
-.search-replace-btns button {
-  flex: 1;
-}
 .search-replace-error {
   color: var(--danger);
 }
@@ -962,7 +947,8 @@
 .keep-list {
   padding: var(--space-2) 0;
 }
-.tag-item {
+.tag-item,
+.tag-file-item {
   justify-content: space-between;
 }
 .tag-name {
@@ -981,15 +967,6 @@
 .tag-back {
   border-bottom: 1px solid var(--border);
   color: var(--link);
-}
-.tag-file-item {
-  justify-content: space-between;
-}
-.tag-file-item > span:first-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .tag-source {
   flex-shrink: 0;
@@ -1212,10 +1189,7 @@
   font-size: var(--text-xs);
   line-height: 1;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .todo-check:hover {
   border-color: var(--accent);
@@ -1300,9 +1274,7 @@
   font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  transition: var(--transition-ui);
 }
 .comments-delete {
   margin-left: auto;
@@ -1329,7 +1301,8 @@
   white-space: pre-wrap;
   cursor: text;
 }
-.comments-empty-body {
+.comments-empty-body,
+.stats-label {
   color: var(--fg-muted);
 }
 .comments-edit {
@@ -1356,9 +1329,6 @@
 }
 .stats-row:hover {
   background: var(--bg-hover);
-}
-.stats-label {
-  color: var(--fg-muted);
 }
 .stats-value {
   color: var(--fg);
