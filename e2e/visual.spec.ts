@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import { expect, test, type Page } from "@playwright/test"
 import { installDeterminism, quiesce, waitForGraphLayout } from "./support/deterministic"
 import { installFakeVault } from "./support/fakeVault"
+import { tinyPdf } from "./support/tinyPdf"
 
 // Visual harness: full-window PNGs of every reachable UI state, per theme, so
 // the UI can be reviewed and regression-compared. Slow, so it only runs when
@@ -591,4 +592,156 @@ for (const { name, theme } of THEMES) {
       }
     })
   }
+}
+
+// Panels that need a faked tool or cloud client: the Git panel (canned git
+// output), the Sync panel and banner (a faked Dropbox), and the PDF pane (a
+// tiny generated PDF). Appended after the original shots on purpose.
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: git panel states`, async ({ page }) => {
+    test.setTimeout(120_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      git: "repo",
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    const trigger = page.locator(".git-menu-item .menu-btn")
+    await trigger.click()
+    await page.locator(".git-panel-overlay .git-file-row").first().waitFor()
+    await page.waitForTimeout(400)
+    await shot(page, name, "git__panel")
+    // Open one diff and the lower sections.
+    await page.locator(".git-file-name-btn").nth(3).click()
+    for (const label of ["Remotes", "Stash", "Recent commits"]) {
+      await page.locator(".git-section-toggle", { hasText: label }).first().click()
+    }
+    await page
+      .locator(".git-log-list button")
+      .first()
+      .click()
+      .catch(() => {})
+    await page.waitForTimeout(300)
+    await shot(page, name, "git__panel-expanded")
+    await trigger.click()
+    // Branch dropdown.
+    await page.locator(".git-branch-chevron").click()
+    await page.locator(".git-branch-dropdown").waitFor()
+    await shot(page, name, "git__branch-dropdown")
+  })
+
+  test(`visual ${name}: git conflict and not a repository`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      git: "conflict",
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    await page.locator(".git-menu-item .menu-btn").click()
+    await page.locator(".git-panel-overlay .git-collab-conflict").first().waitFor()
+    await shot(page, name, "git__conflict")
+
+    const page2 = await page.context().newPage()
+    await page2.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page2)
+    await installFakeVault(page2, {
+      settings: { theme },
+      git: "not-repo",
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page2.goto("/")
+    await page2.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page2)
+    await page2.locator(".git-menu-item .menu-btn").click()
+    await page2.locator(".git-empty-state").waitFor()
+    await shot(page2, name, "git__not-repo")
+  })
+
+  test(`visual ${name}: sync panel and banner`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      cloud: "banner",
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await page
+      .locator(".cloud-sync-banner")
+      .waitFor({ timeout: 8000 })
+      .catch(() => {})
+    await settle(page)
+    await shot(page, name, "sync__banner")
+
+    const page2 = await page.context().newPage()
+    await page2.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page2)
+    await installFakeVault(page2, {
+      settings: { theme },
+      cloud: "conflicts",
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page2.goto("/")
+    await page2.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await page2.locator(`.menubar-direct-btn[title="Sync"]`).click()
+    await page2
+      .locator(".cloud-sync-item")
+      .first()
+      .waitFor({ timeout: 8000 })
+      .catch(() => {})
+    await settle(page2)
+    await shot(page2, name, "sync__panel-conflicts")
+  })
+
+  test(`visual ${name}: pdf pane`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      files: { "figures/paper.pdf": tinyPdf(3) },
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    await page.locator(".sidebar").getByText("paper.pdf").click()
+    await page.locator(".pdf-page canvas").first().waitFor({ timeout: 15_000 })
+    await page.waitForTimeout(1200)
+    await shot(page, name, "pdf__tab")
+  })
+}
+
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: document lab tabs`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    await openFromMenu(page, "Views", "Diagnostics")
+    await page.locator(".lab-group-title").first().waitFor()
+    await shot(page, name, "lab__diagnostics")
+    for (const [index, slug] of [
+      [1, "export"],
+      [2, "project"],
+      [3, "structure"],
+    ] as const) {
+      await page.locator(".lab-tabs button").nth(index).click()
+      await page.waitForTimeout(250)
+      await shot(page, name, `lab__${slug}`)
+    }
+  })
 }
