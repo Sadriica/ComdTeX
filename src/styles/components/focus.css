@@ -107,10 +107,6 @@
 }
 
 /* ── Breadcrumb heading segment ── */
-.breadcrumb-heading {
-  color: #9cdcfe;
-  font-style: italic;
-}
 
 /* ── File tree filter ── */
 .tree-filter {
@@ -150,38 +146,8 @@
 }
 
 /* ── Pinned tabs ── */
-.tab-pin {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0 3px;
-  font-size: 11px;
-  color: #555;
-  line-height: 1;
-  opacity: 0.4;
-  transition:
-    opacity 0.15s,
-    color 0.15s;
-}
-.tab-pin:hover {
-  opacity: 1;
-  color: #9cdcfe;
-}
-.tab-pin.tab-pinned {
-  opacity: 1;
-  color: #f0c040;
-}
 
 /* ── Drag-to-reorder tabs ── */
-.tab-dragging {
-  opacity: 0.4;
-}
-.tab[draggable="true"] {
-  cursor: grab;
-}
-.tab[draggable="true"]:active {
-  cursor: grabbing;
-}
 
 /* ── Mermaid diagrams ── */
 .mermaid-diagram {

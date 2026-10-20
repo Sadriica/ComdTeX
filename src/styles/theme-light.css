@@ -5,87 +5,7 @@
    Component agents: each rule here that duplicates a component rule can go
    once that component is written with tokens. */
 
-/* Title bar */
-.app[data-theme="light"] .titlebar {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .titlebar-title {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .titlebar-btn {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .titlebar-btn:hover {
-  background: var(--bg-active);
-  color: var(--fg);
-}
-
-/* Menu bar */
-.app[data-theme="light"] .menu-bar {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .menu-btn {
-  color: var(--fg);
-}
-.app[data-theme="light"] .menu-btn:hover,
-.app[data-theme="light"] .menu-btn.open {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .menu-panel {
-  background: var(--bg-surface);
-  border-color: var(--border);
-  box-shadow: var(--shadow-1);
-}
-.app[data-theme="light"] .menu-entry {
-  color: var(--fg);
-}
-.app[data-theme="light"] .menu-entry:hover:not(:disabled) {
-  background: var(--bg-selected);
-  color: var(--accent);
-}
-.app[data-theme="light"] .menu-entry:disabled {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .menu-shortcut {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .menu-entry:hover:not(:disabled) .menu-shortcut {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .menu-sep {
-  background: var(--bg-active);
-}
-
-/* Toolbar */
-.app[data-theme="light"] .toolbar {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-}
-
-/* Resizer */
-.app[data-theme="light"] .resizer-v:hover,
-.app[data-theme="light"] .resizer-v:active {
-  background: var(--accent);
-}
-
 /* Sidebar / file tree */
-.app[data-theme="light"] .sidebar {
-  background: var(--bg-surface);
-  border-right-color: var(--border);
-}
-.app[data-theme="light"] .sidebar-header {
-  background: var(--chrome-bg);
-  border-bottom-color: var(--border);
-}
-.app[data-theme="light"] .sidebar-collapse-btn {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .sidebar-collapse-btn:hover {
-  color: var(--fg);
-}
 .app[data-theme="light"] .tree-header {
   color: var(--fg-muted);
   border-bottom-color: var(--border);
@@ -155,55 +75,6 @@
   background: color-mix(in oklch, var(--accent) 12%, transparent);
   outline-color: var(--accent);
 }
-.app[data-theme="light"] .tab-bar {
-  background: var(--bg-surface);
-  border-bottom-color: var(--border);
-  scrollbar-color: var(--border-strong) transparent;
-}
-.app[data-theme="light"] .tab-bar::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-}
-.app[data-theme="light"] .tab {
-  color: var(--fg-muted);
-  border-right-color: var(--border);
-}
-.app[data-theme="light"] .tab:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tab-active {
-  background: var(--bg-surface);
-  color: var(--fg);
-  border-top-color: var(--accent);
-}
-.app[data-theme="light"] .tab-close {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tab-close:hover {
-  background: var(--bg-active);
-  color: var(--fg);
-}
-.app[data-theme="light"] .tab:focus-visible,
-.app[data-theme="light"] .tab-close:focus-visible {
-  outline-color: var(--accent);
-}
-.app[data-theme="light"] .tab-pin {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .tab-pin:hover {
-  color: var(--accent);
-}
-.app[data-theme="light"] .tab-pin.tab-pinned {
-  color: var(--warn);
-}
-.app[data-theme="light"] .tab-lint-error {
-  background: var(--danger);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .tab-lint-warning {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
 
 /* Panes */
 .app[data-theme="light"] .editor-pane {
@@ -214,51 +85,6 @@
 }
 
 /* Preview content (default: when previewTheme is "same") */
-
-/* Status bar */
-.app[data-theme="light"] .status-bar {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .status-position:hover {
-  background: color-mix(in oklch, var(--bg-raised) 18%, transparent);
-}
-
-/* Vim status bar */
-.app[data-theme="light"] .vim-statusbar {
-  background: var(--chrome-bg);
-  border-top-color: var(--border);
-  color: var(--fg);
-}
-
-/* Breadcrumb */
-.app[data-theme="light"] .breadcrumb {
-  background: var(--bg-surface);
-  border-bottom-color: var(--border);
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .breadcrumb-sep {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .breadcrumb-link {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .breadcrumb-link:hover {
-  color: var(--accent);
-}
-.app[data-theme="light"] .breadcrumb-current {
-  color: var(--fg);
-}
-.app[data-theme="light"] .breadcrumb-heading {
-  color: var(--accent);
-}
-.app[data-theme="light"] .breadcrumb-nav-btn {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .breadcrumb-nav-btn:hover:not(:disabled) {
-  color: var(--fg);
-  background: color-mix(in oklch, var(--fg) 6%, transparent);
-}
 
 /* Modals */
 .app[data-theme="light"] .modal-overlay {
@@ -1376,118 +1202,12 @@
 }
 
 /* Welcome screen */
-.app[data-theme="light"] .welcome-screen {
-  background: var(--bg-surface);
-  color: var(--fg);
-}
-.app[data-theme="light"] .welcome-logo {
-  color: var(--fg);
-}
-.app[data-theme="light"] .welcome-logo span {
-  color: var(--accent);
-}
-.app[data-theme="light"] .welcome-tagline {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .welcome-btn-primary {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .welcome-btn-primary:hover {
-  background: var(--accent);
-}
-.app[data-theme="light"] .welcome-btn-secondary {
-  background: var(--chrome-bg);
-  color: var(--fg);
-  border-color: var(--border);
-}
-.app[data-theme="light"] .welcome-btn-secondary:hover {
-  background: var(--bg-hover);
-}
-.app[data-theme="light"] .welcome-feature-card {
-  background: var(--bg-surface);
-  border-color: var(--border);
-}
-.app[data-theme="light"] .welcome-feature-card .feature-name {
-  color: var(--fg);
-}
-.app[data-theme="light"] .welcome-feature-card .feature-desc {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .welcome-recents h3 {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .welcome-recent-item {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .welcome-recent-item:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
-}
-.app[data-theme="light"] .welcome-recent-item::before {
-  color: var(--fg-muted);
-}
-.app[data-theme="light"] .welcome-version,
-.app[data-theme="light"] .welcome-hint {
-  color: var(--fg-muted);
-}
 
 /* Focus mode bg */
-.app[data-theme="light"].focus-mode .main {
-  background: var(--bg-surface);
-}
 
 /* Deps & update banners */
-.app[data-theme="light"] .deps-warning {
-  background: var(--warn-bg);
-  border-bottom-color: var(--warn-border);
-  color: var(--warn);
-}
-.app[data-theme="light"] .deps-warning-btn {
-  background: var(--warn-bg);
-  border-color: var(--warn);
-  color: var(--warn);
-}
-.app[data-theme="light"] .deps-warning-btn:hover {
-  background: var(--warn-bg);
-}
-.app[data-theme="light"] .deps-warning-dismiss {
-  border-color: var(--warn);
-  color: var(--warn);
-}
-.app[data-theme="light"] .update-banner {
-  background: var(--ok-bg);
-  border-color: var(--ok);
-  color: var(--ok);
-  box-shadow: var(--shadow-1);
-}
-.app[data-theme="light"] .update-banner h4 {
-  color: var(--ok);
-}
-.app[data-theme="light"] .update-banner p {
-  color: var(--fg);
-}
-.app[data-theme="light"] .update-btn-install {
-  background: var(--ok);
-  border-color: var(--ok);
-  color: var(--accent-fg);
-}
-.app[data-theme="light"] .update-btn-later {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--fg-muted);
-}
 
 /* Word goal */
-.app[data-theme="light"] .status-goal-bar {
-  background: color-mix(in oklch, var(--bg-raised) 30%, transparent);
-}
-.app[data-theme="light"] .status-goal-fill {
-  background: var(--bg-surface);
-}
-.app[data-theme="light"] .status-goal-fill.completed {
-  background: var(--ok-bg);
-}
 
 /* Table editor modal */
 .app[data-theme="light"] .table-editor-modal {

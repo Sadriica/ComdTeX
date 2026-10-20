@@ -99,9 +99,3 @@
   content: "✓" !important;
   color: #4caf50;
 }
-.status-dirty {
-  color: #ffcc00;
-}
-.status-mode {
-  font-weight: 600;
-}

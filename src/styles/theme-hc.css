@@ -10,87 +10,7 @@
   outline-offset: 2px;
 }
 
-/* Title bar */
-.app[data-theme="hc"] .titlebar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .titlebar-title {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .titlebar-btn {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .titlebar-btn:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-
-/* Menu bar */
-.app[data-theme="hc"] .menu-bar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .menu-btn {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .menu-btn:hover,
-.app[data-theme="hc"] .menu-btn.open {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .menu-panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-3);
-}
-.app[data-theme="hc"] .menu-entry {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .menu-entry:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .menu-entry:disabled {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .menu-shortcut {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .menu-entry:hover:not(:disabled) .menu-shortcut {
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .menu-sep {
-  background: var(--fg);
-}
-
-/* Toolbar */
-.app[data-theme="hc"] .toolbar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-}
-
-/* Resizer */
-.app[data-theme="hc"] .resizer-v:hover,
-.app[data-theme="hc"] .resizer-v:active {
-  background: var(--accent);
-}
-
 /* Sidebar / file tree */
-.app[data-theme="hc"] .sidebar {
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .sidebar-header {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .sidebar-collapse-btn {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .sidebar-collapse-btn:hover {
-  color: var(--accent);
-}
 .app[data-theme="hc"] .tree-header {
   color: var(--fg);
   border-bottom: 1px solid var(--border-strong);
@@ -164,47 +84,6 @@
   background: color-mix(in oklch, var(--accent) 20%, transparent);
   outline: 2px dashed var(--accent);
 }
-.app[data-theme="hc"] .tab-bar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .tab {
-  color: var(--fg);
-  border-right: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .tab:hover {
-  background: var(--bg-raised);
-  color: var(--accent);
-}
-.app[data-theme="hc"] .tab-active {
-  background: var(--bg-surface);
-  color: var(--accent);
-  border-top: 2px solid var(--accent);
-}
-.app[data-theme="hc"] .tab-close {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .tab-close:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .tab-pin {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .tab-pin:hover {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .tab-pin.tab-pinned {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .tab-lint-error {
-  background: var(--danger);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .tab-lint-warning {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
 
 /* Panes */
 .app[data-theme="hc"] .editor-pane {
@@ -212,53 +91,6 @@
 }
 .app[data-theme="hc"] .preview-pane {
   background: var(--bg-surface);
-}
-
-/* Status bar */
-.app[data-theme="hc"] .status-bar {
-  background: var(--bg-surface);
-  color: var(--accent);
-  border-top: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .status-position:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-
-/* Vim status bar */
-.app[data-theme="hc"] .vim-statusbar {
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-strong);
-  color: var(--fg);
-}
-
-/* Breadcrumb */
-.app[data-theme="hc"] .breadcrumb {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-strong);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .breadcrumb-sep {
-  color: var(--fg-muted);
-}
-.app[data-theme="hc"] .breadcrumb-link {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .breadcrumb-link:hover {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .breadcrumb-current {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .breadcrumb-heading {
-  color: var(--link);
-}
-.app[data-theme="hc"] .breadcrumb-nav-btn {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .breadcrumb-nav-btn:hover:not(:disabled) {
-  color: var(--accent);
-  background: var(--bg-raised);
 }
 
 /* Modals */
@@ -1351,119 +1183,12 @@
 }
 
 /* Welcome screen */
-.app[data-theme="hc"] .welcome-screen {
-  background: var(--bg-surface);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-logo {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-logo span {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .welcome-tagline {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-btn-primary {
-  background: var(--link);
-  color: var(--fg);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .welcome-btn-primary:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .welcome-btn-secondary {
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .welcome-btn-secondary:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .welcome-feature-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .welcome-feature-card .feature-name {
-  color: var(--accent);
-}
-.app[data-theme="hc"] .welcome-feature-card .feature-desc {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-recents h3 {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-recent-item {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .welcome-recent-item:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .welcome-version,
-.app[data-theme="hc"] .welcome-hint {
-  color: var(--fg-muted);
-}
 
 /* Focus mode bg */
-.app[data-theme="hc"].focus-mode .main {
-  background: var(--bg-surface);
-}
 
 /* Deps & update banners */
-.app[data-theme="hc"] .deps-warning {
-  background: var(--bg-surface);
-  border-bottom: 2px solid var(--accent);
-  color: var(--accent);
-}
-.app[data-theme="hc"] .deps-warning-btn {
-  background: var(--bg-surface);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-}
-.app[data-theme="hc"] .deps-warning-btn:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .deps-warning-dismiss {
-  border: 1px solid var(--accent);
-  color: var(--accent);
-}
-.app[data-theme="hc"] .update-banner {
-  background: var(--bg-surface);
-  border: 2px solid var(--ok);
-  color: var(--fg);
-}
-.app[data-theme="hc"] .update-banner h4 {
-  color: var(--ok);
-}
-.app[data-theme="hc"] .update-banner p {
-  color: var(--fg);
-}
-.app[data-theme="hc"] .update-btn-install {
-  background: var(--ok);
-  border: 1px solid var(--border-strong);
-  color: var(--accent-fg);
-}
-.app[data-theme="hc"] .update-btn-later {
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-}
 
 /* Word goal */
-.app[data-theme="hc"] .status-goal-bar {
-  background: var(--bg-raised);
-  border: 1px solid var(--border-strong);
-}
-.app[data-theme="hc"] .status-goal-fill {
-  background: var(--accent);
-}
-.app[data-theme="hc"] .status-goal-fill.completed {
-  background: var(--ok);
-}
 
 /* Table editor modal */
 .app[data-theme="hc"] .table-editor-modal {

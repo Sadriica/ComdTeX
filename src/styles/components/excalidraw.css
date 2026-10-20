@@ -202,45 +202,8 @@
 }
 
 /* ── Focus-session clock in the top bar ─────────────────────────────────── */
-.menubar-focus-clock {
-  /* Pinned right: the section menus flow from the left, this is a readout. */
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--fg);
-  cursor: pointer;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.menubar-focus-clock:hover {
-  background: var(--surface2);
-}
-.menubar-focus-dot {
-  font-size: 8px;
-  line-height: 1;
-}
-.menubar-focus-clock.running .menubar-focus-dot {
-  color: #4caf50;
-}
-.menubar-focus-clock.paused .menubar-focus-dot {
-  color: var(--muted);
-}
 
 /* AI gap-filling progress chip in the status bar. */
-.status-ai-busy {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.status-ai-spinner {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-}
 
 /* ── Focus view, detached from the top bar ──────────────────────────────── */
 /* Anchored to the top-right rather than rendered in the sidebar: the timer is

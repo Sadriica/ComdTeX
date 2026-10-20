@@ -74,18 +74,7 @@ export default function StatusBar({
         : t.statusBar.texEngineLocal
   return (
     <div className="status-bar">
-      <span
-        role="status"
-        aria-live="polite"
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          overflow: "hidden",
-          clip: "rect(0 0 0 0)",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <span role="status" aria-live="polite" className="status-live">
         {texEngineState === "compiling"
           ? t.statusBar.texEngineCompiling
           : fillingGaps

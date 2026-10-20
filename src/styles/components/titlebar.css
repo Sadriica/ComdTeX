@@ -1,20 +1,37 @@
-/* ── Title Bar ── */
-.titlebar {
-  height: 32px;
-  background: #111;
+/* ── App header: one compact row = classic menus, window title, window controls ──
+   The title bar and the classic menu bar share the row; the sectioned toolbar
+   (menubar.css) is the second row. Chrome tokens only. */
+.app {
+  --chrome-row: 32px;
+}
+
+.app-header {
+  position: relative;
+  z-index: var(--z-sticky);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  height: var(--chrome-row);
   flex-shrink: 0;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
   user-select: none;
-  border-bottom: 1px solid #222;
+}
+
+.titlebar {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .titlebar-title {
   flex: 1;
-  padding: 0 12px;
-  font-size: 12px;
-  color: #777;
+  min-width: 0;
+  padding: 0 var(--space-5);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -23,41 +40,51 @@
 .titlebar-controls {
   display: flex;
   flex-shrink: 0;
+  height: 100%;
 }
 
+/* Native-sized hit areas: 46 x 32. */
 .titlebar-btn {
-  background: transparent;
-  border: none;
-  /* Monochrome, theme-driven. Slightly dimmed --icon so idle controls read as
-     subtle; full --icon/--fg on hover. No hardcoded colors. */
-  color: var(--icon, #d4d4d4);
-  opacity: 0.6;
-  width: 40px;
-  height: 32px;
-  font-size: 12px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Force flat (text) presentation so glyphs never render as colored emoji. */
+  width: 46px;
+  height: var(--chrome-row);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  /* Flat (text) presentation so glyphs never render as coloured emoji. */
   font-variant-emoji: text;
   transition:
-    background 0.1s,
-    opacity 0.1s,
-    color 0.1s;
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
 }
 .titlebar-btn:hover {
-  background: var(--surface2, #2a2a2a);
-  color: var(--fg, #ccc);
-  opacity: 1;
+  background: var(--bg-hover);
+  color: var(--fg);
 }
-.titlebar-close:hover {
-  background: #c0392b;
-  color: #fff;
-  opacity: 1;
+.titlebar-btn:active {
+  background: var(--bg-active);
 }
-/* The gear is a monochrome glyph (⚙︎, text variation selector), same family
-   as the min/max/close controls; sized to match their optical weight. */
-.titlebar-settings-btn {
-  font-size: 14px;
+.titlebar-btn:focus-visible {
+  outline-offset: -3px;
+}
+.titlebar-btn:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+}
+.titlebar-close:hover,
+.titlebar-close:active {
+  background: var(--danger);
+  color: var(--bg-app);
+}
+
+/* Focus mode and print hide the whole header. */
+.focus-mode .app-header {
+  display: none;
 }

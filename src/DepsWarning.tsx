@@ -76,7 +76,7 @@ export default function DepsWarning({ deps, useWasmTex, dismissed, onDismiss }: 
           <span key={item.name} className="deps-warning-item">
             <strong>{item.label}</strong>: {item.feature}
             {item.name === "zip" && (
-              <span style={{ color: "#bb9900", fontSize: 10 }}> ({getOsHint("zip")})</span>
+              <span className="deps-warning-hint"> ({getOsHint("zip")})</span>
             )}
             <button className="deps-warning-btn" onClick={() => handleInstall(item)}>
               {t.deps.install}
