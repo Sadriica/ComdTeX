@@ -251,6 +251,8 @@ export interface T {
     texliveUrlDesc: string
     autoRebuildPdf: string
     autoRebuildPdfDesc: string
+    pdfDarkMode: string
+    pdfDarkModeDesc: string
     wasmTexInitializing: string
     wasmTexCompiling: string
     wasmTexFallback: string
@@ -793,6 +795,10 @@ export interface T {
     gitNotFoundHint: string
     statusError: (msg: string) => string
     refresh: string
+    summaryClean: string
+    summaryStaged: (n: number) => string
+    summaryModified: (n: number) => string
+    summaryNew: (n: number) => string
     staged: string
     changes: string
     untracked: string

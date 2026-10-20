@@ -252,6 +252,9 @@ export const es: T = {
     autoRebuildPdf: "Reconstruir PDF automáticamente",
     autoRebuildPdfDesc:
       "Reconstruye la vista previa del PDF automáticamente al editar el documento.",
+    pdfDarkMode: "Páginas del PDF en oscuro",
+    pdfDarkModeDesc:
+      "Invierte los colores de la vista previa del PDF en el tema oscuro. Por defecto las páginas se mantienen claras; la inversión repinta cada página al desplazar y ampliar, por lo que es más lenta en documentos largos.",
     wasmTexInitializing: "Inicializando motor LaTeX (WASM)…",
     wasmTexCompiling: "Compilando LaTeX (WASM)…",
     wasmTexFallback: "Motor WASM no disponible, intentando LaTeX local",
@@ -840,6 +843,10 @@ export const es: T = {
     gitNotFoundHint: "Instala Git y reinicia la aplicación.",
     statusError: (msg: string) => `Git no pudo leer el estado: ${msg}`,
     refresh: "Actualizar",
+    summaryClean: "Sin cambios pendientes",
+    summaryStaged: (n: number) => `${n} preparado${n !== 1 ? "s" : ""}`,
+    summaryModified: (n: number) => `${n} modificado${n !== 1 ? "s" : ""}`,
+    summaryNew: (n: number) => `${n} nuevo${n !== 1 ? "s" : ""}`,
     staged: "Cambios preparados",
     changes: "Cambios",
     untracked: "Archivos sin seguimiento",
