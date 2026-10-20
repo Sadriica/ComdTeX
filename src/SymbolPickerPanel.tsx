@@ -1025,6 +1025,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: string) => void }) {
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] = useState<string | "all">("all")
+  // Symbol under the pointer or keyboard focus: its LaTeX command is shown in
+  // the footer, where a tooltip would be clipped by the scrolling grid.
+  const [hovered, setHovered] = useState<{ name: string; latex: string } | null>(null)
   const t = useT()
 
   const query = search.trim().toLowerCase()
@@ -1052,9 +1055,7 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
 
   return (
     <div className="symbol-picker">
-      <div style={{ fontWeight: 600, fontSize: "0.9em", paddingBottom: "0.25rem" }}>
-        {t.symbolPicker.title}
-      </div>
+      <div className="symbol-picker-title">{t.symbolPicker.title}</div>
       <input
         className="symbol-picker-search"
         type="text"
@@ -1095,6 +1096,8 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
                     title={`${sym.name}: ${sym.latex}`}
                     aria-label={`${sym.name} (${sym.latex})`}
                     onClick={() => onInsert(sym.latex)}
+                    onMouseEnter={() => setHovered(sym)}
+                    onFocus={() => setHovered(sym)}
                   >
                     {sym.display}
                   </button>
@@ -1111,12 +1114,22 @@ export default function SymbolPickerPanel({ onInsert }: { onInsert: (latex: stri
                 title={`${sym.name}: ${sym.latex}`}
                 aria-label={`${sym.name} (${sym.latex})`}
                 onClick={() => onInsert(sym.latex)}
+                onMouseEnter={() => setHovered(sym)}
+                onFocus={() => setHovered(sym)}
               >
                 {sym.display}
               </button>
             ))}
           </div>
         )}
+      </div>
+      <div className="symbol-picker-info" aria-live="off">
+        {hovered ? (
+          <>
+            <code className="symbol-picker-cmd">{hovered.latex}</code>
+            <span className="symbol-picker-name">{hovered.name}</span>
+          </>
+        ) : null}
       </div>
     </div>
   )
