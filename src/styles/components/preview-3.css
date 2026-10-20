@@ -86,11 +86,11 @@
 
 /* ── Footnotes (markdown-it-footnote) ── */
 .footnotes {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
   margin-top: 2em;
   padding-top: 1em;
   font-size: 0.85em;
-  color: #888;
+  color: var(--fg-muted);
 }
 .footnotes ol {
   padding-left: 1.5em;
@@ -100,7 +100,7 @@
 }
 .footnote-ref a,
 .footnote-backref {
-  color: #9cdcfe;
+  color: var(--link);
   text-decoration: none;
   font-size: 0.8em;
 }

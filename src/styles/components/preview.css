@@ -1,12 +1,12 @@
 .preview-pane {
-  background: #1e1e1e;
+  background: var(--bg-surface);
   overflow-y: auto;
 }
 
 /* ── Preview content ── */
 .preview-content {
   padding: 2rem 2.5rem;
-  color: #d4d4d4;
+  color: var(--fg);
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.75;
@@ -17,7 +17,7 @@
 .preview-content h2,
 .preview-content h3,
 .preview-content h4 {
-  color: #e8e8e8;
+  color: var(--fg);
   margin-top: 1.6em;
   margin-bottom: 0.5em;
   font-weight: 600;
@@ -27,19 +27,19 @@
 .preview-content h2.active-heading,
 .preview-content h3.active-heading,
 .preview-content h4.active-heading {
-  background-color: rgba(86, 156, 214, 0.15);
+  background-color: color-mix(in oklch, var(--accent) 15%, transparent);
   border-radius: 4px;
   padding-left: 4px;
   margin-left: -4px;
 }
 .preview-content h1 {
   font-size: 2em;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.3em;
 }
 .preview-content h2 {
   font-size: 1.4em;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.2em;
 }
 .preview-content p {
@@ -53,53 +53,53 @@
 /* ── Text highlighting: ==text== → <mark>, plus colour variants ──────────── */
 .preview-content mark,
 .hp-render mark {
-  background: #ffe066; /* default yellow */
-  color: #1a1a1a;
+  background: var(--mark-yellow); /* default yellow */
+  color: var(--fg);
   border-radius: 3px;
   padding: 0.05em 0.25em;
   /* keep math/inline-code legible if highlighted */
 }
 .preview-content mark code {
-  background: rgba(0, 0, 0, 0.12);
+  background: color-mix(in oklch, var(--fg) 12%, transparent);
   color: inherit;
   border-color: transparent;
 }
 .preview-content mark.hl-yellow,
 .hp-render mark.hl-yellow {
-  background: #ffe066;
+  background: var(--mark-yellow);
 }
 .preview-content mark.hl-green,
 .hp-render mark.hl-green {
-  background: #a6e3a1;
+  background: var(--mark-green);
 }
 .preview-content mark.hl-blue,
 .hp-render mark.hl-blue {
-  background: #89c4f4;
+  background: var(--mark-blue);
 }
 .preview-content mark.hl-pink,
 .hp-render mark.hl-pink {
-  background: #f5a9d0;
+  background: var(--mark-pink);
 }
 .preview-content mark.hl-orange,
 .hp-render mark.hl-orange {
-  background: #ffc078;
+  background: var(--mark-orange);
 }
 .preview-content mark.hl-purple,
 .hp-render mark.hl-purple {
-  background: #d0bfff;
+  background: var(--mark-purple);
 }
 .preview-content mark.hl-red,
 .hp-render mark.hl-red {
-  background: #f5a9a9;
+  background: var(--mark-red);
 }
 
 /* ── Auto-generated table of contents ([[toc]]) ──────────────────────────── */
 .preview-content nav.md-toc {
-  border: 1px solid #333;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.6em 1em;
   margin: 1em 0;
-  background: #232323;
+  background: var(--bg-sunken);
 }
 .preview-content nav.md-toc ul {
   list-style: none;
@@ -117,7 +117,7 @@
   font-size: 0.95em;
 }
 .preview-content nav.md-toc a {
-  color: #9cdcfe;
+  color: var(--link);
   text-decoration: none;
 }
 .preview-content nav.md-toc a:hover {
@@ -125,17 +125,17 @@
 }
 
 .preview-content code {
-  background: #2d2d2d;
-  border: 1px solid #3a3a3a;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.15em 0.4em;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.88em;
-  color: #ce9178;
+  color: var(--code-fg);
 }
 .preview-content pre {
-  background: #2d2d2d;
-  border: 1px solid #3a3a3a;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 1em 1.2em;
   overflow-x: auto;
@@ -145,12 +145,12 @@
   background: none;
   border: none;
   padding: 0;
-  color: #d4d4d4;
+  color: var(--code-fg);
 }
 .preview-content blockquote {
-  border-left: 3px solid #555;
+  border-left: 3px solid var(--border-strong);
   padding-left: 1em;
-  color: #999;
+  color: var(--fg-muted);
   margin-bottom: 1em;
 }
 .preview-content ul,
@@ -162,14 +162,14 @@
   margin-bottom: 0.25em;
 }
 .preview-content a {
-  color: #569cd6;
+  color: var(--link);
 }
 .preview-content del {
-  color: #888;
+  color: var(--fg-muted);
 }
 .preview-content hr {
   border: none;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
   margin: 1.5em 0;
 }
 
@@ -182,15 +182,15 @@
 }
 .preview-content th,
 .preview-content td {
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--border);
   padding: 0.45em 0.85em;
   text-align: left;
 }
 .preview-content th {
-  background: #2a2a2a;
-  color: #e8e8e8;
+  background: var(--bg-raised);
+  color: var(--fg);
   font-weight: 600;
 }
 .preview-content tr:nth-child(even) td {
-  background: #252525;
+  background: var(--bg-sunken);
 }

@@ -10,12 +10,12 @@
   flex-direction: column;
   gap: 2px;
   padding: 6px 10px;
-  border-bottom: 1px solid #1e1e1e;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.1s;
 }
 .env-list-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-hover);
 }
 .env-list-row1 {
   display: flex;
@@ -35,27 +35,27 @@
 .env-badge-lemma,
 .env-badge-corollary,
 .env-badge-proposition {
-  background: rgba(86, 156, 214, 0.2);
-  color: #569cd6;
+  background: color-mix(in oklch, var(--env-theorem) 20%, transparent);
+  color: var(--env-theorem);
 }
 .env-badge-definition {
-  background: rgba(78, 201, 176, 0.2);
-  color: #4ec9b0;
+  background: color-mix(in oklch, var(--env-definition) 20%, transparent);
+  color: var(--env-definition);
 }
 .env-badge-example,
 .env-badge-exercise {
-  background: rgba(220, 220, 170, 0.2);
-  color: #dcdcaa;
+  background: color-mix(in oklch, var(--env-example) 20%, transparent);
+  color: var(--env-example);
 }
 .env-badge-proof,
 .env-badge-remark,
 .env-badge-note {
-  background: rgba(150, 150, 150, 0.15);
-  color: #888;
+  background: color-mix(in oklch, var(--env-proof) 18%, transparent);
+  color: var(--env-proof);
 }
 .env-list-title {
   font-size: 12px;
-  color: #ccc;
+  color: var(--fg);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -63,7 +63,7 @@
 }
 .env-list-num {
   font-size: 11px;
-  color: #569cd6;
+  color: var(--accent);
   font-family: monospace;
   flex-shrink: 0;
 }

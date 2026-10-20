@@ -1,20 +1,20 @@
 /* ── Wikilinks ── */
 .wikilink {
-  color: #9cdcfe;
+  color: var(--link);
   text-decoration: none;
-  border-bottom: 1px solid #9cdcfe44;
+  border-bottom: 1px solid color-mix(in oklch, var(--link) 27%, transparent);
   cursor: pointer;
 }
 .wikilink:hover {
-  border-bottom-color: #9cdcfe;
-  background: #9cdcfe11;
+  border-bottom-color: var(--link);
+  background: color-mix(in oklch, var(--link) 7%, transparent);
 }
 .wikilink-broken {
-  color: #888;
-  border-bottom-color: #88888844;
+  color: var(--fg-muted);
+  border-bottom-color: color-mix(in oklch, var(--fg-muted) 27%, transparent);
 }
 .wikilink-broken:hover {
-  border-bottom-color: #888;
+  border-bottom-color: var(--fg-muted);
 }
 
 /* ── Wikilink hover preview card ── */
