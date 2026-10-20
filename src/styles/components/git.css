@@ -330,7 +330,8 @@
   background: var(--bg-hover);
 }
 .git-section-chevron {
-  width: 10px;
+  display: inline-flex;
+  width: 14px;
   flex-shrink: 0;
   color: var(--fg-muted);
 }
