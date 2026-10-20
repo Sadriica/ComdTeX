@@ -5166,7 +5166,10 @@ function AppContent({
                       onClickSource={handlePdfClickSource}
                       synctex={syncTex?.synctex ?? null}
                       focusPage={pdfFocusPage}
-                      invert={settings.theme === "vs-dark" || settings.theme === "hc-black"}
+                      invert={
+                        settings.pdfDarkMode &&
+                        (settings.theme === "vs-dark" || settings.theme === "hc-black")
+                      }
                     />
                   </LazyRegion>
                 )}

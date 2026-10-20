@@ -39,6 +39,21 @@ export interface FakeVaultOptions {
   open?: boolean
   /** Extra localStorage entries. */
   storage?: Record<string, string>
+  /**
+   * Canned git for the Git panel (`plugin:shell|execute` with program `git`).
+   * Unset keeps git "not installed". `repo` is a dirty repo with a remote, one
+   * commit behind and two ahead; `conflict` is a merge with an unmerged file;
+   * `not-repo` answers like a folder that is not a repository.
+   */
+  git?: "repo" | "conflict" | "not-repo"
+  /**
+   * Fake a Dropbox install. `banner`: the client exists but the vault is not
+   * inside it (the "move your vault" banner). `conflicts`: the vault is inside
+   * it and holds three conflicted copies (the Sync panel's list).
+   */
+  cloud?: "banner" | "conflicts"
+  /** Extra vault files (vault-relative path to text). ASCII only; a `.pdf` is served to pdf.js. */
+  files?: Record<string, string>
 }
 
 function collect(dir: string, base: string, out: Record<string, string>) {
@@ -70,9 +85,25 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
   }
   storage.comdtex_settings = JSON.stringify({ language: "en", ...options.settings })
   const files = readFixtureFiles()
+  const home = "/home/tester"
+  const extra: Record<string, string> = {}
+  if (options.cloud === "banner") {
+    extra[`${home}/.dropbox/info.json`] = JSON.stringify({ personal: { path: `${home}/Dropbox` } })
+    extra[`${home}/Dropbox/.keep`] = ""
+  }
+  if (options.cloud === "conflicts") {
+    extra[`${home}/.dropbox/info.json`] = JSON.stringify({
+      personal: { path: `${home}/Documents` },
+    })
+    extra["notes/mixing-times (conflicted copy 2026-10-18).md"] = "# Mixing times\n\nOlder edit.\n"
+    extra["papers/spectral-gap (Ada's conflicted copy 2026-10-17).md"] =
+      "# Spectral gap\n\nEdit from the laptop.\n"
+    extra["notes/lost-idea (conflicted copy 2026-10-12).md"] = "# Lost idea\n"
+  }
+  Object.assign(files, extra, options.files)
 
   await page.addInitScript(
-    ({ files, vaultPath, storage }) => {
+    ({ files, vaultPath, storage, git }) => {
       const w = window as unknown as Record<string, unknown>
       const HOME = "/home/tester"
       const MTIME = Date.UTC(2026, 9, 18, 10, 0, 0)
@@ -91,7 +122,7 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
       }
       addDirs(vaultPath)
       for (const [rel, text] of Object.entries(files)) {
-        const full = `${vaultPath}/${rel}`
+        const full = rel.startsWith("/") ? rel : `${vaultPath}/${rel}`
         addDirs(full.slice(0, full.lastIndexOf("/")))
         fs.set(full, { dir: false, text, mtime: MTIME })
       }
@@ -131,6 +162,81 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
         const e = fs.get(norm(p))
         if (!e) throw missing(p)
         return e
+      }
+
+      // Canned git output, keyed on the subcommand after `-C <vault>`.
+      const fakeGit = (all: string[]) => {
+        const at = all.indexOf("-C")
+        const [sub, ...rest] = at >= 0 ? all.slice(at + 2) : all
+        const ok = (stdout = "") => ({ code: 0, signal: null, stdout, stderr: "" })
+        if (git === "not-repo")
+          return {
+            code: 128,
+            signal: null,
+            stdout: "",
+            stderr: "fatal: not a git repository (or any of the parent directories): .git",
+          }
+        const conflict = git === "conflict"
+        switch (sub) {
+          case "status": {
+            const head = conflict
+              ? "## main...origin/main [ahead 1, behind 1]"
+              : "## main...origin/main [ahead 2, behind 1]"
+            const rows = conflict
+              ? ["UU notes/mixing-times.md", "M  papers/spectral-gap.md", "?? scratch/todo.md"]
+              : [
+                  "M  papers/spectral-gap.md",
+                  "A  notes/new-idea.md",
+                  "R  notes/cheeger-inequality.md",
+                  "notes/cheeger.md",
+                  " M notes/mixing-times.md",
+                  " M references.bib",
+                  " D notes/old-draft.md",
+                  "?? scratch/todo.md",
+                  "?? figures/expander.svg",
+                ]
+            return ok([head, ...rows].join("\0") + "\0")
+          }
+          case "remote":
+            return rest[0] === "-v"
+              ? ok(
+                  "origin\thttps://github.com/ada-tester/spectral-vault.git (fetch)\n" +
+                    "origin\thttps://github.com/ada-tester/spectral-vault.git (push)\n",
+                )
+              : ok("origin\n")
+          case "branch":
+            return ok("main\nfeature/cheeger-bounds\nreview/referee-2\n")
+          case "log":
+            return ok(
+              [
+                "9f3c2ab Tighten the Cheeger bound in section 3",
+                "4be71d0 Add expander figure and caption",
+                "c08a5e6 Rewrite abstract for the resubmission",
+                "71d9f42 Fix broken @eq reference in the proof",
+                "2ae0b13 Import references from Zotero",
+              ].join("\n") + "\n",
+            )
+          case "config":
+            return ok(rest[0] === "user.email" ? "ada@example.org\n" : "Ada Tester\n")
+          case "stash":
+            return ok("stash@{0}: WIP on main: 9f3c2ab Tighten the Cheeger bound\n")
+          case "diff":
+            return ok(
+              [
+                "diff --git a/notes/mixing-times.md b/notes/mixing-times.md",
+                "index 3b1c2d4..8e7f9a0 100644",
+                "--- a/notes/mixing-times.md",
+                "+++ b/notes/mixing-times.md",
+                "@@ -12,3 +12,4 @@ Mixing times",
+                " The spectral gap controls the mixing time.",
+                "-It is at most the inverse gap.",
+                "+It is at most the inverse gap times a log factor.",
+                "+See also the Cheeger inequality.",
+              ].join("\n") + "\n",
+            )
+          default:
+            return ok()
+        }
       }
 
       // Calls are recorded so a spec can assert on them if it wants to.
@@ -245,6 +351,9 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
           case "plugin:dialog|save":
             return null
           default:
+            if (cmd === "plugin:shell|execute" && a.program === "git" && git) {
+              return fakeGit((a.args as string[]) ?? [])
+            }
             if (cmd.startsWith("plugin:shell|")) {
               // pandoc, zip, git, typst, latex engines: "not installed".
               throw new Error(`program not found: ${cmd}`)
@@ -262,6 +371,8 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
           const e = fs.get(norm(decodeURIComponent(path)))
           if (e && !e.dir && path.endsWith(".svg"))
             return `data:image/svg+xml;utf8,${encodeURIComponent(e.text)}`
+          if (e && !e.dir && path.endsWith(".pdf"))
+            return `data:application/pdf;base64,${btoa(e.text)}`
           return ""
         },
         metadata: {
@@ -283,6 +394,6 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
         /* storage unavailable */
       }
     },
-    { files, vaultPath: VAULT_PATH, storage },
+    { files, vaultPath: VAULT_PATH, storage, git: options.git ?? null },
   )
 }

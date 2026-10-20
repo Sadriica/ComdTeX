@@ -24,6 +24,8 @@ export interface Settings {
   dailyNotesFolder: string
   dailyNotesTemplate: string
   autoRebuildPdf: boolean
+  /** Invert PDF pages in the dark themes. Off: pages stay light (cheaper to paint). */
+  pdfDarkMode: boolean
   /**
    * If true, PDF compilation tries the bundled WASM LaTeX engine before
    * falling back to a locally-installed `tectonic` / `xelatex` / `pdflatex`.
@@ -105,6 +107,7 @@ export const DEFAULTS: Settings = {
   dailyNotesFolder: "daily",
   dailyNotesTemplate: "# {{date:YYYY-MM-DD}}\n\n## Tasks\n\n- [ ] \n\n## Notes\n\n",
   autoRebuildPdf: false,
+  pdfDarkMode: false,
   useWasmTex: true,
   texliveUrl: "https://texlive2.swiftlatex.com/",
   pomodoroWorkMin: 25,

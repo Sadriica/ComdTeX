@@ -4,69 +4,83 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background: #1e1e1e;
-  color: #ddd;
+  background: var(--bg-surface);
+  color: var(--fg);
   overflow: hidden;
 }
 .pdf-toolbar {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid #333;
-  background: #252525;
+  gap: var(--space-1);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
   flex: 0 0 auto;
 }
 .pdf-toolbar-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  color: #ccc;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.95em;
-  line-height: 1.2;
-  border-radius: 3px;
+  color: var(--chrome-fg);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-md);
+  line-height: 1;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  min-width: 1.8em;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
 }
 .pdf-toolbar-btn:hover:not(:disabled) {
-  background: #2f2f2f;
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.pdf-toolbar-btn:active:not(:disabled) {
+  background: var(--bg-active);
 }
 .pdf-toolbar-btn.active {
-  background: #3a3a3a;
-  border-color: #569cd6;
-  color: #fff;
+  background: var(--bg-selected);
+  border-color: var(--accent);
+  color: var(--fg);
 }
 .pdf-toolbar-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: default;
 }
 .pdf-toolbar-sep {
   flex: 1 1 auto;
 }
 .pdf-page-indicator {
-  font-size: 0.8em;
-  color: #aaa;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
   min-width: 4em;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* Pages sit on a sunken desk, each on its own sheet with a hairline shadow. */
 .pdf-pages {
   flex: 1 1 auto;
   overflow: auto;
-  padding: 1rem 0.5rem;
+  padding: var(--space-7) var(--space-5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  background: #1a1a1a;
+  gap: var(--space-6);
+  background: var(--bg-sunken);
 }
 .pdf-page {
   position: relative;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-1);
+  outline: 1px solid var(--border);
 }
 .pdf-page canvas {
   display: block;
@@ -74,71 +88,30 @@
 }
 .pdf-page-label {
   position: absolute;
-  top: -1.15rem;
+  top: calc(var(--space-6) * -1);
   right: 0;
-  font-size: 0.7em;
-  color: #888;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
   pointer-events: none;
 }
 .pdf-empty,
 .pdf-error {
-  color: #999;
-  padding: 1rem;
+  color: var(--fg-muted);
+  padding: var(--space-6);
   text-align: center;
-  font-size: 0.9em;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  max-width: 280px;
 }
 .pdf-error {
-  color: #e57373;
+  color: var(--danger);
 }
 
-/* Dark-theme PDF colour inversion. The filter approach is the standard
- * cross-browser way to flip a rendered PDF page for dark-mode reading. */
+/* Dark PDF (opt-in, Settings > PDF). The default keeps pages light: the
+   invert filter repaints every large canvas on scroll and zoom, so it only
+   runs when the person asks for it. */
 .pdf-preview-panel.inverted .pdf-page canvas {
   filter: invert(1) hue-rotate(180deg);
-}
-
-/* Light theme overrides */
-.app[data-theme="light"] .pdf-preview-panel {
-  background: #f7f7f7;
-  color: #222;
-}
-.app[data-theme="light"] .pdf-toolbar {
-  background: #ececec;
-  border-bottom-color: #ccc;
-}
-.app[data-theme="light"] .pdf-toolbar-btn {
-  color: #333;
-}
-.app[data-theme="light"] .pdf-toolbar-btn:hover:not(:disabled) {
-  background: #ddd;
-  color: #000;
-}
-.app[data-theme="light"] .pdf-pages {
-  background: #e9e9e9;
-}
-
-/* High-contrast theme */
-.app[data-theme="hc"] .pdf-preview-panel {
-  background: #000;
-  color: #fff;
-}
-.app[data-theme="hc"] .pdf-toolbar {
-  background: #000;
-  border-bottom-color: #fff;
-}
-.app[data-theme="hc"] .pdf-toolbar-btn {
-  color: #fff;
-  border: 1px solid #fff;
-}
-.app[data-theme="hc"] .pdf-toolbar-btn.active {
-  background: #ffff00;
-  color: #000;
-}
-.app[data-theme="hc"] .pdf-pages {
-  background: #000;
-}
-.app[data-theme="hc"] .pdf-page {
-  box-shadow: 0 0 0 2px #fff;
 }
 
 /* ── Comments: Monaco gutter glyph ── */
