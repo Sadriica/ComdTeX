@@ -9,6 +9,7 @@ import { useT } from "./i18n"
 import { Icon, Tag } from "./icons"
 import { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface LabelsPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -47,10 +48,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
   if (index.labels.length === 0) {
     return (
       <div className="labels-panel">
-        <div className="panel-header">
-          <span className="panel-header-title">{lp.title}</span>
-          <span className="panel-header-actions">0</span>
-        </div>
+        <PanelHeader title={lp.title} count={0} />
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
             <Icon icon={Tag} size={16} />
@@ -63,10 +61,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
 
   return (
     <div className="labels-panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{lp.title}</span>
-        <span className="panel-header-actions">{index.labels.length}</span>
-      </div>
+      <PanelHeader title={lp.title} count={index.labels.length} />
       <div className="labels-controls">
         <input
           className="tag-filter"
@@ -126,6 +121,7 @@ export default function LabelsPanel({ files, onOpenFile }: LabelsPanelProps) {
                 <button
                   key={`${label.id}-${label.filePath}-${label.line}-${i}`}
                   className={`label-item${duplicate ? " label-item-bad" : ""}`}
+                  title={`${label.id} - ${displayBasename(label.filePath)}:${label.line}`}
                   onClick={() => onOpenFile(label.filePath, label.line)}
                 >
                   <span className="label-id">{label.id}</span>

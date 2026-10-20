@@ -173,6 +173,7 @@ export interface T {
     count: (n: number) => string
     lineAriaLabel: (line: number, content: string) => string
     showLess: string
+    toggleGroup: string
     more: (n: number) => string
     toggleReplace: string
     replacePlaceholder: string

@@ -69,12 +69,6 @@
 .folder-rules-remove:hover {
   background: var(--surface2);
 }
-.tree-new-target {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-  padding: 0 4px 2px;
-}
 
 .template-editor {
   display: flex;

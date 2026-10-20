@@ -12,51 +12,10 @@
 .pdf-preview-panel {
   background: var(--bg-surface);
 }
-.tree-header {
-  color: var(--fg-muted);
-}
-.tree-header {
-  border-bottom-color: var(--border);
-}
-.tree-icon,
-.tree-actions button,
-.tree-empty,
-.sidebar-empty {
-  color: var(--fg-muted);
-}
-.tree-actions button:hover {
-  color: var(--fg);
-  background: var(--bg-hover);
-}
-.tree-row:hover {
-  background: var(--bg-hover);
-}
-.tree-file.tree-active {
-  background: var(--bg-selected);
-  color: var(--fg);
-}
-.tree-file.tree-focused:not(.tree-active) {
-  outline-color: var(--accent);
-}
-.tree-dir .tree-name {
-  color: var(--fg);
-}
-.tree-file .tree-name {
-  color: var(--fg);
-}
-.tree-new-input input,
-.tree-rename-input,
-.tree-filter-input {
-  background: var(--bg-sunken);
-  border-color: var(--border-strong);
-  color: var(--fg);
-}
-.btn-vault,
 .btn-create {
   background: var(--accent);
   color: var(--accent-fg);
 }
-.btn-vault:hover,
 .btn-create:hover:not(:disabled) {
   background: color-mix(in oklch, var(--accent) 88%, var(--fg));
 }

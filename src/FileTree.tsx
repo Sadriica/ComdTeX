@@ -107,7 +107,6 @@ function FileNodeRow({
   const renameRef = useRef<HTMLInputElement>(null)
   const isActive = node.path === activePath
   const isFocused = node.path === focusedPath
-  const indent = depth * 12
 
   const startRename = () => {
     setRenameVal(node.name)
@@ -127,7 +126,7 @@ function FileNodeRow({
       <div role="treeitem" aria-expanded={open}>
         <div
           className={`tree-row tree-dir${isDragOver ? " tree-drop-target" : ""}`}
-          style={{ paddingLeft: 8 + indent }}
+          style={{ "--depth": depth } as React.CSSProperties}
           tabIndex={-1}
           // Selecting the folder (not just expanding it) is what makes "new
           // file" land inside it rather than at the vault root.
@@ -155,7 +154,9 @@ function FileNodeRow({
             <Icon icon={open ? ChevronDown : ChevronRight} size={14} />
             <Icon icon={open ? FolderOpen : Folder} size={14} />
           </span>
-          <span className="tree-name">{node.name}</span>
+          <span className="tree-name" title={node.name}>
+            {node.name}
+          </span>
         </div>
         {open &&
           node.children?.map((child) => (
@@ -187,7 +188,7 @@ function FileNodeRow({
       role="treeitem"
       aria-selected={isActive}
       className={`tree-row tree-file ${isActive ? "tree-active" : ""} ${isFocused ? "tree-focused" : ""}${hasConflict ? " tree-conflict" : ""}`}
-      style={{ paddingLeft: 8 + indent }}
+      style={{ "--depth": depth } as React.CSSProperties}
       tabIndex={isFocused ? 0 : -1}
       onClick={() => {
         if (renaming) return
@@ -223,7 +224,9 @@ function FileNodeRow({
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="tree-name">{node.name}</span>
+        <span className="tree-name" title={node.name}>
+          {node.name}
+        </span>
       )}
       {hasConflict && (
         <span

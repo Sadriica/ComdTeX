@@ -35,21 +35,14 @@
 @import "./components/layout-3.css";
 @import "./components/callouts.css";
 @import "./components/preview-3.css";
-@import "./components/side-panels-2.css";
 @import "./components/document-lab.css";
-@import "./components/side-panels-3.css";
 @import "./components/graph.css";
 @import "./components/symbol-picker.css";
-@import "./components/todo.css";
-@import "./components/math-env-3.css";
-@import "./components/side-panels-4.css";
 @import "./components/focus.css";
-@import "./components/panel-search-2.css";
 @import "./components/settings-2.css";
 @import "./components/welcome-2.css";
 @import "./components/citation-manager-2.css";
 @import "./components/math-env-4.css";
-@import "./components/panel-search-3.css";
 @import "./components/tabs-3.css";
 @import "./components/modals-3.css";
 @import "./components/preview-4.css";
@@ -61,7 +54,6 @@
 @import "./theme-hc.css";
 @import "./components/pdf.css";
 @import "./components/layout-4.css";
-@import "./components/comments.css";
 @import "./theme-light-2.css";
 @import "./theme-hc-2.css";
 @import "./components/cloud-sync.css";
@@ -70,4 +62,5 @@
 @import "./components/excalidraw.css";
 @import "./components/icons.css";
 @import "./components/callout-icons.css";
+@import "./components/panels.css";
 @import "./skin.css";

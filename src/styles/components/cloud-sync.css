@@ -67,9 +67,6 @@
 .tree-conflict-badge:hover {
   color: #ffcc66;
 }
-.tree-row.tree-conflict .tree-name {
-  color: #ffcc88;
-}
 
 .cloud-sync-panel {
   padding: 8px 12px;

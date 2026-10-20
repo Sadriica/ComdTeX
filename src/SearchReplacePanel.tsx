@@ -8,6 +8,7 @@ import {
 import { useT } from "./i18n"
 import { type SearchReplaceState, type SearchReplaceResult } from "./useSearchReplaceState"
 import { VaultSearchIndex } from "./searchIndex"
+import PanelHeader from "./PanelHeader"
 
 interface SearchReplacePanelProps {
   vaultPath: string
@@ -245,10 +246,11 @@ export default function SearchReplacePanel({
   ])
 
   return (
-    <div className="panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{t.search.toggleReplace}</span>
-      </div>
+    <div className="panel search-replace-panel">
+      <PanelHeader
+        title={t.sidebar.searchReplace}
+        count={results.length > 0 ? results.length : ""}
+      />
 
       <div className="search-replace-inputs">
         <input
@@ -314,7 +316,7 @@ export default function SearchReplacePanel({
 
       {results.length >= 500 && <div className="panel-empty">{t.search.limit}</div>}
 
-      <div style={{ overflowY: "auto", flex: 1 }}>
+      <div className="search-replace-results">
         {results.map((result, idx) => {
           const { before, match, after } = highlightMatch(
             result.content,
@@ -330,7 +332,6 @@ export default function SearchReplacePanel({
                 onKeyDown={(e) => e.key === "Enter" && onOpenFile(result.filePath, result.line)}
                 role="button"
                 tabIndex={0}
-                style={{ cursor: "pointer" }}
               >
                 {displayBasename(result.filePath)}
               </span>
@@ -341,7 +342,6 @@ export default function SearchReplacePanel({
                 onKeyDown={(e) => e.key === "Enter" && onOpenFile(result.filePath, result.line)}
                 role="button"
                 tabIndex={0}
-                style={{ cursor: "pointer" }}
               >
                 {before}
                 {match && <mark>{match}</mark>}

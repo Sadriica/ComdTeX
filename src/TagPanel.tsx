@@ -4,6 +4,7 @@ import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
 import { ArrowLeft, Hash, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface TagPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -50,11 +51,14 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
 
   if (files.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">
-          <Icon icon={Hash} size={16} />
+      <div className="tag-panel">
+        <PanelHeader title={t.sidebar.tags} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Hash} size={16} />
+          </div>
+          <p className="panel-empty-message">{t.tagPanel.noFiles}</p>
         </div>
-        <p className="panel-empty-message">{t.tagPanel.noFiles}</p>
       </div>
     )
   }
@@ -62,6 +66,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
   if (tagMap.size === 0) {
     return (
       <div className="tag-panel">
+        <PanelHeader title={t.sidebar.tags} />
         <div className="panel-empty-rich">
           <div className="panel-empty-icon" aria-hidden="true">
             <Icon icon={Hash} size={16} />
@@ -77,10 +82,7 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
 
   return (
     <div className="tag-panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{t.sidebar.tags}</span>
-        <span className="panel-header-actions">{tagMap.size > 0 ? `${tagMap.size}` : ""}</span>
-      </div>
+      <PanelHeader title={t.sidebar.tags} count={tagMap.size} />
       <div className="tag-search-wrap">
         <input
           className="tag-filter"
@@ -138,7 +140,9 @@ export default function TagPanel({ files, onOpenFile }: TagPanelProps) {
               onClick={() => setSelected(tag)}
               title={t.tagPanel.fileCount(files.length)}
             >
-              <span className="tag-name">#{tag}</span>
+              <span className="tag-name" title={`#${tag}`}>
+                #{tag}
+              </span>
               <span className="tag-type">{type}</span>
               <span className="tag-count">{files.length}</span>
             </button>
