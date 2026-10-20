@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Grouped citations work.** `[@a; @b]` and `[@a; @b, p. 3]` now render as one bracket (`[1, 2]`, or `(Rudin, 1976; Smith, 2001)` in author-year styles), export as a single `\cite{a,b}`, and are checked key by key. `[@a][@b]` still renders as two markers.
+- **Document Lab no longer cries wolf.** Diagnostics flagged every `[@key]` citation as not found and every local image as missing, because it never saw the bibliography or the image files. It now uses the vault bibliography and every file in the vault, and resolves image paths relative to the document first, then the vault root. Its messages follow the interface language.
 - **No more false "Something went wrong" toast.** The browser's harmless "ResizeObserver loop" notices are no longer reported as errors.
 - **Focus mode toggles once.** The "Focus mode on/off" notice no longer fires twice, and React no longer warns about updating the toast area while the app renders.
 - **Files with Windows line endings stay that way.** A `.md` or `.tex` file saved with CRLF came back with LF on its first save, so every line showed up as changed in git. The line ending is now remembered per file, follows renames and moves, and new lines get the same ending.

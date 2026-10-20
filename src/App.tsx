@@ -905,6 +905,14 @@ function AppContent({
     return () => clearTimeout(timer)
   }, [vault.openTabs])
 
+  // Everything in the vault that is not a document (images, figures, data):
+  // the diagnostics need it to tell a missing image from one the panel was
+  // simply never shown.
+  const vaultAssetPaths = useMemo(
+    () => vaultFileNodes.filter((f) => f.ext !== "md" && f.ext !== "tex").map((f) => f.path),
+    [vaultFileNodes],
+  )
+
   const vaultFiles = useMemo(() => {
     // Recompute when the open-tab shape changes immediately, or when debounced
     // content changes are allowed through. The actual content is read from the
@@ -4915,6 +4923,9 @@ function AppContent({
                     files={vaultFiles}
                     activePath={vault.activeTabPath}
                     activeContent={vault.openFile?.content ?? ""}
+                    bibKeys={bibKeys}
+                    assetPaths={vaultAssetPaths}
+                    vaultPath={vault.vaultPath}
                     onOpenFile={(path, line) => {
                       const node = findVaultNodeByPath(path)
                       if (node) {

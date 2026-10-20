@@ -1,5 +1,22 @@
 import { scanStructuralLabels } from "./structuralLabels"
-import { pathBasename } from "./pathUtils"
+import { pathBasename, pathDirname } from "./pathUtils"
+import { CITATION_GROUP_RE, parseCitationGroup } from "./bibtex"
+import { es } from "./i18n/es"
+import type { T } from "./i18n/types"
+
+export type DiagnosticMessages = T["documentLab"]["diag"]
+
+/** What the vault holds besides the documents themselves. */
+export interface DiagnosticOptions {
+  /** Citation keys already known (the vault bibliography, parsed). */
+  bibKeys?: Iterable<string>
+  /** Paths of every non-document file (images, figures, assets). */
+  assetPaths?: Iterable<string>
+  /** Vault root, used to resolve image paths the way the preview does. */
+  vaultPath?: string
+  /** UI-language messages; Spanish when omitted. */
+  messages?: DiagnosticMessages
+}
 
 export type DiagnosticSeverity = "error" | "warning" | "info"
 export type DiagnosticCategory =
@@ -52,8 +69,8 @@ function push(
   })
 }
 
-function collectBibKeys(files: DiagnosticFile[]): Set<string> {
-  const keys = new Set<string>()
+function collectBibKeys(files: DiagnosticFile[], extra?: Iterable<string>): Set<string> {
+  const keys = new Set<string>(extra ?? [])
   for (const file of files) {
     if (!file.name.endsWith(".bib") && file.name !== "references.bib") continue
     const re = /@\w+\s*\{\s*([^,\s]+)\s*,/g
@@ -63,20 +80,25 @@ function collectBibKeys(files: DiagnosticFile[]): Set<string> {
   return keys
 }
 
-function scanCitations(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
-  const bibKeys = collectBibKeys(files)
+function scanCitations(
+  files: DiagnosticFile[],
+  issues: DiagnosticIssue[],
+  bibKeys: Set<string>,
+  msg: DiagnosticMessages,
+) {
   for (const file of files) {
     if (!file.name.endsWith(".md") && !file.name.endsWith(".tex")) continue
-    const re = /\[@([A-Za-z0-9:_-]+)(?:[,\]])/g
+    const re = new RegExp(CITATION_GROUP_RE.source, "g")
     let match: RegExpExecArray | null
     while ((match = re.exec(file.content)) !== null) {
-      if (!bibKeys.has(match[1])) {
+      for (const { key } of parseCitationGroup(match[1]) ?? []) {
+        if (bibKeys.has(key)) continue
         push(
           issues,
           file,
           "warning",
           "citations",
-          `Cita no encontrada: @${match[1]}`,
+          msg.citationNotFound(key),
           lineOf(file.content, match.index),
         )
       }
@@ -84,24 +106,37 @@ function scanCitations(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
   }
 }
 
-function scanImages(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
-  const known = new Set(files.map((file) => file.path.toLowerCase()))
-  const basenames = new Set(files.map((file) => file.name.toLowerCase()))
+function scanImages(
+  files: DiagnosticFile[],
+  issues: DiagnosticIssue[],
+  opts: DiagnosticOptions,
+  msg: DiagnosticMessages,
+) {
+  const paths = [...files.map((f) => f.path), ...(opts.assetPaths ?? [])]
+  const norm = (p: string) => p.replace(/\\/g, "/").toLowerCase()
+  const known = new Set(paths.map(norm))
+  const basenames = new Set(paths.map((p) => pathBasename(p).toLowerCase()))
+  const vaultRoot = opts.vaultPath?.replace(/[\\/]+$/, "")
   for (const file of files) {
     if (!file.name.endsWith(".md")) continue
     const re = /!\[[^\]]*\]\(([^)]+)\)/g
     let match: RegExpExecArray | null
     while ((match = re.exec(file.content)) !== null) {
       const src = match[1].trim().replace(/^<|>$/g, "").split(/\s+/)[0]
-      if (/^(https?:|data:|file:)/i.test(src)) continue
+      if (/^(https?:|data:|file:|blob:)/i.test(src)) continue
       const clean = src.replace(/^\.\//, "")
-      if (!known.has(clean.toLowerCase()) && !basenames.has(pathBasename(clean).toLowerCase())) {
+      const candidates = [clean, joinNormalized(pathDirname(file.path), src)]
+      if (vaultRoot) candidates.push(joinNormalized(vaultRoot, src))
+      const found =
+        candidates.some((c) => known.has(norm(c))) ||
+        basenames.has(pathBasename(clean).toLowerCase())
+      if (!found) {
         push(
           issues,
           file,
           "warning",
           "assets",
-          `Imagen local no encontrada: ${src}`,
+          msg.imageNotFound(src),
           lineOf(file.content, match.index),
         )
       }
@@ -109,7 +144,20 @@ function scanImages(files: DiagnosticFile[], issues: DiagnosticIssue[]) {
   }
 }
 
-function scanMath(file: DiagnosticFile, issues: DiagnosticIssue[]) {
+/** Joins `base` and a relative `rel`, collapsing `.` and `..` segments. */
+function joinNormalized(base: string, rel: string): string {
+  if (rel.startsWith("/")) return rel
+  const out: string[] = base.replace(/\\/g, "/").split("/")
+  rel = rel.replace(/\\/g, "/")
+  for (const part of rel.split("/")) {
+    if (part === "" || part === ".") continue
+    if (part === "..") out.pop()
+    else out.push(part)
+  }
+  return out.join("/")
+}
+
+function scanMath(file: DiagnosticFile, issues: DiagnosticIssue[], msg: DiagnosticMessages) {
   const dollars = [...file.content.matchAll(/\$\$/g)]
   if (dollars.length % 2 !== 0) {
     const last = dollars[dollars.length - 1]
@@ -118,7 +166,7 @@ function scanMath(file: DiagnosticFile, issues: DiagnosticIssue[]) {
       file,
       "error",
       "math",
-      "Bloque $$ sin cerrar",
+      msg.unclosedMath,
       last ? lineOf(file.content, last.index ?? 0) : 1,
     )
   }
@@ -128,7 +176,7 @@ function countCells(row: string): number {
   return row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").length
 }
 
-function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[]) {
+function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[], msg: DiagnosticMessages) {
   const lines = file.content.split("\n")
   for (let i = 0; i < lines.length - 1; i++) {
     if (
@@ -146,7 +194,7 @@ function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[]) {
           file,
           "warning",
           "tables",
-          `Fila de tabla con ${cells} columnas; se esperaban ${expected}`,
+          msg.tableColumns(cells, expected),
           j + 1,
           lines[j].trim(),
         )
@@ -156,15 +204,12 @@ function scanTables(file: DiagnosticFile, issues: DiagnosticIssue[]) {
   }
 }
 
-function scanExportRisks(file: DiagnosticFile, issues: DiagnosticIssue[]) {
+function scanExportRisks(file: DiagnosticFile, issues: DiagnosticIssue[], msg: DiagnosticMessages) {
   const checks: Array<[RegExp, string]> = [
-    [
-      /<(iframe|video|audio|details|script|style)\b/i,
-      "HTML embebido puede degradarse en LaTeX/Overleaf",
-    ],
-    [/```mermaid\b/i, "Mermaid no se exporta como diagrama nativo en LaTeX"],
-    [/>\s*\[![A-Z]+\]/, "Callout estilo Obsidian se degrada en LaTeX"],
-    [/!\[\[[^\]]+\]\]/, "Transclusión: verifica que el archivo exista antes de exportar"],
+    [/<(iframe|video|audio|details|script|style)\b/i, msg.exportHtml],
+    [/```mermaid\b/i, msg.exportMermaid],
+    [/>\s*\[![A-Z]+\]/, msg.exportCallout],
+    [/!\[\[[^\]]+\]\]/, msg.exportTransclusion],
   ]
   for (const [re, message] of checks) {
     const match = re.exec(file.content)
@@ -172,29 +217,30 @@ function scanExportRisks(file: DiagnosticFile, issues: DiagnosticIssue[]) {
   }
 }
 
-function scanAcademicStructure(file: DiagnosticFile, issues: DiagnosticIssue[]) {
+function scanAcademicStructure(
+  file: DiagnosticFile,
+  issues: DiagnosticIssue[],
+  msg: DiagnosticMessages,
+) {
   if (!file.name.endsWith(".md")) return
   if (/^---[\s\S]*?^---/m.test(file.content) && !/^---[\s\S]*?title\s*:/m.test(file.content)) {
-    push(issues, file, "info", "structure", "Frontmatter sin title", 1)
+    push(issues, file, "info", "structure", msg.noTitle, 1)
   }
   const theoremRe = /^:::theorem(?:\[([^\]]*)\])?(?:\s*\{#[^}]+\})?/gm
   let match: RegExpExecArray | null
   while ((match = theoremRe.exec(file.content)) !== null) {
     const after = file.content.slice(match.index, match.index + 1200)
     if (!/^:::proof\b/m.test(after)) {
-      push(
-        issues,
-        file,
-        "info",
-        "structure",
-        "Teorema sin demostración cercana",
-        lineOf(file.content, match.index),
-      )
+      push(issues, file, "info", "structure", msg.theoremNoProof, lineOf(file.content, match.index))
     }
   }
 }
 
-export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
+export function diagnoseDocuments(
+  files: DiagnosticFile[],
+  opts: DiagnosticOptions = {},
+): DiagnosticSummary {
+  const msg = opts.messages ?? es.documentLab.diag
   const issues: DiagnosticIssue[] = []
   const index = scanStructuralLabels(files)
 
@@ -202,7 +248,7 @@ export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
     issues.push({
       severity: "error",
       category: "references",
-      message: `Referencia rota: @${ref.id}`,
+      message: msg.brokenRef(ref.id),
       filePath: ref.filePath,
       fileName: ref.fileName,
       line: ref.line,
@@ -214,7 +260,7 @@ export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
       issues.push({
         severity: "warning",
         category: "references",
-        message: `Label duplicado: ${id}`,
+        message: msg.duplicateLabel(id),
         filePath: label.filePath,
         fileName: label.fileName,
         line: label.line,
@@ -226,7 +272,7 @@ export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
     issues.push({
       severity: "info",
       category: "references",
-      message: `Label sin uso: ${label.id}`,
+      message: msg.unusedLabel(label.id),
       filePath: label.filePath,
       fileName: label.fileName,
       line: label.line,
@@ -234,13 +280,13 @@ export function diagnoseDocuments(files: DiagnosticFile[]): DiagnosticSummary {
     })
   }
 
-  scanCitations(files, issues)
-  scanImages(files, issues)
+  scanCitations(files, issues, collectBibKeys(files, opts.bibKeys), msg)
+  scanImages(files, issues, opts, msg)
   for (const file of files) {
-    scanMath(file, issues)
-    scanTables(file, issues)
-    scanExportRisks(file, issues)
-    scanAcademicStructure(file, issues)
+    scanMath(file, issues, msg)
+    scanTables(file, issues, msg)
+    scanExportRisks(file, issues, msg)
+    scanAcademicStructure(file, issues, msg)
   }
 
   return {

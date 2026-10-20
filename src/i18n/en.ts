@@ -1672,6 +1672,21 @@ export const en: T = {
   },
 
   documentLab: {
+    diag: {
+      brokenRef: (id) => `Broken reference: @${id}`,
+      duplicateLabel: (id) => `Duplicate label: ${id}`,
+      unusedLabel: (id) => `Unused label: ${id}`,
+      citationNotFound: (key) => `Citation not found: @${key}`,
+      imageNotFound: (src) => `Local image not found: ${src}`,
+      unclosedMath: "Unclosed $$ block",
+      tableColumns: (cells, expected) => `Table row has ${cells} columns; expected ${expected}`,
+      exportHtml: "Embedded HTML may degrade in LaTeX/Overleaf",
+      exportMermaid: "Mermaid is not exported as a native diagram in LaTeX",
+      exportCallout: "Obsidian-style callout degrades in LaTeX",
+      exportTransclusion: "Transclusion: check that the file exists before exporting",
+      noTitle: "Frontmatter without title",
+      theoremNoProof: "Theorem without a nearby proof",
+    },
     diagnostics: "Diagnostics",
     compatibility: "Export",
     project: "Project",
