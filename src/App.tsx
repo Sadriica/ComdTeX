@@ -60,7 +60,9 @@ import {
   toRelativePath as commentToRelative,
   type Comment,
 } from "./comments"
-import { lintFileSummary, type LintSummary } from "./contentLinter"
+import { lintFileSummary, type LintContext, type LintSummary } from "./contentLinter"
+import { LintVaultIndex } from "./lintVault"
+import { bibStubFor, setCodeActionHost } from "./codeActions"
 import {
   onDictionaryReady,
   preloadDictionary,
@@ -607,8 +609,6 @@ function AppContent({
   const lastEditorContentRef = useRef<string>("")
   const mainRef = useRef<HTMLDivElement>(null)
   // Linter context refs: updated without re-creating the editor callback
-  const lintWikiNamesRef = useRef<Set<string>>(new Set())
-  const lintBibKeysRef = useRef<Set<string>>(new Set())
   // Spell-check linter refs: read live by the linter's getContext callback.
   const lintSpellEnabledRef = useRef(false)
   const lintSpellLangRef = useRef<SpellLang>("es")
@@ -1214,7 +1214,6 @@ function AppContent({
 
   useEffect(() => {
     updateVaultFileNames([...wikiNames])
-    lintWikiNamesRef.current = wikiNames
   }, [wikiNames])
 
   useEffect(() => {
@@ -1413,10 +1412,6 @@ function AppContent({
     }
   }, [cursorPos.line, syncScroll, settings.previewVisible, previewContent])
 
-  useEffect(() => {
-    lintBibKeysRef.current = bibKeys
-  }, [bibKeys])
-
   // ── Dictionary spell-check wiring ─────────────────────────────────────────
   // Re-lint when a dictionary finishes loading async (markers were [] until
   // then). Subscribed once for the editor's lifetime.
@@ -1474,6 +1469,31 @@ function AppContent({
     )
   }, [bibMap])
 
+  // ── Linter context (editor markers, background tab lint, quick fixes) ─────
+  // Everything the linter reads about the vault, in one memo: file names, bib
+  // keys, per-note labels and transclusions (cached per file in LintVaultIndex,
+  // identity-stable until a note's labels change), image paths, macros and the
+  // message table. The active document's path is added at call time.
+  const [lintVaultIndex] = useState(() => new LintVaultIndex())
+  const lintDocs = useMemo(() => lintVaultIndex.update(vaultFiles), [lintVaultIndex, vaultFiles])
+  const lintShared = useMemo<Omit<LintContext, "docPath">>(
+    () => ({
+      vaultFileNames: wikiNames,
+      bibKeys,
+      messages: t.lint.messages,
+      vaultPath: vault.vaultPath ?? undefined,
+      vaultDocs: lintDocs,
+      vaultFilePaths: vaultFilePathSet,
+      macros,
+    }),
+    [wikiNames, bibKeys, t, vault.vaultPath, lintDocs, vaultFilePathSet, macros],
+  )
+  const lintSharedRef = useRef(lintShared)
+  useEffect(() => {
+    lintSharedRef.current = lintShared
+    linterDisposableRef.current?.relint?.()
+  }, [lintShared])
+
   // ── Background lint of all open tabs ─────────────────────────────────────
   // Debounced ~1000ms: `vault.openTabs` gets a new array identity on every
   // keystroke (useVault's updateContent maps the tabs array), so this used to
@@ -1483,17 +1503,16 @@ function AppContent({
   // context (wikiNames/bibKeys) changes, since a stale-content skip would
   // otherwise reuse a summary computed against the old context.
   const lintCacheRef = useRef<Map<string, { content: string; summary: LintSummary }>>(new Map())
-  const lintContextRef = useRef<{ wikiNames: typeof wikiNames; bibKeys: typeof bibKeys } | null>(
-    null,
-  )
+  const lintContextRef = useRef<Omit<LintContext, "docPath"> | null>(null)
   useEffect(() => {
     const timer = setTimeout(() => {
-      const prevContext = lintContextRef.current
-      if (!prevContext || prevContext.wikiNames !== wikiNames || prevContext.bibKeys !== bibKeys) {
+      // The shared context is a memo: a new identity means something the lint
+      // reads (vault names, labels, bib keys, macros, language) changed, so the
+      // per-tab summaries computed against the old one are stale.
+      if (lintContextRef.current !== lintShared) {
         lintCacheRef.current.clear()
-        lintContextRef.current = { wikiNames, bibKeys }
+        lintContextRef.current = lintShared
       }
-      const context = { vaultFileNames: wikiNames, bibKeys }
       const cache = lintCacheRef.current
       const counts: Record<string, LintSummary> = {}
       const seenPaths = new Set<string>()
@@ -1504,7 +1523,7 @@ function AppContent({
           counts[tab.path] = cached.summary
           continue
         }
-        const summary = lintFileSummary(tab.content, tab.name, context)
+        const summary = lintFileSummary(tab.content, tab.name, { ...lintShared, docPath: tab.path })
         cache.set(tab.path, { content: tab.content, summary })
         counts[tab.path] = summary
       }
@@ -1515,7 +1534,7 @@ function AppContent({
       setTabLintCounts(counts)
     }, 1000)
     return () => clearTimeout(timer)
-  }, [vault.openTabs, wikiNames, bibKeys])
+  }, [vault.openTabs, lintShared])
 
   // ── Close warning ─────────────────────────────────────────────────────────
   // (openTabsRef declared earlier; reused here to read latest tabs from
@@ -2443,8 +2462,8 @@ function AppContent({
       // Note: Monaco has built-in spell-check via browser (no config needed)
       linterDisposableRef.current?.dispose()
       linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
-        vaultFileNames: lintWikiNamesRef.current,
-        bibKeys: lintBibKeysRef.current,
+        ...lintSharedRef.current,
+        docPath: vaultRef.current.openFile?.path,
         spellcheck: lintSpellEnabledRef.current,
         spellLang: lintSpellLangRef.current,
         spellMessage: lintSpellMessageRef.current,
@@ -4178,6 +4197,69 @@ function AppContent({
     },
     [t],
   )
+
+  // ── Quick fixes of the linter (codeActions.ts) ────────────────────────────
+  // The fixes that leave the open document go through the vault's own write
+  // paths: `createFile` (refuses to overwrite) and the references.bib write used
+  // by the citation manager. Text fixes are Monaco edits and need nothing here.
+  useEffect(() => {
+    setCodeActionHost({
+      getContext: () => ({
+        ...lintSharedRef.current,
+        docPath: vaultRef.current.openFile?.path,
+      }),
+      getActions: () => t.lint.actions,
+      aiEnabled: () => isAiReady(settingsRef.current),
+      fillGapAt: (line, column) => {
+        editorRef.current?.setPosition({ lineNumber: line, column })
+        void handleFillGaps("cursor")
+      },
+      createNote: async (name) => {
+        const v = vaultRef.current
+        if (!v.vaultPath) return false
+        if (findByName(v.tree, name)) {
+          showToast(t.vault.alreadyExists(name), "error")
+          return false
+        }
+        const previous = v.activeTabPath
+        await v.createFile(name, `# ${name}\n`)
+        // createFile opens what it creates; settle, then confirm it exists and
+        // put the writer back where they were.
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        const created = vaultRef.current.openTabs.some(
+          (tab) => tab.name.replace(/\.[^.]+$/, "").toLowerCase() === name.toLowerCase(),
+        )
+        if (!created) return false
+        if (previous) vaultRef.current.switchTab(previous)
+        showToast(t.lint.actions.noteCreated(name), "success")
+        return true
+      },
+      addBibStub: async (key) => {
+        const v = vaultRef.current
+        if (!v.vaultPath) return false
+        try {
+          const bibPath = await pathJoin(v.vaultPath, BIBTEX_FILENAME)
+          const open = v.openTabs.find((tab) => tab.path === bibPath)
+          const current = open
+            ? open.content
+            : (await exists(bibPath))
+              ? await readTextFile(bibPath)
+              : BIB_TEMPLATE
+          if (parseBibtex(current).has(key)) return true
+          const next = `${current.replace(/\s+$/, "")}\n\n${bibStubFor(key)}\n`
+          if (open) await v.writeFileSafe(bibPath, next)
+          else await writeTextFileAtomic(bibPath, next)
+          setBibMap(parseBibtex(next))
+          showToast(t.lint.actions.bibStubAdded(key), "success")
+          return true
+        } catch {
+          showToast(t.lint.actions.bibStubFailed, "error")
+          return false
+        }
+      },
+    })
+    return () => setCodeActionHost(null)
+  }, [t, handleFillGaps])
 
   /** Turn an existing note into a reusable custom template. */
   const handleSaveAsTemplate = useCallback(

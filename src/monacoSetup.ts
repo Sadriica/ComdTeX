@@ -4,7 +4,8 @@ import katex from "katex"
 // mhchem extension: teaches KaTeX \ce{} so chemistry renders in the preview
 // exactly as it will in the LaTeX export (which loads the mhchem package).
 import "katex/contrib/mhchem"
-import { lintFile, type LintContext } from "./contentLinter"
+import { lintFile, LINTER_SOURCE, type LintContext } from "./contentLinter"
+import { registerCodeActions } from "./codeActions"
 import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
@@ -530,9 +531,12 @@ let hoverDisposable: monacoApi.IDisposable | null = null
 let wikilinkHoverDisposable: monacoApi.IDisposable | null = null
 let crossRefHoverDisposable: monacoApi.IDisposable | null = null
 let footnoteHoverDisposable: monacoApi.IDisposable | null = null
+let codeActionsDisposable: monacoApi.IDisposable | null = null
 
 export function setupMonaco(monaco: typeof monacoApi) {
   registerTypstLanguage(monaco)
+  codeActionsDisposable?.dispose()
+  codeActionsDisposable = registerCodeActions(monaco)
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
     triggerCharacters: ["[", "@", "\\", "^", ":"],
@@ -1043,7 +1047,6 @@ export async function enableVimMode(
 
 // ── Content linter (Monaco markers) ──────────────────────────────────────────
 
-const LINTER_SOURCE = "comdtex"
 const LINTER_DEBOUNCE_MS = 600
 
 /**
