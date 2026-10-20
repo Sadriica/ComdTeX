@@ -9,6 +9,7 @@ import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
 import { registerTypstLanguage } from "./typstLanguage"
+import { findDisplayMathBlocks } from "./useDisplayMathPreview"
 
 export interface Completion {
   label: string
@@ -1195,38 +1196,15 @@ export function setupMathHover(
 
       // Try multi-line $$ block
       if (!mathExpr) {
-        const lineCount = model.getLineCount()
+        // Pair fences from the top of the document (the same detector as the
+        // display-math view zones), so a labelled closing fence is never
+        // mistaken for an opening one.
         const cursorLine = cursor.lineNumber
-
-        // Scan upward for opening $$
-        let openLine = -1
-        for (let ln = cursorLine; ln >= 1; ln--) {
-          if (model.getLineContent(ln).trim() === "$$") {
-            openLine = ln
-            break
-          }
-          // Stop if we hit another line that starts a new block or clearly exits
-          if (ln < cursorLine && model.getLineContent(ln).trim() === "") break
-        }
-
-        // Scan downward for closing $$
-        let closeLine = -1
-        if (openLine !== -1) {
-          for (let ln = cursorLine; ln <= lineCount; ln++) {
-            if (ln === openLine) continue
-            if (model.getLineContent(ln).trim() === "$$") {
-              closeLine = ln
-              break
-            }
-          }
-        }
-
-        if (openLine !== -1 && closeLine !== -1) {
-          const exprLines: string[] = []
-          for (let ln = openLine + 1; ln < closeLine; ln++) {
-            exprLines.push(model.getLineContent(ln))
-          }
-          mathExpr = exprLines.join("\n")
+        const block = findDisplayMathBlocks(model).find(
+          (b) => b.startLine < b.endLine && cursorLine >= b.startLine && cursorLine <= b.endLine,
+        )
+        if (block && block.expr.trim()) {
+          mathExpr = block.expr
           displayMode = true
           matchStart = 0
         }

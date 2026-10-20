@@ -4,6 +4,7 @@ import katex from "katex"
 // exactly as it will in the LaTeX export (which loads the mhchem package).
 import "katex/contrib/mhchem"
 import type { KatexMacros } from "./macros"
+import { isDisplayMathFence, singleLineDisplayMath } from "./displayMathFence"
 
 interface MathBlock {
   startLine: number
@@ -11,7 +12,9 @@ interface MathBlock {
   expr: string
 }
 
-function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] {
+export function findDisplayMathBlocks(
+  model: Pick<monacoApi.editor.ITextModel, "getLineCount" | "getLineContent">,
+): MathBlock[] {
   const blocks: MathBlock[] = []
   const lineCount = model.getLineCount()
   let i = 1
@@ -19,19 +22,20 @@ function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] 
     const line = model.getLineContent(i).trim()
     if (line.startsWith("$$")) {
       const startLine = i
-      const rest = line.slice(2).trimEnd()
-      // Single-line: $$ expr $$
-      if (rest.endsWith("$$") && rest.length > 2) {
-        blocks.push({ startLine, endLine: i, expr: rest.slice(0, -2).trim() })
+      // Single-line: $$ expr $$ (optionally labelled)
+      const single = singleLineDisplayMath(line)
+      if (single !== null) {
+        blocks.push({ startLine, endLine: i, expr: single })
         i++
         continue
       }
-      // Multi-line: collect until closing $$
+      // Multi-line: collect until the closing fence, which may carry a label
+      const rest = line.slice(2).trim()
       const exprLines: string[] = rest ? [rest] : []
       i++
       while (i <= lineCount) {
         const inner = model.getLineContent(i)
-        if (inner.trim() === "$$") {
+        if (isDisplayMathFence(inner)) {
           blocks.push({ startLine, endLine: i, expr: exprLines.join("\n") })
           break
         }
