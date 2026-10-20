@@ -1,17 +1,19 @@
 /* ── Wikilinks ── */
+.preview-content a.wikilink,
 .wikilink {
+  border-bottom: 1px solid color-mix(in oklch, var(--link) 35%, transparent);
   color: var(--link);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in oklch, var(--link) 27%, transparent);
   cursor: pointer;
 }
 .wikilink:hover {
   border-bottom-color: var(--link);
-  background: color-mix(in oklch, var(--link) 7%, transparent);
+  background: color-mix(in oklch, var(--link) 8%, transparent);
 }
+.preview-content a.wikilink-broken,
 .wikilink-broken {
+  border-bottom-color: color-mix(in oklch, var(--fg-muted) 35%, transparent);
   color: var(--fg-muted);
-  border-bottom-color: color-mix(in oklch, var(--fg-muted) 27%, transparent);
 }
 .wikilink-broken:hover {
   border-bottom-color: var(--fg-muted);
@@ -25,7 +27,9 @@
   max-height: 300px;
   padding: var(--space-5) var(--space-6);
   overflow: auto;
+  font-family: var(--font-doc);
   font-size: var(--text-md);
+  line-height: var(--leading-normal);
   pointer-events: none;
 }
 .wikilink-hover-card h1,
@@ -35,9 +39,9 @@
 .wikilink-hover-card h5,
 .wikilink-hover-card h6 {
   margin: 0.2em 0 0.4em;
-  font-size: 1em;
-  border: none;
   padding: 0;
+  border: none;
+  font-size: 1em;
 }
 .wikilink-hover-card p {
   margin: 0.4em 0;
@@ -46,5 +50,3 @@
   color: var(--fg-muted);
   font-style: italic;
 }
-
-/* ── Backlinks Panel ── */

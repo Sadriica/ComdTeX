@@ -33,6 +33,26 @@ describe("renderMarkdown", () => {
     expect(html).toContain('class="katex"')
   })
 
+  it("keeps nested list items nested instead of reading their indent as paragraph indentation", () => {
+    const html = renderMarkdown("- one\n  - nested\n- two\n  continued")
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelectorAll("ul ul li")).toHaveLength(1)
+    expect(doc.querySelector("ul ul li")?.textContent?.trim()).toBe("nested")
+    expect(html).not.toContain("md-soft-indent")
+  })
+
+  it("leaves no stray <br> or empty paragraph around block-level environments and equations", () => {
+    const html = renderMarkdown(
+      ":::definition\nA.\n:::\n:::remark\nB.\n:::\ntext before\n$$\nx=1\n$$\ntext after",
+    )
+    expect(html).not.toMatch(/<br>\s*<div/)
+    expect(html).not.toMatch(/<\/div>\s*<br>/)
+    expect(html).not.toMatch(/<p>\s*<\/p>/)
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelectorAll("p").length).toBeGreaterThan(0)
+    for (const p of doc.querySelectorAll("p")) expect(p.textContent?.trim()).not.toBe("")
+  })
+
   it("keeps soft line breaks inside prose environments as <br>", () => {
     const html = renderMarkdown(":::example\nDatos:\nIncognitas:\nSolucion:\n:::")
 

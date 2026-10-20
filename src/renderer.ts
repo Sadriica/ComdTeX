@@ -287,11 +287,38 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
   text = preserveParagraphIndentationSource(text)
   let html = md.render(text)
   html = preserveParagraphIndentation(html)
+  html = unwrapBlockSlots(html)
 
   html = html.replace(/\x02MATH(\d+)\x03/g, (_, i) => mathSlots[parseInt(i)] ?? "")
   html = html.replace(/\x02ENV(\d+)\x03/g, (_, i) => envSlots[parseInt(i)] ?? "")
 
   return html
+}
+
+// Environments and display equations are block-level, but they travel through
+// markdown-it as placeholders inside ordinary paragraphs. Left there, the HTML
+// parser would close the paragraph around each one and leave empty paragraphs,
+// bare text nodes and (with the `breaks` option) stray <br> elements. So a
+// paragraph that holds a block placeholder is split at it: the text on either
+// side becomes a paragraph of its own and the placeholder stands alone.
+const BLOCK_SLOT = "\\x02(?:ENV|DMATH)\\d+\\x03"
+const HAS_BLOCK_SLOT_RE = new RegExp(BLOCK_SLOT)
+const SPLIT_AT_BLOCK_SLOT_RE = new RegExp(`(${BLOCK_SLOT})`)
+const EDGE_BREAKS_RE = /^(?:\s|<br>)+|(?:\s|<br>)+$/g
+
+function unwrapBlockSlots(html: string): string {
+  if (html.indexOf("\x02") < 0) return html
+  return html.replace(/<p>([\s\S]*?)<\/p>/g, (match, body: string) => {
+    if (!HAS_BLOCK_SLOT_RE.test(body)) return match
+    return body
+      .split(SPLIT_AT_BLOCK_SLOT_RE)
+      .map((part, i) => {
+        if (i % 2 === 1) return part
+        const text = part.replace(EDGE_BREAKS_RE, "")
+        return text ? `<p>${text}</p>` : ""
+      })
+      .join("\n")
+  })
 }
 
 function preserveParagraphIndentation(html: string): string {
@@ -307,13 +334,20 @@ function preserveParagraphIndentation(html: string): string {
 function preserveParagraphIndentationSource(text: string): string {
   const lines = text.split("\n")
   let inFence = false
+  // A list item and everything indented under it up to the next blank line is
+  // structure (nesting, continuation), not paragraph indentation to preserve.
+  let inList = false
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim()
     if (/^(```|~~~)/.test(trimmed)) {
       inFence = !inFence
       continue
     }
-    if (inFence || i === 0 || lines[i - 1].trim() === "") continue
+    if (!inFence) {
+      if (trimmed === "") inList = false
+      else if (/^([-*+]|\d{1,9}[.)])\s/.test(trimmed)) inList = true
+    }
+    if (inFence || inList || i === 0 || lines[i - 1].trim() === "") continue
     const match = /^([ \t]{2,})(?=\S)/.exec(lines[i])
     if (!match) continue
     const spaces = match[1].replace(/\t/g, "    ").length

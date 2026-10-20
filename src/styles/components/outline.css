@@ -10,10 +10,3 @@
 .focus-mode #preview-pane {
   display: none;
 }
-
-/* ── Preview images ── */
-.preview-content img {
-  max-width: 100%;
-  border-radius: 4px;
-  margin: 0.5em 0;
-}

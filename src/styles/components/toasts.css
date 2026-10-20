@@ -83,39 +83,3 @@
 }
 
 /* ── Vim mode status bar ── */
-/* ── Preview light/dark themes ── */
-.preview-light {
-  background: #fafafa;
-  color: #1a1a1a;
-}
-.preview-light .preview-content {
-  color: #1a1a1a;
-}
-
-.preview-dark {
-  background: #1e1e1e;
-  color: #d4d4d4;
-}
-
-/* ── Footnotes ── */
-.footnote-ref {
-  font-size: 0.75em;
-  vertical-align: super;
-}
-.footnote-ref a {
-  text-decoration: none;
-  color: #569cd6;
-}
-.footnote-ref a:hover {
-  text-decoration: underline;
-}
-.footnotes {
-  border-top: 1px solid #333;
-  margin-top: 2em;
-  padding-top: 1em;
-  font-size: 0.85em;
-  color: #888;
-}
-.footnotes li {
-  margin-bottom: 0.5em;
-}

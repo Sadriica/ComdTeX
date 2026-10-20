@@ -1,3 +1,5 @@
+import { envTitle } from "./docLang"
+
 /**
  * YAML frontmatter parsing and rendering.
  *
@@ -233,7 +235,10 @@ export function renderFrontmatterHeader(data: FrontmatterData): string {
   if (meta.length) parts.push(`<div class="fm-meta">${meta.join(" · ")}</div>`)
 
   if (data.abstract) {
-    parts.push(`<div class="fm-abstract">${esc(String(data.abstract))}</div>`)
+    const label = envTitle("abstract") || "Abstract"
+    parts.push(
+      `<div class="fm-abstract"><span class="fm-abstract-label">${esc(label)}</span> ${esc(String(data.abstract))}</div>`,
+    )
   }
 
   if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {

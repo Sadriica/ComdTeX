@@ -228,18 +228,3 @@
 /* ── Pinned tabs ── */
 
 /* ── Drag-to-reorder tabs ── */
-
-/* ── Mermaid diagrams ── */
-.mermaid-diagram {
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 6px;
-  margin: 1em 0;
-  padding: 1em;
-  overflow-x: auto;
-  text-align: center;
-}
-.mermaid-diagram svg {
-  max-width: 100%;
-  height: auto;
-}

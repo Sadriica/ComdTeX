@@ -16,9 +16,6 @@
 .app[data-theme="hc"] .editor-pane {
   border-right: 1px solid var(--border-strong);
 }
-.app[data-theme="hc"] .preview-pane {
-  background: var(--bg-surface);
-}
 
 /* Search panel */
 
@@ -38,24 +35,6 @@
 }
 
 /* Wikilinks / cross-refs */
-
-.app[data-theme="hc"] .transclusion {
-  border: 2px solid var(--link);
-  background: transparent;
-}
-.app[data-theme="hc"] .transclusion-header {
-  color: var(--link);
-}
-.app[data-theme="hc"] .transclusion-missing {
-  border-color: var(--danger);
-}
-.app[data-theme="hc"] .transclusion-missing .transclusion-header {
-  color: var(--danger);
-}
-.app[data-theme="hc"] .xref {
-  color: var(--link);
-  border-bottom: 1px solid var(--link);
-}
 
 .app[data-theme="hc"] .git-commit-btn,
 .app[data-theme="hc"] .git-empty-btn {
@@ -294,12 +273,6 @@
 /* Environments panel */
 
 /* Panel header / empty */
-
-/* Mermaid diagram bg in HC */
-.app[data-theme="hc"] .mermaid-diagram {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-}
 
 /* Scrollbars */
 .app[data-theme="hc"] *::-webkit-scrollbar {

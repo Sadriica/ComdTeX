@@ -1,52 +1,43 @@
-/* ── Bibliography ── */
+/* ── Bibliography: numbered, hanging, a little smaller than the text ── */
 .bibliography {
-  margin-top: 2em;
-  padding-top: 1em;
-  border-top: 1px solid var(--border);
+  margin-top: 2.5em;
+  font-size: 0.92em;
 }
-
-.bibliography h2 {
-  font-size: 1.2em;
-  color: var(--fg);
-  margin-bottom: 0.8em;
-  font-weight: 600;
+.preview-content .bibliography h2 {
+  margin: 0 0 0.8em;
+  font-size: 1.25em;
 }
-
 .bib-entry {
-  display: flex;
-  gap: 0.7em;
-  font-size: 0.9em;
-  color: var(--fg-muted);
-  margin-bottom: 0.6em;
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1fr);
+  column-gap: 0.4em;
+  margin-bottom: 0.5em;
+  color: var(--fg);
   line-height: 1.5;
+  text-align: left;
+  hyphens: manual;
 }
-
 .bib-number {
   color: var(--fg-muted);
-  flex-shrink: 0;
-  min-width: 2.5em;
+  font-variant-numeric: lining-nums tabular-nums;
   text-align: right;
 }
-
 .bib-content em {
-  color: var(--fg);
-  font-style: normal;
-  font-weight: 600;
+  font-style: italic;
 }
-
 .bib-missing {
   color: var(--fg-muted);
   font-style: italic;
 }
 
+/* ── Citations: [1] raised for numbered styles, inline (Author Year) otherwise ── */
 .cite-ref {
   color: var(--link);
-  text-decoration: none;
-  font-size: 0.85em;
-  vertical-align: super;
 }
-.cite-ref:hover {
-  text-decoration: underline;
+.preview-content sup:has(> .cite-ref) {
+  margin-left: 0.05em;
+  font-size: 0.72em;
+  font-variant-numeric: lining-nums;
 }
 .cite-broken {
   color: var(--danger);

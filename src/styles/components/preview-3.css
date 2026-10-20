@@ -1,110 +1,145 @@
+/* ── Transclusion ![[note]]: quoted from another note, so set apart by a thin
+   rule rather than a box ── */
 .transclusion {
-  border: 1px solid #333;
-  border-left: 4px solid #4ec9b0;
-  border-radius: 6px;
-  padding: 8px 14px 10px;
-  margin: 1em 0 1em 12px;
-  background: rgba(78, 201, 176, 0.06);
+  --transclusion-accent: var(--ok);
+  margin: 1.2em 0 1.2em 0.4em;
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-left: 2px solid var(--transclusion-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in oklch, var(--transclusion-accent) 6%, transparent);
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 .transclusion:hover {
-  background: rgba(78, 201, 176, 0.12);
+  background: color-mix(in oklch, var(--transclusion-accent) 11%, transparent);
 }
 .transclusion-header {
-  font-size: 11px;
-  color: #4ec9b0;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3);
+  color: var(--transclusion-accent);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
   font-style: italic;
   letter-spacing: 0.02em;
-  text-transform: none;
   user-select: none;
 }
 .transclusion-missing {
-  border-left-color: #d16969;
-  background: rgba(209, 105, 105, 0.06);
-}
-.transclusion-missing .transclusion-header {
-  color: #d16969;
-}
-.xref {
-  color: #9cdcfe;
-  border-bottom: 1px dotted #9cdcfe66;
-  text-decoration: none;
+  --transclusion-accent: var(--danger);
 }
 
-/* ── Figures ── */
+/* ── Cross references: the link colour, no underline until hover ── */
+.xref {
+  border-bottom: 1px dotted color-mix(in oklch, var(--link) 45%, transparent);
+}
+.preview-content :is(a.xref, a.fig-ref, a.tbl-ref, a.env-ref, a.cite-ref) {
+  text-decoration: none;
+}
+.preview-content :is(a.xref, a.fig-ref, a.tbl-ref, a.env-ref, a.cite-ref):hover {
+  text-decoration: underline;
+}
+.xref-broken,
+.fig-ref-broken {
+  color: var(--danger);
+}
+
+/* ── Figures: centred, caption below in a smaller size ── */
 .fig-block {
-  margin: 1.5em auto;
-  text-align: center;
   max-width: 100%;
+  margin: 1.6em auto;
+  text-align: center;
+  break-inside: avoid;
 }
 .fig-block img {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
 }
-.fig-block figcaption {
-  margin-top: 6px;
-  font-size: 0.85em;
-  color: #888;
-  font-style: italic;
-  text-align: center;
+.fig-block figcaption,
+.tbl-block figcaption {
+  max-width: 92%;
+  margin: 0.6em auto 0;
+  color: var(--fg);
+  font-size: 0.88em;
+  line-height: var(--leading-normal);
+  text-wrap: balance;
+  hyphens: manual;
 }
-.fig-number {
+.fig-number,
+.tbl-number {
+  color: var(--fg);
   font-style: normal;
   font-weight: 600;
-  color: #9cdcfe;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.03em;
 }
-.fig-ref {
-  color: #9cdcfe;
-  text-decoration: none;
+.tbl-number::after {
+  content: ".";
 }
 .fig-ref:hover {
   text-decoration: underline;
 }
-.fig-ref-broken {
-  color: #f48771;
-}
+
+/* ── Tables are figures too, but the caption goes above (booktabs) ── */
 .tbl-block {
-  margin: 1.5em auto;
+  display: flex;
+  flex-direction: column;
+  margin: 1.6em auto;
   overflow-x: auto;
+  break-inside: avoid;
 }
 .tbl-block table {
   margin: 0 auto;
 }
 .tbl-block figcaption {
-  margin-top: 6px;
-  text-align: center;
-  font-size: 0.85em;
-  color: #888;
-}
-.tbl-number {
-  color: #9cdcfe;
-  font-weight: 600;
+  order: -1;
+  margin: 0 auto 0.5em;
 }
 
 /* ── Footnotes (markdown-it-footnote) ── */
+.footnotes-sep {
+  display: none;
+}
 .footnotes {
-  border-top: 1px solid var(--border);
-  margin-top: 2em;
-  padding-top: 1em;
-  font-size: 0.85em;
-  color: var(--fg-muted);
+  margin-top: 2.5em;
+  color: var(--fg);
+  font-size: 0.86em;
+  line-height: 1.5;
+}
+.footnotes::before {
+  content: "";
+  display: block;
+  width: 8em;
+  margin-bottom: 0.9em;
+  border-top: 1px solid var(--border-strong);
 }
 .footnotes ol {
-  padding-left: 1.5em;
+  margin: 0;
+  padding-left: 2em;
 }
 .footnotes li {
-  margin: 0.25em 0;
+  margin: 0 0 0.4em;
+  padding-left: 0.2em;
 }
-.footnote-ref a,
-.footnote-backref {
-  color: var(--link);
+.footnotes li::marker {
+  color: var(--fg-muted);
+}
+.footnotes li p {
+  display: inline;
+  margin: 0;
+  text-wrap: auto;
+}
+.footnote-ref {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: super;
+}
+.preview-content :is(.footnote-ref a, a.footnote-backref) {
   text-decoration: none;
-  font-size: 0.8em;
 }
-.footnote-ref a:hover,
-.footnote-backref:hover {
+.preview-content a.footnote-backref {
+  margin-left: 0.3em;
+  font-family: var(--font-ui);
+  font-size: 0.9em;
+  font-variant-emoji: text;
+}
+.preview-content :is(.footnote-ref a, a.footnote-backref):hover {
   text-decoration: underline;
 }

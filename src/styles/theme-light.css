@@ -11,11 +11,6 @@
 .app[data-theme="light"] .editor-pane {
   border-right-color: var(--border);
 }
-.app[data-theme="light"] .preview-pane {
-  background: var(--bg-surface);
-}
-
-/* Preview content (default: when previewTheme is "same") */
 
 /* Search panel */
 
@@ -35,26 +30,6 @@
 }
 
 /* Wikilinks / cross-refs */
-.app[data-theme="light"] .xref {
-  color: var(--accent);
-  border-bottom-color: color-mix(in oklch, var(--accent) 40%, transparent);
-}
-
-.app[data-theme="light"] .transclusion {
-  border-color: var(--border);
-  border-left-color: var(--ok);
-  background: color-mix(in oklch, var(--ok) 6%, transparent);
-}
-.app[data-theme="light"] .transclusion-header {
-  color: var(--ok);
-}
-.app[data-theme="light"] .transclusion-missing {
-  border-left-color: var(--danger);
-  background: color-mix(in oklch, var(--danger) 5%, transparent);
-}
-.app[data-theme="light"] .transclusion-missing .transclusion-header {
-  color: var(--danger);
-}
 
 .app[data-theme="light"] .git-commit-area {
   border-bottom-color: var(--border);
@@ -326,12 +301,6 @@
 /* Environments panel */
 
 /* Panel header / empty */
-
-/* Mermaid diagram bg in light */
-.app[data-theme="light"] .mermaid-diagram {
-  background: var(--bg-surface);
-  border-color: var(--border);
-}
 
 /* Scrollbars */
 .app[data-theme="light"] *::-webkit-scrollbar {

@@ -8,30 +8,8 @@
    its import in index.css) once it is empty. */
 
 /* Panes */
-.preview-pane,
 .pdf-preview-panel {
   background: var(--bg-surface);
-}
-
-/* Preview */
-.preview-content {
-  color: var(--fg);
-}
-.preview-content h1,
-.preview-content h2,
-.preview-content h3,
-.preview-content h4 {
-  color: var(--fg);
-}
-.preview-content h1,
-.preview-content h2 {
-  border-bottom-color: var(--border);
-}
-.preview-content th {
-  background: var(--bg-raised);
-}
-.preview-content tr:nth-child(even) td {
-  background: var(--bg-sunken);
 }
 
 .fm-author {

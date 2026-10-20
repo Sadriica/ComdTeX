@@ -566,3 +566,29 @@ for (const { name, theme } of THEMES) {
     await page.evaluate(() => document.getElementById("visual-inject")?.remove())
   })
 }
+
+// Typeset preview: a manuscript with every block kind, in the paper and sans styles.
+for (const { name, theme } of THEMES) {
+  for (const style of ["paper", "sans"]) {
+    test(`visual ${name}: typeset preview (${style})`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await installDeterminism(page)
+      await installFakeVault(page, {
+        settings: { theme, documentStyle: style },
+        tabs: ["papers/typesetting.md"],
+        storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+      })
+      await page.goto("/")
+      await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+      await settle(page, { math: true })
+      await shot(page, name, `typeset-${style}__top`)
+      for (const [i, y] of [800, 1700, 2600].entries()) {
+        await page.evaluate((top) => {
+          ;(document.querySelector("#preview-pane") as HTMLElement).scrollTop = top
+        }, y)
+        await page.waitForTimeout(500)
+        await shot(page, name, `typeset-${style}__scrolled-${i + 1}`)
+      }
+    })
+  }
+}
