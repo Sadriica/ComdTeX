@@ -374,7 +374,7 @@ export function setupEditorCommands(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const snippetCtrl = () => editor.getContribution<any>("snippetController2")
   // Assigned below; the Enter handler reads it at keystroke time.
-  let triggers: CompletionTriggers | undefined
+  const triggers: { current?: CompletionTriggers } = {}
 
   editor.onKeyDown((e) => {
     if (e.keyCode !== monaco.KeyCode.Tab) return
@@ -439,7 +439,7 @@ export function setupEditorCommands(
       const at = editor.getPosition()
       const here = editor.getModel()
       // A widget that opened by itself in math is not an answer to Enter.
-      if (!at || !here || !triggers?.refusesEnter(here, at)) return
+      if (!at || !here || !triggers.current?.refusesEnter(here, at)) return
       editor.trigger("keyboard", "hideSuggestWidget", null)
     }
 
@@ -523,7 +523,7 @@ export function setupEditorCommands(
 
   // Keep the suggest widget coming in frontmatter, :::csv bodies, multi-cites
   // and math, without enabling quickSuggestions for prose.
-  triggers = setupCompletionTriggers(editor)
+  triggers.current = setupCompletionTriggers(editor)
   setupAutoCloseGuards(editor, monaco)
 
   // quickSuggestions is off globally (App.tsx editor options) so the widget
