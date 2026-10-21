@@ -119,8 +119,7 @@
     }
   }
   .modal,
-  .palette,
-  .quick-switcher {
+  .palette {
     transition:
       opacity var(--dur-med) var(--ease-standard),
       transform var(--dur-med) var(--ease-standard);
@@ -178,7 +177,6 @@
 /* ── Popover: the one floating-card surface ── */
 .popover-panel,
 .palette,
-.quick-switcher,
 .focus-popover,
 .cmdk-edit,
 .wikilink-hover-card,
@@ -192,9 +190,7 @@
 
 /* ── kbd chip: shortcuts in the palette, menus and the shortcuts dialog ── */
 .kbd,
-.help-key,
-.cmd-shortcut,
-.quick-switcher-footer kbd {
+.help-key {
   display: inline-flex;
   align-items: center;
   justify-content: center;

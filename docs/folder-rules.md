@@ -114,7 +114,7 @@ final bajo *Sin fecha*, no se descartan.
 No es automático. Se ejecuta cuando tú lo pides:
 
 - **Menú Vault → Regenerar archivos de carpeta**
-- **Ctrl+P → "Regenerar archivos de carpeta"**
+- **Ctrl+Shift+P → "Regenerar archivos de carpeta"**
 
 Regenera las reglas de la carpeta del archivo que tengas abierto.
 

@@ -75,7 +75,7 @@ async function openFromMenu(page: Page, section: string, item: string) {
 }
 
 async function palette(page: Page, query: string) {
-  await page.keyboard.press("Control+p")
+  await page.keyboard.press("Control+Shift+p")
   await page.locator(".palette-input").fill(query)
   await page.waitForTimeout(250)
 }
@@ -236,8 +236,8 @@ for (const { name, theme } of THEMES) {
     await shot(page, name, "panel__git")
     await closeOverlays(page)
 
-    // Command palette (empty, then filtered).
-    await page.keyboard.press("Control+p")
+    // Command palette: commands (empty, filtered) and every other mode.
+    await page.keyboard.press("Control+Shift+p")
     await page.locator(".palette-input").waitFor()
     await page.waitForTimeout(400)
     await shot(page, name, "command-palette")
@@ -245,6 +245,23 @@ for (const { name, theme } of THEMES) {
     await page.waitForTimeout(300)
     await shot(page, name, "command-palette__filtered")
     await closeOverlays(page)
+
+    for (const [label, query] of [
+      ["files", ""],
+      ["files-filtered", "gap"],
+      ["outline", "@"],
+      ["labels", "#"],
+      ["cite", "["],
+      ["line", ":12"],
+      ["help", "?"],
+    ] as const) {
+      await page.keyboard.press("Control+p")
+      await page.locator(".palette-input").waitFor()
+      if (query) await page.locator(".palette-input").fill(query)
+      await page.waitForTimeout(350)
+      await shot(page, name, `command-palette__${label}`)
+      await closeOverlays(page)
+    }
 
     // Citation manager.
     await palette(page, "citation manager")

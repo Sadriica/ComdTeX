@@ -297,7 +297,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Per-line comments: annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
 - Clickable checkboxes in preview
-- Visual table editor (Ctrl+P → "Table editor")
+- Visual table editor (Ctrl+Shift+P → "Table editor")
 - Typewriter mode and focus mode (F11)
 - Autosave (debounced) with crash recovery via drafts
 - Session restore (tabs, active file, pinned tabs)
@@ -310,8 +310,8 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-render correctness: macros are loaded before the initial render (no flash of unrendered math)
 
 ### Navigation & Panels
-- Command palette (Ctrl+P): a categorized, selection-aware universal launcher: eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
-- Quick switcher (Ctrl+;): fast file switching
+- Command palette (Ctrl+Shift+P): a categorized, selection-aware universal launcher: eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
+- Go to file (Ctrl+P or Ctrl+;): fuzzy file search with the folder shown, recents first, `note#heading` jumps, and a Create note row when nothing matches. The same box has prefixes: `>` commands, `@` headings and labels of this document, `#` labels across the vault (Alt+Enter inserts a reference), `[` citations from references.bib (Enter inserts `[@key]`), `:` go to line, `?` lists the modes
 - Daily notes (Ctrl+Shift+D): create or jump to today's dated note
 - Outline panel (document headings): drag headings to reorder sections in the source
 - Backlinks panel (incoming `[[wikilinks]]`)
@@ -386,13 +386,13 @@ All cited entries are collected into a bibliography at the bottom of the preview
 | `Ctrl+S` | Save current file |
 | `Ctrl+Shift+S` | Save as |
 | `Ctrl+O` | Open vault |
-| `Ctrl+P` | Command palette |
-| `Ctrl+;` | Quick switcher |
+| `Ctrl+P` / `Ctrl+;` | Go to file |
+| `Ctrl+Shift+P` | Command palette |
 | `Ctrl+Shift+D` | Open or create today's daily note |
 | `Ctrl+F` | Find in file |
 | `Ctrl+Shift+F` | Search across vault |
 | `Ctrl+D` | Select next occurrence |
-| `Ctrl+Shift+P` | Toggle preview |
+| `Ctrl+Alt+P` | Toggle preview |
 | `Ctrl++` / `Ctrl+-` | Zoom in / out |
 | `Ctrl+0` | Reset zoom |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |

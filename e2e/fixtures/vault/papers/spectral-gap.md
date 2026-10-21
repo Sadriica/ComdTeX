@@ -8,7 +8,7 @@ abstract: "We bound the spectral gap of lazy random walks on regular graphs."
 
 # Introduction {#sec:intro}
 
-Let $G=(V,E)$ be a $d$-regular graph on $n$ vertices. The *spectral gap* controls how fast a random walk mixes [@levin2017][@lubotzky1988]. See also [[mixing-times]] and [[expander-notes]].
+Let $G=(V,E)$ be a $d$-regular graph on $n$ vertices. The _spectral gap_ controls how fast a random walk mixes [@levin2017][@lubotzky1988]. See also [[mixing-times]] and [[expander-notes]].
 
 > [!NOTE]
 > All graphs in this draft are finite, simple and connected. Macros come from [[macros]].
@@ -28,7 +28,9 @@ A $d$-regular graph $G$ is an $\varepsilon$-expander if $\gamma(G)\ge\varepsilon
 :::lemma[Cheeger-type bound]{#lem:cheeger}
 For every $S\subseteq V$ with $|S|\le n/2$ we have
 $$
+
 \frac{|E(S,\bar S)|}{d|S|} \ge \frac{\gamma(G)}{2}.
+
 $$ {#eq:cheeger}
 :::
 
@@ -39,7 +41,9 @@ Apply the variational characterization of $\lambda_2$ to the test vector $f=\mat
 :::theorem[Mixing time]{#thm:mixing}
 If $G$ is an $\varepsilon$-expander (Definition @def:expander) then the lazy walk mixes in
 $$
+
 t_{\mathrm{mix}} \le \frac{1}{\varepsilon}\log\frac{n}{\delta}
+
 $$ {#eq:mixing}
 steps. This follows from Lemma @lem:cheeger and @eq:cheeger.
 :::
@@ -110,3 +114,4 @@ C -> D [k]
 
 # References {#sec:refs}
 
+$$

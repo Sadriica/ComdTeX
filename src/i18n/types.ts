@@ -539,6 +539,81 @@ export interface T {
     openAi: string
     aiInlineEdit: string
     exportObsidian: string
+    lineBreak: string
+    quickFix: string
+    lineBreakHint: string
+    snippets: string
+    snippetsHint: string
+    ph: {
+      text: string
+      code: string
+      item: string
+      task: string
+      title: string
+      statement: string
+      content: string
+      noteName: string
+      footnote: string
+      key: string
+      hint: string
+      remark: string
+      caption: string
+      imageFile: string
+      label: string
+      quote: string
+      definition: string
+      proof: string
+      exercise: string
+      example: string
+      author: string
+    }
+    here: {
+      group: string
+      mathToDisplay: string
+      changeEnvType: string
+    }
+    groups: {
+      pinned: string
+      recent: string
+      recentFiles: string
+      files: string
+      categories: string
+    }
+    pin: string
+    unpin: string
+    modes: Record<
+      "files" | "commands" | "outline" | "labels" | "cite" | "line" | "help",
+      { name: string; placeholder: string; hint: string }
+    >
+    modesTitle: string
+    listLabel: string
+    resultCount: (n: number) => string
+    showingFirst: (shown: number, total: number) => string
+    createNote: (name: string) => string
+    createNoteIn: (folder: string) => string
+    noteCreateFailed: string
+    goToLine: (line: number, column?: number) => string
+    lineHint: (count: number) => string
+    noDocument: string
+    noLabels: string
+    noCitations: string
+    noHeadings: (note: string) => string
+    noteNotFound: (note: string) => string
+    inThisFile: string
+    insertCitationHint: string
+    insertReferenceHint: string
+    footer: {
+      navigate: string
+      run: string
+      open: string
+      jump: string
+      insert: string
+      insertAlt: string
+      pin: string
+      create: string
+      close: string
+      modes: string
+    }
     categories: {
       Edición: string
       Insertar: string
@@ -566,14 +641,6 @@ export interface T {
     exportAnkiCards: string
     ankiNoCards: string
     ankiExported: (n: number) => string
-  }
-
-  quickSwitcher: {
-    placeholder: string
-    noResults: string
-    navigate: string
-    open: string
-    close: string
   }
 
   sidebar: {
@@ -920,6 +987,7 @@ export interface T {
     findInFile: string
     searchVault: string
     commandPalette: string
+    goToFile: string
     undo: string
     redo: string
     cut: string

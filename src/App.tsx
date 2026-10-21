@@ -112,7 +112,11 @@ import DocumentLabPanel from "./DocumentLabPanel"
 import FrontmatterPanel from "./FrontmatterPanel"
 import StatusBar from "./StatusBar"
 import CommandPalette from "./CommandPalette"
-import type { PaletteCommand } from "./CommandPalette"
+import type { PaletteCommand, PaletteMode } from "./CommandPalette"
+import { computeCursorContext } from "./cursorContext"
+import { citationInsertEdit } from "./paletteSources"
+import { registerPaletteKeys } from "./paletteKeys"
+import type { StructuralLabel } from "./structuralLabels"
 import { buildPaletteCommands } from "./commands"
 import { buildMenus, type EditorActionId } from "./menus"
 import { insertSnippet } from "./editorInsert"
@@ -156,7 +160,6 @@ import { resolveTransclusions } from "./transclusion"
 import { LabelScanner, createDefaultLabelBackend } from "./labelScanner"
 import { showToast } from "./toastService"
 import ClosedTabsPopup from "./ClosedTabsPopup"
-import QuickSwitcher from "./QuickSwitcher"
 import BookmarksPopup from "./BookmarksPopup"
 import OnboardingTour from "./OnboardingTour"
 import {
@@ -726,8 +729,22 @@ function AppContent({
   }, [selectedWords])
   const [tabLintCounts, setTabLintCounts] = useState<Record<string, LintSummary>>({})
   const [focusMode, setFocusMode] = useState(false)
-  const [paletteOpen, setPaletteOpen] = useState(false)
-  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false)
+  // The palette: one component, several modes. `nonce` re-keys it per opening so
+  // its state (query, cursor context) starts fresh each time.
+  const [paletteReq, setPaletteReq] = useState<{
+    open: boolean
+    mode: PaletteMode
+    intent?: "insert"
+    nonce: number
+  }>({ open: false, mode: "files", nonce: 0 })
+  const openPalette = useCallback(
+    (mode: PaletteMode, intent?: "insert") =>
+      setPaletteReq((r) => ({ open: true, mode, intent, nonce: r.nonce + 1 })),
+    [],
+  )
+  const closePalette = useCallback(() => setPaletteReq((r) => ({ ...r, open: false })), [])
+  const pendingGotoRef = useRef<{ path: string; line: number } | null>(null)
+  const [paletteLabels, setPaletteLabels] = useState<StructuralLabel[]>([])
   const [closedTabsOpen, setClosedTabsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined)
@@ -1232,6 +1249,7 @@ function AppContent({
     if (!scanner) return
     void scanner.update(vaultFiles).then((index) => {
       if (!index) return
+      setPaletteLabels(index.labels)
       updateStructuralLabelSuggestions(
         index.labels.map((label) => ({
           id: label.id,
@@ -1763,8 +1781,8 @@ function AppContent({
             showToast(next ? t.app.focusModeOn : t.app.focusModeOff, "info")
           },
           exitFocusMode: () => setFocusMode(false),
-          openCommandPalette: () => setPaletteOpen(true),
-          openQuickSwitcher: () => setQuickSwitcherOpen(true),
+          openCommandPalette: () => openPalette("commands"),
+          openFilesPalette: () => openPalette("files"),
           toggleBookmark: (slot: number) => {
             if (!editorRef.current || !vault.activeTabPath) return
             const line = editorRef.current.getPosition()?.lineNumber ?? 1
@@ -1874,6 +1892,7 @@ function AppContent({
     nextTab,
     prevTab,
     openPanel,
+    openPalette,
   ])
 
   // ── Linter + math hover + pending-timer cleanup on unmount ────────────────
@@ -2468,6 +2487,24 @@ function AppContent({
       editorRef.current = editor
       setEditorInstance(editor)
       setupEditorCommands(editor, monaco, () => listContinuationRef.current)
+      // Palette keys on the editor itself: Monaco owns F1 and monaco-vim owns
+      // Ctrl+P, so the window listener alone is not enough while it has focus.
+      registerPaletteKeys(editor, monaco, () => ({
+        openCommands: () => openPalette("commands"),
+        openFiles: () => openPalette("files"),
+        togglePreview: () =>
+          updateSettings({ previewVisible: !settingsRef.current.previewVisible }),
+      }))
+      // A palette jump to a line in a file that was not open: apply it now that
+      // the file's editor exists.
+      const pendingGoto = pendingGotoRef.current
+      if (pendingGoto && pendingGoto.path === vaultRef.current.activeTabPath) {
+        pendingGotoRef.current = null
+        setTimeout(() => {
+          editor.setPosition({ lineNumber: pendingGoto.line, column: 1 })
+          editor.revealLineInCenter(pendingGoto.line)
+        }, 0)
+      }
       // Note: Monaco has built-in spell-check via browser (no config needed)
       linterDisposableRef.current?.dispose()
       linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
@@ -2639,7 +2676,16 @@ function AppContent({
       // Apply typewriter mode from settings
       applyTypewriterMode(editor, settings.typewriterMode)
     },
-    [vault, settings.vimMode, settings.typewriterMode, t, openPanel, restoreEditorPlacement],
+    [
+      vault,
+      settings.vimMode,
+      settings.typewriterMode,
+      t,
+      openPanel,
+      restoreEditorPlacement,
+      openPalette,
+      updateSettings,
+    ],
   )
 
   const handleChange = useCallback(
@@ -3170,7 +3216,7 @@ function AppContent({
 
   useTouchpadGestures(
     {
-      openCommandPalette: () => setPaletteOpen(true),
+      openCommandPalette: () => openPalette("commands"),
       nextTab,
       prevTab,
       searchVault,
@@ -4811,6 +4857,8 @@ function AppContent({
         goBack,
         goForward,
         handleShowInPdf,
+        openPalette,
+        editorRef,
       }),
     [
       t,
@@ -4846,6 +4894,7 @@ function AppContent({
       goBack,
       goForward,
       handleShowInPdf,
+      openPalette,
     ],
   )
 
@@ -4887,7 +4936,7 @@ function AppContent({
         handleSaveAs,
         handleFind,
         openPanel,
-        setPaletteOpen,
+        openPalette,
         setFocusMode,
         handleOpenMacros,
         handleOpenBib,
@@ -4915,6 +4964,7 @@ function AppContent({
       runEditorAction,
       handleNormalizeTable,
       handleRegenerateFolderFiles,
+      openPalette,
     ],
   )
 
@@ -4934,6 +4984,97 @@ function AppContent({
       </LazyRegion>
     ),
     [vault.vaultPath, gitOpenSignal],
+  )
+
+  // ── Command palette wiring ───────────────────────────────────────────────
+  // Everything the palette's modes read comes from state the app already holds
+  // (file tree, label index, bib map, open buffers); nothing here scans the disk.
+  const paletteCtx = {
+    getDocumentText: () => editorRef.current?.getValue() ?? vault.openFile?.content ?? null,
+    getFileText: (path: string) =>
+      vaultFilesRef.current.find((f) => f.path === path)?.content ?? null,
+    getCursorContext: () => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      const pos = editor?.getPosition()
+      if (!editor || !model || !pos) return null
+      return computeCursorContext(
+        model.getValue(),
+        pos.lineNumber,
+        pos.column,
+        !editor.getSelection()?.isEmpty(),
+      )
+    },
+    lineCount: () => editorRef.current?.getModel()?.getLineCount() ?? 1,
+    onGoToLine: (line: number, column = 1) => {
+      const editor = editorRef.current
+      editor?.setPosition({ lineNumber: line, column })
+      editor?.revealLineInCenter(line)
+      editor?.focus()
+    },
+    onOpenPath: (path: string, line?: number) => {
+      const node = findVaultNodeByPath(path)
+      if (!node) return
+      if (line && vault.activeTabPath === path) {
+        paletteCtx.onGoToLine(line)
+        return
+      }
+      if (line) pendingGotoRef.current = { path, line }
+      handleOpenFileNode(node)
+    },
+    onInsertCitation: (key: string) => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      const pos = editor?.getPosition()
+      if (!editor || !model || !pos) return
+      const edit = citationInsertEdit(model.getLineContent(pos.lineNumber), pos.column, key)
+      if (edit) {
+        editor.executeEdits("palette-cite", [
+          {
+            range: {
+              startLineNumber: pos.lineNumber,
+              endLineNumber: pos.lineNumber,
+              startColumn: edit.startColumn,
+              endColumn: edit.endColumn,
+            },
+            text: edit.text,
+          },
+        ])
+      }
+      editor.focus()
+    },
+    onInsertReference: (text: string) => {
+      const editor = editorRef.current
+      const selection = editor?.getSelection()
+      if (!editor || !selection) return
+      editor.executeEdits("palette-ref", [{ range: selection, text, forceMoveMarkers: true }])
+      editor.focus()
+    },
+    onCreateNote: (fileName: string, folderRel: string) => {
+      const root = vault.vaultPath
+      if (!root) return
+      void (async () => {
+        const parentDir = folderRel ? await pathJoin(root, ...folderRel.split("/")) : root
+        await createFileWithRules(fileName, parentDir)
+      })()
+    },
+  }
+  const paletteEl = (
+    <CommandPalette
+      key={paletteReq.nonce}
+      open={paletteReq.open}
+      initialMode={paletteReq.mode}
+      intent={paletteReq.intent}
+      onClose={closePalette}
+      files={vaultFileNodes}
+      vaultRoot={vault.vaultPath}
+      commands={paletteCommands}
+      recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
+      activeFilePath={vault.activeTabPath}
+      labels={paletteLabels}
+      bib={bibMap}
+      {...paletteCtx}
+    />
   )
 
   const themeAttr =
@@ -4963,15 +5104,7 @@ function AppContent({
           }}
         />
         <ToastContainer />
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          files={vault.tree}
-          commands={paletteCommands}
-          onOpenFile={handleOpenFileNode}
-          recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
-          onOpenRecent={handleOpenRecent}
-        />
+        {paletteEl}
         <LazyRegion region="dialog">
           <SettingsModal
             key={settingsSection ?? "default"}
@@ -5522,32 +5655,13 @@ function AppContent({
         }}
       />
 
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        files={vault.tree}
-        commands={paletteCommands}
-        onOpenFile={handleOpenFileNode}
-        recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
-        onOpenRecent={handleOpenRecent}
-      />
+      {paletteEl}
 
       <ClosedTabsPopup
         open={closedTabsOpen}
         paths={recentlyClosed}
         onSelect={(path) => vault.reopenTab(path)}
         onClose={() => setClosedTabsOpen(false)}
-      />
-
-      <QuickSwitcher
-        open={quickSwitcherOpen}
-        files={vaultFileNodes.map((f) => ({ path: f.path, name: f.name }))}
-        recentFiles={recentFiles.map((p) => ({ path: p, name: displayBasename(p) }))}
-        onSelect={(path) => {
-          const node = findVaultNodeByPath(path)
-          if (node) handleOpenFileNode(node)
-        }}
-        onClose={() => setQuickSwitcherOpen(false)}
       />
 
       <BookmarksPopup

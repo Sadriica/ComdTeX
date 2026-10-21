@@ -139,7 +139,7 @@ Never invent a `{{?}}` marker in content you generate.
   (Help, Outline, Equations, Environments) have their own filter box.
 - **Focus timer**: a Pomodoro popover hanging off the top bar, with a compact
   clock in the bar while a session runs.
-- **Command palette**: `Ctrl+P` (fuzzy file + command launcher). Notable commands:
+- **Command palette**: `Ctrl+Shift+P` commands, `Ctrl+P` files (fuzzy launcher; prefixes `@` headings, `#` labels, `[` citations, `:` line). Notable commands:
   "Normalizar tabla" (pad a pipe table's short rows and realign it),
   "Dividir documento en secciones" (one file per `##`, linked by transclusions),
   "Regenerar archivos de carpeta", "Completar hueco con IA".
