@@ -112,6 +112,7 @@ so the contrast gate covers it. No component file changes.
 | `--overlay` | modal backdrop |
 | `--code-bg`, `--code-fg` | code blocks and inline code |
 | `--syn-keyword`, `--syn-string`, `--syn-number`, `--syn-comment`, `--syn-function`, `--syn-type`, `--syn-punct` | syntax colours in the preview |
+| `--syn-math`, `--syn-ref`, `--syn-cite`, `--syn-label` | editor grammar colours (comdtexLanguage.ts): math body, `@kind:name` references, `[@key]` citations, `{#label}` anchors; each passes 4.5:1 on `--code-bg` and `--bg-surface` |
 | `--env-theorem`, `--env-lemma`, `--env-corollary`, `--env-proposition`, `--env-definition`, `--env-example`, `--env-exercise`, `--env-remark`, `--env-proof`, `--env-note` | environment accent; backgrounds come from `color-mix(in oklch, var(--env-x) 8%, transparent)` |
 | `--callout-note`, `--callout-tip`, `--callout-info`, `--callout-warning`, `--callout-danger`, `--callout-success`, `--callout-quote` | callout accent, same mixing rule |
 | `--viz-1` … `--viz-8` | categorical colours for graph, plots, Mermaid |

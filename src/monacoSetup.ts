@@ -12,6 +12,8 @@ import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
 import { registerTypstLanguage } from "./typstLanguage"
+import { registerComdtexLanguage, shorthandNames } from "./comdtexLanguage"
+import { registerLatexLanguage } from "./latexLanguage"
 import { findDisplayMathBlocks } from "./useDisplayMathPreview"
 
 export interface Completion {
@@ -522,6 +524,18 @@ export function setupMonaco(monaco: typeof monacoApi) {
   registerTypstLanguage(monaco)
   codeActionsDisposable?.dispose()
   codeActionsDisposable = registerCodeActions(monaco)
+  registerLatexLanguage(monaco)
+  // Grammar for the "markdown" language; the vocabulary is injected so the
+  // grammar never imports this file.
+  registerComdtexLanguage(monaco, {
+    shorthands: shorthandNames(COMPLETIONS),
+    blocks: Object.fromEntries(
+      ["pseudocode", "flowchart", "truth", "graph", "plot", "commdiag"].map((type) => [
+        type,
+        getSpecialBlockCompletions(type) ?? [],
+      ]),
+    ),
+  })
   providerDisposable?.dispose()
   providerDisposable = monaco.languages.registerCompletionItemProvider("markdown", {
     triggerCharacters: ["[", "@", "\\", "^", ":"],

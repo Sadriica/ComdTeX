@@ -96,6 +96,31 @@ export function buildThemeData(
     rule("meta.separator", v("syn-punct")),
     rule("strong", v("fg"), "bold"),
     rule("emphasis", v("fg"), "italic"),
+    // ComdTeX grammar (comdtexLanguage.ts, latexLanguage.ts). Structure is the
+    // keyword hue (fences, environment names), anchors are gold (labels), what
+    // points elsewhere is rose (references) or coral (citations); math sits in
+    // a quiet blue so a page of it reads as one calm field.
+    rule("keyword.env", v("syn-keyword"), "bold"),
+    rule("delimiter.env", v("syn-keyword"), ""),
+    rule("keyword.block", v("syn-keyword"), ""),
+    rule("keyword.task", v("syn-type"), "bold"),
+    rule("string.title", v("syn-string"), ""),
+    rule("tag.label", v("syn-label"), ""),
+    rule("tag.ref", v("syn-ref"), ""),
+    rule("tag.footnote", v("syn-label"), ""),
+    rule("string.cite", v("syn-cite"), ""),
+    rule("string.link.embed", v("link"), "bold"),
+    rule("math", v("syn-math")),
+    rule("keyword.math", v("syn-function"), ""),
+    rule("number.math", v("syn-math")),
+    rule("delimiter.math", v("syn-punct")),
+    rule("function.shorthand", v("syn-function"), ""),
+    rule("operator", v("syn-function")),
+    rule("mark", v("syn-number"), "bold"),
+    rule("invalid.gap", v("warn"), "underline bold"),
+    rule("comment.keep", v("syn-comment"), "italic"),
+    rule("delimiter.fence", v("syn-punct")),
+    rule("meta.frontmatter", v("syn-punct")),
   ].filter((r): r is Rule => r !== null)
 
   const colours: Record<string, string | undefined> = {

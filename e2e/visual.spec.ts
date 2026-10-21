@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { expect, test, type Page } from "@playwright/test"
 import { installDeterminism, quiesce, waitForGraphLayout } from "./support/deterministic"
@@ -743,5 +743,113 @@ for (const { name, theme } of THEMES) {
       await page.waitForTimeout(250)
       await shot(page, name, `lab__${slug}`)
     }
+  })
+}
+
+// Editor syntax highlighting (the ComdTeX Monarch grammar): crops of the editor
+// scrolled to math, environments, references, citations and special blocks, on
+// the two manuscripts plus an appended tour of every construct.
+const TOUR = [
+  "",
+  "# Syntax tour {#sec:tour}",
+  "",
+  "Inline $\\alpha_i^2 + \\frac{1}{2}$ with a shorthand frac(a, b), a price of $5 or $6, and an escaped \\$.",
+  "A reference @eq:gap, a cross-file one @notes/mixing-times@thm:x, a path with spaces @[my notes/a]@def:y.",
+  "Citations [@levin2017; @lubotzky1988, p. 3], a wikilink [[mixing-times#h|alias]], an embed ![[expander-notes]],",
+  "a footnote[^n], a gap {{? fill me}}, a keep ^^def: spectral gap^^ and a ==highlight== with `code`.",
+  "",
+  "$$",
+  "\\begin{align} x &= \\sqrt{2} \\\\ y_{i+1} &\\le 3 \\end{align}",
+  "$$ {#eq:tour}",
+  "",
+  ":::theorem[Tour theorem]{#thm:tour}",
+  "Body with **bold $z$**, _italic_ and @eq:tour.",
+  ":::",
+  "",
+  ":::pseudocode[Loop]",
+  "FOR i <- 1 TO n DO",
+  "  IF x > 3 THEN RETURN i",
+  "END FOR",
+  ":::",
+  "",
+  ":::plot",
+  "range: [-5, 5]",
+  "f(x) = sin(x)",
+  ":::",
+  "",
+  "```python",
+  "def f(x): return x",
+  "```",
+  "",
+  "[^n]: The footnote.",
+  "",
+].join("\n")
+
+async function revealLine(page: Page, line: number) {
+  await page.locator(".monaco-editor textarea").first().focus()
+  await page.keyboard.press("Control+g")
+  await page.keyboard.type(String(line))
+  await page.keyboard.press("Enter")
+  await page.waitForTimeout(250)
+}
+
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: editor syntax highlighting`, async ({ page }) => {
+    test.setTimeout(180_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, {
+      settings: { theme },
+      tabs: ["papers/spectral-gap.md", "papers/typesetting.md"],
+      storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    const editor = page.locator(".monaco-editor").first()
+    const crop = async (file: string, label: string) => {
+      mkdirSync(OUT, { recursive: true })
+      await page.waitForTimeout(400)
+      await editor.screenshot({
+        path: resolve(OUT, `${name}__editor-syntax__${file}-${label}.png`),
+      })
+    }
+    const fixture = (rel: string) =>
+      readFileSync(resolve("e2e/fixtures/vault", rel), "utf8").split("\n")
+    const probes: [string, RegExp][] = [
+      ["top", /^---$/],
+      ["math", /^\$\$$/],
+      ["env", /^:::(theorem|lemma|definition)/],
+      ["cite", /\[@/],
+      ["special", /^:::(pseudocode|plot|graph|truth|commdiag|flowchart)/],
+    ]
+    for (const [tab, rel] of [
+      ["spectral-gap.md", "papers/spectral-gap.md"],
+      ["typesetting.md", "papers/typesetting.md"],
+    ]) {
+      await page.locator(".tab-name", { hasText: tab }).click()
+      await page.waitForTimeout(500)
+      const lines = fixture(rel)
+      const stem = tab.replace(/\.md$/, "")
+      for (const [label, re] of probes) {
+        const index = lines.findIndex((l) => re.test(l))
+        if (index < 0) continue
+        await revealLine(page, index + 1)
+        await crop(stem, label)
+      }
+    }
+    // The tour: appended with one paste-like insert, then viewed from its heading.
+    await page.locator(".tab-name", { hasText: "spectral-gap.md" }).click()
+    await page.locator(".monaco-editor .view-line").first().click()
+    await page.keyboard.press("Control+End")
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
+    await page.evaluate((text) => navigator.clipboard.writeText(text), TOUR)
+    await page.keyboard.press("Control+v")
+    await page.waitForTimeout(400)
+    const total = fixture("papers/spectral-gap.md").length + TOUR.split("\n").length
+    await revealLine(page, total - 26)
+    await crop("tour", "a")
+    await revealLine(page, total - 4)
+    await crop("tour", "b")
   })
 }
