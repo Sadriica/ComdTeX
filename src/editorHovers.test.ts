@@ -27,7 +27,7 @@ const A_TEXT = [
   "",
   "Refs: @eq:second, @lem:cheeger, @sub/b@def:far, @thm:nowhere, @fig:pic.",
   "Cites: [@one; @two, p. 3] and [@ghost].",
-  "Notes: [[b]], [[b#Second part]], [[unloaded]], [[nope]].",
+  "Notes: [[b]], [[b#Second part]], [[unloaded]], [[nope]], [[lazy#Second part]].",
   "Footnote[^n].",
   "",
   "[^n]: The footnote text.",
@@ -56,13 +56,18 @@ const files: NavFile[] = [
   { path: "/v/sub/b.md", name: "b.md", content: B_TEXT },
   // The text cache has not reached this note yet.
   { path: "/v/unloaded.md", name: "unloaded.md", content: "" },
+  { path: "/v/lazy.md", name: "lazy.md", content: "" },
 ]
 
 describe("hover cards", () => {
   let model: FakeModel
   let provider: ReturnType<typeof createHoverProvider>
   const readText = vi.fn(async (path: string) =>
-    path === "/v/unloaded.md" ? "Read later\n" : null,
+    path === "/v/unloaded.md"
+      ? "Read later\n"
+      : path === "/v/lazy.md"
+        ? "# Lazy\nintro\n\n## Second part\nlazy part body\n\n## Third\nlater\n"
+        : null,
   )
 
   beforeEach(() => {
@@ -139,6 +144,13 @@ describe("hover cards", () => {
     const h = (await hover("[[unloaded]]"))!
     expect(readText).toHaveBeenCalledWith("/v/unloaded.md")
     expect(h.contents[1].value).toBe("Read later")
+  })
+
+  it("previews just the section of a note that still has to be read", async () => {
+    const h = (await hover("[[lazy#Second part]]"))!
+    expect(readText).toHaveBeenCalledWith("/v/lazy.md")
+    expect(h.contents[0].value).toBe("**lazy › Second part**")
+    expect(h.contents[1].value).toBe("lazy part body")
   })
 
   it("says so for a note that does not exist", async () => {

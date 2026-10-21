@@ -98,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **A `---` line at the top of a note is not always a header.** When it is a divider above prose, typing no longer pops up frontmatter keys that Enter could accept.
 - **Enter on a `:::name` line inside a code fence no longer adds a closing `:::`.** Fenced code is left exactly as typed.
 - **The usages list can no longer swallow your typing.** The preview of another note inside Find Usages was editable but was never saved; it is read-only now.
+- **Hovering `[[note#heading]]` shows that section** even when the note has not been loaded yet (it used to show the top of the note).
 
 ## [1.29.1] - 2026-10-15
 
