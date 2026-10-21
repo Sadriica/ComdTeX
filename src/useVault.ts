@@ -342,7 +342,7 @@ durante el render. Ideal para tesis con un archivo principal y capítulos separa
 > \`note\` \`tip\` \`warning\` \`important\` \`danger\` \`success\` \`question\` \`quote\`.
 
 > [!tip] Atajo
-> Pulsa \`Ctrl+P\` para el palette de comandos, \`Ctrl+Shift+F\` para búsqueda
+> Pulsa \`Ctrl+Shift+P\` para la paleta de comandos, \`Ctrl+P\` para abrir archivos, \`Ctrl+Shift+F\` para búsqueda
 > en todo el vault, \`Ctrl+Tab\` para navegar pestañas.
 
 ---

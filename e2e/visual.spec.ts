@@ -158,11 +158,11 @@ for (const { name, theme } of THEMES) {
     await page.locator(".tab-name", { hasText: "spectral-gap.md" }).click()
     await settle(page, { math: true })
 
-    // Editor only (preview toggled off with Ctrl+;).
-    await page.keyboard.press("Control+Shift+p")
+    // Editor only (preview toggled off with Ctrl+Alt+P).
+    await page.keyboard.press("Control+Alt+p")
     await page.waitForTimeout(700)
     await shot(page, name, "editor-only__paper")
-    await page.keyboard.press("Control+Shift+p")
+    await page.keyboard.press("Control+Alt+p")
     await settle(page, { math: true })
 
     // Sidebar panels reachable from the toolbar.
@@ -475,14 +475,12 @@ for (const { name, theme } of THEMES) {
     await shot(page, name, "modal__table-editor-filled")
     await closeOverlays(page)
 
-    // Quick switcher.
-    await page.keyboard.press("Control+;")
-    await page.locator(".quick-switcher").waitFor({ timeout: 5000 })
+    // Quick switcher: the palette's files mode (Ctrl+P).
+    await page.keyboard.press("Control+p")
+    await page.locator(".palette-input").waitFor({ timeout: 5000 })
     await page.waitForTimeout(400)
     await shot(page, name, "overlay__quick-switcher")
     await closeOverlays(page)
-    // Older builds did not close the switcher on Escape; fall back to the backdrop.
-    if (await page.locator(".quick-switcher").count()) await page.mouse.click(5, 5)
 
     // Bookmarks (one set from the editor) and recently closed tabs.
     await page

@@ -15,7 +15,7 @@ This line is a soft break inside the same paragraph.
 
 ## Background
 
-Some text with `inline code`, a [link to somewhere](https://example.org), ==a highlighted phrase==, and _emphasis_ next to **strong** text.
+Some text with `inline code`, a [link to somewhere](https://example.org), ==a highlighted phrase==, and *emphasis* next to **strong** text.
 
 ### Third level heading
 
@@ -53,7 +53,6 @@ Text under a sixth level heading.
 
 :::theorem[Main result]{#thm:main}
 Let $G$ be a connected graph. Then for every $\varepsilon>0$ there is an $n_0$ such that
-
 $$
 \gamma(G_n) \ge \varepsilon \quad\text{for all } n \ge n_0.
 $$ {#eq:main}
@@ -85,9 +84,7 @@ This is an unnumbered remark.
 A long display equation that must scroll rather than overflow the page:
 
 $$
-
 \sum_{i=1}^{n} \sum_{j=1}^{n} \sum_{k=1}^{n} a_{ijk} x_i y_j z_k + \sum_{i=1}^{n} \sum_{j=1}^{n} \sum_{k=1}^{n} b_{ijk} x_i y_j z_k + \sum_{i=1}^{n} \sum_{j=1}^{n} c_{ij} x_i y_j
-
 $$
 
 ```ts
@@ -117,4 +114,3 @@ return x
 :::
 
 [^1]: A footnote that is long enough to wrap, so that the hanging indent and the smaller size can be checked.
-$$

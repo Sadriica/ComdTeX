@@ -14,4 +14,3 @@ t_{\mathrm{mix}}(\varepsilon)=\min\{t : d(t)\le\varepsilon\}
 $$ {#eq:tmix}
 
 - [ ] Summarize the coupling argument
-$$

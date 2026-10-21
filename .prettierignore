@@ -1,0 +1,2 @@
+# Fixture notes are test data: their exact bytes are what the tests exercise.
+e2e/fixtures/
