@@ -4,6 +4,7 @@ import { configureEditorNavigation } from "./editorNavigation"
 import { cancelToken, createFakeMonaco, editorModel, type FakeModel } from "./fakeMonaco.testutil"
 import { resetEditorNavigation } from "./navHost"
 import type { NavFile } from "./navScan"
+import { perfBudget } from "./perfBudget"
 
 const A_TEXT = [
   "---",
@@ -217,7 +218,7 @@ describe("hover cards", () => {
     await hover("@lem:cheeger") // warms the index
     const t = performance.now()
     for (let i = 0; i < 20; i++) await hover("@lem:cheeger")
-    expect((performance.now() - t) / 20).toBeLessThan(5)
+    expect((performance.now() - t) / 20).toBeLessThan(perfBudget(5))
   })
 })
 

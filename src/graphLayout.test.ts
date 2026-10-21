@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { layoutGraph, mulberry32, boundsOf, type LayoutRequest } from "./graphLayout"
 import { LayoutRunner, syncLayoutBackend } from "./graphLayoutClient"
+import { perfBudget } from "./perfBudget"
 
 /** Seeded scale-free-ish graph: each node links to up to `m` earlier nodes. */
 function randomGraph(n: number, m: number, seed = 7): LayoutRequest {
@@ -125,7 +126,7 @@ describe("layoutGraph", () => {
     expect(r.converged).toBe(true)
     expect(Array.from(r.pos).every(Number.isFinite)).toBe(true)
     // Far under a second on a laptop; the budget is deliberately loose for CI.
-    expect(ms).toBeLessThan(8000)
+    expect(ms).toBeLessThan(perfBudget(8000))
   }, 20000)
 })
 

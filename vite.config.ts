@@ -69,6 +69,15 @@ export default defineConfig(async () => ({
 
   test: {
     environment: "node",
+    // Which kind of run this is decides the timing budgets (src/perfBudget.ts):
+    // `test:perf` passes --no-file-parallelism, coverage passes --coverage.
+    env: {
+      COMDTEX_TEST_RUN: process.argv.includes("--coverage")
+        ? "coverage"
+        : process.argv.includes("--no-file-parallelism")
+          ? "perf"
+          : "parallel",
+    },
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     coverage: {
       provider: "v8",

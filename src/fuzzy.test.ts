@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { foldText, fuzzyMatch, fuzzyScore, positionRanges, rankItems } from "./fuzzy"
+import { perfBudget } from "./perfBudget"
 
 describe("foldText", () => {
   it("folds case and accents but keeps ñ distinct", () => {
@@ -137,6 +138,6 @@ describe("performance", () => {
     const ranked = rankItems(names, "lecn 42", (s) => [{ text: s, weight: 1 }])
     const ms = performance.now() - t0
     expect(ranked.length).toBeGreaterThan(0)
-    expect(ms).toBeLessThan(300)
+    expect(ms).toBeLessThan(perfBudget(300))
   })
 })

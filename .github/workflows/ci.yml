@@ -102,6 +102,10 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: npm run test:coverage
 
+      # Timing budgets are waived under coverage; check them alone, uninstrumented.
+      - name: Performance budgets
+        run: npm run test:perf
+
       - name: Cargo check (Rust only, fast)
         working-directory: src-tauri
         env:

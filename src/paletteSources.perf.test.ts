@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildFileEntries, rankFileEntries } from "./paletteSources"
+import { perfBudget } from "./perfBudget"
 
 /**
  * Typing in the files palette ranks the whole vault on every keystroke. Past
@@ -28,6 +29,9 @@ describe("files palette at 20k files", () => {
     }
     const warm = times.slice(1)
     const avg = warm.reduce((a, b) => a + b, 0) / warm.length
-    expect(avg, `per-keystroke ms: ${times.map((t) => Math.round(t)).join(", ")}`).toBeLessThan(200)
-  })
+    expect(avg, `per-keystroke ms: ${times.map((t) => Math.round(t)).join(", ")}`).toBeLessThan(
+      perfBudget(200),
+    )
+    // Coverage instrumentation can make the eight passes take tens of seconds.
+  }, 60_000)
 })

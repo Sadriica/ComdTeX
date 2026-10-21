@@ -55,6 +55,7 @@ A new look and a much smarter editor. Highlights:
 - `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 
 ### Fixed
+- **Security:** markdown-it updated to 14.3.3 for two quadratic-time denial-of-service advisories (GHSA-vfgh-jcmw-g37q, GHSA-gfr2-rv44-r23c): a crafted note could freeze the preview.
 - **Typing with AltGr works again on Windows.** On Spanish, German and French keyboards the characters `|`, `@`, `#`, `~`, `¬`, `€`, `{`, `[` and `]` (AltGr plus 1, 2, 3, 4, 6, E, 7, 8 and 9, depending on the layout) were swallowed because Windows reports AltGr as Ctrl+Alt and the bookmark jump (Ctrl+Alt+1 to 9) took the key. Ctrl+Alt+P and Ctrl+; no longer fire on AltGr characters either, and a bookmark key with nothing saved in that slot is left alone.
 - **Shortcuts and Escape stay out of an open palette or dialog.** Escape in the palette used to also leave focus mode, and shortcuts such as F11 or Ctrl+Alt+P acted behind it. Ctrl+P and Ctrl+Shift+P still switch the palette's mode.
 - **Tab no longer escapes the palette** in the commands view, and focus stays where an action put it: running a menu entry or palette command that moves you into the editor no longer snaps focus back to the menu button. Escape also closes a menu opened with the mouse.

@@ -10,6 +10,7 @@ import {
   updateVaultFiles,
 } from "./state"
 import { LATEX_COMMANDS } from "../latexCommands"
+import { perfBudget } from "../perfBudget"
 
 // Budget (docs): a completion call stays under 5 ms on a 5k-label vault. The
 // assertion is looser than the budget so a loaded CI machine does not flake;
@@ -116,7 +117,7 @@ describe("completion performance on a 5k-label vault", () => {
           .join("\n"),
     )
     for (const [name, ms] of Object.entries(results)) {
-      expect(ms, name).toBeLessThan(BUDGET_MS)
+      expect(ms, name).toBeLessThan(perfBudget(BUDGET_MS))
     }
   })
 
@@ -125,6 +126,6 @@ describe("completion performance on a 5k-label vault", () => {
     const t0 = performance.now()
     await complete(`${model.text()}\nx [^|`)
     const first = performance.now() - t0
-    expect(first).toBeLessThan(200)
+    expect(first).toBeLessThan(perfBudget(200))
   })
 })

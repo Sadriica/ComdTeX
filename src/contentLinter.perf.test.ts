@@ -1,5 +1,6 @@
 import { expect, it } from "vitest"
 import { lintContent, scanLintLabels, type LintContext, type LintVaultDoc } from "./contentLinter"
+import { perfBudget } from "./perfBudget"
 
 const Sev = { Error: 8, Warning: 4, Info: 2, Hint: 1 } as never
 
@@ -57,7 +58,7 @@ for (const unique of [false, true]) {
     // The generated document is clean: a marker here is a false positive.
     expect(first).toEqual([])
     expect(second).toEqual([])
-    expect(t1 - t0).toBeLessThan(2000)
-    expect(t2 - t1).toBeLessThan(1000)
+    expect(t1 - t0).toBeLessThan(perfBudget(2000))
+    expect(t2 - t1).toBeLessThan(perfBudget(1000))
   })
 }
