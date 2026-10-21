@@ -801,105 +801,114 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   // ── Restore tabs on mount ────────────────────────────────────────────────
   // Returns true if at least one tab was restored
-  const restoreTabs = useCallback(async (vaultP: string): Promise<boolean> => {
-    try {
-      const savedPaths: string[] = JSON.parse(localStorage.getItem(TABS_KEY) ?? "[]")
-      const savedActive = localStorage.getItem(ACTIVE_KEY)
-      if (!savedPaths.length) return false
+  const restoreTabs = useCallback(
+    async (vaultP: string): Promise<boolean> => {
+      try {
+        const savedPaths: string[] = JSON.parse(localStorage.getItem(TABS_KEY) ?? "[]")
+        const savedActive = localStorage.getItem(ACTIVE_KEY)
+        if (!savedPaths.length) return false
 
-      const tabs: OpenFile[] = []
-      for (const path of savedPaths) {
-        // Only restore files from the current vault
-        if (!isPathInsideVault(path, vaultP)) continue
-        // Never clobber an already-open tab that has unsaved in-memory edits
-        // with the (older) disk/draft content. restoreTabs runs on refresh
-        // paths too, and reading disk here would silently overwrite text the
-        // user typed within the autosave/draft-flush window.
-        const existingDirty = openTabsRef.current.find((tb) => tb.path === path)
-        if (existingDirty?.isDirty) {
-          tabs.push(existingDirty)
-          continue
-        }
-        const ext = path.split(".").pop()?.toLowerCase() ?? ""
-        // PDFs restore as preview-mode tabs, no text content
-        if (ext === "pdf") {
-          tabs.push({ path, name: displayBasename(path), content: "", isDirty: false, mode: "pdf" })
-          continue
-        }
-        // Skip other binary files
-        if (BINARY_EXTS.has(ext)) continue
-        try {
-          const name = displayBasename(path)
-          // Use draft if present: cleared on save, its presence indicates unsaved changes
-          const draft = getDrafts().find((d) => d.path === path)
-          const content = await readTextFile(path)
-          let cachedMtime: number | undefined
-          try {
-            const info = await stat(path)
-            cachedMtime = info.mtime?.getTime()
-          } catch {
-            // stat optional - some filesystems may not support it
+        const tabs: OpenFile[] = []
+        for (const path of savedPaths) {
+          // Only restore files from the current vault
+          if (!isPathInsideVault(path, vaultP)) continue
+          // Never clobber an already-open tab that has unsaved in-memory edits
+          // with the (older) disk/draft content. restoreTabs runs on refresh
+          // paths too, and reading disk here would silently overwrite text the
+          // user typed within the autosave/draft-flush window.
+          const existingDirty = openTabsRef.current.find((tb) => tb.path === path)
+          if (existingDirty?.isDirty) {
+            tabs.push(existingDirty)
+            continue
           }
-          showConversionWarnings(path, content, "opening", t)
-          const diskContent = toEditorContent(path, content)
-          // A draft only wins when it is NEWER than the file on disk. A draft
-          // older than the file's mtime predates an external change (or a save
-          // whose draft cleanup was lost), and restoring it would resurrect
-          // stale text over newer disk content.
-          const draftIsNewer =
-            !!draft && (cachedMtime === undefined || draft.savedAt >= cachedMtime)
-          if (draft && draftIsNewer && draft.content !== diskContent) {
-            // cachedMtime stays the CURRENT disk mtime on purpose: the draft is
-            // newer than the file, so nothing external happened since it was
-            // typed, and any later external change still trips the guard.
-            // pendingContent makes the restored edit actually reach disk
-            // (autosave, tab close, vault switch, quit flush).
-            pendingContent.current.set(path, draft.content)
-            if (!saveTimers.current.has(path)) {
-              saveTimers.current.set(
-                path,
-                setTimeout(() => {
-                  saveTimers.current.delete(path)
-                  void saveFileRef.current(path, draft.content)
-                }, 800),
-              )
-            }
+          const ext = path.split(".").pop()?.toLowerCase() ?? ""
+          // PDFs restore as preview-mode tabs, no text content
+          if (ext === "pdf") {
             tabs.push({
               path,
-              name,
-              content: draft.content,
-              isDirty: true,
-              mode: editorModeForPath(path),
-              cachedMtime,
-            })
-          } else {
-            if (draft) clearDraft(path)
-            tabs.push({
-              path,
-              name,
-              content: diskContent,
+              name: displayBasename(path),
+              content: "",
               isDirty: false,
-              mode: editorModeForPath(path),
-              cachedMtime,
+              mode: "pdf",
             })
+            continue
           }
-        } catch {
-          /* file deleted, skip */
+          // Skip other binary files
+          if (BINARY_EXTS.has(ext)) continue
+          try {
+            const name = displayBasename(path)
+            // Use draft if present: cleared on save, its presence indicates unsaved changes
+            const draft = getDrafts().find((d) => d.path === path)
+            const content = await readTextFile(path)
+            let cachedMtime: number | undefined
+            try {
+              const info = await stat(path)
+              cachedMtime = info.mtime?.getTime()
+            } catch {
+              // stat optional - some filesystems may not support it
+            }
+            showConversionWarnings(path, content, "opening", t)
+            const diskContent = toEditorContent(path, content)
+            // A draft only wins when it is NEWER than the file on disk. A draft
+            // older than the file's mtime predates an external change (or a save
+            // whose draft cleanup was lost), and restoring it would resurrect
+            // stale text over newer disk content.
+            const draftIsNewer =
+              !!draft && (cachedMtime === undefined || draft.savedAt >= cachedMtime)
+            if (draft && draftIsNewer && draft.content !== diskContent) {
+              // cachedMtime stays the CURRENT disk mtime on purpose: the draft is
+              // newer than the file, so nothing external happened since it was
+              // typed, and any later external change still trips the guard.
+              // pendingContent makes the restored edit actually reach disk
+              // (autosave, tab close, vault switch, quit flush).
+              pendingContent.current.set(path, draft.content)
+              if (!saveTimers.current.has(path)) {
+                saveTimers.current.set(
+                  path,
+                  setTimeout(() => {
+                    saveTimers.current.delete(path)
+                    void saveFileRef.current(path, draft.content)
+                  }, 800),
+                )
+              }
+              tabs.push({
+                path,
+                name,
+                content: draft.content,
+                isDirty: true,
+                mode: editorModeForPath(path),
+                cachedMtime,
+              })
+            } else {
+              if (draft) clearDraft(path)
+              tabs.push({
+                path,
+                name,
+                content: diskContent,
+                isDirty: false,
+                mode: editorModeForPath(path),
+                cachedMtime,
+              })
+            }
+          } catch {
+            /* file deleted, skip */
+          }
         }
-      }
-      if (tabs.length > 0) {
-        setOpenTabs(tabs)
-        const active =
-          savedActive && tabs.find((t) => t.path === savedActive) ? savedActive : tabs[0].path
-        setActiveTabPath(active)
-        return true
+        if (tabs.length > 0) {
+          setOpenTabs(tabs)
+          const active =
+            savedActive && tabs.find((t) => t.path === savedActive) ? savedActive : tabs[0].path
+          setActiveTabPath(active)
+          return true
+        }
+        return false
+      } catch {
+        /* corrupted storage */
       }
       return false
-    } catch {
-      /* corrupted storage */
-    }
-    return false
-  }, [t])
+    },
+    [t],
+  )
 
   // ── Open or create README.md ─────────────────────────────────────────────
   const openOrCreateReadme = useCallback(
