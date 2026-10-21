@@ -34,14 +34,17 @@ import {
   setupMathHover,
   setupCommentDecorations,
   setupKeepMarkDecorations,
-  updateVaultFileNames,
+  updateVaultFiles,
+  updateLabelIndex,
+  setCompletionCsvResolver,
+  setCompletionCurrentFile,
+  setCompletionKatexMacros,
   updateBibSuggestions,
   updateBibHoverEntries,
   updateUserSnippets,
   enableVimMode,
   applyTypewriterMode,
   updateMacroCompletions,
-  updateStructuralLabelSuggestions,
   type CommentDecorationsHandle,
   type CommentMarker,
   type KeepMarkDecorationsHandle,
@@ -1212,9 +1215,18 @@ function AppContent({
     return set
   }, [cloudConflicts])
 
+  // Editor completion reads the vault's files (paths, not just names) so it can
+  // show folders, disambiguate same-named notes and complete :::csv file names.
   useEffect(() => {
-    updateVaultFileNames([...wikiNames])
-  }, [wikiNames])
+    updateVaultFiles(
+      vaultFileNodes.map((f) => ({ path: f.path, name: f.name, ext: f.ext })),
+      vault.vaultPath ?? "",
+    )
+  }, [vaultFileNodes, vault.vaultPath])
+  useEffect(() => {
+    setCompletionCsvResolver(transclusionResolver)
+    setCompletionKatexMacros(() => macrosRef.current)
+  }, [transclusionResolver])
 
   // Label scan runs in a worker (sync fallback) and only rescans changed files;
   // results superseded by a newer vaultFiles snapshot are dropped by the scanner.
@@ -1232,13 +1244,7 @@ function AppContent({
     if (!scanner) return
     void scanner.update(vaultFiles).then((index) => {
       if (!index) return
-      updateStructuralLabelSuggestions(
-        index.labels.map((label) => ({
-          id: label.id,
-          kind: label.kind,
-          detail: `${label.fileName}:${label.line}`,
-        })),
-      )
+      updateLabelIndex(index)
     })
   }, [vaultFiles])
 
@@ -1449,6 +1455,8 @@ function AppContent({
       author: entry.fields.author,
       title: entry.fields.title,
       year: entry.fields.year,
+      type: entry.type,
+      fields: entry.fields,
     }))
     updateBibSuggestions(entries)
     updateBibHoverEntries(
@@ -2467,6 +2475,7 @@ function AppContent({
     (editor, monaco) => {
       editorRef.current = editor
       setEditorInstance(editor)
+      setCompletionCurrentFile(activeFilePathRef.current)
       setupEditorCommands(editor, monaco, () => listContinuationRef.current)
       // Note: Monaco has built-in spell-check via browser (no config needed)
       linterDisposableRef.current?.dispose()
