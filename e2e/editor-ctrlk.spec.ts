@@ -35,3 +35,17 @@ test("with AI on, Ctrl+K opens the inline edit", async ({ page }) => {
   await page.keyboard.press("Control+k")
   await expect(page.locator(".cmdk-edit, [class*='cmdk']").first()).toBeVisible()
 })
+
+test("with AI on, the palette folds and unfolds everything", async ({ page }) => {
+  await openEditor(page, true)
+  const lines = page.locator(".monaco-editor .view-line")
+  const before = await lines.count()
+  await page.keyboard.press("Control+Shift+p")
+  await page.locator(".palette-input").fill("fold all sections")
+  await page.keyboard.press("Enter")
+  await expect.poll(() => lines.count()).toBeLessThan(before)
+  await page.keyboard.press("Control+Shift+p")
+  await page.locator(".palette-input").fill("unfold all sections")
+  await page.keyboard.press("Enter")
+  await expect.poll(() => lines.count()).toBe(before)
+})

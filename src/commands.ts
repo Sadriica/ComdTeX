@@ -988,6 +988,30 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       action: () => openPanel("symbols"),
     },
 
+    // Fold every section and block, or open them all again. Ctrl+K Ctrl+0 and
+    // Ctrl+K Ctrl+J do the same, but only while the AI assistant is off
+    // (Ctrl+K is the inline AI edit when it is on).
+    {
+      id: "view:foldAll",
+      label: t.palette.foldAll,
+      keywords: ["fold", "collapse", "plegar"],
+      category: "Vista",
+      action: () => {
+        editorRef.current?.focus()
+        editorRef.current?.trigger("palette", "editor.foldAll", null)
+      },
+    },
+    {
+      id: "view:unfoldAll",
+      label: t.palette.unfoldAll,
+      keywords: ["unfold", "expand", "desplegar"],
+      category: "Vista",
+      action: () => {
+        editorRef.current?.focus()
+        editorRef.current?.trigger("palette", "editor.unfoldAll", null)
+      },
+    },
+
     // ── Vista (paneles) ──────────────────────────────────────────────────────
     {
       id: "panel:files",

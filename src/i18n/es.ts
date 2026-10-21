@@ -629,6 +629,8 @@ export const es: T = {
     pin: "Fijar comando",
     unpin: "Quitar comando fijado",
     checked: "Activado",
+    foldAll: "Plegar todas las secciones y bloques",
+    unfoldAll: "Desplegar todas las secciones y bloques",
     modes: {
       files: {
         name: "Archivos",

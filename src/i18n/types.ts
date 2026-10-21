@@ -610,6 +610,8 @@ export interface T {
     unpin: string
     /** Screen-reader label of the mark on an enabled toggle row. */
     checked: string
+    foldAll: string
+    unfoldAll: string
     modes: Record<
       "files" | "commands" | "outline" | "labels" | "cite" | "line" | "help",
       { name: string; placeholder: string; hint: string }

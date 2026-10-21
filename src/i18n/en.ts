@@ -626,6 +626,8 @@ export const en: T = {
     pin: "Pin command",
     unpin: "Unpin command",
     checked: "On",
+    foldAll: "Fold all sections and blocks",
+    unfoldAll: "Unfold all sections and blocks",
     modes: {
       files: {
         name: "Files",

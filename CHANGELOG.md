@@ -56,7 +56,7 @@ A new look and a much smarter editor. Highlights:
 
 ### Fixed
 - **Current AI models by default.** The suggested models were retired by their providers (`claude-3-5-sonnet-latest`, `gemini-1.5-flash`), so turning the assistant on with the defaults failed. The defaults are now `claude-opus-5-5`, `gpt-5.6` and `gemini-3.6-flash`, and a saved retired default is moved forward on start (a model you typed yourself is left alone).
-- **Ctrl+K Ctrl+0 and Ctrl+K Ctrl+J fold and unfold again when the AI assistant is off.** Ctrl+K was always taken by the inline AI edit, even with AI disabled.
+- **Ctrl+K Ctrl+0 and Ctrl+K Ctrl+J fold and unfold again when the AI assistant is off.** Ctrl+K was always taken by the inline AI edit, even with AI disabled. With AI on, the new palette commands Fold all and Unfold all do the same.
 - **Security:** markdown-it updated to 14.3.3 for two quadratic-time denial-of-service advisories (GHSA-vfgh-jcmw-g37q, GHSA-gfr2-rv44-r23c): a crafted note could freeze the preview.
 - **Typing with AltGr works again on Windows.** On Spanish, German and French keyboards the characters `|`, `@`, `#`, `~`, `¬`, `€`, `{`, `[` and `]` (AltGr plus 1, 2, 3, 4, 6, E, 7, 8 and 9, depending on the layout) were swallowed because Windows reports AltGr as Ctrl+Alt and the bookmark jump (Ctrl+Alt+1 to 9) took the key. Ctrl+Alt+P and Ctrl+; no longer fire on AltGr characters either, and a bookmark key with nothing saved in that slot is left alone.
 - **Shortcuts and Escape stay out of an open palette or dialog.** Escape in the palette used to also leave focus mode, and shortcuts such as F11 or Ctrl+Alt+P acted behind it. Ctrl+P and Ctrl+Shift+P still switch the palette's mode.
