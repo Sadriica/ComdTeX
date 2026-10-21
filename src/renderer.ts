@@ -411,27 +411,6 @@ function normalizeSourceKey(s: string): string {
   )
 }
 
-/** Pick the rendered-text key for a DOM element (first 40 chars, normalized). */
-function elementTextKey(el: Element): string {
-  // Code blocks are many source lines joined, so their full textContent can
-  // never match a single source line in the map. Key them by their FIRST
-  // non-empty content line instead: that is the line the block starts on.
-  // The line is run through `normalizeSourceKey` so it is shaped exactly like
-  // the map keys (which are built from trimmed source lines).
-  if (el.tagName.toLowerCase() === "pre") {
-    const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
-    return first ? normalizeSourceKey(first) : ""
-  }
-  let text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
-  // Strip auto-numbering prefixes from headings: numberHeadings turns
-  // `# Intro` → `<h1>1 Intro</h1>` and `## Sub` → `<h2>1.1 Sub</h2>`. The
-  // source line is just `Intro`, so peel the leading `N(.N)*` group.
-  if (/^h[1-6]$/i.test(el.tagName)) {
-    text = text.replace(/^\d+(?:\.\d+)*\s+/, "")
-  }
-  return text.slice(0, SOURCE_KEY_LEN)
-}
-
 /**
  * Build a map from `key → line[]` for lines in `raw` that can plausibly be
  * the source of a rendered block. `key` is the first ~40 chars of the line's
@@ -529,34 +508,159 @@ export function annotateSourceLines(html: string, raw: string): string {
  * document HTML is parsed exactly once per render instead of three times.
  */
 export function annotateSourceLinesIn(root: ParentNode, raw: string): void {
-  const map = buildParagraphLineMap(raw)
-  // Track consumed indices per key so duplicate keys map to distinct lines.
-  const consumed = new Map<string, number>()
-
+  const entries = buildSignatureEntries(raw)
+  if (entries.length === 0) return
+  // Rendered blocks come out in source order, so matching walks the source
+  // lines with a pointer that only moves forward: a repeated sentence maps to
+  // its own occurrence, and one unmatched block (a transclusion, a generated
+  // caption) never drags the rest of the document onto wrong lines.
+  let next = 0
   const targets = [...root.querySelectorAll(ANNOTATABLE_SELECTOR)] as HTMLElement[]
   for (const el of targets) {
-    if (el.hasAttribute("data-source-line")) continue
-    // `renderMarkdown` returns `frontmatterHtml + html + bibHtml`, but the
-    // line map built above (`buildParagraphLineMap`) only reflects `raw`,
-    // i.e. the BODY source, the same scope the old string-based annotation
-    // pass used. Elements from the frontmatter header (`renderFrontmatterHeader`
-    // in frontmatter.ts, e.g. `<h1 class="fm-title">`) or the bibliography
-    // (`renderBibliography` in bibtex.ts, wrapped in `.bibliography`) can match
-    // ANNOTATABLE_SELECTOR and share text with a body line (e.g. a frontmatter
-    // `title: Notas` next to a body `# Notas` heading). Without this guard such
-    // an element would silently consume an index from the duplicate-key line
-    // list, shifting every subsequent body annotation to the wrong line. Skip
-    // anything outside the body to restore the old body-only scope.
-    if (el.closest(".frontmatter-header, .bibliography")) continue
-    const key = elementTextKey(el)
-    if (!key) continue
-    const lines = map.get(key)
-    if (!lines || lines.length === 0) continue
-    const idx = consumed.get(key) ?? 0
-    const line = lines[Math.min(idx, lines.length - 1)]
-    consumed.set(key, idx + 1)
-    el.setAttribute("data-source-line", String(line))
+    // Not body text: the frontmatter header, the bibliography, footnotes.
+    if (el.closest(".frontmatter-header, .bibliography, .footnotes")) continue
+    const own = el.getAttribute("data-source-line")
+    if (own !== null) {
+      // Pre-annotated by the renderer (environments): resync the pointer.
+      const line = Number(own)
+      while (next < entries.length && entries[next].line <= line) next++
+      continue
+    }
+    const sig = elementSignature(el)
+    if (!sig) continue
+    // A paragraph inside an already annotated list item or quote shares its
+    // first line: reuse the parent's line instead of consuming another one.
+    if (el.tagName === "P") {
+      const parent = el.parentElement
+      const parentLine = parent?.matches("li, blockquote")
+        ? parent.getAttribute("data-source-line")
+        : null
+      if (parentLine !== null && parentLine !== undefined && parent?.firstElementChild === el) {
+        el.setAttribute("data-source-line", parentLine)
+        continue
+      }
+    }
+    const end = Math.min(entries.length, next + MATCH_WINDOW)
+    for (let i = next; i < end; i++) {
+      if (signaturesMatch(entries[i].sig, sig)) {
+        el.setAttribute("data-source-line", String(entries[i].line))
+        next = i + 1
+        break
+      }
+    }
   }
+}
+
+/** How far ahead (in indexed source lines) a block may match. */
+const MATCH_WINDOW = 400
+const SIGNATURE_LEN = 32
+const MIN_PREFIX = 4
+
+interface SignatureEntry {
+  line: number
+  sig: string
+}
+
+/**
+ * A line's or block's comparable text: letters and digits only, lowercased,
+ * with everything the preview renders differently from the source removed
+ * (math, citations, cross-references, labels, footnote marks, markup).
+ */
+function signature(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .slice(0, SIGNATURE_LEN)
+}
+
+function sourceSignature(line: string): string {
+  const prose = line
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
+    .replace(/^\s*>+\s*(?:\[![\w-]+\][+-]?\s*)?/, "")
+    .replace(/^\s*#{1,6}\s+/, "")
+    .replace(/\{#[^}\s]+\}/g, "")
+    .replace(/\$\$[\s\S]*?\$\$|\$[^$\n]+\$/g, "")
+    .replace(/\$\$/g, "")
+    .replace(/\[(?:[^\]]*?)@[\w:.-]+[^\]]*\]/g, "")
+    .replace(/@\[[^\]]+\]@[\w]+:[\w.-]+|@[\w./-]+@[\w]+:[\w.-]+|@[a-z]+:[\w.-]*\w/gi, "")
+    .replace(/\[\^[^\]]+\]/g, "")
+    .replace(/!?\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, "")
+  return signature(prose)
+}
+
+/** Ordered source lines that can start a rendered block, with signatures. */
+function buildSignatureEntries(raw: string): SignatureEntry[] {
+  if (raw === lastEntriesRaw) return lastEntries
+  const out: SignatureEntry[] = []
+  const lines = raw.split("\n")
+  let inFence = false
+  let fenceFirstPending = false
+  let inFrontmatter = false
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (/^(```|~~~)/.test(trimmed)) {
+      inFence = !inFence
+      fenceFirstPending = inFence
+      continue
+    }
+    if (inFence) {
+      // A code block is keyed by its first content line, like the <pre>.
+      if (fenceFirstPending && trimmed) {
+        const sig = signature(trimmed)
+        if (sig) out.push({ line: i + 1, sig })
+        fenceFirstPending = false
+      }
+      continue
+    }
+    if (i === 0 && trimmed === "---") {
+      inFrontmatter = true
+      continue
+    }
+    if (inFrontmatter) {
+      if (trimmed === "---") inFrontmatter = false
+      continue
+    }
+    if (!trimmed || /^:::/.test(trimmed)) continue
+    if (/^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?$/.test(trimmed)) continue
+    const sig = sourceSignature(trimmed)
+    if (sig) out.push({ line: i + 1, sig })
+  }
+  lastEntriesRaw = raw
+  lastEntries = out
+  return out
+}
+let lastEntriesRaw: string | null = null
+let lastEntries: SignatureEntry[] = []
+
+/** Rendered parts that do not exist as such in the source line. */
+const NOT_SOURCE_TEXT =
+  ".katex, .katex-display, .eq-ref, .eq-ref-broken, .env-ref, .env-ref-broken, .fig-ref, " +
+  ".fig-ref-broken, .xref, .xref-broken, .cite-ref, .cite-broken, sup, .footnote-ref, " +
+  ".sec-num, .callout-icon, .math-env-qed, .callout-title"
+
+function elementSignature(el: Element): string {
+  if (el.tagName.toLowerCase() === "pre") {
+    const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
+    return first ? signature(first) : ""
+  }
+  const clone = el.cloneNode(true) as Element
+  for (const n of clone.querySelectorAll(NOT_SOURCE_TEXT)) n.remove()
+  return signature(clone.textContent ?? "")
+}
+
+/**
+ * Same block? A source line is often only the first line of a paragraph, so
+ * one signature may be a prefix of the other (both truncated to the same
+ * length), as long as the shorter one says enough to be specific.
+ */
+function signaturesMatch(source: string, rendered: string): boolean {
+  if (source === rendered) return true
+  const shorter = source.length <= rendered.length ? source : rendered
+  const longer = shorter === source ? rendered : source
+  return shorter.length >= MIN_PREFIX && longer.startsWith(shorter)
 }
 
 // A standalone `[[toc]]` or `[toc]` line (case-insensitive) → auto TOC.

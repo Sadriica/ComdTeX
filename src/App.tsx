@@ -1442,44 +1442,47 @@ function AppContent({
     const wasSuppressed = suppressPreviewScrollOnce.current
     suppressPreviewScrollOnce.current = false
     if (!settings.previewVisible) return
-    // Use the DEBOUNCED preview content: this matches the headings actually
-    // rendered in the preview pane (`headingEls` below) AND avoids splitting the
-    // whole document on every keystroke.
-    const content = previewContent
-    if (!content) return
-
-    // Collect heading line numbers from document
-    const headingLines: number[] = []
-    content.split("\n").forEach((ln, i) => {
-      if (/^#{1,6}\s/.test(ln)) headingLines.push(i + 1)
-    })
-
-    // Find the active heading index (last heading at or before cursor)
-    const activeIdx = headingLines.reduce(
-      (found, lineNum, i) => (lineNum <= cursorPos.line ? i : found),
-      -1,
-    )
-
+    if (!previewContent) return
     const previewEl = previewPaneRef.current
     if (!previewEl) return
-    const headingEls = previewEl.querySelectorAll("h1,h2,h3,h4,h5,h6")
 
-    // Remove all active-heading classes
-    headingEls.forEach((el) => el.classList.remove("active-heading"))
-
-    if (activeIdx >= 0) {
-      const target = headingEls[activeIdx] as HTMLElement | undefined
-
-      // Add active class
-      target?.classList.add("active-heading")
-
-      // Scroll only if syncScroll is enabled, and not when the cursor move
-      // came from a preview click (otherwise the preview yanks back up to the
-      // heading the user is already looking at). The flag was already cleared
-      // at the top of the effect; we use the captured `wasSuppressed` value.
-      if (syncScroll && !wasSuppressed) {
-        target?.scrollIntoView({ behavior: "smooth", block: "start" })
+    // Every preview block carries the editor line it came from
+    // (`data-source-line`, see renderer.ts annotateSourceLinesIn). The block
+    // to follow is the one with the greatest line at or before the cursor;
+    // the active heading is the last heading at or before it. Matching by
+    // line, not by "the n-th heading", keeps the frontmatter title and the
+    // bibliography heading from shifting everything by one.
+    const annotated = previewEl.querySelectorAll<HTMLElement>("[data-source-line]")
+    let target: HTMLElement | null = null
+    let targetLine = -1
+    let heading: HTMLElement | null = null
+    let headingLine = -1
+    for (const el of annotated) {
+      const line = Number(el.dataset.sourceLine)
+      if (!Number.isFinite(line) || line > cursorPos.line) continue
+      if (line >= targetLine) {
+        target = el
+        targetLine = line
       }
+      if (/^H[1-6]$/.test(el.tagName) && line >= headingLine) {
+        heading = el
+        headingLine = line
+      }
+    }
+
+    previewEl
+      .querySelectorAll(".active-heading")
+      .forEach((el) => el.classList.remove("active-heading"))
+    heading?.classList.add("active-heading")
+
+    // Scroll only if syncScroll is enabled, and not when the cursor move came
+    // from a preview click (the user is already looking at that block). The
+    // flag was cleared at the top of the effect; `wasSuppressed` holds it.
+    if (syncScroll && !wasSuppressed && target) {
+      const box = target.getBoundingClientRect()
+      const view = previewEl.getBoundingClientRect()
+      const visible = box.top >= view.top && box.bottom <= view.bottom
+      if (!visible) target.scrollIntoView({ behavior: "smooth", block: "center" })
     }
   }, [cursorPos.line, syncScroll, settings.previewVisible, previewContent])
 
@@ -3550,7 +3553,19 @@ function AppContent({
       // Single click anywhere inside an element (or descendant) carrying
       // `data-source-line` reveals that line in the editor and focuses it.
       if (editor) {
-        const sourceEl = (e.target as Element).closest("[data-source-line]") as HTMLElement | null
+        let sourceEl = (e.target as Element).closest("[data-source-line]") as HTMLElement | null
+        // A block without a line of its own (a generated caption, a table
+        // cell) takes the nearest annotated block before it.
+        if (!sourceEl) {
+          const pane = (e.target as Element).closest(".preview-content")
+          if (pane) {
+            for (const el of pane.querySelectorAll<HTMLElement>("[data-source-line]")) {
+              if (el.compareDocumentPosition(e.target as Node) & Node.DOCUMENT_POSITION_FOLLOWING)
+                sourceEl = el
+              else break
+            }
+          }
+        }
         if (sourceEl) {
           const lineNum = parseInt(sourceEl.dataset.sourceLine ?? "", 10)
           if (Number.isFinite(lineNum) && lineNum > 0) {

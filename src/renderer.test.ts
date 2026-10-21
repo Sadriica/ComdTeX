@@ -22,7 +22,9 @@ describe("renderMarkdown", () => {
   it("turns soft line breaks in plain paragraphs into <br>, without needing pre-wrap CSS", () => {
     const html = renderMarkdown("Datos:\nIncognitas:\nSolucion:")
 
-    expect(html).toContain("<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>")
+    expect(html.replace(/ data-source-line="\d+"/g, "")).toContain(
+      "<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>",
+    )
   })
 
   it("preserves leading indentation on paragraph continuation lines", () => {
@@ -57,7 +59,9 @@ describe("renderMarkdown", () => {
     const html = renderMarkdown(":::example\nDatos:\nIncognitas:\nSolucion:\n:::")
 
     expect(html).toContain('class="math-env math-env-example"')
-    expect(html).toContain("<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>")
+    expect(html.replace(/ data-source-line="\d+"/g, "")).toContain(
+      "<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>",
+    )
   })
 
   it("renders markdown formatting inside prose environments", () => {
