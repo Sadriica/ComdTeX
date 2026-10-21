@@ -209,7 +209,8 @@ export interface OutlineEntry {
   label?: string
 }
 
-const ENV_OPEN = /^\s*:::\s*([A-Za-z][\w-]*)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*$/
+const ENV_OPEN =
+  /^\s*:::\s*(?:(?:sm|lg)\s+)?([A-Za-z][\w-]*)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*$/
 const HEADING = /^(#{1,6})\s+(\S.*?)\s*$/
 const LABEL = /\{#([a-zA-Z]+:[\w:.-]+)\}/g
 
