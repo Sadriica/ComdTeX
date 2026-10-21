@@ -24,6 +24,7 @@ import type * as monacoApi from "monaco-editor"
 import { registerEditorHovers } from "./editorHovers"
 import {
   NAV_SCHEME,
+  beginShadowRequest,
   ensureShadowModel,
   getNavHost,
   getNavSnapshot,
@@ -139,6 +140,7 @@ export function createNavigationProviders(monaco: typeof monacoApi): NavigationP
       const model = m as unknown as NavModel
       const c = constructAt(m.getLineContent(position.lineNumber), position.column - 1)
       if (!c) return null
+      beginShadowRequest()
       const snap = getNavSnapshot(model)
       const resolved = await resolveConstruct(snap, c, snap.activePath)
       if (resolved.length === 0) return null
@@ -169,6 +171,7 @@ export function createNavigationProviders(monaco: typeof monacoApi): NavigationP
       const model = m as unknown as NavModel
       const c = constructAt(m.getLineContent(position.lineNumber), position.column - 1)
       if (!c) return null
+      beginShadowRequest()
       const snap = getNavSnapshot(model)
       const { db } = snap
       const out: monacoApi.languages.Location[] = []

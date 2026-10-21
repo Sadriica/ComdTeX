@@ -100,10 +100,34 @@ interface Shadow {
 }
 const shadows = new Map<string, Shadow>()
 let useClock = 0
+// Clock value at the start of the current request. Anything used since belongs
+// to the latest result set and is never evicted while that set may be on screen.
+let requestStart = 0
 
 /** The vault path a shadow model stands for, or null for any other URI. */
 export function pathOfShadowUri(uri: { toString(): string }): string | null {
   return shadows.get(uri.toString())?.path ?? null
+}
+
+/**
+ * Start of a navigation request that may create shadow models. Trims the cache
+ * back to its cap here, between requests, and only models the previous request
+ * did not hand out: the references peek still shows (and navigates through) the
+ * models of its latest result list, however long it is. Within a request
+ * nothing is ever evicted, so a list of 100 notes keeps all 100 models.
+ */
+export function beginShadowRequest(): void {
+  const previousStart = requestStart
+  requestStart = ++useClock
+  if (shadows.size <= MAX_SHADOW_MODELS) return
+  const evictable = [...shadows.entries()]
+    .filter(([, s]) => s.used < previousStart)
+    .sort((a, b) => a[1].used - b[1].used)
+  for (const [key, s] of evictable) {
+    if (shadows.size <= MAX_SHADOW_MODELS) break
+    s.model.dispose()
+    shadows.delete(key)
+  }
 }
 
 /** A model for a file that is not the one in the editor, kept in step with `text`. */
@@ -121,13 +145,6 @@ export function ensureShadowModel(
     const model = existing ?? monaco.editor.createModel(text, language, uri)
     entry = { path, model, used: ++useClock }
     shadows.set(key, entry)
-    if (shadows.size > MAX_SHADOW_MODELS) {
-      const oldest = [...shadows.entries()].sort((a, b) => a[1].used - b[1].used)[0]
-      if (oldest && oldest[0] !== key) {
-        oldest[1].model.dispose()
-        shadows.delete(oldest[0])
-      }
-    }
   }
   entry.used = ++useClock
   if (entry.model.getValue() !== text) entry.model.setValue(text)

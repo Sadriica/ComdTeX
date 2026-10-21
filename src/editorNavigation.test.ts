@@ -215,6 +215,45 @@ describe("editor navigation providers", () => {
   })
 })
 
+describe("find usages across many notes", () => {
+  it("keeps every model of the result list alive, however long the list is", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    const many: NavFile[] = [
+      { path: "/v/a.md", name: "a.md", content: A_TEXT },
+      ...Array.from({ length: 60 }, (_, i) => ({
+        path: `/v/n/note-${i}.md`,
+        name: `note-${i}.md`,
+        content: `uses @lem:x in note ${i}`,
+      })),
+    ]
+    configureEditorNavigation({ getActivePath: () => "/v/a.md", getFiles: () => many })
+    const p = createNavigationProviders(fake.api)
+    const model = editorModel(A_TEXT)
+    const hits = (await p.references.provideReferences(
+      model as never,
+      pos(5, 8),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    const uris = new Set(hits.map((h) => h.uri.toString()))
+    expect(uris.size).toBeGreaterThan(50)
+    for (const uri of uris) {
+      const shadow = fake.models.get(uri)
+      if (shadow) expect(shadow.disposed, uri).toBe(false)
+    }
+    // A later request may trim what the previous one left behind, never its own results.
+    const again = (await p.references.provideReferences(
+      model as never,
+      pos(5, 8),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    for (const h of again) expect(fake.models.get(h.uri.toString())?.disposed ?? false).toBe(false)
+    resetEditorNavigation()
+  })
+})
+
 describe("editor navigation registration", () => {
   let fake: FakeMonaco
   let opened: [string, number, number][]

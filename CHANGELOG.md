@@ -92,6 +92,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Typing a code fence no longer leaves a stray backtick.** Typing three backticks now gives exactly three, and a fenced block typed with Enter closes exactly as typed; inline `code` still closes its backtick.
 - **A dollar sign is no longer closed where it is not math.** "costs $5 each" and `echo $HOME` (in a code fence or inline code) keep a single `$`; a `$` is closed only after whitespace or an opening bracket. A price is no longer taken for the start of math, so Enter after "costs $5 and sum" breaks the line instead of accepting a shorthand, and Enter never accepts a suggestion that opened by itself in math until you move the selection.
 - **References to notes with accents or special characters now resolve.** Completion, quick fixes and the palette wrote `@Álgebra/Teoría@thm:x`, which the preview, the linter and go to definition could not read; they now write `@[Álgebra/Teoría]@thm:x` whenever the path has anything beyond letters, digits and `_ . / -`. Typing `@Álg` offers the note, and a path written with a different accent encoding (macOS) still matches.
+- **Find usages works across more than 40 notes.** The references list used to close the previews of its own first results once it grew past 40 notes; the previews are now trimmed only between searches.
 
 ## [1.29.1] - 2026-10-15
 
