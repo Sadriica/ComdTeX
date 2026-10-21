@@ -61,23 +61,51 @@ const ACRONYM = 14
 const WHOLE_WORD = 20
 const NEG = -1e9
 
-interface Prepared {
+/**
+ * A text folded once for matching. Callers that rank the same large list on
+ * every keystroke (the files palette) keep one per item and pass it as a field
+ * `text`, so nothing is re-folded while typing.
+ */
+export interface Prepared {
   orig: string
   folded: string
-  bonus: number[]
+  /** Word-boundary bonuses; built on first use, after the cheap subsequence test passed. */
+  bonus: number[] | null
 }
 
-const preparedCache = new Map<string, Prepared>()
+export function prepareText(text: string): Prepared {
+  return { orig: text, folded: foldText(text), bonus: null }
+}
 
-function prepare(text: string): Prepared {
-  let p = preparedCache.get(text)
-  if (!p) {
-    if (preparedCache.size > 30000) preparedCache.clear()
+function bonusOf(p: Prepared): number[] {
+  if (!p.bonus) {
+    const text = p.orig
     const bonus = new Array<number>(text.length)
     for (let j = 0; j < text.length; j++) bonus[j] = boundaryBonus(text, j)
-    p = { orig: text, folded: foldText(text), bonus }
-    preparedCache.set(text, p)
+    p.bonus = bonus
   }
+  return p.bonus
+}
+
+// Plain strings (commands, headings, ...) are prepared through a small
+// two-generation cache: a hit is as cheap as a Map lookup, and the memory of a
+// finished working set is dropped one generation later instead of wholesale,
+// so a list a little bigger than one generation never thrashes.
+const CACHE_GENERATION = 50000
+let cacheNew = new Map<string, Prepared>()
+let cacheOld = new Map<string, Prepared>()
+
+function prepare(text: string | Prepared): Prepared {
+  if (typeof text !== "string") return text
+  let p = cacheNew.get(text)
+  if (p) return p
+  p = cacheOld.get(text)
+  if (!p) p = prepareText(text)
+  if (cacheNew.size >= CACHE_GENERATION) {
+    cacheOld = cacheNew
+    cacheNew = new Map()
+  }
+  cacheNew.set(text, p)
   return p
 }
 
@@ -108,6 +136,7 @@ function matchTerm(q: string, p: Prepared): FuzzyResult | null {
   const n = t.length
   if (m === 0) return { score: 0, positions: [] }
   if (m > n || !isSubsequence(q, t)) return null
+  const bonus = bonusOf(p)
 
   // M[i][j]: best score with q[i] matched at t[j]. G[i][j]: best score with q[i]
   // matched at some k <= j, discounted by the gap since (affine). Parent
@@ -131,7 +160,7 @@ function matchTerm(q: string, p: Prepared): FuzzyResult | null {
     const qc = q[i]
     for (let j = i; j < n; j++) {
       if (t[j] === qc) {
-        const own = MATCH + p.bonus[j]
+        const own = MATCH + bonus[j]
         if (i === 0) {
           M[row + j] = own
         } else if (j > 0) {
@@ -180,20 +209,20 @@ function matchTerm(q: string, p: Prepared): FuzzyResult | null {
 
   let score = best
   // Acronym: every matched char opens a word (`scf` -> Save Current File).
-  if (m >= 2 && positions.every((pos) => p.bonus[pos] >= 7)) score += ACRONYM
+  if (m >= 2 && positions.every((pos) => bonus[pos] >= 7)) score += ACRONYM
   // The term is exactly one whole word of the text ("gap" in "Fill gap with AI").
   const first = positions[0]
   const last = positions[m - 1]
   if (
     last - first === m - 1 &&
-    p.bonus[first] >= 7 &&
+    bonus[first] >= 7 &&
     (last === n - 1 || SEPARATOR.test(p.orig[last + 1]))
   ) {
     score += WHOLE_WORD
   }
   // Scattered mid-word matches are noise: demand some structure.
   const structured = positions.filter(
-    (pos, k) => p.bonus[pos] >= 7 || (k > 0 && pos === positions[k - 1] + 1),
+    (pos, k) => bonus[pos] >= 7 || (k > 0 && pos === positions[k - 1] + 1),
   )
   if (m >= 3 && structured.length < Math.ceil(m / 2)) return null
   // Shorter targets are tighter matches.
@@ -218,7 +247,7 @@ export function fuzzyMatch(query: string, text: string): FuzzyResult | null {
 }
 
 export interface FuzzyField {
-  text: string | undefined | null
+  text: string | Prepared | undefined | null
   weight: number
   /**
    * Only counts when the query is (a prefix of) this field as a whole: used for
@@ -236,9 +265,9 @@ export interface FuzzyScored {
   field: number
 }
 
-function exactMatch(query: string, text: string): boolean {
+function exactMatch(query: string, text: string | Prepared): boolean {
   const q = foldText(query).replace(/\s+/g, "")
-  const t = foldText(text).replace(/\s+/g, "")
+  const t = (typeof text === "string" ? foldText(text) : text.folded).replace(/\s+/g, "")
   return q.length > 0 && t.startsWith(q)
 }
 
