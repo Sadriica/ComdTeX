@@ -36,40 +36,67 @@ export function renderHoverKatex(
 }
 
 const PREVIEW_CLASS = "comdtex-suggest-math"
-let latestPreviewKey = ""
+const IDLE_MS = 20_000
+
+/** TeX sources whose rendered preview may be shown in the suggest details pane. */
+const previewSources = new Set<string>()
+let observer: MutationObserver | null = null
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+function normalize(text: string): string {
+  return text.replace(/\s+/g, " ").trim()
+}
+
+/** Put the rendered equation at the top of the details pane when it shows a registered source. */
+function syncPane(doc: Document, getMacros: () => Record<string, string>): void {
+  const pane = doc.querySelector(".suggest-details .docs")
+  if (!pane) return
+  const code = pane.querySelector(".monaco-tokenized-source")
+  const source = code ? normalize(code.textContent ?? "") : ""
+  const existing = pane.querySelector(`.${PREVIEW_CLASS}`)
+  if (!source || !previewSources.has(source)) {
+    existing?.remove()
+    return
+  }
+  if (existing?.getAttribute("data-source") === source) return
+  const html = renderHoverKatex(source, true, getMacros())
+  if (!html) return
+  existing?.remove()
+  const box = doc.createElement("div")
+  box.className = PREVIEW_CLASS
+  box.setAttribute("data-source", source)
+  box.style.overflowX = "auto"
+  box.style.padding = "4px 0"
+  box.innerHTML = html
+  pane.insertBefore(box, pane.firstChild)
+}
 
 /**
  * Monaco renders suggestion documentation as sanitized Markdown, which strips
- * the inline styles KaTeX needs. So the equation is drawn into the details
- * pane directly, after Monaco has shown it. Best effort: when the pane is not
- * there (details collapsed, another host) the Markdown fallback still reads.
+ * the inline styles KaTeX needs, and it builds the details pane again for each
+ * focused item (and only once the pane is opened). So the rendered equation is
+ * drawn into the pane directly: a short-lived observer watches the DOM while
+ * label suggestions are in use and re-draws the preview whenever the pane shows
+ * a registered source. Best effort: when the pane is not open, the Markdown
+ * fallback (the TeX source in a code block) is what is shown.
  */
-export function injectSuggestPreview(
-  html: string,
-  key: string,
+export function showSuggestPreview(
+  source: string,
+  getMacros: () => Record<string, string>,
   doc: Document | undefined = typeof document === "undefined" ? undefined : document,
 ): void {
-  latestPreviewKey = key
   if (!doc) return
-  const attempt = (): boolean => {
-    // The focus may have moved on to another suggestion while we waited.
-    if (key !== latestPreviewKey) return true
-    const pane = doc.querySelector(".suggest-details .docs")
-    if (!pane) return false
-    const existing = pane.querySelector(`.${PREVIEW_CLASS}`)
-    if (existing?.getAttribute("data-key") === key) return true
-    existing?.remove()
-    const box = doc.createElement("div")
-    box.className = PREVIEW_CLASS
-    box.setAttribute("data-key", key)
-    box.style.overflowX = "auto"
-    box.style.padding = "4px 0"
-    box.innerHTML = html
-    pane.insertBefore(box, pane.firstChild)
-    return true
+  previewSources.add(normalize(source))
+  if (previewSources.size > 500) previewSources.clear()
+  if (!observer && typeof MutationObserver !== "undefined") {
+    observer = new MutationObserver(() => syncPane(doc, getMacros))
+    observer.observe(doc.body, { childList: true, subtree: true })
   }
-  if (typeof window === "undefined") return
-  for (const delay of [0, 30, 90, 200]) {
-    window.setTimeout(attempt, delay)
-  }
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    observer?.disconnect()
+    observer = null
+    previewSources.clear()
+  }, IDLE_MS)
+  window.setTimeout(() => syncPane(doc, getMacros), 0)
 }

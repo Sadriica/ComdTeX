@@ -26,7 +26,7 @@ import {
   relPathOf,
   type LabelEntry,
 } from "./state"
-import { injectSuggestPreview, renderHoverKatex } from "./katexPreview"
+import { showSuggestPreview } from "./katexPreview"
 import {
   RETRIGGER_COMMAND,
   type CompletionEnv,
@@ -481,8 +481,7 @@ export function resolveLabelItem(item: monacoApi.languages.CompletionItem): void
   const heading = [kindName(entry), entry.title].filter(Boolean).join(" · ")
   const parts = [`**${heading}**`]
   if (entry.kind === "eq" && entry.preview) {
-    const html = renderHoverKatex(entry.preview, true, getKatexMacros())
-    if (html) injectSuggestPreview(html, entry.id + "|" + entry.filePath)
+    showSuggestPreview(entry.preview, getKatexMacros)
     parts.push("```latex\n" + entry.preview + "\n```")
   } else if (entry.preview) {
     parts.push(entry.preview)

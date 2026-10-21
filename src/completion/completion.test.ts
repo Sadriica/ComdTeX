@@ -197,12 +197,12 @@ describe("citations [@", () => {
   it("suggests on [@ with an empty word and does not double the closer", async () => {
     const r = await complete("as in [@|]")
     expect(labels(r)).toEqual(["levin2017", "lubotzky1988"])
-    expect(accept("as in [@|]", r.suggestions[0])).toBe("as in [@levin2017]|")
+    expect(accept("as in [@|]", r.suggestions[0])).toBe("as in [@levin2017|]")
   })
 
   it("adds ] when the bracket is not closed", async () => {
     const r = await complete("as in [@lev|")
-    expect(accept("as in [@lev|", r.suggestions[0])).toBe("as in [@levin2017]|")
+    expect(accept("as in [@lev|", r.suggestions[0])).toBe("as in [@levin2017|]")
   })
 
   it("finds an entry by author, title and year, not only by key", async () => {
@@ -229,9 +229,9 @@ describe("citations [@", () => {
   it("completes the next key after ; and after , @", async () => {
     const semi = await complete("[@levin2017; @|]")
     expect(labels(semi)).toContain("lubotzky1988")
-    expect(accept("[@levin2017; @|]", semi.suggestions[0])).toBe("[@levin2017; @levin2017]|")
+    expect(accept("[@levin2017; @|]", semi.suggestions[0])).toBe("[@levin2017; @levin2017|]")
     const bare = await complete("[@levin2017; |]")
-    expect(accept("[@levin2017; |]", bare.suggestions[0])).toBe("[@levin2017; @levin2017]|")
+    expect(accept("[@levin2017; |]", bare.suggestions[0])).toBe("[@levin2017; @levin2017|]")
     const comma = await complete("[@levin2017, p. 3, @lub|]")
     expect(labels(comma)).toEqual(["lubotzky1988"])
   })

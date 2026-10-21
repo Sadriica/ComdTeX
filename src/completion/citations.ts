@@ -7,7 +7,7 @@
 import type * as monacoApi from "monaco-editor"
 import { getBibEntries, completionText, type BibEntry } from "./state"
 import type { CompletionSource } from "./types"
-import { closerPlan, makeRange, MAX_ITEMS } from "./util"
+import { closerPlan, escapeSnippet, makeRange, MAX_ITEMS } from "./util"
 
 /** An open `[@...` span that has not been closed yet. */
 const SPAN_RE = /\[@[^\]\n]*$/
@@ -98,7 +98,13 @@ export const citationsSource: CompletionSource = (env) => {
         kind: env.monaco.languages.CompletionItemKind.Reference,
         detail: entry.title.replace(/[{}]/g, "") || t.citeKey,
         documentation: card(entry),
-        insertText: (ctx.needsAt ? "@" : "") + entry.key + closer.text,
+        // The caret stays before the `]`: next comes a locator (`, p. 3`) or `; @other`.
+        insertText: closer.text
+          ? escapeSnippet((ctx.needsAt ? "@" : "") + entry.key) + "$0" + closer.text
+          : (ctx.needsAt ? "@" : "") + entry.key,
+        insertTextRules: closer.text
+          ? env.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+          : undefined,
         range,
         sortText: sort,
         filterText: `${entry.key} ${entry.author} ${entry.title} ${entry.year}`,

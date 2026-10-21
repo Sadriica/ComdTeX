@@ -49,6 +49,11 @@ export function cachedByVersion<T>(model: CompletionModel, key: string, compute:
   return value
 }
 
+/** Escape text so Monaco's snippet parser inserts it literally. */
+export function escapeSnippet(text: string): string {
+  return text.replace(/[\\$}]/g, "\\$&")
+}
+
 export function foldAccents(text: string): string {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "")
 }

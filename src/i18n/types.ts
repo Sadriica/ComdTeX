@@ -1860,16 +1860,13 @@ export interface T {
     userMacro: string
     /** Display names for label kinds (eq, fig, tbl, sec, data). */
     kindNames: Record<string, string>
-    inFile: (file: string) => string
     otherFileLine: (file: string, line: number) => string
     thisFile: string
     nextFootnote: string
     footnoteDefined: (line: number) => string
     footnoteUndefined: string
-    pathStem: string
     column: (letter: string) => string
     todayDate: string
-    noTitle: string
     wikilinkHeading: string
     citeKey: string
     frontmatterKeys: Record<string, string>
@@ -1877,6 +1874,5 @@ export interface T {
     domainValues: Record<string, string>
     texclassValues: Record<string, string>
     citestyleValues: Record<string, string>
-    sigArgs: Record<string, string>
   }
 }

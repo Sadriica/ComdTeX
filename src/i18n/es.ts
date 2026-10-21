@@ -2029,16 +2029,13 @@ export const es: T = {
       sec: "Sección",
       data: "Datos",
     },
-    inFile: (file) => `en ${file}`,
     otherFileLine: (file, line) => `${file}:${line}`,
     thisFile: "este archivo",
     nextFootnote: "siguiente número libre",
     footnoteDefined: (line) => `definida en la línea ${line}`,
     footnoteUndefined: "usada pero sin definir",
-    pathStem: "nota",
     column: (letter) => `columna ${letter}`,
     todayDate: "hoy",
-    noTitle: "sin título",
     wikilinkHeading: "encabezado",
     citeKey: "clave de cita",
     frontmatterKeys: {
@@ -2071,6 +2068,5 @@ export const es: T = {
       apa: "APA (autor, año)",
       "author-year": "Autor-año",
     },
-    sigArgs: {},
   },
 }

@@ -2011,16 +2011,13 @@ export const en: T = {
       sec: "Section",
       data: "Dataset",
     },
-    inFile: (file) => `in ${file}`,
     otherFileLine: (file, line) => `${file}:${line}`,
     thisFile: "this file",
     nextFootnote: "next free number",
     footnoteDefined: (line) => `defined on line ${line}`,
     footnoteUndefined: "used but not defined yet",
-    pathStem: "note",
     column: (letter) => `column ${letter}`,
     todayDate: "today",
-    noTitle: "untitled",
     wikilinkHeading: "heading",
     citeKey: "citation key",
     frontmatterKeys: {
@@ -2053,6 +2050,5 @@ export const en: T = {
       apa: "APA (author, year)",
       "author-year": "Author-year",
     },
-    sigArgs: {},
   },
 }
