@@ -844,7 +844,7 @@ export const en: T = {
     baseUrl: "Base URL",
     baseUrlPlaceholder: "https://api.deepseek.com/v1  •  http://localhost:11434/v1",
     model: "Model",
-    modelPlaceholder: "e.g. claude-3-5-sonnet-latest, gpt-4o-mini, gemini-1.5-flash",
+    modelPlaceholder: "e.g. claude-opus-5-5, gpt-5.6, gemini-3.6-flash",
     apiKey: "API key",
     apiKeyPlaceholder: "Paste your API key",
     apiKeyNote: "Stored locally on this device (localStorage). Never shared with ComdTeX.",

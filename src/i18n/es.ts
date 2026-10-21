@@ -848,7 +848,7 @@ export const es: T = {
     baseUrl: "URL base",
     baseUrlPlaceholder: "https://api.deepseek.com/v1  •  http://localhost:11434/v1",
     model: "Modelo",
-    modelPlaceholder: "p. ej. claude-3-5-sonnet-latest, gpt-4o-mini, gemini-1.5-flash",
+    modelPlaceholder: "p. ej. claude-opus-5-5, gpt-5.6, gemini-3.6-flash",
     apiKey: "Clave de API",
     apiKeyPlaceholder: "Pega tu clave de API",
     apiKeyNote:

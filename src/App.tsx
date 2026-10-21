@@ -1375,8 +1375,11 @@ function AppContent({
   useEffect(() => {
     settingsRef.current = settings
   }, [settings])
+  // Monaco context key behind the Ctrl+K binding (set on editor mount).
+  const aiEnabledCtxRef = useRef<{ set(value: boolean): void } | null>(null)
   useEffect(() => {
     aiEnabledRef.current = settings.aiEnabled
+    aiEnabledCtxRef.current?.set(settings.aiEnabled)
   }, [settings.aiEnabled])
 
   // ── Custom preview CSS ────────────────────────────────────────────────────
@@ -2604,12 +2607,18 @@ function AppContent({
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () =>
         insertSnippet(editorRef.current, "_${1:texto}_"),
       )
-      // Ctrl/Cmd+K inline AI edit (flagship). Monaco normally reserves Ctrl+K as a
-      // CHORD prefix (e.g. Ctrl+K Ctrl+C); registering a plain Ctrl+K command here
-      // overrides the chord with a single-stroke binding, which is what we want.
-      // Routed through a ref so this once-bound command always calls the latest
-      // handler (and re-reads settings.aiEnabled) without re-binding on every render.
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => openCmdkRef.current())
+      // Ctrl/Cmd+K inline AI edit. Monaco reserves Ctrl+K as a CHORD prefix
+      // (Ctrl+K Ctrl+0 folds everything, Ctrl+K Ctrl+J unfolds); a plain Ctrl+K
+      // command overrides it. Bound only while the AI assistant is on, through a
+      // context key, so with AI off the chords work as documented.
+      // Routed through a ref so this once-bound command always calls the latest handler.
+      const aiCtx = editor.createContextKey("comdtexAiEnabled", aiEnabledRef.current)
+      aiEnabledCtxRef.current = aiCtx
+      editor.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK,
+        () => openCmdkRef.current(),
+        "comdtexAiEnabled",
+      )
       editor.onDidChangeCursorPosition((e) => {
         const nextCursor = { line: e.position.lineNumber, col: e.position.column }
         const previousCursor = cursorPosRef.current

@@ -52,7 +52,7 @@ export interface Settings {
   aiProviderId: string
   /** Base URL for the openai-compatible preset (DeepSeek, Ollama, LM Studio…). */
   aiBaseUrl: string
-  /** Model id (e.g. "claude-3-5-sonnet-latest", "gpt-4o-mini", "gemini-1.5-flash"). */
+  /** Model id (e.g. "claude-opus-5-5", "gpt-5.6", "gemini-3.6-flash"). */
   aiModel: string
   /**
    * API key. Kept in memory here for backwards-compatible consumer access,
@@ -131,6 +131,16 @@ export const DEFAULTS: Settings = {
 const KEY = STORAGE_KEYS.SETTINGS
 const AI_API_KEY_SECRET = "aiApiKey"
 
+/**
+ * Model ids that older builds offered as the default and the providers have
+ * since retired: a saved one would fail on every request. Only these exact
+ * defaults are moved forward; a model the user typed is left alone.
+ */
+export const RETIRED_DEFAULT_MODELS: Record<string, string> = {
+  "claude-3-5-sonnet-latest": "claude-opus-5-5",
+  "gemini-1.5-flash": "gemini-3.6-flash",
+}
+
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
@@ -138,6 +148,8 @@ function load(): Settings {
     const merged: Settings = { ...DEFAULTS, ...JSON.parse(raw) }
     if (merged.documentStyle !== "paper" && merged.documentStyle !== "sans")
       merged.documentStyle = DEFAULTS.documentStyle
+    const replacement = RETIRED_DEFAULT_MODELS[merged.aiModel]
+    if (replacement) merged.aiModel = replacement
     return merged
   } catch {
     localStorage.removeItem(KEY)

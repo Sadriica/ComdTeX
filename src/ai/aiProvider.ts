@@ -82,15 +82,15 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     label: "Anthropic (Claude)",
     needsBaseUrl: false,
     isCli: false,
-    defaultModel: "claude-3-5-sonnet-latest",
+    defaultModel: "claude-opus-5-5",
   },
-  { id: "openai", label: "OpenAI", needsBaseUrl: false, isCli: false, defaultModel: "gpt-4o-mini" },
+  { id: "openai", label: "OpenAI", needsBaseUrl: false, isCli: false, defaultModel: "gpt-5.6" },
   {
     id: "gemini",
     label: "Google Gemini",
     needsBaseUrl: false,
     isCli: false,
-    defaultModel: "gemini-1.5-flash",
+    defaultModel: "gemini-3.6-flash",
   },
   {
     id: "openai-compatible",
