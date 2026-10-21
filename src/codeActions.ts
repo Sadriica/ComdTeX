@@ -184,11 +184,13 @@ function replaceFixes(input: FixInput, from: number, to: number, options: string
 }
 
 function fixDisplayMath({ model, marker, actions }: FixInput) {
-  // Close the block at the end of the paragraph it opens: the first blank line,
-  // or the end of the document.
+  // Close the block at the end of the paragraph it opens: before the first blank
+  // line, the closing `:::` of the environment it sits in (or the next one), or a
+  // heading, whichever comes first; else the end of the document.
   let last = marker.startLineNumber
   for (let line = marker.startLineNumber + 1; line <= model.getLineCount(); line++) {
-    if (model.getLineContent(line).trim() === "") break
+    const text = model.getLineContent(line)
+    if (text.trim() === "" || /^\s*:::/.test(text) || /^#{1,6}\s/.test(text)) break
     last = line
   }
   const at = endOfLine(model, last)
@@ -411,6 +413,19 @@ function fixGap({ marker, actions, aiEnabled }: FixInput) {
   ]
 }
 
+/** Top-level comma-separated slots of an argument list, empty ones counted. */
+function countArgSlots(content: string): number {
+  if (content.trim() === "") return 0
+  let depth = 0
+  let slots = 1
+  for (const ch of content) {
+    if (ch === "(" || ch === "[") depth++
+    else if (ch === ")" || ch === "]") depth--
+    else if (ch === "," && depth === 0) slots++
+  }
+  return slots
+}
+
 function fixArity({ model, marker, covered, actions }: FixInput) {
   const m = /^(\w+)\s*\(/.exec(covered)
   if (!m) return []
@@ -423,7 +438,11 @@ function fixArity({ model, marker, covered, actions }: FixInput) {
   const args = splitArgs(balanced.content).filter((a) => a.length > 0)
   const range = markerRange(marker)
   if (args.length < expected) {
-    const text = `${covered.slice(0, balanced.end - 1)}${", ".repeat(expected - args.length)}${covered.slice(balanced.end - 1)}`
+    // Slots already written, empty ones included ("frac(a, )" has two): only
+    // the missing ones are added, so the fix is not offered twice for the same gap.
+    const slots = countArgSlots(balanced.content)
+    if (slots >= expected) return []
+    const text = `${covered.slice(0, balanced.end - 1)}${", ".repeat(expected - slots)}${covered.slice(balanced.end - 1)}`
     return [
       quickFix(actions.addMissingArgs(name), marker, { edits: [textEdit(model, range, text)] }),
     ]

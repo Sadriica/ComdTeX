@@ -243,6 +243,18 @@ describe("close unclosed blocks", () => {
     expect(out).toBe("$$x\n$$")
   })
 
+  it("closes a $$ block before the :::, not after it", () => {
+    const text = ":::theorem[T]\n$$\nx^2\n:::\n\nafter"
+    const out = fixedBy(text, "display-math-unclosed", "Close the $$ block")
+    expect(out).toBe(":::theorem[T]\n$$\nx^2\n$$\n:::\n\nafter")
+    expect(lintMarkers(out).filter((m) => m.code === "display-math-unclosed")).toHaveLength(0)
+  })
+
+  it("closes a $$ block before a heading", () => {
+    const out = fixedBy("$$\nx\n# Next", "display-math-unclosed", "Close the $$ block")
+    expect(out).toBe("$$\nx\n$$\n# Next")
+  })
+
   it("closes an environment before the next heading", () => {
     const text = ":::theorem[T]\nLet x.\n\n\n# Next\n\ntext"
     const out = fixedBy(text, "env-unclosed", "Close the :::theorem environment")
@@ -436,6 +448,16 @@ describe("tables, gaps, shorthands, footnotes, labels", () => {
 
   it("adds the missing arguments of a shorthand", () => {
     expect(fixedBy("frac(a)", "shorthand-arity", /Add the missing arguments/)).toBe("frac(a, )")
+  })
+
+  it("fills a gap once: an empty slot counts, so the fix is not offered again", () => {
+    const out = fixedBy("frac(a)", "shorthand-arity", /Add the missing arguments/)
+    expect(out).toBe("frac(a, )")
+    // The second slot is already there; there is nothing left to add.
+    expect(actionsFor("frac(a, )", "shorthand-arity")).toEqual([])
+    expect(actionsFor("frac(a,)", "shorthand-arity")).toEqual([])
+    expect(fixedBy("sum(a)", "shorthand-arity", /Add the missing arguments/)).toBe("sum(a, )")
+    expect(fixedBy("x frac(a) y", "shorthand-arity", /Add the missing/)).toBe("x frac(a, ) y")
   })
 
   it("keeps the first arguments when there are too many", () => {
