@@ -511,7 +511,11 @@ export default function CommandPalette({
               e.kind === "heading" && r.positions.length
                 ? r.positions.map((p) => p + (e.level ?? 1) + 1)
                 : r.positions,
-            detail: [e.kind === "env" ? e.type : undefined, e.label, `L${e.line}`]
+            detail: [
+              e.kind === "env" ? e.type : undefined,
+              e.kind === "label" ? undefined : e.label,
+              `L${e.line}`,
+            ]
               .filter(Boolean)
               .join(" · "),
             icon:
