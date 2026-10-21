@@ -31,4 +31,21 @@ describe("preview to editor line mapping on a real paper", () => {
     const nums = lines.map(Number)
     for (let i = 1; i < nums.length; i++) expect(nums[i]).toBeGreaterThanOrEqual(nums[i - 1])
   })
+
+  it("points each environment at its opening line, also when the editor spells it with spaces", () => {
+    // A callout reopened from disk becomes `:::theorem[T] {#thm:x}`.
+    const spaced = paper.replace(/\]\{#/g, "] {#")
+    const lines = spaced.split("\n")
+    const root = document.createElement("div")
+    root.innerHTML = renderMarkdown(spaced)
+    const envs = [...root.querySelectorAll<HTMLElement>(".env-wrap")]
+    expect(envs.length).toBeGreaterThan(3)
+    for (const env of envs) {
+      const line = Number(env.getAttribute("data-source-line"))
+      expect(line).toBeGreaterThan(0)
+      expect(lines[line - 1]).toMatch(/^\s*:::/)
+    }
+    const theorem = envs.find((e) => (e.textContent ?? "").includes("Mixing time"))
+    expect(lines[Number(theorem?.getAttribute("data-source-line")) - 1]).toContain(":::theorem")
+  })
 })

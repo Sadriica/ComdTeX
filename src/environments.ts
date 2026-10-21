@@ -379,18 +379,38 @@ export function extractEnvironments(
     for (let i = from; i < to; i++) if (s.charCodeAt(i) === 10) n++
     return n
   }
-  const lineOfInRaw = (opening: string): number => {
-    const idx = rawSource!.indexOf(opening, rawCursor)
-    if (idx === -1) return 1
+  const escRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  // The opening as the editor may spell it: optional spaces between the
+  // parts (`:::theorem[T] {#thm:x}` is what a callout reopened from disk
+  // becomes), any indentation. `parts` are the pieces ENV_RE captured.
+  const openingRe = (parts: string[]): RegExp =>
+    new RegExp(`^[ \\t]*${parts.map(escRe).join("[ \\t]*")}[ \\t]*$`, "gm")
+  const lineOfInRaw = (parts: string[]): number => {
+    const re = openingRe(parts)
+    re.lastIndex = rawCursor
+    let m = re.exec(rawSource!)
+    // Nested environments are rewritten inner-first, so an outer opening can
+    // sit before the cursor: look again from the top before giving up.
+    if (!m) {
+      re.lastIndex = 0
+      m = re.exec(rawSource!)
+      if (!m) return 0
+      return countNewlines(rawSource!, 0, m.index) + 1
+    }
+    const idx = m.index
     const newlinesBeforeIdx = rawCursorNewlines + countNewlines(rawSource!, rawCursor, idx)
-    rawCursorNewlines = newlinesBeforeIdx + countNewlines(rawSource!, idx, idx + opening.length)
-    rawCursor = idx + opening.length
+    rawCursorNewlines = newlinesBeforeIdx + countNewlines(rawSource!, idx, idx + m[0].length)
+    rawCursor = idx + m[0].length
     return newlinesBeforeIdx + 1
   }
   const lineOfInText = (idx: number): number => text.slice(0, idx).split("\n").length
 
+  // Line 0 means "not found": no attribute, so the preview's own matcher
+  // (renderer.ts annotateSourceLinesIn) can still place the block's contents.
   const wrapWithSourceLine = (html: string, line: number): string =>
-    `<div class="env-wrap" data-source-line="${line}">${html}</div>`
+    line > 0
+      ? `<div class="env-wrap" data-source-line="${line}">${html}</div>`
+      : `<div class="env-wrap">${html}</div>`
 
   // Pre-pass: extract `:::code [language]` blocks before the generic ENV_RE.
   // The body must be preserved verbatim (HTML-escaped, no shorthand expansion,
@@ -400,8 +420,9 @@ export function extractEnvironments(
   let current = text.replace(
     CODE_ENV_RE,
     (_match, lang: string | undefined, body: string, offset: number) => {
-      const opening = lang ? `:::code ${lang}` : `:::code`
-      const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
+      const srcLine = haveRaw
+        ? lineOfInRaw(lang ? [":::code", lang] : [":::code"])
+        : lineOfInText(offset)
       // Body is verbatim: preserve the trailing newline that closes its last line
       // by NOT trimming. But strip the single trailing newline produced by `\n:::`.
       const verbatim = body.endsWith("\n") ? body.slice(0, -1) : body
@@ -419,12 +440,15 @@ export function extractEnvironments(
       ENV_RE(),
       (match, size, rawName, title, label, content, offset: number) => {
         const envName = rawName.toLowerCase()
-        // Build the exact opening as it appears in source: `:::[size ]name[title][{#label}]`
-        const sizeStr = size ? `${size} ` : ""
-        const titleStr = title !== undefined ? `[${title}]` : ""
-        const labelStr = label !== undefined ? `{#${label}}` : ""
-        const opening = `:::${sizeStr}${rawName}${titleStr}${labelStr}`
-        const srcLine = haveRaw ? lineOfInRaw(opening) : lineOfInText(offset)
+        // The opening's pieces, as in source: `:::[size ]name[title][{#label}]`.
+        const openingParts = [
+          ":::",
+          ...(size ? [size] : []),
+          rawName,
+          ...(title !== undefined ? [`[${title}]`] : []),
+          ...(label !== undefined ? [`{#${label}}`] : []),
+        ]
+        const srcLine = haveRaw ? lineOfInRaw(openingParts) : lineOfInText(offset)
 
         if (envName === "pseudocode") {
           counters["pseudocode"] = (counters["pseudocode"] ?? 0) + 1
