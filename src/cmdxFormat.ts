@@ -61,10 +61,24 @@ export function usesCrlf(text: string): boolean {
   return crlf * 2 >= all
 }
 
+function isSameOrUnderPath(p: string, root: string): boolean {
+  return p === root || p.startsWith(root + "/") || p.startsWith(root + "\\")
+}
+
+/**
+ * Drop what is remembered about a path (and everything under it, for a
+ * folder). A file created where a CRLF file used to live is new: it must
+ * not inherit the old file's line ending.
+ */
+export function forgetLineEnding(path: string): void {
+  for (const p of [...crlfPaths]) if (isSameOrUnderPath(p, path)) crlfPaths.delete(p)
+}
+
 /** Carry a file's remembered line ending over to its new path after a rename or move. */
 export function renameLineEnding(oldPath: string, newPath: string): void {
+  forgetLineEnding(newPath)
   for (const p of [...crlfPaths]) {
-    if (p === oldPath || p.startsWith(oldPath + "/") || p.startsWith(oldPath + "\\")) {
+    if (isSameOrUnderPath(p, oldPath)) {
       crlfPaths.delete(p)
       crlfPaths.add(newPath + p.slice(oldPath.length))
     }

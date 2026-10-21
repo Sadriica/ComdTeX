@@ -202,6 +202,44 @@ describe("useVault data-loss guards", () => {
       expect(disk(`${VAULT}/sub/b.md`)).toBe("SUB-B")
     })
 
+    it("reports whether a rename happened", async () => {
+      fsMock.touch(`${VAULT}/a.md`, "A")
+      fsMock.touch(`${VAULT}/b.md`, "B")
+      const { result } = renderHook(() => useVault())
+      let refused: boolean | undefined
+      let done: boolean | undefined
+      await act(async () => {
+        refused = await result.current.renameFile(`${VAULT}/a.md`, "b.md")
+      })
+      await act(async () => {
+        done = await result.current.renameFile(`${VAULT}/a.md`, "c.md")
+      })
+      expect(refused).toBe(false)
+      expect(done).toBe(true)
+    })
+
+    it("keeps the other program's version when renaming a note with an open conflict", async () => {
+      fsMock.touch(`${VAULT}/a.md`, "old")
+      const { result } = renderHook(() => useVault(20))
+      await openAndType(result, `${VAULT}/a.md`, "my typing")
+      fsMock.touch(`${VAULT}/a.md`, "EXTERNAL EDIT")
+      dialogMock.choice = "Cancel"
+      await act(async () => {
+        await result.current.closeTab(`${VAULT}/a.md`)
+      })
+      expect(disk(`${VAULT}/a.md`)).toBe("EXTERNAL EDIT")
+
+      await act(async () => {
+        await result.current.renameFile(`${VAULT}/a.md`, "b.md")
+      })
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 150))
+      })
+      expect(disk(`${VAULT}/b.md`)).toBe("EXTERNAL EDIT")
+      // The typing is still in the tab, not thrown away.
+      expect(result.current.getLiveContent(`${VAULT}/b.md`)).toBe("my typing")
+    })
+
     it("re-keys open tabs and pending edits when a folder is renamed", async () => {
       fsMock.touch(`${VAULT}/dir/a.md`, "old")
       const { result } = renderHook(() => useVault(60_000))

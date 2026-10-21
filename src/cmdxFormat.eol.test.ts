@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { renameLineEnding, toDiskContent, toEditorContent, usesCrlf } from "./cmdxFormat"
+import {
+  forgetLineEnding,
+  renameLineEnding,
+  toDiskContent,
+  toEditorContent,
+  usesCrlf,
+} from "./cmdxFormat"
 
 const CASES: Array<[string, string]> = [
   ["plain.md", "# T\r\n\r\nhello\r\nworld\r\n"],
@@ -43,5 +49,18 @@ describe("line endings survive open and save", () => {
     expect(usesCrlf("a\r\nb\r\nc\n")).toBe(true)
     expect(usesCrlf("a\nb\nc\r\n")).toBe(false)
     expect(usesCrlf("no breaks")).toBe(false)
+  })
+
+  it("a file created where a CRLF file was deleted starts with LF", () => {
+    toEditorContent("/v/gone.md", "a\r\nb\r\n")
+    forgetLineEnding("/v/gone.md")
+    expect(toDiskContent("/v/gone.md", "# New\nline\n")).toBe("# New\nline\n")
+  })
+
+  it("a rename onto a path remembered as CRLF does not inherit it", () => {
+    toEditorContent("/v/old-crlf.md", "x\r\ny\r\n")
+    const lf = toEditorContent("/v/lf.md", "p\nq\n")
+    renameLineEnding("/v/lf.md", "/v/old-crlf.md")
+    expect(toDiskContent("/v/old-crlf.md", lf)).toBe("p\nq\n")
   })
 })

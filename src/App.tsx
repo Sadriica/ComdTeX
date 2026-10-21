@@ -933,6 +933,14 @@ function AppContent({
   const suppressPreviewScrollOnce = useRef(false)
   const splitPreviewRef = useRef<HTMLDivElement>(null)
 
+  /** The newest text of a note: the editor's live buffer when open, else disk. */
+  const currentText = useCallback(async (path: string): Promise<string> => {
+    const live = vaultRef.current.getLiveContent(path)
+    if (live !== undefined) return live
+    const raw = await readTextFile(path).catch(() => "")
+    return raw ? toEditorContent(path, raw) : ""
+  }, [])
+
   // ── Wikilink file names (memoized, stable reference for effects) ─────────
   const wikiNames = useMemo(() => getFileNameSet(vault.tree), [vault.tree])
   const bibKeys = useMemo(() => new Set(bibMap.keys()), [bibMap])
@@ -3841,10 +3849,7 @@ function AppContent({
         // writeFileSafe so the pending autosave is cancelled (otherwise it could
         // fire after our write and clobber the replacement with the pre-edit
         // buffer) and the tab/draft/mtime stay consistent.
-        const openTab = vault.openTabs.find((tb) => tb.path === filePath)
-        const text = openTab
-          ? openTab.content
-          : toEditorContent(filePath, await readTextFile(filePath))
+        const text = await currentText(filePath)
         const re = buildSearchRegExp(search, opts)
         if (!re) return 0
         const { count, content: newContent } = target
@@ -3858,7 +3863,7 @@ function AppContent({
         return 0
       }
     },
-    [vault, t],
+    [vault, t, currentText],
   )
 
   const handleBreadcrumbNavigate = useCallback(
@@ -4357,8 +4362,9 @@ function AppContent({
         try {
           const bibPath = await pathJoin(v.vaultPath, BIBTEX_FILENAME)
           const open = v.openTabs.find((tab) => tab.path === bibPath)
+          // The live buffer, not React state that lags typing by ~250 ms.
           const current = open
-            ? open.content
+            ? (v.getLiveContent(bibPath) ?? open.content)
             : (await exists(bibPath))
               ? await readTextFile(bibPath)
               : BIB_TEMPLATE
@@ -4486,7 +4492,11 @@ function AppContent({
       const oldBasename = displayBasename(oldPath).replace(/\.[^.]+$/, "")
       const newBasename = newName.replace(/\.[^.]+$/, "")
 
-      // Only offer refactor for .md files where the base name actually changes
+      // Only offer refactor for .md files where the base name actually changes.
+      // The question is asked first, but links are rewritten only AFTER the
+      // rename succeeded: a refused rename (name taken, invalid) must not leave
+      // every [[old]] pointing at a note that does not exist.
+      let refactor: { re: RegExp; paths: string[] } | null = null
       if (oldBasename !== newBasename && oldPath.endsWith(".md")) {
         const re = new RegExp(
           `\\[\\[${oldBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}((?:#[^\\]|]+)?)((?:\\|[^\\]]+)?)\\]\\]`,
@@ -4495,47 +4505,47 @@ function AppContent({
         const markdownFiles = vaultFileNodes.filter(
           (file) => file.path !== oldPath && file.ext === "md",
         )
-        const filesWithLinks: { path: string; content: string }[] = []
-
+        const paths: string[] = []
         for (const file of markdownFiles) {
-          const openTab = openTabsRef.current.find((tab) => tab.path === file.path)
-          const rawDisk = await readTextFile(file.path).catch(() => "")
-          const source = openTab?.content ?? toEditorContent(file.path, rawDisk)
+          const source = await currentText(file.path)
           re.lastIndex = 0
-          if (source && re.test(source)) filesWithLinks.push({ path: file.path, content: source })
+          if (source && re.test(source)) paths.push(file.path)
         }
-
-        if (filesWithLinks.length > 0) {
-          let refactorCount = 0
+        if (paths.length > 0) {
           try {
             const ok = await tauriConfirm(
-              t.vault.renameRefactorConfirm(oldBasename, newBasename, filesWithLinks.length),
+              t.vault.renameRefactorConfirm(oldBasename, newBasename, paths.length),
               { title: "ComdTeX" },
             )
-            if (ok) {
-              for (const file of filesWithLinks) {
-                re.lastIndex = 0
-                const matches = file.content.match(re)
-                re.lastIndex = 0
-                const updated = file.content.replace(re, `[[${newBasename}$1$2]]`)
-                // writeFileSafe masks special blocks, cancels the pending autosave
-                // (lost-update guard), patches the open tab + refreshes mtime.
-                await vault.writeFileSafe(file.path, updated)
-                refactorCount += matches ? matches.length : 0
-              }
-              if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
-            }
+            if (ok) refactor = { re, paths }
           } catch {
             /* dialog cancelled */
           }
         }
       }
 
-      await vault.renameFile(oldPath, newName)
+      const renamed = await vault.renameFile(oldPath, newName)
+      if (!renamed || !refactor) return
+
+      let refactorCount = 0
+      for (const path of refactor.paths) {
+        // Re-read now: the user may have typed while the dialog was open.
+        const source = await currentText(path)
+        refactor.re.lastIndex = 0
+        const matches = source.match(refactor.re)
+        refactor.re.lastIndex = 0
+        const updated = source.replace(refactor.re, `[[${newBasename}$1$2]]`)
+        if (updated === source) continue
+        // writeFileSafe masks special blocks, cancels the pending autosave
+        // (lost-update guard), patches the open tab + refreshes mtime.
+        await vault.writeFileSafe(path, updated)
+        refactorCount += matches ? matches.length : 0
+      }
+      if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
       // Stable deps (open tabs read via ref) so FileTree's React.memo holds while typing.
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe],
+    [t, vaultFileNodes, vault.renameFile, vault.writeFileSafe, currentText],
   )
 
   const handleOpenBib = useCallback(async () => {
@@ -5402,10 +5412,7 @@ function AppContent({
                         await vault.createFile(`${name}.md`, `# ${name}\n`)
                       }}
                       onRemoveLink={async (path, line, link) => {
-                        const openTab = vault.openTabs.find((tab) => tab.path === path)
-                        const content = openTab
-                          ? openTab.content
-                          : toEditorContent(path, await readTextFile(path))
+                        const content = await currentText(path)
                         const lines = content.split("\n")
                         const idx = line - 1
                         if (idx < 0 || idx >= lines.length) return

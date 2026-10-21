@@ -9,6 +9,7 @@ import { showToast } from "./toastService"
 import { useT, type T } from "./i18n"
 import {
   analyzeConversion,
+  forgetLineEnding,
   renameLineEnding,
   storageFormatForPath,
   toEditorContent,
@@ -1629,6 +1630,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         return
       }
       try {
+        forgetLineEnding(filePath)
         await writeTextFileAtomic(filePath, toDiskContent(filePath, content))
         await refreshTree(vaultPath)
         // Brand-new path: make sure no stale cache entry lingers (shouldn't
@@ -1672,6 +1674,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         pendingContent.current.delete(path)
         conflictPaths.current.delete(path)
         await remove(path)
+        forgetLineEnding(path)
         searchIndexRef.current.invalidate(path)
         forgetViewState(path)
         if (vaultPath) await refreshTree(vaultPath)
@@ -1704,17 +1707,23 @@ export function useVault(options: UseVaultOptions | number = {}) {
       if (pending !== undefined) {
         pendingContent.current.delete(oldPath)
         pendingContent.current.set(newPath, pending)
-        // Re-arm the debounced save against the new path. Force it: the rename/move
-        // we just performed bumps newPath's mtime above the tab's cachedMtime, which
-        // would otherwise trip saveFile's external-modification conflict guard for
-        // what is actually OUR own pending edit (no external change to protect).
-        saveTimers.current.set(
-          newPath,
-          setTimeout(() => {
-            saveTimers.current.delete(newPath)
-            void saveFile(newPath, pending, { force: true })
-          }, autoSaveMs),
-        )
+        // A path with an unresolved external-edit conflict keeps its edits
+        // pending and unsaved: forcing a save here would overwrite the other
+        // program's version that the user chose to keep. The conflict flag is
+        // re-keyed by rekeyPaths right after this.
+        if (!conflictPaths.current.has(oldPath)) {
+          // Re-arm the debounced save against the new path. Force it: the rename/move
+          // we just performed bumps newPath's mtime above the tab's cachedMtime, which
+          // would otherwise trip saveFile's external-modification conflict guard for
+          // what is actually OUR own pending edit (no external change to protect).
+          saveTimers.current.set(
+            newPath,
+            setTimeout(() => {
+              saveTimers.current.delete(newPath)
+              void saveFile(newPath, pending, { force: true })
+            }, autoSaveMs),
+          )
+        }
       }
       // peekDraft (not getDrafts) so a draft still sitting in the un-flushed
       // in-memory queue migrates too, instead of being orphaned under oldPath.
@@ -1781,11 +1790,11 @@ export function useVault(options: UseVaultOptions | number = {}) {
   )
 
   const renameFile = useCallback(
-    async (oldPath: string, newName: string) => {
+    async (oldPath: string, newName: string): Promise<boolean> => {
       const v = validate(newName.replace(/\.[^.]+$/, ""))
       if (!v.valid) {
         showToast(v.error!, "error")
-        return
+        return false
       }
       const dir = pathDirname(oldPath)
       const newPath = await pathJoin(dir, newName)
@@ -1797,7 +1806,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         (await pathExists(newPath))
       ) {
         showToast(t.vault.alreadyExists(newName), "error")
-        return
+        return false
       }
       try {
         await rename(oldPath, newPath)
@@ -1806,8 +1815,10 @@ export function useVault(options: UseVaultOptions | number = {}) {
         rekeyPaths(oldPath, newPath)
         if (vaultPath) await refreshTree(vaultPath)
         showToast(t.vault.renamed(newName), "success")
+        return true
       } catch (e) {
         showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
+        return false
       }
     },
     [vaultPath, refreshTree, validate, rekeyPaths, t],

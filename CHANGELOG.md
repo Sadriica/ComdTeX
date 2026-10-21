@@ -42,6 +42,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `npm audit` is clean again: Excalidraw's unused `sass` dependency is moved past the `braces` advisory. `eslint-plugin-react-hooks` is on 7.1.
 
 ### Fixed
+- **Ticking a task in the preview edits that task.** In a note with frontmatter the click landed on a line above it, and could flip a different task. The click now only edits a line that holds a task in the expected state.
+- **Renaming a note no longer overwrites an edit made in another program.** When you had kept the other program's version in a conflict, renaming the note saved your typing over it.
+- **Links are updated only when the rename really happens.** If the new name was taken, every `[[link]]` used to be rewritten anyway.
+- **A new file created where a Windows-style (CRLF) file was deleted starts with normal line endings.**
+- Quick fixes and link updates read the text you just typed, not a copy up to a quarter of a second old.
 - **Conversion notices speak your language and appear once.** The note about a block kept as text when opening or saving a file was always in Spanish and could show twice when tabs were restored.
 - **A citation that is not in references.bib no longer breaks the bibliography layout.** Its line was squeezed into the narrow number column.
 - **Escape closes the Git panel** and returns focus to its button.
