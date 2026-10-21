@@ -315,6 +315,23 @@ describe("references", () => {
     expect(lintMarkers(out)).toHaveLength(0)
   })
 
+  it("uses the bracket form when the path has accents", () => {
+    ctx.vaultDocs = docsOf({
+      "/v/a.md": "x",
+      "/v/Álgebra/Teoría.md": ":::definition{#def:far}\nx\n:::",
+    })
+    const out = fixedBy("@def:far", "ref-other-note", /cross-file form/)
+    expect(out).toBe("@[Álgebra/Teoría]@def:far")
+    expect(lintMarkers(out)).toHaveLength(0)
+  })
+
+  it("brackets a corrected path that needs it", () => {
+    ctx.vaultDocs = docsOf({ "/v/a.md": "x", "/v/Álgebra/Teoría.md": "{#def:d}" })
+    const out = fixedBy("@Algebra/Teoria@def:d", "ref-doc-missing", /Change to/)
+    expect(out).toBe("@[Álgebra/Teoría]@def:d")
+    expect(lintMarkers(out)).toHaveLength(0)
+  })
+
   it("does not offer the cross-file form for kinds that cannot cross files", () => {
     ctx.vaultDocs = docsOf({ "/v/a.md": "x", "/v/b.md": "$$y$$ {#eq:far}" })
     const titles = actionsFor("@eq:far", "ref-other-note").map((a) => a.title)

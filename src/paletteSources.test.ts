@@ -192,6 +192,12 @@ describe("labels", () => {
     expect(referenceText(labels[2], "/v/notes/other.md", "/v")).toBe("@eq:main")
     const spaced = mk("def:x", "/v/my notes/a b.md")
     expect(referenceText(spaced, "/v/z.md", "/v")).toBe("@[my notes/a b]@def:x")
+    // Anything outside A-Za-z0-9_./- cannot be a bare path: the renderer would never resolve it.
+    const accented = mk("def:x", "/v/Álgebra/Teoría.md")
+    expect(referenceText(accented, "/v/z.md", "/v")).toBe("@[Álgebra/Teoría]@def:x")
+    expect(referenceText(mk("def:x", "/v/c++/notes.md"), "/v/z.md", "/v")).toBe(
+      "@[c++/notes]@def:x",
+    )
   })
 })
 

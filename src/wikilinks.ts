@@ -70,7 +70,8 @@ export function findByName(tree: FileNode[], name: string): FileNode | null {
  * bare names ambiguously.
  */
 export function matchesVaultRelPath(filePath: string, relPath: string): boolean {
-  const norm = (s: string) => s.replace(/\\/g, "/").toLowerCase()
+  // NFC: macOS stores file names decomposed, a typed accent is composed.
+  const norm = (s: string) => s.replace(/\\/g, "/").normalize("NFC").toLowerCase()
   const file = norm(filePath).replace(/\.[^./]+$/, "")
   const rel = norm(relPath.trim())
     .replace(/\.[^./]+$/, "")

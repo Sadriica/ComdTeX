@@ -638,8 +638,10 @@ export function prescanEnvironmentLabels(text: string): Map<string, EnvironmentR
  */
 export type EnvironmentDocResolver = (docPath: string) => string | null
 
+export { BARE_PATH_RE, crossFileRefText, refPathTarget } from "./crossFileRef"
+
 // Matches, in priority order:
-//   1. `@[my folder/my note]@def:label`: escaped path (only needed for spaces)
+//   1. `@[my folder/my note]@def:label`: escaped path (needed for anything outside `A-Za-z0-9_./-`)
 //   2. `@gp/calendario@def:label`       : bare vault-relative path
 //   3. `@def:label`                     : local ref (legacy form, unchanged)
 //

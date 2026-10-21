@@ -20,6 +20,7 @@ import {
   type LintContext,
   type LintVaultDoc,
 } from "./contentLinter"
+import { crossFileRefText, refPathTarget } from "./crossFileRef"
 import { findTableBlock, normalizeTableBlock } from "./markdownEditing"
 import type { T } from "./i18n/types"
 
@@ -287,10 +288,6 @@ function relPathOf(doc: LintVaultDoc, ctx: LintContext): string {
   return vaultRelativeDocPath(doc.path, ctx.vaultPath)
 }
 
-function crossFileRef(rel: string, id: string): string {
-  return /\s/.test(rel) ? `@[${rel}]@${id}` : `@${rel}@${id}`
-}
-
 function fixRef(input: FixInput, code: string) {
   const { model, marker, covered, actions, ctx } = input
   const ref = parseRef(covered)
@@ -300,7 +297,14 @@ function fixRef(input: FixInput, code: string) {
 
   if (code === "ref-doc-missing" && ref.path !== undefined) {
     const paths = (ctx.vaultDocs ?? []).map((d) => relPathOf(d, ctx))
-    return replaceFixes(input, ref.pathFrom, ref.pathTo, closestMatches(ref.path, paths))
+    const bracketed = covered[1] === "["
+    // A bare path that now needs brackets (an accent, a space) gets them.
+    return replaceFixes(
+      input,
+      ref.pathFrom,
+      ref.pathTo,
+      closestMatches(ref.path, paths).map((p) => (bracketed ? p : refPathTarget(p))),
+    )
   }
 
   if (code === "ref-label-missing" && ref.path !== undefined) {
@@ -315,7 +319,7 @@ function fixRef(input: FixInput, code: string) {
   if (code === "ref-other-note" && ENV_REF_KINDS.includes(ref.kind) && ctx.vaultDocs) {
     const owner = ctx.vaultDocs.find((d) => d.path !== ctx.docPath && d.labels.has(wantedId))
     if (owner) {
-      const text = crossFileRef(relPathOf(owner, ctx), wantedId)
+      const text = crossFileRefText(relPathOf(owner, ctx), wantedId)
       out.push(
         quickFix(actions.useCrossFileRef(text), marker, {
           edits: [textEdit(model, markerRange(marker), text)],

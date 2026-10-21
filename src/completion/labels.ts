@@ -15,6 +15,7 @@
 // file cannot be cited at all, so those are never offered from other files.
 
 import type * as monacoApi from "monaco-editor"
+import { crossFileRefText, refPathTarget } from "../crossFileRef"
 import { envTitle, getUiLanguage } from "../docLang"
 import {
   completionText,
@@ -130,7 +131,7 @@ export function parseRefContext(before: string): RefContext | null {
   m = /(?<![\w@])@([A-Za-z]+):([\w.-]*)$/.exec(before)
   if (m) return { type: "local", start: m.index, kind: canonicalKind(m[1]), partial: m[2] }
 
-  m = /(?<![\w@])@([\w./-]*)$/.exec(before)
+  m = /(?<![\w@])@([\p{L}\p{N}_./-]*)$/u.exec(before)
   if (m) return { type: "starter", start: m.index, partial: m[1] }
   return null
 }
@@ -223,8 +224,7 @@ function kindName(entry: Pick<LabelEntry, "kind" | "envType" | "number">): strin
 }
 
 function refText(path: string, kind: string, name: string): string {
-  const target = /\s/.test(path) ? `[${path}]` : path
-  return `@${target}@${kind}:${name}`
+  return crossFileRefText(path, `${kind}:${name}`)
 }
 
 const itemEntry = new WeakMap<object, LabelEntry>()
@@ -403,11 +403,11 @@ function pathItems(
   for (const [path, rel] of referencablePaths()) {
     if (known.size > 0 && !known.has(path)) continue
     if (partialLc && !rel.toLowerCase().includes(partialLc)) continue
-    const spaced = /\s/.test(rel)
+    const bracketed = refPathTarget(rel) !== rel
     out.push({
       label: { label: rel, description: "@" },
       kind: env.monaco.languages.CompletionItemKind.File,
-      insertText: inBracket ? `${rel}]@` : spaced ? `[${rel}]@` : `${rel}@`,
+      insertText: inBracket ? `${rel}]@` : bracketed ? `[${rel}]@` : `${rel}@`,
       range,
       sortText: "2" + rel.toLowerCase(),
       filterText: (inBracket ? "" : "@") + rel,

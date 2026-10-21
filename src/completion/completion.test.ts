@@ -32,6 +32,7 @@ const FILES = [
   { path: "/v/notes/intro.md", name: "intro.md", ext: "md" },
   { path: "/v/physics/intro.md", name: "intro.md", ext: "md" },
   { path: "/v/my folder/note.md", name: "note.md", ext: "md" },
+  { path: "/v/Álgebra/Teoría.md", name: "Teoría.md", ext: "md" },
   { path: "/v/data/growth.csv", name: "growth.csv", ext: "csv" },
   { path: "/v/other/growth.csv", name: "growth.csv", ext: "csv" },
   { path: "/v/data/rates.csv", name: "rates.csv", ext: "csv" },
@@ -65,6 +66,7 @@ const CONTENT: Record<string, string> = {
     "## Second heading",
   ].join("\n"),
   "/v/my folder/note.md": ":::lemma[Spaces]{#lem:spaced}\nA lemma.\n:::",
+  "/v/Álgebra/Teoría.md": ":::proposition[Accents]{#prop:accents}\nA proposition.\n:::",
   "/v/notes/intro.md": "# Notes intro",
   "/v/physics/intro.md": "# Physics intro",
 }
@@ -264,6 +266,19 @@ describe("labels @kind:", () => {
   it("uses the @[...]@ form for a path with spaces", async () => {
     const r = await complete(doc("@lem:|"))
     expect(accept("@lem:|", r.suggestions[0])).toBe("@[my folder/note]@lem:spaced|")
+  })
+
+  it("brackets a path with accents, which the renderer cannot read bare", async () => {
+    const r = await complete(doc("@prop:|"))
+    expect(accept("@prop:|", r.suggestions[0])).toBe("@[Álgebra/Teoría]@prop:accents|")
+    const path = await complete("@Álg|")
+    const item = path.suggestions.find((s) => labelOf(s) === "Álgebra/Teoría")!
+    expect(accept("@Álg|", item)).toBe("@[Álgebra/Teoría]@|")
+    // Typing inside the bracket form completes the label after it.
+    const kinds = await complete("@[Álgebra/Teoría]@|")
+    expect(labels(kinds)).toEqual(["prop:"])
+    const names = await complete("@[Álgebra/Teoría]@prop:|")
+    expect(labels(names)).toEqual(["accents"])
   })
 
   it("never offers an equation, figure, table or section of another file", async () => {
