@@ -6,6 +6,8 @@ import katex from "katex"
 import "katex/contrib/mhchem"
 import { lintFile, LINTER_SOURCE, type LintContext } from "./contentLinter"
 import { registerCodeActions } from "./codeActions"
+import { setBibHoverEntries, type BibHoverEntry } from "./editorHovers"
+import { registerEditorNavigation } from "./editorNavigation"
 import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
@@ -481,13 +483,6 @@ export function updateVaultFileNames(names: string[]) {
   vaultFileNames = names
 }
 
-// ── Open files snapshot for wikilink hover preview ───────────────────────────
-
-let openFilesSnapshot: { name: string; content: string }[] = []
-export function updateOpenFilesSnapshot(files: { name: string; content: string }[]) {
-  openFilesSnapshot = files
-}
-
 // ── BibTeX key/metadata for citation autocomplete + hover ─────────────────────
 
 interface BibSuggestion {
@@ -504,14 +499,8 @@ export function updateBibSuggestions(
   }))
 }
 
-interface BibHoverEntry {
-  key: string
-  type: string
-  fields: Record<string, string>
-}
-let bibHoverEntries: BibHoverEntry[] = []
 export function updateBibHoverEntries(entries: BibHoverEntry[]) {
-  bibHoverEntries = entries
+  setBibHoverEntries(entries)
 }
 
 interface StructuralLabelSuggestion {
@@ -527,10 +516,6 @@ export function updateStructuralLabelSuggestions(labels: StructuralLabelSuggesti
 // ── Completion provider (dropdown visual) ────────────────────────────────────
 
 let providerDisposable: monacoApi.IDisposable | null = null
-let hoverDisposable: monacoApi.IDisposable | null = null
-let wikilinkHoverDisposable: monacoApi.IDisposable | null = null
-let crossRefHoverDisposable: monacoApi.IDisposable | null = null
-let footnoteHoverDisposable: monacoApi.IDisposable | null = null
 let codeActionsDisposable: monacoApi.IDisposable | null = null
 
 export function setupMonaco(monaco: typeof monacoApi) {
@@ -859,168 +844,9 @@ export function setupMonaco(monaco: typeof monacoApi) {
     },
   })
 
-  // Citation hover: [@key] → show BibTeX entry info
-  hoverDisposable?.dispose()
-  hoverDisposable = monaco.languages.registerHoverProvider("markdown", {
-    provideHover(model, position) {
-      const line = model.getLineContent(position.lineNumber)
-      const col = position.column - 1
-      // Find [@key] at cursor position
-      const citeRe = /\[@([\w:.-]+)\]/g
-      let m: RegExpExecArray | null
-      while ((m = citeRe.exec(line)) !== null) {
-        if (col >= m.index && col <= m.index + m[0].length) {
-          const key = m[1]
-          const entry = bibHoverEntries.find((e) => e.key === key)
-          if (!entry) break
-          const f = entry.fields
-          const lines: string[] = []
-          if (f.title) lines.push(`**${f.title}**`)
-          if (f.author) lines.push(`_${f.author}_`)
-          const meta = [f.year, f.journal ?? f.booktitle ?? f.publisher].filter(Boolean).join(", ")
-          if (meta) lines.push(meta)
-          lines.push(`\`@${entry.type}{${key}}\``)
-          return {
-            range: new monaco.Range(
-              position.lineNumber,
-              m.index + 1,
-              position.lineNumber,
-              m.index + m[0].length + 1,
-            ),
-            contents: [{ value: lines.join("\n\n"), isTrusted: true }],
-          }
-        }
-      }
-      return null
-    },
-  })
-
-  // Wikilink hover: [[noteName]] → show first 12 non-empty lines of file content
-  wikilinkHoverDisposable?.dispose()
-  wikilinkHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
-    provideHover(model, position) {
-      const line = model.getLineContent(position.lineNumber)
-      const col = position.column - 1 // 0-indexed
-      const wikilinkRe = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
-      let m: RegExpExecArray | null
-      while ((m = wikilinkRe.exec(line)) !== null) {
-        if (col >= m.index && col <= m.index + m[0].length) {
-          const noteName = m[1].trim().replace(/\.md$/i, "")
-          const entry = openFilesSnapshot.find(
-            (f) => f.name.replace(/\.md$/i, "").toLowerCase() === noteName.toLowerCase(),
-          )
-          if (!entry) return null
-          const nonEmptyLines = entry.content.split("\n").filter((l) => l.trim() !== "")
-          const preview = nonEmptyLines.slice(0, 12)
-          const hasMore = nonEmptyLines.length > 12
-          const body = preview.join("\n") + (hasMore ? "\n…" : "")
-          return {
-            range: new monaco.Range(
-              position.lineNumber,
-              m.index + 1,
-              position.lineNumber,
-              m.index + m[0].length + 1,
-            ),
-            contents: [
-              { value: `**${entry.name}**`, isTrusted: true },
-              { value: body, isTrusted: true },
-            ],
-          }
-        }
-      }
-      return null
-    },
-  })
-
-  // Cross-reference hover: @eq:label / @fig:label → show equation number + source
-  crossRefHoverDisposable?.dispose()
-  crossRefHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
-    provideHover(model, position) {
-      const line = model.getLineContent(position.lineNumber)
-      const col = position.column - 1 // 0-indexed
-      const crossRefRe = /@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
-      let m: RegExpExecArray | null
-      while ((m = crossRefRe.exec(line)) !== null) {
-        if (col >= m.index && col <= m.index + m[0].length) {
-          const kind = m[1]
-          const refKey = m[2]
-          if (kind !== "eq") {
-            const id = `${kind}:${refKey}`
-            const label = structuralLabelSuggestions.find((candidate) => candidate.id === id)
-            return {
-              range: new monaco.Range(
-                position.lineNumber,
-                m.index + 1,
-                position.lineNumber,
-                m.index + m[0].length + 1,
-              ),
-              contents: [
-                {
-                  value: label ? `**${label.id}**\n\n${label.detail}` : `Reference: \`${id}\``,
-                  isTrusted: true,
-                },
-              ],
-            }
-          }
-          // kind === "eq": search document for matching $$...$$  {#eq:label}
-          const content = model.getValue()
-          const eqRe = /\$\$([\s\S]+?)\$\$(?:\s*\{#eq:([\w:.-]+)\})?/g
-          let eqM: RegExpExecArray | null
-          let eqIndex = 0
-          while ((eqM = eqRe.exec(content)) !== null) {
-            eqIndex++
-            const label = eqM[2] ?? null
-            if (label === refKey) {
-              const texSource = eqM[1].trim()
-              const value = `**Equation (${eqIndex})**\n\n\`\`\`tex\n${texSource}\n\`\`\``
-              return {
-                range: new monaco.Range(
-                  position.lineNumber,
-                  m.index + 1,
-                  position.lineNumber,
-                  m.index + m[0].length + 1,
-                ),
-                contents: [{ value, isTrusted: true }],
-              }
-            }
-          }
-          return null
-        }
-      }
-      return null
-    },
-  })
-
-  // Footnote hover: [^label] (reference) → show definition text
-  footnoteHoverDisposable?.dispose()
-  footnoteHoverDisposable = monaco.languages.registerHoverProvider("markdown", {
-    provideHover(model, position) {
-      const line = model.getLineContent(position.lineNumber)
-      const col = position.column - 1 // 0-indexed
-      const footnoteRefRe = /\[\^([\w-]+)\]/g
-      let m: RegExpExecArray | null
-      while ((m = footnoteRefRe.exec(line)) !== null) {
-        if (col >= m.index && col <= m.index + m[0].length) {
-          const label = m[1]
-          const content = model.getValue()
-          const defRe = new RegExp(`^\\[\\^${label}\\]:\\s*(.+)$`, "m")
-          const defMatch = defRe.exec(content)
-          if (!defMatch) return null
-          const definitionText = defMatch[1]
-          return {
-            range: new monaco.Range(
-              position.lineNumber,
-              m.index + 1,
-              position.lineNumber,
-              m.index + m[0].length + 1,
-            ),
-            contents: [{ value: `**Footnote:** ${definitionText}`, isTrusted: true }],
-          }
-        }
-      }
-      return null
-    },
-  })
+  // Go to definition, find usages, link underlines and the hover cards for
+  // ComdTeX syntax live in editorNavigation.ts / editorHovers.ts.
+  registerEditorNavigation(monaco)
 }
 
 // ── Typewriter mode ───────────────────────────────────────────────────────────

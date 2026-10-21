@@ -1803,6 +1803,17 @@ export const en: T = {
     replace: "Replace",
   },
 
+  editorNav: {
+    followLink: "Go to target",
+    goToDefinition: "Go to definition",
+    findUsages: "Find usages",
+    unresolved: (what) => `Not found: ${what}`,
+    equation: (n) => `Equation (${n})`,
+    inFile: (file, line) => `${file}, line ${line}`,
+    footnote: "Footnote",
+    emptyNote: "(empty note)",
+  },
+
   breadcrumb: {
     location: "Location",
     back: "Back",

@@ -1177,6 +1177,31 @@ export function useVault(options: UseVaultOptions | number = {}) {
     [openTabs, t],
   )
 
+  // Open-at-position: a jump (go to definition, a link, a cross-file result)
+  // names a file AND a spot in it. The editor for a tab mounts after the tab
+  // becomes active (it is keyed per tab), so the target waits here until that
+  // editor asks for it with `takePendingReveal`.
+  const pendingReveal = useRef<{ path: string; line: number; column: number; at: number } | null>(
+    null,
+  )
+  const openFileAt = useCallback(
+    async (path: string, line: number, column = 1): Promise<"current" | "opened"> => {
+      if (activeTabPathRef.current === path) return "current"
+      pendingReveal.current = { path, line, column, at: Date.now() }
+      await openFilePath(path)
+      return "opened"
+    },
+    [openFilePath],
+  )
+  const takePendingReveal = useCallback((path: string): { line: number; column: number } | null => {
+    const want = pendingReveal.current
+    if (!want || want.path !== path) return null
+    pendingReveal.current = null
+    // A target for a file that failed to open must not fire on a much later open.
+    if (Date.now() - want.at > 10_000) return null
+    return { line: want.line, column: want.column }
+  }, [])
+
   const togglePin = useCallback((path: string) => {
     setPinnedPaths((prev) => {
       const next = new Set(prev)
@@ -2118,6 +2143,8 @@ export function useVault(options: UseVaultOptions | number = {}) {
     refreshTree,
     openFileNode,
     openFilePath,
+    openFileAt,
+    takePendingReveal,
     closeTab,
     switchTab,
     reopenTab,

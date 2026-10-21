@@ -37,7 +37,6 @@ import {
   updateVaultFileNames,
   updateBibSuggestions,
   updateBibHoverEntries,
-  updateOpenFilesSnapshot,
   updateUserSnippets,
   enableVimMode,
   applyTypewriterMode,
@@ -47,6 +46,7 @@ import {
   type CommentMarker,
   type KeepMarkDecorationsHandle,
 } from "./monacoSetup"
+import { configureEditorNavigation } from "./editorNavigation"
 import { monacoThemeName, refreshMonacoThemes, setupMonacoTheming } from "./monacoThemes"
 import {
   loadComments,
@@ -1215,15 +1215,6 @@ function AppContent({
   useEffect(() => {
     updateVaultFileNames([...wikiNames])
   }, [wikiNames])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateOpenFilesSnapshot(
-        openTabsRef.current.map((t) => ({ name: t.name, content: t.content })),
-      )
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [vault.openTabs])
 
   // Label scan runs in a worker (sync fallback) and only rescans changed files;
   // results superseded by a newer vaultFiles snapshot are dropped by the scanner.
@@ -2433,6 +2424,16 @@ function AppContent({
    * both jumped visibly and raced the first keystrokes after a tab switch.
    */
   const restoreEditorPlacement = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
+    // A navigation jump (definition, link, usage in another note) names a spot.
+    const reveal = activeFilePathRef.current
+      ? vaultRef.current.takePendingReveal(activeFilePathRef.current)
+      : null
+    if (reveal) {
+      editor.setPosition({ lineNumber: reveal.line, column: reveal.column })
+      editor.revealLineInCenter(reveal.line)
+      editor.focus()
+      return
+    }
     // An explicit jump (search hit, outline click, backlink) outranks the
     // remembered position: the user asked to go somewhere specific.
     if (pendingJumpRef.current !== null) {
@@ -2822,6 +2823,48 @@ function AppContent({
       setNavHistory((h) => [...h.slice(-49), vaultRef.current.activeTabPath!])
     vaultRef.current.openFileNode(node)
   }, [navFuture, findVaultNodeByPath])
+
+  // ── Editor navigation: definitions, links and usages (editorNavigation.ts) ──
+  // Jumps to another note go through the same back/forward history as a tree
+  // click; a jump inside the current note only moves the caret.
+  const openEditorLocation = useCallback(
+    (path: string, line: number, column: number) => {
+      const current = vaultRef.current
+      if (current.activeTabPath === path) {
+        const editor = editorRef.current
+        editor?.setPosition({ lineNumber: line, column })
+        editor?.revealLineInCenter(line)
+        editor?.focus()
+        return
+      }
+      if (current.activeTabPath) {
+        setNavHistory((h) => [...h.slice(-49), current.activeTabPath!])
+        setNavFuture([])
+      }
+      void current.openFileAt(path, line, column)
+      trackRecent(path)
+    },
+    [trackRecent],
+  )
+  useEffect(() => {
+    configureEditorNavigation({
+      getActivePath: () => activeFilePathRef.current,
+      getFiles: () => vaultFilesRef.current,
+      getLiveText: (path) => vaultRef.current.getLiveContent(path),
+      getBibPath: () =>
+        vaultRef.current.vaultPath ? `${vaultRef.current.vaultPath}/${BIBTEX_FILENAME}` : null,
+      readText: async (path) => {
+        try {
+          return await readTextFile(path)
+        } catch {
+          return null
+        }
+      },
+      openLocation: openEditorLocation,
+      getStrings: () => t.editorNav,
+      getLang: () => settings.language,
+    })
+  }, [openEditorLocation, t, settings.language])
 
   // ── Per-line comment handlers ─────────────────────────────────────────────
   const handleAddCommentAtCursor = useCallback(async () => {

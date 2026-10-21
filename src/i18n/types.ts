@@ -1646,6 +1646,18 @@ export interface T {
     replace: string
   }
 
+  /** Editor navigation (go to definition, usages, links) and its hover cards. */
+  editorNav: {
+    followLink: string
+    goToDefinition: string
+    findUsages: string
+    unresolved: (what: string) => string
+    equation: (n: number) => string
+    inFile: (file: string, line: number) => string
+    footnote: string
+    emptyNote: string
+  }
+
   breadcrumb: {
     location: string
     back: string
