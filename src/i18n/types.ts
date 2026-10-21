@@ -1778,6 +1778,63 @@ export interface T {
       safetyNet: string
     }
   }
+  /** Editor diagnostics (contentLinter.ts) and their quick fixes (codeActions.ts). */
+  lint: {
+    messages: {
+      displayMathUnclosed: () => string
+      envUnclosed: (name: string) => string
+      envStrayClose: () => string
+      envUnknownType: (name: string) => string
+      /** `ref` is the full reference as written, e.g. `@thm:main`. */
+      refUndefined: (ref: string) => string
+      refInOtherNote: (ref: string, file: string) => string
+      refInOtherNoteEnv: (ref: string, file: string) => string
+      refDocMissing: (ref: string, path: string) => string
+      refLabelMissing: (ref: string, path: string) => string
+      wikilinkMissing: (target: string) => string
+      citeUndefined: (key: string) => string
+      shorthandUnclosed: (name: string) => string
+      shorthandArity: (name: string, expected: number, got: number) => string
+      tableRagged: (actual: number, expected: number) => string
+      gapPending: (hint: string | null) => string
+      footnoteUndefined: (id: string) => string
+      footnoteUnused: (id: string) => string
+      labelDuplicate: (id: string) => string
+      imageMissing: (src: string) => string
+      mathError: (detail: string) => string
+      dataDuplicate: (id: string) => string
+      dataUndeclared: (id: string) => string
+      spellUnknown: (word: string) => string
+      bioItalic: (text: string, suggestion: string) => string
+      bibUnclosed: (type: string, close: string) => string
+      bibUnknownType: (type: string) => string
+      bibNoKey: (type: string) => string
+      bibDuplicateKey: (key: string) => string
+      bibMissingField: (type: string, key: string, fields: string[]) => string
+      macroDuplicate: (name: string) => string
+      macroBraceClose: () => string
+      macroBraceOpen: () => string
+      macroUnknownLine: () => string
+    }
+    actions: {
+      closeMath: string
+      closeEnv: (name: string) => string
+      removeStrayClose: string
+      replaceWith: (text: string) => string
+      useCrossFileRef: (ref: string) => string
+      createNote: (name: string) => string
+      addBibStub: (key: string) => string
+      normalizeTable: string
+      fillGap: string
+      addMissingArgs: (name: string) => string
+      trimExtraArgs: (name: string, expected: number) => string
+      addFootnoteDef: (id: string) => string
+      renameLabel: (id: string) => string
+      noteCreated: (name: string) => string
+      bibStubAdded: (key: string) => string
+      bibStubFailed: string
+    }
+  }
   errorBoundary: {
     title: string
     retry: string

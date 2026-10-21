@@ -586,7 +586,7 @@ export function extractEnvironments(
 }
 
 /** Reference prefix (`@thm:x`) to the environment type it points at. */
-const ENV_REF_PREFIXES: Record<string, string> = {
+export const ENV_REF_PREFIXES: Record<string, string> = {
   thm: "theorem",
   theorem: "theorem",
   lem: "lemma",

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { lintContent, lintFile, lintFileSummary, type LintContext } from "./contentLinter"
+import { es } from "./i18n/es"
 
 // Stub for monaco MarkerSeverity enum
 const Severity = { Error: 8, Warning: 4, Info: 2, Hint: 1 } as const
@@ -25,24 +26,24 @@ function lintMac(text: string) {
 describe("lintDisplayMath", () => {
   it("no error when $$ are balanced", () => {
     const markers = lint("$$x^2$$")
-    expect(markers.filter((m) => m.message.includes("$$"))).toHaveLength(0)
+    expect(markers.filter((m) => m.code === "display-math-unclosed")).toHaveLength(0)
   })
 
   it("error on unclosed $$", () => {
     const markers = lint("$$x^2")
-    const err = markers.find((m) => m.message.includes("$$"))
+    const err = markers.find((m) => m.code === "display-math-unclosed")
     expect(err).toBeDefined()
     expect(err!.severity).toBe(Severity.Error)
   })
 
   it("no false positive for multiple balanced $$", () => {
     const text = "$$a$$\n\nSome text.\n\n$$b$$"
-    expect(lint(text).filter((m) => m.message.includes("$$"))).toHaveLength(0)
+    expect(lint(text).filter((m) => m.code === "display-math-unclosed")).toHaveLength(0)
   })
 
   it("ignores $$ inside fenced code blocks", () => {
     const text = "```\n$$unclosed\n```"
-    expect(lint(text).filter((m) => m.message.includes("$$"))).toHaveLength(0)
+    expect(lint(text).filter((m) => m.code === "display-math-unclosed")).toHaveLength(0)
   })
 })
 
@@ -51,36 +52,36 @@ describe("lintDisplayMath", () => {
 describe("lintEnvironments", () => {
   it("no error on balanced :::theorem", () => {
     const text = ":::theorem\nContent\n:::"
-    expect(lint(text).filter((m) => m.message.includes(":::"))).toHaveLength(0)
+    expect(lint(text).filter((m) => String(m.code).startsWith("env-"))).toHaveLength(0)
   })
 
   it("error on unclosed :::theorem", () => {
     const markers = lint(":::theorem\nContent")
-    const err = markers.find((m) => m.message.includes(":::theorem"))
+    const err = markers.find((m) => m.code === "env-unclosed")
     expect(err).toBeDefined()
     expect(err!.severity).toBe(Severity.Error)
   })
 
   it("error on orphan closing :::", () => {
     const markers = lint(":::")
-    const err = markers.find((m) => m.message.includes("sin entorno"))
+    const err = markers.find((m) => m.code === "env-stray-close")
     expect(err).toBeDefined()
   })
 
   it("handles nested environments", () => {
     const text = ":::theorem\n:::example\nInner\n:::\n:::"
-    expect(lint(text).filter((m) => m.message.includes(":::"))).toHaveLength(0)
+    expect(lint(text).filter((m) => String(m.code).startsWith("env-"))).toHaveLength(0)
   })
 
   it("reports unclosed outer env when inner is closed but outer is not", () => {
     const text = ":::theorem\n:::example\nInner\n:::"
-    const markers = lint(text).filter((m) => m.message.includes(":::"))
+    const markers = lint(text).filter((m) => String(m.code).startsWith("env-"))
     expect(markers.length).toBeGreaterThan(0)
   })
 
   it("env with title: :::theorem[Título]", () => {
     const text = ":::theorem[Teorema principal]\nContent\n:::"
-    expect(lint(text).filter((m) => m.message.includes(":::"))).toHaveLength(0)
+    expect(lint(text).filter((m) => String(m.code).startsWith("env-"))).toHaveLength(0)
   })
 })
 
@@ -89,23 +90,23 @@ describe("lintEnvironments", () => {
 describe("lintEqRefs", () => {
   it("no warning when ref matches a label", () => {
     const text = "$$x$$ {#eq:foo}\nSee @eq:foo."
-    expect(lint(text).filter((m) => m.message.includes("@eq:"))).toHaveLength(0)
+    expect(lint(text).filter((m) => m.code === "ref-undefined")).toHaveLength(0)
   })
 
   it("warning on undefined ref", () => {
     const markers = lint("See @eq:missing.")
-    const w = markers.find((m) => m.message.includes("@eq:missing"))
+    const w = markers.find((m) => m.code === "ref-undefined")
     expect(w).toBeDefined()
     expect(w!.severity).toBe(Severity.Warning)
   })
 
   it("numeric refs like @eq:1 are always valid", () => {
-    expect(lint("See @eq:1.").filter((m) => m.message.includes("@eq:"))).toHaveLength(0)
+    expect(lint("See @eq:1.").filter((m) => m.code === "ref-undefined")).toHaveLength(0)
   })
 
   it("reports correct position of broken ref", () => {
     const text = "abc @eq:broken xyz"
-    const markers = lint(text).filter((m) => m.message.includes("@eq:broken"))
+    const markers = lint(text).filter((m) => m.code === "ref-undefined")
     expect(markers).toHaveLength(1)
     expect(markers[0].startColumn).toBe(5) // 'abc ' = 4 chars, 1-based → col 5
   })
@@ -120,25 +121,25 @@ describe("lintWikilinks", () => {
 
   it("no warning for existing wikilink", () => {
     const ctx: LintContext = { vaultFileNames: new Set(["my-note"]), bibKeys: new Set() }
-    expect(lint("[[my-note]]", ctx).filter((m) => m.message.includes("Wikilink"))).toHaveLength(0)
+    expect(lint("[[my-note]]", ctx).filter((m) => m.code === "wikilink-missing")).toHaveLength(0)
   })
 
   it("warning for missing wikilink", () => {
     const ctx: LintContext = { vaultFileNames: new Set(["exists"]), bibKeys: new Set() }
-    const markers = lint("[[not-here]]", ctx).filter((m) => m.message.includes("Wikilink"))
+    const markers = lint("[[not-here]]", ctx).filter((m) => m.code === "wikilink-missing")
     expect(markers).toHaveLength(1)
     expect(markers[0].severity).toBe(Severity.Warning)
   })
 
   it("wikilink matching is case-insensitive", () => {
     const ctx: LintContext = { vaultFileNames: new Set(["my note"]), bibKeys: new Set() }
-    expect(lint("[[My Note]]", ctx).filter((m) => m.message.includes("Wikilink"))).toHaveLength(0)
+    expect(lint("[[My Note]]", ctx).filter((m) => m.code === "wikilink-missing")).toHaveLength(0)
   })
 
   it("wikilinks with pipe alias: [[target|label]]", () => {
     const ctx: LintContext = { vaultFileNames: new Set(["target"]), bibKeys: new Set() }
     expect(
-      lint("[[target|display label]]", ctx).filter((m) => m.message.includes("Wikilink")),
+      lint("[[target|display label]]", ctx).filter((m) => m.code === "wikilink-missing"),
     ).toHaveLength(0)
   })
 })
@@ -152,24 +153,24 @@ describe("lintCitations", () => {
 
   it("no warning for defined citation key", () => {
     const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["knuth84"]) }
-    expect(lint("[@knuth84]", ctx).filter((m) => m.message.includes("Cita"))).toHaveLength(0)
+    expect(lint("[@knuth84]", ctx).filter((m) => m.code === "cite-undefined")).toHaveLength(0)
   })
 
   it("warning for undefined citation key", () => {
     const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["knuth84"]) }
-    const markers = lint("[@unknown]", ctx).filter((m) => m.message.includes("Cita"))
+    const markers = lint("[@unknown]", ctx).filter((m) => m.code === "cite-undefined")
     expect(markers).toHaveLength(1)
     expect(markers[0].severity).toBe(Severity.Warning)
   })
 
   it("citation with page number: [@key, p. 42]", () => {
     const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["ref"]) }
-    expect(lint("[@ref, p. 42]", ctx).filter((m) => m.message.includes("Cita"))).toHaveLength(0)
+    expect(lint("[@ref, p. 42]", ctx).filter((m) => m.code === "cite-undefined")).toHaveLength(0)
   })
 
   it("checks every key of a grouped citation", () => {
     const ctx: LintContext = { vaultFileNames: new Set(), bibKeys: new Set(["a"]) }
-    const markers = lint("[@a; @b, p. 3]", ctx).filter((m) => m.message.includes("Cita"))
+    const markers = lint("[@a; @b, p. 3]", ctx).filter((m) => m.code === "cite-undefined")
     expect(markers).toHaveLength(1)
     expect(markers[0].message).toContain("@b")
   })
@@ -179,39 +180,44 @@ describe("lintCitations", () => {
 
 describe("lintShorthands", () => {
   it("no error for correct frac(a, b)", () => {
-    expect(lint("frac(a, b)").filter((m) => m.message.includes("frac"))).toHaveLength(0)
+    expect(lint("frac(a, b)").filter((m) => String(m.code).startsWith("shorthand-"))).toHaveLength(
+      0,
+    )
   })
 
   it("error on unclosed paren: frac(a, b", () => {
-    const markers = lint("frac(a, b").filter((m) => m.message.includes("frac"))
+    const markers = lint("frac(a, b").filter((m) => String(m.code).startsWith("shorthand-"))
     expect(markers).toHaveLength(1)
     expect(markers[0].severity).toBe(Severity.Error)
   })
 
   it("warning when arg count is wrong: frac(a) → expects 2", () => {
-    const markers = lint("frac(a)").filter((m) => m.message.includes("frac"))
+    const markers = lint("frac(a)").filter((m) => String(m.code).startsWith("shorthand-"))
     expect(markers).toHaveLength(1)
     expect(markers[0].severity).toBe(Severity.Warning)
-    expect(markers[0].message).toContain("2 argumentos")
-    expect(markers[0].message).toContain("recibió 1")
+    expect(markers[0].message).toBe(es.lint.messages.shorthandArity("frac", 2, 1))
   })
 
   it("warning when too many args: sqrt(x, y) → expects 1", () => {
-    const markers = lint("sqrt(x, y)").filter((m) => m.message.includes("sqrt"))
+    const markers = lint("sqrt(x, y)").filter((m) => String(m.code).startsWith("shorthand-"))
     expect(markers).toHaveLength(1)
-    expect(markers[0].message).toContain("1 argumento")
+    expect(markers[0].message).toBe(es.lint.messages.shorthandArity("sqrt", 1, 2))
   })
 
   it("no error for variadic mat()", () => {
-    expect(lint("mat(1, 0, 0, 1)").filter((m) => m.message.includes("mat"))).toHaveLength(0)
+    expect(
+      lint("mat(1, 0, 0, 1)").filter((m) => String(m.code).startsWith("shorthand-")),
+    ).toHaveLength(0)
   })
 
   it("ignores \\frac( (LaTeX command, not a shorthand)", () => {
-    expect(lint("$\\frac(a, b)$").filter((m) => m.message.includes("frac"))).toHaveLength(0)
+    expect(
+      lint("$\\frac(a, b)$").filter((m) => String(m.code).startsWith("shorthand-")),
+    ).toHaveLength(0)
   })
 
   it("no false positive for empty shorthand call: frac()", () => {
-    expect(lint("frac()").filter((m) => m.message.includes("argumentos"))).toHaveLength(0)
+    expect(lint("frac()").filter((m) => String(m.code).startsWith("shorthand-"))).toHaveLength(0)
   })
 })
 
@@ -225,7 +231,7 @@ describe("code block stripping", () => {
 
   it("does not flag shorthands inside inline code", () => {
     const text = "Use `frac(a,` to type fractions."
-    expect(lint(text).filter((m) => m.message.includes("Paréntesis"))).toHaveLength(0)
+    expect(lint(text).filter((m) => m.code === "shorthand-unclosed")).toHaveLength(0)
   })
 })
 
@@ -260,7 +266,7 @@ describe("lintBibtex", () => {
 }`
     const markers = lintBib(bib)
     expect(
-      markers.some((m) => m.message.includes("desconocido") && m.severity === Severity.Warning),
+      markers.some((m) => m.code === "bib-unknown-type" && m.severity === Severity.Warning),
     ).toBe(true)
   })
 
@@ -273,7 +279,7 @@ describe("lintBibtex", () => {
 }`
     const markers = lintBib(bib)
     expect(
-      markers.some((m) => m.message.includes("duplicada") && m.severity === Severity.Error),
+      markers.some((m) => m.code === "bib-duplicate-key" && m.severity === Severity.Error),
     ).toBe(true)
   })
 
@@ -285,7 +291,7 @@ describe("lintBibtex", () => {
   author = {A}, title = {B}, journal = {C}, year = {2020},
 }`
     const markers = lintBib(bib)
-    expect(markers.some((m) => m.message.includes("duplicada"))).toBe(true)
+    expect(markers.some((m) => m.code === "bib-duplicate-key")).toBe(true)
   })
 
   it("warning for missing required field in article (no journal)", () => {
@@ -296,7 +302,7 @@ describe("lintBibtex", () => {
 }`
     const markers = lintBib(bib)
     expect(
-      markers.some((m) => m.message.includes("journal") && m.severity === Severity.Warning),
+      markers.some((m) => m.code === "bib-missing-field" && m.severity === Severity.Warning),
     ).toBe(true)
   })
 
@@ -308,7 +314,7 @@ describe("lintBibtex", () => {
 }`
     const markers = lintBib(bib)
     expect(
-      markers.some((m) => m.message.includes("publisher") && m.severity === Severity.Warning),
+      markers.some((m) => m.code === "bib-missing-field" && m.severity === Severity.Warning),
     ).toBe(true)
   })
 
@@ -321,17 +327,17 @@ describe("lintBibtex", () => {
 }`
     // Should NOT warn about author/editor
     const markers = lintBib(bib)
-    expect(markers.some((m) => m.message.includes("author") || m.message.includes("editor"))).toBe(
-      false,
-    )
+    expect(
+      markers.some((m) => m.code === "bib-missing-field" || m.message.includes("editor")),
+    ).toBe(false)
   })
 
   it("error for unclosed entry brace", () => {
     const bib = "@article{unclosed,\n  author = {A},\n  title = {B},"
     const markers = lintBib(bib)
-    expect(
-      markers.some((m) => m.message.includes("sin cerrar") && m.severity === Severity.Error),
-    ).toBe(true)
+    expect(markers.some((m) => m.code === "bib-unclosed" && m.severity === Severity.Error)).toBe(
+      true,
+    )
   })
 
   it("ignores @string and @comment entries", () => {
@@ -398,7 +404,7 @@ describe("lintMacros", () => {
 `
     const markers = lintMac(text)
     expect(
-      markers.some((m) => m.message.includes("duplicado") && m.severity === Severity.Error),
+      markers.some((m) => m.code === "macros-duplicate" && m.severity === Severity.Error),
     ).toBe(true)
   })
 
@@ -407,7 +413,7 @@ describe("lintMacros", () => {
 `
     const markers = lintMac(text)
     expect(
-      markers.some((m) => m.message.includes("sin abrir") && m.severity === Severity.Error),
+      markers.some((m) => m.code === "macros-brace-close" && m.severity === Severity.Error),
     ).toBe(true)
   })
 
@@ -416,7 +422,7 @@ describe("lintMacros", () => {
 `
     const markers = lintMac(text)
     expect(
-      markers.some((m) => m.message.includes("sin cerrar") && m.severity === Severity.Error),
+      markers.some((m) => m.code === "macros-brace-open" && m.severity === Severity.Error),
     ).toBe(true)
   })
 
@@ -435,18 +441,18 @@ describe("lintFile", () => {
     const bib = "@article{x, author={A}, journal={J}, year={2020},}"
     // Missing title → warning
     const markers = lintFile(bib, "references.bib", emptyCtx, MarkerSeverity)
-    expect(markers.some((m) => m.message.includes("title"))).toBe(true)
+    expect(markers.some((m) => m.code === "bib-missing-field")).toBe(true)
   })
 
   it("dispatches macros.md to macros linter", () => {
     const text = "\\newcommand{\\A}{1}\n\\newcommand{\\A}{2}\n"
     const markers = lintFile(text, "macros.md", emptyCtx, MarkerSeverity)
-    expect(markers.some((m) => m.message.includes("duplicado"))).toBe(true)
+    expect(markers.some((m) => m.code === "macros-duplicate")).toBe(true)
   })
 
   it("dispatches other filenames to content linter", () => {
     const markers = lintFile("$$unclosed", "notes.md", emptyCtx, MarkerSeverity)
-    expect(markers.some((m) => m.message.includes("$$"))).toBe(true)
+    expect(markers.some((m) => m.code === "display-math-unclosed")).toBe(true)
   })
 
   it("dispatches custom bib filenames correctly", () => {
@@ -486,7 +492,7 @@ describe("lintFileSummary", () => {
 // ── Tables ────────────────────────────────────────────────────────────────────
 
 describe("lintTables", () => {
-  const tableMarkers = (text: string) => lint(text).filter((m) => m.message.includes("columna"))
+  const tableMarkers = (text: string) => lint(text).filter((m) => m.code === "table-ragged")
 
   it("flags a row with fewer columns than the header", () => {
     const markers = tableMarkers("| a | b | c |\n|---|---|---|\n| 1 | 2 |\n")
