@@ -8,7 +8,8 @@ export const GLOBAL_ERROR_TOAST_INTERVAL_MS = 10_000
 export function isBenignError(detail: unknown): boolean {
   // Monaco rejects in-flight work (word highlight, hover) with an Error named
   // "Canceled" when the model changes; that is its normal cancellation path.
-  if (detail instanceof Error && detail.name === "Canceled" && detail.message === "Canceled") return true
+  if (detail instanceof Error && detail.name === "Canceled" && detail.message === "Canceled")
+    return true
   const text = detail instanceof Error ? detail.message : typeof detail === "string" ? detail : ""
   return /ResizeObserver loop (completed with undelivered notifications|limit exceeded)/.test(text)
 }
