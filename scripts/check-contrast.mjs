@@ -129,9 +129,19 @@ const STATUS = ["--danger", "--warn", "--ok", "--info"]
 const MARKS = ["yellow", "green", "blue", "purple", "orange", "red", "pink"].map(
   (n) => `--mark-${n}`,
 )
-const SYN = ["keyword", "string", "number", "comment", "function", "type", "punct"].map(
-  (n) => `--syn-${n}`,
-)
+const SYN = [
+  "keyword",
+  "string",
+  "number",
+  "comment",
+  "function",
+  "type",
+  "punct",
+  "math",
+  "ref",
+  "cite",
+  "label",
+].map((n) => `--syn-${n}`)
 
 export function runChecks(themes) {
   const results = []
@@ -179,7 +189,10 @@ export function runChecks(themes) {
     check("--chrome-fg", "--chrome-bg", 4.5)
     // Beyond the contract: text that sits on tokens the contract defines.
     check("--code-fg", "--code-bg", 4.5)
-    for (const k of SYN) check(k, "--code-bg", 4.5)
+    for (const k of SYN) {
+      check(k, "--code-bg", 4.5)
+      check(k, "--bg-surface", 4.5)
+    }
     for (const k of MARKS) check("--fg", k, 4.5, `--fg on ${k}`, t[k])
     check("--fg", "--accent-soft", 4.5)
   }

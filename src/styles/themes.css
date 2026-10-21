@@ -51,6 +51,10 @@
   --syn-function: oklch(0.8 0.09 235);
   --syn-type: oklch(0.8 0.09 190);
   --syn-punct: oklch(0.8 0.02 100);
+  --syn-math: oklch(0.8 0.05 265);
+  --syn-ref: oklch(0.8 0.09 350);
+  --syn-cite: oklch(0.8 0.09 25);
+  --syn-label: oklch(0.8 0.09 85);
   --env-theorem: oklch(0.78 0.1 250);
   --env-lemma: oklch(0.78 0.09 195);
   --env-corollary: oklch(0.78 0.11 290);
@@ -144,6 +148,10 @@
   --syn-function: oklch(0.45 0.1 235);
   --syn-type: oklch(0.45 0.1 190);
   --syn-punct: oklch(0.45 0.02 100);
+  --syn-math: oklch(0.45 0.07 265);
+  --syn-ref: oklch(0.45 0.1 350);
+  --syn-cite: oklch(0.45 0.1 25);
+  --syn-label: oklch(0.45 0.1 85);
   --env-theorem: oklch(0.43 0.11 250);
   --env-lemma: oklch(0.43 0.099 195);
   --env-corollary: oklch(0.43 0.121 290);
@@ -236,6 +244,10 @@
   --syn-function: oklch(0.88 0.12 235);
   --syn-type: oklch(0.88 0.12 190);
   --syn-punct: oklch(0.88 0 100);
+  --syn-math: oklch(0.88 0.08 265);
+  --syn-ref: oklch(0.88 0.12 350);
+  --syn-cite: oklch(0.88 0.12 25);
+  --syn-label: oklch(0.88 0.12 85);
   --env-theorem: oklch(0.86 0.15 250);
   --env-lemma: oklch(0.86 0.135 195);
   --env-corollary: oklch(0.86 0.165 290);
