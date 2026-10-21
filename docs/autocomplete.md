@@ -2,7 +2,7 @@
 
 ComdTeX has two complementary "type less" systems: **editor autocompletion**
 (suggestions and Tab expansion while writing) and the **Command Palette**
-(`Ctrl+P`), which can insert or open practically everything in the app.
+(`Ctrl+Shift+P`), which can insert or open practically everything in the app.
 
 ## Editor autocompletion
 
@@ -55,9 +55,11 @@ Math environments (`theorem`, `proof`…) are intentionally *not* contextual:
 their content is normal Markdown + math, so every regular completion keeps
 working inside them.
 
-## Command Palette (`Ctrl+P`)
+## Command Palette (`Ctrl+Shift+P`)
 
-One fuzzy search box over **files, recent files, and ~150 commands**. Type any
+One fuzzy search box with several modes. `Ctrl+P` opens it on **files**, `Ctrl+Shift+P` on **commands** (~150, with recent and pinned ones first; `Alt+P` pins). Prefixes switch mode: `>` commands, `@` headings, environments and labels of this document, `#` labels across the vault (`Alt+Enter` inserts a reference), `[` citations (Enter inserts `[@key]`, or appends `; @key` inside an existing citation), `:12` go to line, `note#heading` jumps into another note, `?` lists the modes. Commands that only make sense under the cursor (table, math, gap, environment) appear in a **Here** group.
+
+The commands mode searches by name: type any
 part of a command's name, its syntax, or a keyword in Spanish or English:
 `flowchart`, `:::theorem`, `cita`, `footnote`, `[[`, `frontmatter` all land on
 the right entry. Categories:

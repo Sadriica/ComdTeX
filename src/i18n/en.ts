@@ -1419,7 +1419,7 @@ export const en: T = {
     wikilinkHoverDesc:
       "Hover over a [[note]] in the editor to see a content preview without opening it.",
     templatesDesc:
-      'File → New from template · or Ctrl+P → "template". You can save custom templates with {{title}}, {{filename}}, {{date}}, and {{datetime}} variables.',
+      'File → New from template · or Ctrl+Shift+P → "template". You can save custom templates with {{title}}, {{filename}}, {{date}}, and {{datetime}} variables.',
     tplArticle: "Article",
     tplArticleDesc: "Abstract + sections + BibTeX",
     tplNotes: "Class notes",
@@ -1555,13 +1555,13 @@ export const en: T = {
       "AI inline edit: describe a change and it is applied to the selection or at the cursor.",
     symbolPickerHelp: "Symbol picker (sidebar panel)",
     symbolPickerDesc:
-      "Open the math symbol panel from the command palette (Ctrl+P → 'Math symbol picker'). Click any symbol to insert it at the cursor. Search by name or category (greek, operators, arrows, logic…).",
+      "Open the math symbol panel from the command palette (Ctrl+Shift+P → 'Math symbol picker'). Click any symbol to insert it at the cursor. Search by name or category (greek, operators, arrows, logic…).",
     mathPreviewHelp: "Inline math preview",
     mathPreviewDesc:
       "When moving the cursor away from an inline math block ($...$), a rendered preview appears below it. Can be disabled in Settings → Equation preview.",
     editorToggles: "Editor toggles",
     editorTogglesIntro:
-      "Quick access from the command palette (Ctrl+P) or Settings. All persist across sessions.",
+      "Quick access from the command palette (Ctrl+Shift+P) or Settings. All persist across sessions.",
     sidebarPanels: "Sidebar panels",
     sidebarPanelsIntro: "Switch panels from the sidebar tabs or the command palette.",
     toggleTypewriter: "Typewriter mode",

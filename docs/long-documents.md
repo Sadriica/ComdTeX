@@ -41,7 +41,7 @@ para reordenar, porque reordenar una lista filtrada movería secciones que no ve
 
 ## Dividir el archivo cuando ya pesa demasiado
 
-**Ctrl+P → "Dividir documento en secciones (##)"**
+**Ctrl+Shift+P → "Dividir documento en secciones (##)"**
 
 Corta el documento por sus `##` y crea un archivo por sección junto al original.
 El original se queda con su preámbulo (frontmatter, introducción) y una lista de

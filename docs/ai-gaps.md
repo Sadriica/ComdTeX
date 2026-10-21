@@ -23,7 +23,7 @@ El teorema fundamental dice que {{?}}
 
 La pista puede ser cualquier texto hasta el `}}`.
 
-Puedes insertar uno con **Ctrl+P → "Insertar hueco {{?}}"**.
+Puedes insertar uno con **Ctrl+Shift+P → "Insertar hueco {{?}}"**.
 
 Los huecos aparecen marcados en el editor con un aviso informativo (no un
 error: un hueco pendiente es un recordatorio deliberado, no un fallo). Así ves
@@ -43,7 +43,7 @@ enciendes tú.
 | **Completar hueco con IA** | Rellena el hueco donde está el cursor |
 | **Completar todos los huecos con IA** | Recorre el documento entero |
 
-Ambos desde **Ctrl+P**. Mientras trabaja, la barra inferior muestra
+Ambos desde **Ctrl+Shift+P**. Mientras trabaja, la barra inferior muestra
 *Completando huecos…*.
 
 ### Qué se le envía al modelo

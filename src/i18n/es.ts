@@ -1426,7 +1426,7 @@ export const es: T = {
     wikilinkHoverDesc:
       "Pasa el cursor sobre [[nota]] en el editor para ver una vista previa del contenido sin abrirla.",
     templatesDesc:
-      'Archivo → Nuevo desde plantilla · o Ctrl+P → "plantilla". Puedes guardar plantillas propias con variables {{title}}, {{filename}}, {{date}} y {{datetime}}.',
+      'Archivo → Nuevo desde plantilla · o Ctrl+Shift+P → "plantilla". Puedes guardar plantillas propias con variables {{title}}, {{filename}}, {{date}} y {{datetime}}.',
     tplArticle: "Artículo",
     tplArticleDesc: "Abstract + secciones + BibTeX",
     tplNotes: "Apuntes de clase",
@@ -1566,13 +1566,13 @@ export const es: T = {
       "Edición en línea con IA: describe un cambio y se aplica a la selección o en el cursor.",
     symbolPickerHelp: "Selector de símbolos (panel lateral)",
     symbolPickerDesc:
-      "Abre el panel de símbolos matemáticos desde la paleta de comandos (Ctrl+P → 'Selector de símbolos'). Haz clic en cualquier símbolo para insertarlo en el cursor. Puedes buscar por nombre o categoría (griego, operadores, flechas, lógica…).",
+      "Abre el panel de símbolos matemáticos desde la paleta de comandos (Ctrl+Shift+P → 'Selector de símbolos'). Haz clic en cualquier símbolo para insertarlo en el cursor. Puedes buscar por nombre o categoría (griego, operadores, flechas, lógica…).",
     mathPreviewHelp: "Vista previa de matemáticas en línea",
     mathPreviewDesc:
       "Al mover el cursor fuera de un bloque de matemáticas en línea ($...$), aparece una vista previa renderizada debajo. Se puede desactivar en Configuración → Vista previa de ecuaciones.",
     editorToggles: "Ajustes del editor",
     editorTogglesIntro:
-      "Acceso rápido desde la paleta (Ctrl+P) o desde Configuración. Todos se conservan entre sesiones.",
+      "Acceso rápido desde la paleta (Ctrl+Shift+P) o desde Configuración. Todos se conservan entre sesiones.",
     sidebarPanels: "Paneles laterales",
     sidebarPanelsIntro: "Cambia entre paneles desde la barra lateral o la paleta de comandos.",
     toggleTypewriter: "Modo máquina de escribir",
