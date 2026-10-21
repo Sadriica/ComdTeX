@@ -97,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Two quick fixes wrote the wrong text.** "Close the $$ block" inside a `:::` environment put the closing `$$` after the closing `:::` (it now stops before the `:::` or a heading), and "Add the missing arguments" appended another `, ` every time on `frac(a, )` (it now counts the argument slots already written).
 - **A `---` line at the top of a note is not always a header.** When it is a divider above prose, typing no longer pops up frontmatter keys that Enter could accept.
 - **Enter on a `:::name` line inside a code fence no longer adds a closing `:::`.** Fenced code is left exactly as typed.
+- **The usages list can no longer swallow your typing.** The preview of another note inside Find Usages was editable but was never saved; it is read-only now.
 
 ## [1.29.1] - 2026-10-15
 

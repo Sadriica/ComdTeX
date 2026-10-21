@@ -288,6 +288,7 @@ export function registerEditorNavigation(
     )
   }
   registered.push(registerEditorHovers(monaco, languages))
+  registered.push(lockShadowEditors(monaco))
 
   registered.push(
     monaco.editor.registerEditorOpener({
@@ -315,6 +316,33 @@ export function registerEditorNavigation(
     }),
   )
   return { dispose: disposeEditorNavigation }
+}
+
+/**
+ * A shadow model is a throwaway copy of a note for the references peek; nothing
+ * ever saves it, so typing into its embedded editor would silently lose the
+ * text. Any editor that shows one is made read-only (the peek editors are
+ * created by Monaco, hence the global hook) and gets its flag back when it
+ * moves to a real model.
+ */
+function lockShadowEditors(monaco: typeof monacoApi): monacoApi.IDisposable {
+  const locked = new WeakSet<object>()
+  const apply = (editor: monacoApi.editor.ICodeEditor) => {
+    const model = editor.getModel()
+    const shadow = model !== null && pathOfShadowUri(model.uri) !== null
+    if (shadow) {
+      locked.add(editor)
+      editor.updateOptions({ readOnly: true })
+    } else if (locked.has(editor)) {
+      locked.delete(editor)
+      editor.updateOptions({ readOnly: false })
+    }
+  }
+  const created = monaco.editor.onDidCreateEditor((editor) => {
+    apply(editor)
+    editor.onDidChangeModel(() => apply(editor))
+  })
+  return { dispose: () => created.dispose() }
 }
 
 export function disposeEditorNavigation(): void {

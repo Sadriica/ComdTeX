@@ -315,6 +315,42 @@ describe("editor navigation registration", () => {
     expect(opened).toEqual([["/v/sub/b.md", 5, 11]])
   })
 
+  it("makes an editor read-only while it shows a shadow model, and only then", async () => {
+    registerEditorNavigation(fake.api)
+    const p = createNavigationProviders(fake.api)
+    const model = editorModel("see @sub/b@thm:y")
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(1, 6),
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    const shadow = fake.models.get(hit.uri.toString())!
+
+    const options: Record<string, unknown>[] = []
+    let onModel: () => void = () => {}
+    let current: unknown = shadow
+    const peek = {
+      getModel: () => current,
+      updateOptions: (o: Record<string, unknown>) => options.push(o),
+      onDidChangeModel: (l: () => void) => {
+        onModel = l
+        return { dispose() {} }
+      },
+    }
+    for (const listener of fake.createListeners) listener(peek)
+    expect(options).toEqual([{ readOnly: true }])
+
+    // The same editor moving to a real model gets its flag back.
+    current = model
+    onModel()
+    expect(options).toEqual([{ readOnly: true }, { readOnly: false }])
+
+    // An editor that never showed a shadow is left alone.
+    const main = { ...peek, getModel: () => model, updateOptions: vi.fn() }
+    for (const listener of fake.createListeners) listener(main)
+    expect(main.updateOptions).not.toHaveBeenCalled()
+  })
+
   it("leaves resources it does not own to Monaco", () => {
     registerEditorNavigation(fake.api)
     expect(

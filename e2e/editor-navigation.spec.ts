@@ -77,3 +77,21 @@ test("usages of a note open the note that links to it", async ({ page }) => {
   await expect(page.locator(".tab-active .tab-name")).toContainText("reading-list.md")
   expect(errors).toEqual([])
 })
+
+test("the references peek cannot be typed into: its copies of other notes are never saved", async ({
+  page,
+}) => {
+  const errors = await openVault(page)
+  await revealLine(page, 44)
+  const box = await boxOf(page, "@lem:cheeger")
+  await page.mouse.click(box.x + box.w / 2, box.y + box.h / 2)
+  await page.keyboard.press("Shift+F12")
+  const peek = page.locator(".zone-widget.peekview-widget, .reference-zone-widget").first()
+  await expect(peek).toBeVisible()
+  const preview = peek.locator(".preview .monaco-editor").first()
+  await expect(preview.locator(".view-lines")).toContainText("cheeger")
+  await preview.locator(".view-line").filter({ hasText: "cheeger" }).first().click()
+  await page.keyboard.type("ZZQQ")
+  await expect(preview.locator(".view-lines")).not.toContainText("ZZQQ")
+  expect(errors).toEqual([])
+})
