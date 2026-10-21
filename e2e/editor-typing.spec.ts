@@ -137,3 +137,19 @@ test("accepting a label keeps a hyphenated word after the caret", async ({ page 
   await page.waitForTimeout(150)
   expect(await text(page)).toMatch(/^a @\S+@thm:\w+-style$/)
 })
+
+test("a thematic break above prose is not a header: Enter never accepts a key", async ({
+  page,
+}) => {
+  await openEmpty(page)
+  await page.keyboard.type("---")
+  await page.keyboard.press("Enter")
+  await page.keyboard.type("A first paragraph.")
+  await page.keyboard.press("Enter")
+  await page.keyboard.type("ti")
+  await page.waitForTimeout(400)
+  await expect(widget(page)).toBeHidden()
+  await page.keyboard.press("Enter")
+  await page.keyboard.type("x")
+  await expect.poll(() => text(page)).toBe("---\nA first paragraph.\nti\nx")
+})

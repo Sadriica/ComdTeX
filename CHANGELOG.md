@@ -95,6 +95,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Find usages works across more than 40 notes.** The references list used to close the previews of its own first results once it grew past 40 notes; the previews are now trimmed only between searches.
 - **Accepting a reference no longer eats the punctuation after the cursor.** With the cursor in `see @thm:|.` or `@lem:|-style`, choosing a label used to delete the period or the "-style"; only the rest of the label itself is replaced now.
 - **Two quick fixes wrote the wrong text.** "Close the $$ block" inside a `:::` environment put the closing `$$` after the closing `:::` (it now stops before the `:::` or a heading), and "Add the missing arguments" appended another `, ` every time on `frac(a, )` (it now counts the argument slots already written).
+- **A `---` line at the top of a note is not always a header.** When it is a divider above prose, typing no longer pops up frontmatter keys that Enter could accept.
 
 ## [1.29.1] - 2026-10-15
 

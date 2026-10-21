@@ -505,6 +505,22 @@ describe("frontmatter", () => {
     expect(labels(r)).not.toContain("en")
   })
 
+  const fm = (text: string) => new FakeModel(text)
+
+  it("is not a header when a leading --- is a thematic break above prose", async () => {
+    expect(labels(await complete("---\nA first paragraph.\nti|"))).not.toContain("title")
+    expect(labels(await complete("---\n\nText\nti|"))).not.toContain("title")
+    expect(wantsSuggest(fm("---\nProse here\nti"), 3, "ti")).toBe(false)
+    expect(wantsSuggest(fm("---\n\nText\nti"), 4, "ti")).toBe(false)
+  })
+
+  it("is still a header while it is typed, before any closing fence", async () => {
+    expect(labels(await complete("---\ntitle: A\nau|"))).toContain("author")
+    expect(labels(await complete("---\n|"))).toContain("title")
+    expect(wantsSuggest(fm("---\ntitle: A\nau"), 3, "au")).toBe(true)
+    expect(wantsSuggest(fm("---\ntags:\n  - a\nau"), 4, "au")).toBe(true)
+  })
+
   it("does not treat a document without a leading --- as frontmatter", async () => {
     const r = await complete("hello\n---\n|\n---")
     expect(labels(r)).not.toContain("author")
