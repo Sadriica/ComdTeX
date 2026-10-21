@@ -1,5 +1,5 @@
 import type { BibEntry } from "./bibtex"
-import { foldText, rankItems, type FuzzyField } from "./fuzzy"
+import { foldText, prepareText, rankItems, type FuzzyField, type Prepared } from "./fuzzy"
 import type { LineEdit } from "./cursorContext"
 import type { StructuralLabel } from "./structuralLabels"
 import type { PaletteMode } from "./paletteTypes"
@@ -100,6 +100,20 @@ export interface RankedFile {
 /** Max entries the empty files view lists after the recents. */
 const EMPTY_VIEW_FILES = 40
 
+// Each entry is folded once, the first time a query reaches it, and the result
+// lives as long as the entry does (App rebuilds entries only when the file list
+// changes). Re-folding 20k+ names per keystroke was the whole cost of typing.
+const preparedEntries = new WeakMap<FileEntry, { name: Prepared; rel: Prepared }>()
+
+function preparedFor(e: FileEntry): { name: Prepared; rel: Prepared } {
+  let p = preparedEntries.get(e)
+  if (!p) {
+    p = { name: prepareText(e.name), rel: prepareText(e.rel) }
+    preparedEntries.set(e, p)
+  }
+  return p
+}
+
 export function rankFileEntries(
   entries: readonly FileEntry[],
   query: string,
@@ -120,10 +134,13 @@ export function rankFileEntries(
       .map((entry) => ({ entry, positions: [], recent: false }))
     return [...recents, ...rest]
   }
-  const ranked = rankItems(entries, query, (e) => [
-    { text: e.name, weight: 1 },
-    { text: e.rel, weight: 0.55 },
-  ])
+  const ranked = rankItems(entries, query, (e) => {
+    const p = preparedFor(e)
+    return [
+      { text: p.name, weight: 1 },
+      { text: p.rel, weight: 0.55 },
+    ]
+  })
   // Recency breaks near-ties without overriding a clearly better match.
   const boosted = ranked.map((r) => {
     const idx = recentIndex.get(r.item.path)
@@ -199,7 +216,8 @@ export interface OutlineEntry {
   label?: string
 }
 
-const ENV_OPEN = /^\s*:::\s*([A-Za-z][\w-]*)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*$/
+const ENV_OPEN =
+  /^\s*:::\s*(?:(?:sm|lg)\s+)?([A-Za-z][\w-]*)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*$/
 const HEADING = /^(#{1,6})\s+(\S.*?)\s*$/
 const LABEL = /\{#([a-zA-Z]+:[\w:.-]+)\}/g
 

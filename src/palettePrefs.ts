@@ -8,6 +8,10 @@ import { STORAGE_KEYS } from "./storageKeys"
  */
 
 export const MAX_RECENT_COMMANDS = 8
+/** More pins than this is a corrupted or runaway list, not a choice. */
+export const MAX_PINNED = 50
+/** A pin whose command was missing on this many palette openings is dropped. */
+export const STALE_PIN_OPENINGS = 5
 
 export interface RecentCommand {
   id: string
@@ -20,6 +24,8 @@ export interface PalettePrefs {
   /** Most recent first. */
   recent: RecentCommand[]
   pinned: string[]
+  /** Openings each pin has gone missing for, in a row (absent: none). */
+  stale?: Record<string, number>
 }
 
 export const EMPTY_PREFS: PalettePrefs = { v: 1, recent: [], pinned: [] }
@@ -34,8 +40,34 @@ export function recordCommandUse(prefs: PalettePrefs, id: string): PalettePrefs 
 export function togglePinned(prefs: PalettePrefs, id: string): PalettePrefs {
   const pinned = prefs.pinned.includes(id)
     ? prefs.pinned.filter((p) => p !== id)
-    : [...prefs.pinned, id]
+    : [...prefs.pinned, id].slice(-MAX_PINNED)
   return { ...prefs, pinned }
+}
+
+/**
+ * Notes which pinned commands no longer exist and forgets the ones missing for
+ * STALE_PIN_OPENINGS openings in a row (a command that is merely unavailable
+ * for a moment, like one tied to an open vault, comes back and resets). Returns
+ * the same object when nothing changed.
+ */
+export function prunePinned(prefs: PalettePrefs, exists: (id: string) => boolean): PalettePrefs {
+  const stale: Record<string, number> = {}
+  const pinned: string[] = []
+  let changed = false
+  for (const id of prefs.pinned) {
+    if (exists(id)) {
+      pinned.push(id)
+      if (prefs.stale?.[id]) changed = true
+      continue
+    }
+    const n = (prefs.stale?.[id] ?? 0) + 1
+    changed = true
+    if (n >= STALE_PIN_OPENINGS) continue
+    pinned.push(id)
+    stale[id] = n
+  }
+  if (!changed) return prefs
+  return { ...prefs, pinned, stale: Object.keys(stale).length ? stale : undefined }
 }
 
 /** Ranking boost for a command: frequent and recent ones float up. */
@@ -62,9 +94,19 @@ export function parsePrefs(raw: string | null): PalettePrefs {
           .slice(0, MAX_RECENT_COMMANDS)
       : []
     const pinned = Array.isArray(data.pinned)
-      ? [...new Set(data.pinned.filter((p): p is string => typeof p === "string"))]
+      ? [...new Set(data.pinned.filter((p): p is string => typeof p === "string"))].slice(
+          0,
+          MAX_PINNED,
+        )
       : []
-    return { v: 1, recent, pinned }
+    const stale: Record<string, number> = {}
+    if (data.stale && typeof data.stale === "object") {
+      for (const id of pinned) {
+        const n = (data.stale as Record<string, unknown>)[id]
+        if (typeof n === "number" && n > 0) stale[id] = Math.min(n, STALE_PIN_OPENINGS)
+      }
+    }
+    return { v: 1, recent, pinned, ...(Object.keys(stale).length ? { stale } : {}) }
   } catch {
     return EMPTY_PREFS
   }

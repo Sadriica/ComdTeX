@@ -30,7 +30,7 @@ interface DropdownProps extends MenuDef {
   /** Where keyboard focus should land once the panel is open (null: leave it). */
   focusTarget: Focus | null
   onOpen: (focus: Focus | null) => void
-  onClose: (returnFocus: boolean) => void
+  onClose: (returnFocus: boolean | "if-lost") => void
   /** Move to the previous (-1) or next (1) top-level menu, opened. */
   onStep: (dir: -1 | 1) => void
   onFocusTop: (dir: -1 | 1) => void
@@ -177,14 +177,17 @@ function MenuDropdown({
                 onMouseDown={(e) => {
                   e.preventDefault()
                   if (!entry.disabled) {
-                    entry.action()
                     onClose(false)
+                    entry.action()
                   }
                 }}
                 onClick={(e) => {
                   if (e.detail !== 0 || entry.disabled) return
+                  // Close first, then run: an action that focuses the editor
+                  // (or opens a dialog) keeps its focus. The trigger only gets
+                  // focus back when the action left it nowhere.
+                  onClose("if-lost")
                   entry.action()
-                  onClose(true)
                 }}
               >
                 <span className="menu-entry-label">{entry.label}</span>
@@ -209,19 +212,44 @@ function MenuBar({ menus, children }: { menus: MenuDef[]; children?: React.React
     const close = (e: MouseEvent) => {
       if (!barRef.current?.contains(e.target as Node)) setOpenIdx(null)
     }
+    // Escape closes the menu wherever focus is: a mouse-opened menu leaves it in
+    // the editor, which would otherwise swallow the key.
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      e.preventDefault()
+      e.stopPropagation()
+      const inBar = barRef.current?.contains(document.activeElement) ?? false
+      const was = openIdx
+      setOpenIdx(null)
+      setFocusTarget(null)
+      if (inBar) triggers.current[was]?.focus()
+    }
     document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
+    document.addEventListener("keydown", onEscape, true)
+    return () => {
+      document.removeEventListener("mousedown", close)
+      document.removeEventListener("keydown", onEscape, true)
+    }
   }, [openIdx])
 
   const open = (i: number, focus: Focus | null) => {
     setFocusTarget(focus)
     setOpenIdx(i)
   }
-  const close = (returnFocus: boolean) => {
+  const close = (returnFocus: boolean | "if-lost") => {
     const was = openIdx
     setOpenIdx(null)
     setFocusTarget(null)
-    if (returnFocus && was !== null) triggers.current[was]?.focus()
+    if (was === null) return
+    if (returnFocus === true) triggers.current[was]?.focus()
+    else if (returnFocus === "if-lost") {
+      // After the action ran and the panel unmounted: only a focus that fell
+      // to <body> goes back to the trigger.
+      setTimeout(() => {
+        const a = document.activeElement
+        if (!a || a === document.body) triggers.current[was]?.focus()
+      }, 0)
+    }
   }
   const wrap = (i: number, dir: -1 | 1) => (i + dir + menus.length) % menus.length
 

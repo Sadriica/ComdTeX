@@ -37,7 +37,8 @@ describe("computeCursorContext", () => {
     expect(at("text").inTable).toBe(false)
     expect(at(":::theorem{#thm:g|ap}").label).toBe("thm:gap")
     expect(at("see @thm:g|ap now").ref).toBe("thm:gap")
-    expect(at("see @notes/a@def:x| now").ref).toBe("def:x")
+    expect(at("see @notes/a@def:x| now").ref).toBe("notes/a@def:x")
+    expect(at("see @[my notes/a b]@def:x| now").ref).toBe("[my notes/a b]@def:x")
     expect(at("as [@levin2017; @a|lon]").citation).toBe(true)
     expect(at("as [@levin2017] |x").citation).toBe(false)
     expect(at("fill {{? a hi|nt}} here").onGap).toBe(true)
@@ -77,5 +78,24 @@ describe("envTypeEdit", () => {
     const applied = line.slice(0, edit.startColumn - 1) + edit.text + line.slice(edit.endColumn - 1)
     expect(applied).toBe(":::lemma[Spectral gap]{#thm:gap}")
     expect(envTypeEdit("not a fence", "lemma")).toBeNull()
+  })
+})
+
+describe("sized environments", () => {
+  it("`:::sm theorem` and `:::lg theorem` open a theorem block", () => {
+    expect(at(":::sm theorem[T]\nbody |\n:::").block).toEqual({ type: "theorem", startLine: 1 })
+    expect(at(":::lg lemma\nx|\n:::").block?.type).toBe("lemma")
+    expect(at(":::sm theo|rem").block?.type).toBe("theorem")
+  })
+
+  it("changing the type of a sized opener keeps the size", () => {
+    const edit = envTypeEdit(":::sm theorem[T]{#thm:a}", "lemma")
+    expect(edit).toEqual({ startColumn: 7, endColumn: 14, text: "lemma" })
+    expect(envTypeEdit(":::lg theorem", "lemma")?.startColumn).toBe(7)
+    expect(envTypeEdit(":::theorem", "lemma")?.startColumn).toBe(4)
+  })
+
+  it("a block literally named sm or lg is still a block", () => {
+    expect(at(":::sm\nx|\n:::").block?.type).toBe("sm")
   })
 })

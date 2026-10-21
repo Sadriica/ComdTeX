@@ -6,7 +6,8 @@ import type { CursorContext } from "./paletteTypes"
  */
 
 const FENCE_RE = /^\s*(```+|~~~+)/
-const BLOCK_OPEN_RE = /^\s*:::\s*([A-Za-z][\w-]*)/
+// `:::sm theorem` / `:::lg theorem` carry a size word before the type.
+const BLOCK_OPEN_RE = /^\s*:::\s*(?:(?:sm|lg)\s+)?([A-Za-z][\w-]*)/
 const BLOCK_CLOSE_RE = /^\s*:::\s*$/
 
 function countDisplayFences(line: string): number {
@@ -84,7 +85,8 @@ export function computeCursorContext(
   }
 
   const label = rangeAt(current, /\{#([\w:.-]+)\}/, column)
-  const ref = rangeAt(current, /@(?:[\w/.-]+@)?([a-zA-Z]+:[\w.-]+)/, column)
+  // `@kind:x`, `@path@kind:x` and `@[a path with spaces]@kind:x`; the whole ref is kept.
+  const ref = rangeAt(current, /@((?:[\w/.-]+@|\[[^\]\n]+\]@)?[a-zA-Z]+:[\w.-]+)/, column)
   const citation = rangeAt(current, /\[@[^\]\n]*\]/, column)
   const gap = rangeAt(current, /\{\{\?[^}\n]*\}\}/, column)
 
@@ -92,6 +94,7 @@ export function computeCursorContext(
     lineNumber,
     column,
     line: current,
+    blockOpener: blockHere ? (lines[blockHere.startLine - 1] ?? null) : null,
     hasSelection,
     inMath,
     block: blockHere,
@@ -136,7 +139,7 @@ export function inlineToDisplayEdit(line: string, column: number): LineEdit | nu
 
 /** Rewrites the type of a `:::old[Title]{#label}` opener, keeping the rest of the line. */
 export function envTypeEdit(openerLine: string, newType: string): LineEdit | null {
-  const m = /^(\s*:::\s*)([A-Za-z][\w-]*)/.exec(openerLine)
+  const m = /^(\s*:::\s*(?:(?:sm|lg)\s+)?)([A-Za-z][\w-]*)/.exec(openerLine)
   if (!m) return null
   const start = m[1].length
   return { startColumn: start + 1, endColumn: start + m[2].length + 1, text: newType }

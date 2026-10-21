@@ -4,7 +4,7 @@
 // refactor target.
 import { createElement, type RefObject } from "react"
 import type { editor as MonacoEditor } from "monaco-editor"
-import type { PaletteCommand, PaletteMode } from "./paletteTypes"
+import type { CursorContext, PaletteCommand, PaletteMode } from "./paletteTypes"
 import { inlineToDisplayEdit, envTypeEdit } from "./cursorContext"
 import { ALL_ENVS } from "./environments"
 import { canNavigateAt, findUsages, goToDefinition } from "./editorNavigation"
@@ -71,6 +71,38 @@ export interface PaletteCommandsCtx {
   openPalette: (mode: PaletteMode, intent?: "insert") => void
   /** The live editor, for the contextual "Here" edits (null with no file open). */
   editorRef: RefObject<MonacoEditor.IStandaloneCodeEditor | null>
+}
+
+/**
+ * Applies a single-line edit computed against the cursor context captured when
+ * the palette opened, but only if that line still reads the same in the same
+ * model. Returns false (and edits nothing) when the buffer moved on.
+ */
+export function applyGuardedLineEdit(
+  editor: MonacoEditor.IStandaloneCodeEditor,
+  modelUri: string | undefined,
+  lineNumber: number,
+  expectedLine: string,
+  edit: { startColumn: number; endColumn: number; text: string },
+): boolean {
+  const model = editor.getModel()
+  if (!model) return false
+  if (modelUri !== undefined && model.uri.toString() !== modelUri) return false
+  if (lineNumber < 1 || lineNumber > model.getLineCount()) return false
+  if (model.getLineContent(lineNumber) !== expectedLine) return false
+  editor.executeEdits("palette-here", [
+    {
+      range: {
+        startLineNumber: lineNumber,
+        endLineNumber: lineNumber,
+        startColumn: edit.startColumn,
+        endColumn: edit.endColumn,
+      },
+      text: edit.text,
+    },
+  ])
+  editor.focus()
+  return true
 }
 
 export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] {
@@ -147,23 +179,16 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
   })
 
   const applyLineEdit = (
+    c: CursorContext,
     lineNumber: number,
+    expectedLine: string,
     edit: { startColumn: number; endColumn: number; text: string } | null,
   ) => {
     const editor = editorRef.current
     if (!editor || !edit) return
-    editor.executeEdits("palette-here", [
-      {
-        range: {
-          startLineNumber: lineNumber,
-          endLineNumber: lineNumber,
-          startColumn: edit.startColumn,
-          endColumn: edit.endColumn,
-        },
-        text: edit.text,
-      },
-    ])
-    editor.focus()
+    if (!applyGuardedLineEdit(editor, c.modelUri, lineNumber, expectedLine, edit)) {
+      showToast(t.palette.here.staleEdit, "info")
+    }
   }
 
   // Contextual commands: only offered where they apply, and listed first in the
@@ -176,7 +201,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       category: "Matemáticas",
       when: (c) => c.inMath === "inline",
       action: (c) => {
-        if (c) applyLineEdit(c.lineNumber, inlineToDisplayEdit(c.line, c.column))
+        if (c) applyLineEdit(c, c.lineNumber, c.line, inlineToDisplayEdit(c.line, c.column))
       },
     },
     {
@@ -232,8 +257,8 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
         category: "Matemáticas" as const,
         action: (c) => {
           if (!c?.block) return
-          const opener = editorRef.current?.getModel()?.getLineContent(c.block.startLine)
-          if (opener) applyLineEdit(c.block.startLine, envTypeEdit(opener, type))
+          const opener = c.blockOpener
+          if (opener != null) applyLineEdit(c, c.block.startLine, opener, envTypeEdit(opener, type))
         },
       })),
     },

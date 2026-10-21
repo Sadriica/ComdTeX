@@ -161,3 +161,99 @@ describe("handleGlobalShortcut", () => {
     expect(handlers.toggleBookmark).not.toHaveBeenCalled()
   })
 })
+
+describe("AltGr characters are typed, never shortcuts", () => {
+  const ctx = { focusMode: false, isTextInputTarget: true }
+  // Windows/WebView2 reports AltGr as Ctrl+Alt. `code` is the physical key,
+  // `key` the character the layout produced.
+  const cases: [string, string, string][] = [
+    ["es", "|", "Digit1"],
+    ["es", "@", "Digit2"],
+    ["es", "#", "Digit3"],
+    ["es", "~", "Digit4"],
+    ["es", "\u00ac", "Digit6"],
+    ["es", "\u20ac", "KeyE"],
+    ["de", "{", "Digit7"],
+    ["de", "[", "Digit8"],
+    ["de", "]", "Digit9"],
+    ["fr", "#", "Digit3"],
+    ["fr", "{", "Digit4"],
+    ["fr", "[", "Digit5"],
+    ["fr", "|", "Digit6"],
+    ["de", "@", "KeyQ"],
+    ["pl", "\u0105", "KeyA"],
+  ]
+  for (const [layout, ch, code] of cases) {
+    it(`${layout} AltGr gives ${ch} (${code}) untouched`, () => {
+      const handlers = makeHandlers()
+      handlers.goToBookmark = vi.fn(() => true)
+      const event = makeEvent(ch, { code, ctrlKey: true, altKey: true })
+      expect(handleGlobalShortcut(event, ctx, handlers)).toBe(false)
+      expect(event.preventDefault).not.toHaveBeenCalled()
+      expect(handlers.goToBookmark).not.toHaveBeenCalled()
+      expect(handlers.togglePreview).not.toHaveBeenCalled()
+    })
+  }
+
+  it("rejects the event when the browser says AltGraph is down", () => {
+    const handlers = makeHandlers()
+    const event = {
+      ...makeEvent("1", { code: "Digit1", ctrlKey: true, altKey: true }),
+      getModifierState: (k: string) => k === "AltGraph",
+    }
+    expect(handleGlobalShortcut(event, ctx, handlers)).toBe(false)
+    expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(handlers.goToBookmark).not.toHaveBeenCalled()
+  })
+
+  it("Ctrl+; is not taken when Alt is also down", () => {
+    const handlers = makeHandlers()
+    const event = makeEvent(";", { code: "Comma", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(event, ctx, handlers)).toBe(false)
+    expect(handlers.openFilesPalette).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it("Ctrl+Alt+P preview ignores an AltGr character on the P key", () => {
+    const handlers = makeHandlers()
+    const event = makeEvent("\u00fe", { code: "KeyP", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(event, ctx, handlers)).toBe(false)
+    expect(handlers.togglePreview).not.toHaveBeenCalled()
+  })
+
+  it("the real shortcuts still work: Ctrl+Alt+digit jumps, Ctrl+Alt+P toggles", () => {
+    const handlers = makeHandlers()
+    handlers.goToBookmark = vi.fn(() => true)
+    const jump = makeEvent("3", { code: "Digit3", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(jump, ctx, handlers)).toBe(true)
+    expect(handlers.goToBookmark).toHaveBeenCalledWith(3)
+    expect(jump.preventDefault).toHaveBeenCalledTimes(1)
+    const preview = makeEvent("p", { code: "KeyP", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(preview, ctx, handlers)).toBe(true)
+    expect(handlers.togglePreview).toHaveBeenCalledTimes(1)
+    const numpad = makeEvent("5", { code: "Numpad5", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(numpad, ctx, handlers)).toBe(true)
+    expect(handlers.goToBookmark).toHaveBeenLastCalledWith(5)
+  })
+
+  it("does not swallow Ctrl+Alt+digit when the slot has no bookmark", () => {
+    const handlers = makeHandlers()
+    handlers.goToBookmark = vi.fn(() => false)
+    const event = makeEvent("2", { code: "Digit2", ctrlKey: true, altKey: true })
+    expect(handleGlobalShortcut(event, ctx, handlers)).toBe(false)
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it("survives a keydown with no key (autofill)", () => {
+    const handlers = makeHandlers()
+    const event = { ...makeEvent("a"), key: undefined as unknown as string, code: "" }
+    expect(() => handleGlobalShortcut(event, ctx, handlers)).not.toThrow()
+  })
+
+  it("F1 opens the commands palette from anywhere", () => {
+    const handlers = makeHandlers()
+    const event = makeEvent("F1", { code: "F1" })
+    expect(handleGlobalShortcut(event, ctx, handlers)).toBe(true)
+    expect(handlers.openCommandPalette).toHaveBeenCalledTimes(1)
+  })
+})

@@ -275,3 +275,14 @@ describe("parseLineQuery", () => {
     expect(parseLineQuery("", 100)).toBeNull()
   })
 })
+
+describe("documentOutline with sized environments", () => {
+  it("lists `:::sm theorem[T]{#thm:a}` as a theorem, not as type `sm`", () => {
+    const out = documentOutline(":::sm theorem[Small one]{#thm:a}\nx\n:::\n:::lg lemma\ny\n:::")
+    const envs = out.filter((e) => e.kind === "env")
+    expect(envs.map((e) => [e.type, e.text, e.label])).toEqual([
+      ["theorem", "Small one", "thm:a"],
+      ["lemma", "lemma", undefined],
+    ])
+  })
+})

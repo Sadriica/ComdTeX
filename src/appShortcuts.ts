@@ -7,7 +7,8 @@ export interface ShortcutActionHandlers {
   openFilesPalette: () => void
   togglePreview: () => void
   toggleBookmark: (slot: number) => void
-  goToBookmark: (slot: number) => void
+  /** Returns false when the slot is empty (the key press is then left alone). */
+  goToBookmark: (slot: number) => boolean | void
   showBookmarks: () => void
   zoomIn: () => void
   zoomOut: () => void
@@ -29,15 +30,57 @@ export interface ShortcutContext {
   isTextInputTarget: boolean
 }
 
+/**
+ * True while a modal dialog (`aria-modal="true"`, which every dialog in the
+ * app sets) is open and `event` should not reach the global shortcuts. The
+ * palette, marked `data-palette`, keeps its own open shortcuts (Ctrl+P,
+ * Ctrl+Shift+P, F1) alive so they switch its mode; every other key, and every
+ * key over any other modal, is the modal's.
+ */
+export function modalBlocksShortcut(
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">,
+  root: ParentNode = document,
+): boolean {
+  const modals = Array.from(root.querySelectorAll('[aria-modal="true"]'))
+  if (modals.length === 0) return false
+  const onlyPalette = modals.every((m) => m.hasAttribute("data-palette"))
+  if (!onlyPalette) return true
+  const key = event.key?.toLowerCase() ?? ""
+  const paletteKey =
+    (key === "p" && (event.ctrlKey || event.metaKey) && !event.altKey) ||
+    (event.key === "F1" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey)
+  return !paletteKey
+}
+
+/**
+ * AltGr: Windows/WebView2 reports it as Ctrl+Alt, so a Spanish AltGr+1 (`|`),
+ * German AltGr+7 (`{`) or French AltGr+3 (`#`) looks like Ctrl+Alt+Digit.
+ * True when the event is a typed character rather than a shortcut:
+ * `getModifierState("AltGraph")`, or Ctrl+Alt (no Meta) producing a single
+ * printable character other than the shortcut's own key.
+ */
+export function isAltGrCharacter(
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey"> & {
+    getModifierState?: (key: string) => boolean
+  },
+  ownKey?: string,
+): boolean {
+  if (event.getModifierState?.("AltGraph")) return true
+  if (!event.ctrlKey || !event.altKey || event.metaKey) return false
+  const k = event.key
+  if (typeof k !== "string" || k.length !== 1) return false
+  return ownKey === undefined || k.toLowerCase() !== ownKey.toLowerCase()
+}
+
 export function handleGlobalShortcut(
   event: Pick<
     KeyboardEvent,
     "key" | "code" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault"
-  >,
+  > & { getModifierState?: (key: string) => boolean },
   context: ShortcutContext,
   handlers: ShortcutActionHandlers,
 ) {
-  const key = event.key.toLowerCase()
+  const key = event.key?.toLowerCase() ?? ""
   // Physical digit (1–9) of the key, layout-independent. Using `event.code`
   // avoids the US-keyboard trap where Shift+3 yields `event.key === "#"`.
   const digitMatch = /^(?:Digit|Numpad)([1-9])$/.exec(event.code)
@@ -52,6 +95,15 @@ export function handleGlobalShortcut(
     handlers.exitFocusMode()
     return true
   }
+  // F1: the commands palette from anywhere (the editor binds it itself).
+  if (event.key === "F1" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    event.preventDefault()
+    handlers.openCommandPalette()
+    return true
+  }
+  // Every Ctrl+Alt binding below shares one rule: a typed AltGr character is
+  // never a shortcut. Plain AltGraph events are rejected up front.
+  if (event.getModifierState?.("AltGraph")) return false
   // VS Code layout: Ctrl+P files, Ctrl+Shift+P commands, Ctrl+Alt+P preview.
   // `event.code` for the Alt variant: with Alt held, macOS reports `key` as "π".
   if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && key === "p") {
@@ -68,7 +120,8 @@ export function handleGlobalShortcut(
     (event.ctrlKey || event.metaKey) &&
     event.altKey &&
     !event.shiftKey &&
-    event.code === "KeyP"
+    event.code === "KeyP" &&
+    !isAltGrCharacter(event, "p")
   ) {
     event.preventDefault()
     handlers.togglePreview()
@@ -122,7 +175,7 @@ export function handleGlobalShortcut(
     handlers.reopenTab()
     return true
   }
-  if ((event.ctrlKey || event.metaKey) && key === ";") {
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && key === ";") {
     event.preventDefault()
     handlers.openFilesPalette()
     return true
@@ -162,9 +215,10 @@ export function handleGlobalShortcut(
       handlers.toggleBookmark(digit)
       return true
     }
-    if (event.altKey && !event.shiftKey) {
+    if (event.altKey && !event.shiftKey && !isAltGrCharacter(event, String(digit))) {
+      // Only swallow the key when a bookmark was there to jump to.
+      if (handlers.goToBookmark(digit) === false) return false
       event.preventDefault()
-      handlers.goToBookmark(digit)
       return true
     }
   }
@@ -181,7 +235,7 @@ export function handleGlobalShortcut(
 export interface AppShortcut {
   /** Stable id, also the i18n-free key the help dialog looks entries up by. */
   id: string
-  /** Display form: "Ctrl+Shift+P". Cmd is shown instead of Ctrl on macOS. */
+  /** Display form: "Ctrl+Shift+P". Shown exactly as written on every platform (macOS also accepts Cmd for Ctrl, but labels stay "Ctrl"). */
   keys: string
   /** Palette command that shows this chip. */
   commandId?: string
@@ -215,6 +269,12 @@ export const APP_SHORTCUTS: readonly AppShortcut[] = [
   {
     id: "commandPalette",
     keys: "Ctrl+Shift+P",
+    source: "global",
+    handler: "openCommandPalette",
+  },
+  {
+    id: "commandPaletteF1",
+    keys: "F1",
     source: "global",
     handler: "openCommandPalette",
   },
