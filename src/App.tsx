@@ -183,6 +183,7 @@ import { STORAGE_KEYS } from "./storageKeys"
 import { saveViewState, restoreViewState, readLegacyCursor } from "./editorViewState"
 import {
   findSpecialBlockStarts,
+  findTaskLineToToggle,
   findTableBlock,
   normalizeTableBlock,
   splitIntoSections,
@@ -3348,9 +3349,18 @@ function AppContent({
             input.checked
               ? line.replace(/^(\s*)-\s\[ \]/, "$1- [x]")
               : line.replace(/^(\s*)-\s\[x\]/i, "$1- [ ]")
+          // The browser has already flipped `checked`; the source line still
+          // holds the previous state.
+          const wasChecked = !input.checked
           if (editor && model) {
-            if (lineIdx + 1 <= model.getLineCount()) {
-              const lineNo = lineIdx + 1
+            const target = findTaskLineToToggle(
+              model.getLineCount(),
+              (i) => model.getLineContent(i + 1),
+              lineIdx,
+              wasChecked,
+            )
+            if (target >= 0) {
+              const lineNo = target + 1
               const line = model.getLineContent(lineNo)
               const newLine = toggle(line)
               if (newLine !== line) {
@@ -3373,8 +3383,9 @@ function AppContent({
             const lines = (
               vault.getLiveContent(vault.openFile.path) ?? vault.openFile.content
             ).split("\n")
-            if (lines[lineIdx] !== undefined) {
-              lines[lineIdx] = toggle(lines[lineIdx])
+            const target = findTaskLineToToggle(lines.length, (i) => lines[i], lineIdx, wasChecked)
+            if (target >= 0) {
+              lines[target] = toggle(lines[target])
               vault.updateContent(lines.join("\n"))
             }
           }

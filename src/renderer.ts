@@ -742,6 +742,11 @@ function renderMarkdownImpl(
   // shape (Vancouver for biomedicine, author-year for astronomy, ...).
   const citeStyle = pickCiteStyle(parsed?.data?.["comdtex.citestyle"])
   let content = parsed ? parsed.content : raw
+  // Lines the frontmatter occupied in the editor: checkbox `data-line`s are
+  // counted on the stripped text and must point back at editor lines.
+  const frontmatterLines = parsed
+    ? (raw.slice(0, raw.length - parsed.content.length).match(/\n/g)?.length ?? 0)
+    : 0
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
   // Transclusions and `:::csv` selections, resolved exactly as every export
@@ -800,12 +805,12 @@ function renderMarkdownImpl(
         if (/^(\s*)-\s\[ \]/.test(line))
           return line.replace(
             /^(\s*)-\s\[ \]/,
-            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}">`,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i + frontmatterLines}">`,
           )
         if (/^(\s*)-\s\[x\]/i.test(line))
           return line.replace(
             /^(\s*)-\s\[x\]/i,
-            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}" checked>`,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i + frontmatterLines}" checked>`,
           )
         return line
       })

@@ -377,3 +377,30 @@ export function raggedTableRows(
   }
   return out
 }
+
+const OPEN_TASK_RE = /^\s*-\s\[ \]/
+const DONE_TASK_RE = /^\s*-\s\[x\]/i
+
+/**
+ * The editor line a preview checkbox click should toggle. The preview's line
+ * hint can drift (transcluded notes above the task add lines), so the hint is
+ * only trusted when it holds a task in the state the checkbox had; otherwise
+ * the nearest such task within a small window wins, and -1 means "touch
+ * nothing" rather than editing an unrelated line.
+ */
+export function findTaskLineToToggle(
+  lineCount: number,
+  getLine: (index: number) => string,
+  hint: number,
+  wasChecked: boolean,
+  window = 40,
+): number {
+  const re = wasChecked ? DONE_TASK_RE : OPEN_TASK_RE
+  const ok = (i: number) => i >= 0 && i < lineCount && re.test(getLine(i))
+  if (ok(hint)) return hint
+  for (let d = 1; d <= window; d++) {
+    if (ok(hint - d)) return hint - d
+    if (ok(hint + d)) return hint + d
+  }
+  return -1
+}
