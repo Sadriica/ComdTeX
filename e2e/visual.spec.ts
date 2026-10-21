@@ -868,3 +868,59 @@ for (const { name, theme } of THEMES) {
     await crop("tour", "b")
   })
 }
+
+// Creating and naming: the inline create row, its validation message and the
+// inline rename, in the tree, plus the places that now say where a note lands.
+for (const { name, theme } of THEMES) {
+  test(`visual ${name}: inline create, validation and rename`, async ({ page }) => {
+    test.setTimeout(120_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await installDeterminism(page)
+    await installFakeVault(page, { settings: { theme, language: "en" } })
+    await page.goto("/")
+    await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+    await settle(page)
+    const tree = page.locator(".file-tree")
+
+    // New file: the row opens inside papers/, where the active note lives.
+    await page.getByRole("button", { name: "New file", exact: true }).click()
+    await page.getByRole("textbox", { name: "New file" }).fill("draft")
+    await shot(page, name, "tree__inline-create")
+    await tree.screenshot({ path: resolve(OUT, `${name}__tree__inline-create__crop.png`) })
+
+    // An invalid name: the message sits under the input.
+    await page.getByRole("textbox", { name: "New file" }).fill("spectral-gap")
+    await shot(page, name, "tree__inline-create-error")
+    await tree.screenshot({ path: resolve(OUT, `${name}__tree__inline-create-error__crop.png`) })
+    await page.keyboard.press("Escape")
+
+    // New folder.
+    await page.getByRole("button", { name: "New folder", exact: true }).click()
+    await page.getByRole("textbox", { name: "New folder" }).fill("drafts")
+    await tree.screenshot({ path: resolve(OUT, `${name}__tree__inline-new-folder__crop.png`) })
+    await page.keyboard.press("Escape")
+
+    // Rename: in the row, base name selected, error under the field.
+    await page.getByRole("treeitem", { name: "typesetting.md", exact: true }).dblclick()
+    await shot(page, name, "tree__rename")
+    await tree.screenshot({ path: resolve(OUT, `${name}__tree__rename__crop.png`) })
+    await page.getByRole("textbox", { name: "Rename typesetting.md" }).fill("spectral-gap.md")
+    await tree.screenshot({ path: resolve(OUT, `${name}__tree__rename-error__crop.png`) })
+    await page.keyboard.press("Escape")
+
+    // Palette: the Create row names its destination.
+    await page.keyboard.press("Control+p")
+    await page.locator(".palette-input").fill("brand new idea")
+    await page.waitForTimeout(400)
+    await shot(page, name, "command-palette__create-note")
+    await closeOverlays(page)
+
+    // Template picker: folder, name and the resulting path.
+    await palette(page, "from template")
+    await page.keyboard.press("Enter")
+    await page.getByLabel("File name").fill("from-template")
+    await page.waitForTimeout(500)
+    await shot(page, name, "modal__templates-destination")
+    await closeOverlays(page)
+  })
+}
