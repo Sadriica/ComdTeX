@@ -261,6 +261,18 @@ function matches(entry: LabelEntry, partialLc: string): boolean {
   return !partialLc || entry.nameLc.includes(partialLc) || entry.titleLc.includes(partialLc)
 }
 
+/**
+ * How much of `after` (the text past the caret) is the rest of the label being
+ * completed. A label is word characters with internal dots or hyphens, so a
+ * trailing "." or "-" is punctuation of the sentence and stays: "see @thm:|."
+ * keeps its period and "@lem:|-style" its "-style".
+ */
+export function labelTail(after: string, partial: string): number {
+  const continues = partial === "" || !/\w$/.test(partial)
+  const re = continues ? /^\w+(?:[.-]\w+)*/ : /^\w*(?:[.-]\w+)*/
+  return re.exec(after)?.[0].length ?? 0
+}
+
 function pad(n: number): string {
   return String(n).padStart(6, "0")
 }
@@ -271,11 +283,7 @@ function provideLocal(
 ): monacoApi.languages.CompletionList {
   const partialLc = ctx.partial.toLowerCase()
   const startCol = ctx.start + 1
-  const range = makeRange(
-    env,
-    startCol,
-    env.position.column + (/^[\w.-]*/.exec(env.after)?.[0].length ?? 0),
-  )
+  const range = makeRange(env, startCol, env.position.column + labelTail(env.after, ctx.partial))
   const suggestions: monacoApi.languages.CompletionItem[] = []
 
   const same = sameFileEntries(env.model, ctx.kind).filter((e) => matches(e, partialLc))
@@ -435,7 +443,7 @@ function provideCross(
   const range = makeRange(
     env,
     env.position.column - ctx.partial.length,
-    env.position.column + (/^[\w.-]*/.exec(env.after)?.[0].length ?? 0),
+    env.position.column + labelTail(env.after, ctx.partial),
   )
   const suggestions = entries
     .filter((e) => e.kind === ctx.kind && matches(e, partialLc))

@@ -115,3 +115,25 @@ test("a suggestion in math is accepted once the user navigated to it", async ({ 
   expect(await text(page)).not.toContain("\n")
   expect(await text(page)).toContain("sum")
 })
+
+test("accepting a label keeps the punctuation after the caret", async ({ page }) => {
+  await openEmpty(page)
+  await page.keyboard.type("see @thm:.")
+  await page.keyboard.press("ArrowLeft")
+  await page.keyboard.press("Control+Space")
+  await expect(widget(page)).toBeVisible()
+  await page.keyboard.press("Enter")
+  await page.waitForTimeout(150)
+  expect(await text(page)).toMatch(/^see @\S+@thm:\w+\.$/)
+})
+
+test("accepting a label keeps a hyphenated word after the caret", async ({ page }) => {
+  await openEmpty(page)
+  await page.keyboard.type("a @thm:-style")
+  for (let i = 0; i < "-style".length; i++) await page.keyboard.press("ArrowLeft")
+  await page.keyboard.press("Control+Space")
+  await expect(widget(page)).toBeVisible()
+  await page.keyboard.press("Enter")
+  await page.waitForTimeout(150)
+  expect(await text(page)).toMatch(/^a @\S+@thm:\w+-style$/)
+})

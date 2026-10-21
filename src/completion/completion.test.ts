@@ -281,6 +281,27 @@ describe("labels @kind:", () => {
     expect(labels(names)).toEqual(["accents"])
   })
 
+  it("replaces the rest of the label past the caret, not the punctuation after it", async () => {
+    const sentence = doc("see @thm:| Next.")
+    const r = await complete(sentence)
+    expect(accept(sentence, r.suggestions[0])).toBe(doc("see @thm:mixing| Next."))
+    const dash = doc("a @thm:|-style proof")
+    expect(accept(dash, (await complete(dash)).suggestions[0])).toBe(
+      doc("a @thm:mixing|-style proof"),
+    )
+    const period = doc("so @thm:mi|xing.")
+    expect(accept(period, (await complete(period)).suggestions[0])).toBe(doc("so @thm:mixing|."))
+    // A label that continues past the caret is still replaced as a whole.
+    const inner = doc("so @thm:mi|xing-two.")
+    expect(accept(inner, (await complete(inner)).suggestions[0])).toBe(doc("so @thm:mixing|."))
+  })
+
+  it("does the same after a cross-file path", async () => {
+    const text = "see @notes/mixing-times@thm:|."
+    const r = await complete(text)
+    expect(accept(text, r.suggestions[0])).toBe("see @notes/mixing-times@thm:cheeger|.")
+  })
+
   it("never offers an equation, figure, table or section of another file", async () => {
     const eq = await complete(doc("@eq:|"))
     expect(labels(eq)).toEqual(["gap"])
