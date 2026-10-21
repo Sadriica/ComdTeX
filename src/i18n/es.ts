@@ -561,6 +561,7 @@ export const es: T = {
     aiInlineEdit: "Edición inline con IA",
     exportObsidian: "Exportar a Obsidian (Markdown)",
     lineBreak: "Salto de línea",
+    quickFix: "Arreglo rápido en el cursor",
     lineBreakHint: "Nueva línea",
     snippets: "Snippets / autocompletado",
     snippetsHint: "Todos los snippets del editor",

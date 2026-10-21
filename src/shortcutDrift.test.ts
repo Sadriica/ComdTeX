@@ -138,6 +138,19 @@ describe("shortcut registry vs the palette", () => {
   })
 })
 
+describe("navigation commands in the palette", () => {
+  it("go to definition is a Here command only on a navigable construct", () => {
+    const { all } = flattenCommands(buildPaletteCommands(makeCtx("en")))
+    const def = all.get("nav:goToDefinition")!
+    const on = { lineNumber: 1, column: 8, line: "see @thm:gap now" } as never
+    const off = { lineNumber: 1, column: 8, line: "plain prose here" } as never
+    expect(def.here!(on)).toBe(true)
+    expect(def.here!(off)).toBe(false)
+    expect(all.has("nav:findUsages")).toBe(true)
+    expect(all.has("nav:quickFix")).toBe(true)
+  })
+})
+
 describe("splitKeys", () => {
   it("splits into key caps and keeps a literal plus", () => {
     expect(splitKeys("Ctrl+Shift+P")).toEqual(["Ctrl", "Shift", "P"])

@@ -559,6 +559,7 @@ export const en: T = {
     aiInlineEdit: "Inline AI edit",
     exportObsidian: "Export to Obsidian (Markdown)",
     lineBreak: "Line break",
+    quickFix: "Quick fix at cursor",
     lineBreakHint: "New line",
     snippets: "Snippets / autocomplete",
     snippetsHint: "Every editor snippet",

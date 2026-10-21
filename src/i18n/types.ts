@@ -540,6 +540,7 @@ export interface T {
     aiInlineEdit: string
     exportObsidian: string
     lineBreak: string
+    quickFix: string
     lineBreakHint: string
     snippets: string
     snippetsHint: string

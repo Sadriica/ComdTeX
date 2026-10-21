@@ -7,6 +7,7 @@ import type { editor as MonacoEditor } from "monaco-editor"
 import type { PaletteCommand, PaletteMode } from "./paletteTypes"
 import { inlineToDisplayEdit, envTypeEdit } from "./cursorContext"
 import { ALL_ENVS } from "./environments"
+import { canNavigateAt, findUsages, goToDefinition } from "./editorNavigation"
 import type { SidebarMode } from "./App"
 import type { T } from "./i18n"
 import type { DepStatus } from "./checkDeps"
@@ -173,6 +174,47 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       when: (c) => c.inMath === "inline",
       action: (c) => {
         if (c) applyLineEdit(c.lineNumber, inlineToDisplayEdit(c.line, c.column))
+      },
+    },
+    {
+      id: "nav:goToDefinition",
+      label: t.editorNav.goToDefinition,
+      keywords: ["definition", "definición", "follow", "link"],
+      category: "Navegación",
+      here: (c) =>
+        canNavigateAt(
+          { getLineContent: () => c.line },
+          { lineNumber: c.lineNumber, column: c.column },
+        ),
+      action: () => {
+        const editor = editorRef.current
+        if (editor) void goToDefinition(editor)
+      },
+    },
+    {
+      id: "nav:findUsages",
+      label: t.editorNav.findUsages,
+      keywords: ["references", "usages", "usos", "referencias"],
+      category: "Navegación",
+      here: (c) =>
+        canNavigateAt(
+          { getLineContent: () => c.line },
+          { lineNumber: c.lineNumber, column: c.column },
+        ),
+      action: () => {
+        const editor = editorRef.current
+        if (editor) void findUsages(editor)
+      },
+    },
+    {
+      id: "nav:quickFix",
+      label: t.palette.quickFix,
+      keywords: ["fix", "arreglar", "lint", "warning", "code action"],
+      category: "Edición",
+      action: () => {
+        const editor = editorRef.current
+        editor?.focus()
+        void editor?.getAction("editor.action.quickFix")?.run()
       },
     },
     {
