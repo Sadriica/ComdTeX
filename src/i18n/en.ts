@@ -1186,6 +1186,18 @@ export const en: T = {
     errorReading: (e) => `Error reading vault: ${e}`,
     errorCreatingReadme: (e) => `Could not create README.md: ${e}`,
     binaryFile: (name) => `${name} is a binary file and cannot be opened`,
+    conversionWarning: (count, phase, name, line, detail) =>
+      `${count === 1 ? "1 note" : `${count} notes`} ${phase === "opening" ? "opening" : "saving"} ${name}. Line ${line}: ${detail}`,
+    conversionDetail: {
+      "unclosed-cmdx-environment": "a ::: block is never closed, so it was kept as plain text",
+      "unsupported-latex-environment":
+        "this LaTeX environment has no ComdTeX equivalent and is kept as written",
+      "latex-preamble-preserved": "LaTeX preamble commands are kept as written",
+      "custom-latex-macro-preserved": "custom LaTeX macro definitions are kept as written",
+      "unbalanced-shorthand": "a shorthand has unbalanced parentheses, so it was kept as text",
+      "size-prefix-dropped":
+        "the sm/lg size prefix cannot be stored in a .md callout and is lost on save",
+    },
     errorOpening: (name, e) => `Could not open ${name}: ${e}`,
     errorCreating: (e) => `Could not create: ${e}`,
     errorDeleting: (e) => `Could not delete: ${e}`,

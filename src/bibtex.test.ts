@@ -130,6 +130,13 @@ describe("renderBibliography", () => {
     expect(html).toContain("TeXbook")
   })
 
+  it("lays out a missing entry with the same number and content parts as a found one", () => {
+    const html = renderBibliography(["ghost"], new Map())
+    expect(html).toMatch(
+      /<div class="bib-entry bib-missing"[^>]*>\s*<span class="bib-number">\[1\]<\/span>\s*<span class="bib-content">[^<]*<code>ghost<\/code><\/span><\/div>/,
+    )
+  })
+
   it("renders missing entry with bib-missing class", () => {
     const html = renderBibliography(["nonexistent"], bibMap)
     expect(html).toContain("bib-missing")

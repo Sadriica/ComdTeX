@@ -1189,6 +1189,19 @@ export const es: T = {
     errorReading: (e) => `Error leyendo vault: ${e}`,
     errorCreatingReadme: (e) => `No se pudo crear README.md: ${e}`,
     binaryFile: (name) => `${name} es un archivo binario y no se puede abrir`,
+    conversionWarning: (count, phase, name, line, detail) =>
+      `${count === 1 ? "1 aviso" : `${count} avisos`} al ${phase === "opening" ? "abrir" : "guardar"} ${name}. Línea ${line}: ${detail}`,
+    conversionDetail: {
+      "unclosed-cmdx-environment": "un bloque ::: no se cierra, así que se conservó como texto",
+      "unsupported-latex-environment":
+        "este entorno LaTeX no tiene equivalente en ComdTeX y se conserva tal cual",
+      "latex-preamble-preserved": "los comandos de preámbulo LaTeX se conservan tal cual",
+      "custom-latex-macro-preserved": "las definiciones de macros LaTeX se conservan tal cual",
+      "unbalanced-shorthand":
+        "un atajo tiene paréntesis sin cerrar, así que se conservó como texto",
+      "size-prefix-dropped":
+        "el prefijo de tamaño sm/lg no cabe en un callout .md y se pierde al guardar",
+    },
     errorOpening: (name, e) => `No se pudo abrir ${name}: ${e}`,
     errorCreating: (e) => `No se pudo crear: ${e}`,
     errorDeleting: (e) => `No se pudo eliminar: ${e}`,

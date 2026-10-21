@@ -1111,6 +1111,21 @@ export interface T {
     errorReading: (e: string) => string
     errorCreatingReadme: (e: string) => string
     binaryFile: (name: string) => string
+    conversionWarning: (
+      count: number,
+      phase: "opening" | "saving",
+      name: string,
+      line: number,
+      detail: string,
+    ) => string
+    conversionDetail: {
+      "unclosed-cmdx-environment": string
+      "unsupported-latex-environment": string
+      "latex-preamble-preserved": string
+      "custom-latex-macro-preserved": string
+      "unbalanced-shorthand": string
+      "size-prefix-dropped": string
+    }
     errorOpening: (name: string, e: string) => string
     errorCreating: (e: string) => string
     errorDeleting: (e: string) => string

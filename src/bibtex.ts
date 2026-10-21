@@ -244,8 +244,18 @@ export function renderBibliography(
   const items = citedKeys
     .map((key, i) => {
       const entry = bibMap.get(key)
-      if (!entry)
-        return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] ${esc(terms.missing)}: <code>${key}</code></div>`
+      if (!entry) {
+        // Same grid parts as a found entry, so the text does not fall into
+        // the narrow number column.
+        const number = style.id === "default" ? `[${i + 1}]` : style.numbered ? `${i + 1}.` : ""
+        return [
+          `<div class="bib-entry bib-missing" id="bib-${esc(key)}">`,
+          number ? `<span class="bib-number">${number}</span>` : "",
+          `<span class="bib-content">${esc(terms.missing)}: <code>${esc(key)}</code></span></div>`,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      }
       return formatEntry(entry, i + 1, style)
     })
     .join("\n")

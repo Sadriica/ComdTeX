@@ -6,7 +6,7 @@ import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
 import { allowVaultDir } from "./vaultScope"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
-import { useT } from "./i18n"
+import { useT, type T } from "./i18n"
 import {
   analyzeConversion,
   renameLineEnding,
@@ -73,15 +73,30 @@ function editorModeForPath(path: string): "md" | "tex" | "pdf" | "typ" {
   return storageFormatForPath(path) === "tex" ? "tex" : "md"
 }
 
-function showConversionWarnings(path: string, content: string, phase: "opening" | "saving") {
+// Restoring tabs and opening a note can read the same file twice in a row;
+// one notice per file and phase is enough.
+const lastConversionNotice = new Map<string, { key: string; at: number }>()
+const CONVERSION_NOTICE_DEDUPE_MS = 5000
+
+function showConversionWarnings(path: string, content: string, phase: "opening" | "saving", t: T) {
   const format = storageFormatForPath(path)
   if (!format) return
   const warnings = analyzeConversion(content, format).warnings
   if (warnings.length === 0) return
   const first = warnings[0]
-  const verb = phase === "opening" ? "abrir" : "guardar"
+  const key = `${phase}:${warnings.length}:${first.code}:${first.line}`
+  const now = Date.now()
+  const last = lastConversionNotice.get(path)
+  if (last && last.key === key && now - last.at < CONVERSION_NOTICE_DEDUPE_MS) return
+  lastConversionNotice.set(path, { key, at: now })
   showToast(
-    `CMDX: ${warnings.length} advertencia(s) al ${verb} ${displayBasename(path)}. Línea ${first.line}: ${first.message}`,
+    t.vault.conversionWarning(
+      warnings.length,
+      phase,
+      displayBasename(path),
+      first.line,
+      t.vault.conversionDetail[first.code],
+    ),
     "info",
     7000,
   )
@@ -825,7 +840,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
           } catch {
             // stat optional - some filesystems may not support it
           }
-          showConversionWarnings(path, content, "opening")
+          showConversionWarnings(path, content, "opening", t)
           const diskContent = toEditorContent(path, content)
           // A draft only wins when it is NEWER than the file on disk. A draft
           // older than the file's mtime predates an external change (or a save
@@ -884,7 +899,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       /* corrupted storage */
     }
     return false
-  }, [])
+  }, [t])
 
   // ── Open or create README.md ─────────────────────────────────────────────
   const openOrCreateReadme = useCallback(
@@ -1099,7 +1114,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
       }
       try {
         const content = await readTextFile(node.path)
-        showConversionWarnings(node.path, content, "opening")
+        showConversionWarnings(node.path, content, "opening", t)
         let cachedMtime: number | undefined
         try {
           const info = await stat(node.path)
@@ -1150,7 +1165,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
       try {
         const content = await readTextFile(path)
-        showConversionWarnings(path, content, "opening")
+        showConversionWarnings(path, content, "opening", t)
         // Get modification time for conflict detection
         let cachedMtime: number | undefined
         try {
@@ -1356,7 +1371,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
             // ignore stat errors (filesystem may not support mtime)
           }
         }
-        showConversionWarnings(path, content, "saving")
+        showConversionWarnings(path, content, "saving", t)
         // Convert from CMDX to storage format before saving. Non-CMDX files like .bib stay raw.
         const storageContent = toDiskContent(path, content)
         await writeTextFileAtomic(path, storageContent)

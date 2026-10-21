@@ -433,7 +433,11 @@ function RemotesSection({ vaultPath }: { vaultPath: string }) {
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") setUrl(r.name, urlInput)
-                    if (e.key === "Escape") setEditing(null)
+                    if (e.key === "Escape") {
+                      // Only leave the remote editor; the panel stays open.
+                      e.preventDefault()
+                      setEditing(null)
+                    }
                   }}
                   autoFocus
                 />
@@ -1350,8 +1354,20 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
       )
         setPanelOpen(false)
     }
+    // Escape closes the panel like every other popover, and focus goes back to
+    // the Git button. An inner control that handles Escape itself (the inline
+    // remote editor) stops propagation first.
+    const k = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return
+      setPanelOpen(false)
+      wrapRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
+    }
     document.addEventListener("mousedown", h)
-    return () => document.removeEventListener("mousedown", h)
+    document.addEventListener("keydown", k)
+    return () => {
+      document.removeEventListener("mousedown", h)
+      document.removeEventListener("keydown", k)
+    }
   }, [panelOpen])
 
   const handleInit = useCallback(async () => {
