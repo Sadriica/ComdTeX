@@ -8,7 +8,7 @@ import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
 import { registerTypstLanguage } from "./typstLanguage"
-import { registerComdtexLanguage, shorthandNames } from "./comdtexLanguage"
+import { EDITOR_LANGUAGES, registerComdtexLanguage, shorthandNames } from "./comdtexLanguage"
 import { registerLatexLanguage } from "./latexLanguage"
 import { findDisplayMathBlocks } from "./useDisplayMathPreview"
 import {
@@ -131,7 +131,7 @@ export function setupMonaco(monaco: typeof monacoApi) {
 
   // Go to definition, find usages, link underlines and the hover cards for
   // ComdTeX syntax live in editorNavigation.ts / editorHovers.ts.
-  registerEditorNavigation(monaco)
+  registerEditorNavigation(monaco, EDITOR_LANGUAGES)
 }
 
 // ── Typewriter mode ───────────────────────────────────────────────────────────

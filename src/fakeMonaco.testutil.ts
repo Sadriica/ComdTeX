@@ -39,6 +39,9 @@ export class FakeModel {
   get id() {
     return this.uri.toString()
   }
+  getLanguageId() {
+    return this.language
+  }
   getValue() {
     return this.text
   }

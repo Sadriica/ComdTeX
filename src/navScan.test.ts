@@ -10,6 +10,52 @@ import {
 } from "./navScan"
 import { prescanEquations } from "./equations"
 
+describe("LaTeX constructs", () => {
+  it("reads labels, references and citations by their commands", () => {
+    const line = "See \\ref{thm:main}, \\eqref{eq:a,eq:b}, \\cite[p. 3]{one, two} \\label{sec:x}."
+    const found = constructsInLine(line, true)
+    expect(found.map((c) => c.type)).toEqual(["ref", "ref", "ref", "cite", "cite", "labelDef"])
+    expect(found[0]).toMatchObject({ id: "thm:main", kind: "thm", name: "main", docPath: null })
+    expect(found[2]).toMatchObject({ id: "eq:b" })
+    const one = found[3] as { key: string; start: number; end: number }
+    expect(line.slice(one.start, one.end)).toBe("one")
+    expect(found[4]).toMatchObject({ key: "two" })
+    expect(found[5]).toMatchObject({ id: "sec:x" })
+  })
+
+  it("accepts a label without a kind prefix and skips comments", () => {
+    expect(constructsInLine("\\ref{main}", true)).toMatchObject([{ id: "main", kind: "" }])
+    expect(constructsInLine("text % \\ref{gone}", true)).toEqual([])
+    expect(constructsInLine("100\\% \\ref{kept}", true)).toHaveLength(1)
+  })
+
+  it("also reads the {#kind:name} labels the editor shows for a .tex file", () => {
+    expect(constructsInLine("{#eq:main}", true)).toMatchObject([
+      { type: "labelDef", id: "eq:main" },
+    ])
+  })
+
+  it("ignores the Markdown syntax, and Markdown ignores the LaTeX commands", () => {
+    expect(constructsInLine("@thm:x [@key] [[note]]", true)).toEqual([])
+    expect(constructsInLine("\\ref{thm:x}")).toEqual([])
+  })
+
+  it("indexes a .tex file by its commands and resolves refs inside it", () => {
+    const db = new NavDb([
+      {
+        path: "/v/a.tex",
+        name: "a.tex",
+        content: "\\section{A}\\label{sec:a}\nsee \\ref{sec:a} and \\cite{k}",
+      },
+    ])
+    const file = db.file("/v/a.tex")!
+    expect(file.labels.map((l) => l.id)).toEqual(["sec:a"])
+    expect(file.cites.map((c) => c.key)).toEqual(["k"])
+    const hits = db.resolveRef({ id: "sec:a", docPath: null }, "/v/a.tex")
+    expect(hits[0].label.line).toBe(1)
+  })
+})
+
 describe("constructsInLine", () => {
   it("finds wikilinks, transclusions and headings in links", () => {
     const line = "See [[mixing-times]], ![[intro#Setup|the setup]] and [[a/b]]."

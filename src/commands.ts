@@ -211,7 +211,10 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       category: "Navegación",
       here: (c) =>
         canNavigateAt(
-          { getLineContent: () => c.line },
+          {
+            getLineContent: () => c.line,
+            getLanguageId: () => editorRef.current?.getModel()?.getLanguageId() ?? "markdown",
+          },
           { lineNumber: c.lineNumber, column: c.column },
         ),
       action: () => {
@@ -226,7 +229,10 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       category: "Navegación",
       here: (c) =>
         canNavigateAt(
-          { getLineContent: () => c.line },
+          {
+            getLineContent: () => c.line,
+            getLanguageId: () => editorRef.current?.getModel()?.getLanguageId() ?? "markdown",
+          },
           { lineNumber: c.lineNumber, column: c.column },
         ),
       action: () => {

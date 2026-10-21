@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test"
+import { installDeterminism } from "./support/deterministic"
+import { installFakeVault } from "./support/fakeVault"
 import { boxOf, cursorLine, openVault, revealLine } from "./support/editorNav"
 
 // Editor navigation in the fake vault: Ctrl+click opens a note, F12 jumps to a
@@ -93,5 +95,52 @@ test("the references peek cannot be typed into: its copies of other notes are ne
   await preview.locator(".view-line").filter({ hasText: "cheeger" }).first().click()
   await page.keyboard.type("ZZQQ")
   await expect(preview.locator(".view-lines")).not.toContainText("ZZQQ")
+  expect(errors).toEqual([])
+})
+
+test("F12 on \\ref{} in a .tex file jumps to its \\label, and on \\cite{} to references.bib", async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on("pageerror", (e) => errors.push(e.message))
+  await installDeterminism(page)
+  await installFakeVault(page, {
+    settings: { theme: "vs-dark" },
+    tabs: ["chapters/a.tex"],
+    storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
+    files: {
+      "chapters/a.tex": [
+        "\\section{Intro}",
+        "",
+        "Some text.",
+        "",
+        "\\begin{equation}\\label{eq:main} x = 1 \\end{equation}",
+        "",
+        "As in \\ref{eq:main} and \\cite{lubotzky1988}.",
+        "",
+      ].join("\n"),
+    },
+  })
+  await page.goto("/")
+  await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+  await expect(page.locator(".view-lines")).toContainText("As in")
+
+  // Monospace: the line's own first word gives the character width.
+  const line = "As in \\ref{eq:main} and \\cite{lubotzky1988}."
+  const first = await boxOf(page, "As in")
+  const charW = first.w / "As in".length
+  const clickAt = (index: number) =>
+    page.mouse.click(first.x + charW * (index + 0.5), first.y + first.h / 2)
+  await clickAt(line.indexOf("eq:main") + 2)
+  await page.keyboard.press("F12")
+  // The caret is on the label line (the editor shows it as {#eq:main}): a typed marker lands there.
+  await page.keyboard.press("End")
+  await page.keyboard.type("QQ")
+  await expect(page.locator(".view-line", { hasText: "QQ" })).toContainText("{#eq:main}")
+  await page.keyboard.press("Control+z")
+
+  await clickAt(line.indexOf("lubotzky1988") + 3)
+  await page.keyboard.press("F12")
+  await expect(page.locator(".tab-active .tab-name")).toContainText("references.bib")
   expect(errors).toEqual([])
 })

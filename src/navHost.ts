@@ -11,7 +11,7 @@
  */
 import type * as monacoApi from "monaco-editor"
 import type { DocLang } from "./docLang"
-import { NavDb, type NavFile } from "./navScan"
+import { NavDb, isLatexPath, type NavFile } from "./navScan"
 
 export interface EditorNavStrings {
   followLink: string
@@ -89,6 +89,8 @@ export interface NavModel {
   getLineContent(line: number): string
   getLineCount(): number
   getVersionId(): number
+  /** Language id of the model ("latex" scans LaTeX commands); absent means Markdown. */
+  getLanguageId?(): string
 }
 
 export const NAV_SCHEME = "comdtex-nav"
@@ -242,7 +244,7 @@ export function uriForPath(
 ): monacoApi.Uri {
   if (useEditorModel && path === snap.activePath) return model.uri
   const file = snap.db.file(path)
-  return ensureShadowModel(monaco, path, file?.text ?? "")
+  return ensureShadowModel(monaco, path, file?.text ?? "", isLatexPath(path) ? "latex" : "markdown")
 }
 
 // ── references.bib ────────────────────────────────────────────────────────────
@@ -309,4 +311,9 @@ export async function locateBibEntry(key: string): Promise<BibLocation | null> {
   if (!bib) return null
   const at = findBibEntry(bib.text, key)
   return at ? { ...bib, ...at } : null
+}
+
+/** Whether the model holds LaTeX, so navigation reads `\\ref{}` rather than `@kind:name`. */
+export function isLatexModel(model: Pick<NavModel, "getLanguageId">): boolean {
+  return model.getLanguageId?.() === "latex"
 }

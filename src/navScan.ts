@@ -89,8 +89,99 @@ function codeSpans(line: string): [number, number][] {
   return spans
 }
 
-/** Every navigable construct on a line, in order, minus anything inside inline code. */
-export function constructsInLine(line: string): LineConstruct[] {
+// ── LaTeX (.tex) ──────────────────────────────────────────────────────────────
+// The same constructs under their LaTeX names: `\label{x}` defines, `\ref{x}`
+// (and `\eqref`, `\autoref`, `\cref`...) uses, `\cite{a,b}` (and the natbib /
+// biblatex variants) cites. Label ids are kept as written: no kind prefix is
+// required (`\label{main}` works) and none is normalized.
+
+const LATEX_LABEL_RE = /\\label\s*\{([^{}\n]*)\}/g
+const LATEX_REF_RE = /\\(?:eqref|autoref|cref|Cref|vref|ref|pageref|nameref)\*?\s*\{([^{}\n]*)\}/g
+const LATEX_CITE_RE = /\\[A-Za-z]*cite[A-Za-z]*\*?(?:\s*\[[^\]\n]*\]){0,2}\s*\{([^{}\n]*)\}/g
+
+/** Comma-separated items inside the braces of `match`, each with its 0-based span in the line. */
+function latexItems(match: RegExpExecArray): { text: string; start: number; end: number }[] {
+  const open = match[0].lastIndexOf("{")
+  const base = match.index + open + 1
+  const items: { text: string; start: number; end: number }[] = []
+  let at = 0
+  for (const part of match[1].split(",")) {
+    const text = part.trim()
+    if (text) {
+      const start = base + at + part.indexOf(text)
+      items.push({ text, start, end: start + text.length })
+    }
+    at += part.length + 1
+  }
+  return items
+}
+
+function latexConstructs(line: string): LineConstruct[] {
+  if (!line.includes("\\") && !line.includes("{#")) return []
+  // Everything after an unescaped % is a comment.
+  const cut = /(?<!\\)%/.exec(line)
+  const text = cut ? line.slice(0, cut.index) : line
+  const out: LineConstruct[] = []
+  let m: RegExpExecArray | null
+
+  const label = new RegExp(LATEX_LABEL_RE.source, "g")
+  while ((m = label.exec(text)) !== null) {
+    const id = m[1].trim()
+    if (id) out.push({ type: "labelDef", start: m.index, end: m.index + m[0].length, id })
+  }
+  // The editor shows a .tex file with its labels already rewritten to `{#kind:name}`
+  // (the storage format is converted on open), so that form defines labels too.
+  const braced = new RegExp(LABEL_DEF_RE.source, "g")
+  while ((m = braced.exec(text)) !== null) {
+    const kind = normalizeLabelKind(m[1])
+    if (kind) {
+      out.push({
+        type: "labelDef",
+        start: m.index,
+        end: m.index + m[0].length,
+        id: `${kind}:${m[2]}`,
+      })
+    }
+  }
+  const ref = new RegExp(LATEX_REF_RE.source, "g")
+  while ((m = ref.exec(text)) !== null) {
+    for (const item of latexItems(m)) {
+      const [prefix, ...rest] = item.text.split(":")
+      out.push({
+        type: "ref",
+        start: item.start,
+        end: item.end,
+        kind: rest.length > 0 ? prefix : "",
+        name: rest.length > 0 ? rest.join(":") : item.text,
+        id: item.text,
+        docPath: null,
+      })
+    }
+  }
+  const cite = new RegExp(LATEX_CITE_RE.source, "g")
+  while ((m = cite.exec(text)) !== null) {
+    const groupStart = m.index
+    const groupEnd = m.index + m[0].length
+    for (const item of latexItems(m)) {
+      out.push({
+        type: "cite",
+        start: item.start,
+        end: item.end,
+        key: item.text,
+        groupStart,
+        groupEnd,
+      })
+    }
+  }
+  return out.sort((a, b) => a.start - b.start)
+}
+
+/**
+ * Every navigable construct on a line, in order, minus anything inside inline
+ * code. `latex` reads the LaTeX commands instead of the Markdown syntax.
+ */
+export function constructsInLine(line: string, latex = false): LineConstruct[] {
+  if (latex) return latexConstructs(line)
   if (!line.includes("@") && !line.includes("[[") && !line.includes("{#")) return []
   const out: LineConstruct[] = []
   const spans = codeSpans(line)
@@ -181,8 +272,8 @@ export function constructsInLine(line: string): LineConstruct[] {
 }
 
 /** The construct under a 0-based column, or null. Cites resolve to the key under the cursor. */
-export function constructAt(line: string, col0: number): LineConstruct | null {
-  const all = constructsInLine(line)
+export function constructAt(line: string, col0: number, latex = false): LineConstruct | null {
+  const all = constructsInLine(line, latex)
   let hit: LineConstruct | null = null
   for (const c of all) {
     if (col0 >= c.start && col0 <= c.end) {
@@ -378,6 +469,9 @@ function memo<T>(fn: () => T): () => T {
   }
 }
 
+/** A `.tex` file is scanned for LaTeX commands, everything else as ComdTeX Markdown. */
+export const isLatexPath = (path: string) => /\.tex$/i.test(path)
+
 const HEADING_RE = /^(#{1,6})\s+(.+?)\s*(?:\{#[^}]*\})?\s*$/
 
 export function indexFile(file: NavFile): FileNav {
@@ -391,24 +485,28 @@ export function indexFile(file: NavFile): FileNav {
   const headings: NavHeading[] = []
   const text = file.content
   const lines = memo(() => text.split("\n"))
+  const latex = isLatexPath(file.path)
 
   if (text) {
     let fence: string | null = null
     const all = text.split("\n")
     for (let i = 0; i < all.length; i++) {
       const line = all[i]
-      const f = /^(`{3,}|~{3,})/.exec(line)
-      if (fence) {
-        const t = line.trim()
-        if (t[0] === fence[0] && t.length >= fence.length && /^(`+|~+)$/.test(t)) fence = null
-        continue
-      }
-      if (f) {
-        fence = f[1]
-        continue
+      // No fences or headings in LaTeX: the commands are all that is indexed.
+      if (!latex) {
+        const f = /^(`{3,}|~{3,})/.exec(line)
+        if (fence) {
+          const t = line.trim()
+          if (t[0] === fence[0] && t.length >= fence.length && /^(`+|~+)$/.test(t)) fence = null
+          continue
+        }
+        if (f) {
+          fence = f[1]
+          continue
+        }
       }
       const lineNo = i + 1
-      const h = line.charCodeAt(0) === 35 ? HEADING_RE.exec(line) : null
+      const h = !latex && line.charCodeAt(0) === 35 ? HEADING_RE.exec(line) : null
       if (h) {
         const title = h[2].trim()
         headings.push({
@@ -418,7 +516,7 @@ export function indexFile(file: NavFile): FileNav {
           line: lineNo,
         })
       }
-      for (const c of constructsInLine(line)) {
+      for (const c of constructsInLine(line, latex)) {
         if (c.type === "labelDef") {
           const [kind, ...rest] = c.id.split(":")
           labels.push({

@@ -13,7 +13,7 @@ import {
   cancelToken,
   createFakeMonaco,
   editorModel,
-  type FakeModel,
+  FakeModel,
   type FakeMonaco,
 } from "./fakeMonaco.testutil"
 import { bibScanCount, resetEditorNavigation } from "./navHost"
@@ -212,6 +212,74 @@ describe("editor navigation providers", () => {
       expect(new URLSearchParams(first.query).get("path")).toBe("/v/a.md")
       expect(new URLSearchParams(first.query).get("line")).toBe("2")
     })
+  })
+})
+
+describe("LaTeX documents", () => {
+  const TEX = [
+    "\\section{Intro}\\label{sec:intro}",
+    "As in \\ref{sec:intro} and \\cite{key1}.",
+  ].join("\n")
+
+  function setup() {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.tex",
+      getFiles: () => [{ path: "/v/a.tex", name: "a.tex", content: "" }],
+      getBibPath: () => "/v/references.bib",
+      readText: async () => BIB,
+    })
+    const model = new FakeModel(TEX, new FakeUri("inmemory", "/model/9"), "latex")
+    return { fake, model, p: createNavigationProviders(fake.api) }
+  }
+
+  it("jumps from \\ref to its \\label in the editor's own model", async () => {
+    const { model, p } = setup()
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(2, 12),
+      cancelToken,
+    )) as { uri: FakeUri; targetSelectionRange: { startLineNumber: number } }[]
+    expect(hit.uri).toBe(model.uri)
+    expect(hit.targetSelectionRange.startLineNumber).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("takes \\cite{key} to its entry in references.bib", async () => {
+    const { model, p } = setup()
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(2, 35),
+      cancelToken,
+    )) as { uri: FakeUri; targetSelectionRange: { startLineNumber: number } }[]
+    expect(hit.uri.toString()).toBe("file:///v/references.bib")
+    expect(hit.targetSelectionRange.startLineNumber).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("lists the usages of a label and underlines references and citations", async () => {
+    const { model, p } = setup()
+    const refs = (await p.references.provideReferences(
+      model as never,
+      pos(1, 28),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as unknown[]
+    expect(refs).toHaveLength(2)
+    const { links } = (await p.links.provideLinks(model as never, cancelToken))!
+    expect(links).toHaveLength(2)
+    resetEditorNavigation()
+  })
+
+  it("registers the providers for latex as well as markdown", () => {
+    const fake = createFakeMonaco()
+    registerEditorNavigation(fake.api, ["markdown", "latex"])
+    expect(
+      fake.providers.filter((x) => x.language === "latex" && x.kind === "definition"),
+    ).toHaveLength(1)
+    disposeEditorNavigation()
+    resetEditorNavigation()
   })
 })
 

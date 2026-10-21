@@ -100,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **The usages list can no longer swallow your typing.** The preview of another note inside Find Usages was editable but was never saved; it is read-only now.
 - **Hovering `[[note#heading]]` shows that section** even when the note has not been loaded yet (it used to show the top of the note).
 - **Citation links in long notes no longer re-read references.bib for every key**, and the bibliography is located with the same path join as the open tabs, so Go to definition on a citation finds its tab on Windows.
+- **Go to definition, find usages, hovers and link underlines work in `.tex` files.** F12 on `\ref{x}` goes to its label, `\cite{key}` opens the entry in references.bib, and Shift+F12 lists the uses of a label or key (the `\eqref`, `\autoref`, `\cref` and natbib/biblatex citation commands are understood). Before, they only worked in Markdown notes.
 
 ## [1.29.1] - 2026-10-15
 
