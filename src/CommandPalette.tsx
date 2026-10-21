@@ -302,8 +302,12 @@ export default function CommandPalette({
   const { leaves, all: commandById } = useMemo(() => flattenCommands(commands), [commands])
   // Once per opening: note pins whose command has gone and forget the ones that
   // stay gone (see prunePinned). Runs against the commands this opening has.
+  const prunedRef = useRef(false)
   useEffect(() => {
-    if (!open) return
+    if (!open || prunedRef.current) return
+    // One-time sync of the stored pins with the commands that exist; the ref
+    // guard keeps StrictMode from counting an opening twice.
+    prunedRef.current = true
     setPrefs((current) => {
       const next = prunePinned(current, (id) => commandById.has(id))
       if (next !== current) savePalettePrefs(next)
