@@ -15,6 +15,7 @@
 // file cannot be cited at all, so those are never offered from other files.
 
 import type * as monacoApi from "monaco-editor"
+import { crossFileRefText, refPathTarget } from "../crossFileRef"
 import { envTitle, getUiLanguage } from "../docLang"
 import {
   completionText,
@@ -130,7 +131,7 @@ export function parseRefContext(before: string): RefContext | null {
   m = /(?<![\w@])@([A-Za-z]+):([\w.-]*)$/.exec(before)
   if (m) return { type: "local", start: m.index, kind: canonicalKind(m[1]), partial: m[2] }
 
-  m = /(?<![\w@])@([\w./-]*)$/.exec(before)
+  m = /(?<![\w@])@([\p{L}\p{N}_./-]*)$/u.exec(before)
   if (m) return { type: "starter", start: m.index, partial: m[1] }
   return null
 }
@@ -223,8 +224,7 @@ function kindName(entry: Pick<LabelEntry, "kind" | "envType" | "number">): strin
 }
 
 function refText(path: string, kind: string, name: string): string {
-  const target = /\s/.test(path) ? `[${path}]` : path
-  return `@${target}@${kind}:${name}`
+  return crossFileRefText(path, `${kind}:${name}`)
 }
 
 const itemEntry = new WeakMap<object, LabelEntry>()
@@ -261,6 +261,18 @@ function matches(entry: LabelEntry, partialLc: string): boolean {
   return !partialLc || entry.nameLc.includes(partialLc) || entry.titleLc.includes(partialLc)
 }
 
+/**
+ * How much of `after` (the text past the caret) is the rest of the label being
+ * completed. A label is word characters with internal dots or hyphens, so a
+ * trailing "." or "-" is punctuation of the sentence and stays: "see @thm:|."
+ * keeps its period and "@lem:|-style" its "-style".
+ */
+export function labelTail(after: string, partial: string): number {
+  const continues = partial === "" || !/\w$/.test(partial)
+  const re = continues ? /^\w+(?:[.-]\w+)*/ : /^\w*(?:[.-]\w+)*/
+  return re.exec(after)?.[0].length ?? 0
+}
+
 function pad(n: number): string {
   return String(n).padStart(6, "0")
 }
@@ -271,11 +283,7 @@ function provideLocal(
 ): monacoApi.languages.CompletionList {
   const partialLc = ctx.partial.toLowerCase()
   const startCol = ctx.start + 1
-  const range = makeRange(
-    env,
-    startCol,
-    env.position.column + (/^[\w.-]*/.exec(env.after)?.[0].length ?? 0),
-  )
+  const range = makeRange(env, startCol, env.position.column + labelTail(env.after, ctx.partial))
   const suggestions: monacoApi.languages.CompletionItem[] = []
 
   const same = sameFileEntries(env.model, ctx.kind).filter((e) => matches(e, partialLc))
@@ -403,11 +411,11 @@ function pathItems(
   for (const [path, rel] of referencablePaths()) {
     if (known.size > 0 && !known.has(path)) continue
     if (partialLc && !rel.toLowerCase().includes(partialLc)) continue
-    const spaced = /\s/.test(rel)
+    const bracketed = refPathTarget(rel) !== rel
     out.push({
       label: { label: rel, description: "@" },
       kind: env.monaco.languages.CompletionItemKind.File,
-      insertText: inBracket ? `${rel}]@` : spaced ? `[${rel}]@` : `${rel}@`,
+      insertText: inBracket ? `${rel}]@` : bracketed ? `[${rel}]@` : `${rel}@`,
       range,
       sortText: "2" + rel.toLowerCase(),
       filterText: (inBracket ? "" : "@") + rel,
@@ -435,7 +443,7 @@ function provideCross(
   const range = makeRange(
     env,
     env.position.column - ctx.partial.length,
-    env.position.column + (/^[\w.-]*/.exec(env.after)?.[0].length ?? 0),
+    env.position.column + labelTail(env.after, ctx.partial),
   )
   const suggestions = entries
     .filter((e) => e.kind === ctx.kind && matches(e, partialLc))

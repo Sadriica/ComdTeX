@@ -32,6 +32,7 @@ const FILES = [
   { path: "/v/notes/intro.md", name: "intro.md", ext: "md" },
   { path: "/v/physics/intro.md", name: "intro.md", ext: "md" },
   { path: "/v/my folder/note.md", name: "note.md", ext: "md" },
+  { path: "/v/Álgebra/Teoría.md", name: "Teoría.md", ext: "md" },
   { path: "/v/data/growth.csv", name: "growth.csv", ext: "csv" },
   { path: "/v/other/growth.csv", name: "growth.csv", ext: "csv" },
   { path: "/v/data/rates.csv", name: "rates.csv", ext: "csv" },
@@ -65,6 +66,7 @@ const CONTENT: Record<string, string> = {
     "## Second heading",
   ].join("\n"),
   "/v/my folder/note.md": ":::lemma[Spaces]{#lem:spaced}\nA lemma.\n:::",
+  "/v/Álgebra/Teoría.md": ":::proposition[Accents]{#prop:accents}\nA proposition.\n:::",
   "/v/notes/intro.md": "# Notes intro",
   "/v/physics/intro.md": "# Physics intro",
 }
@@ -264,6 +266,40 @@ describe("labels @kind:", () => {
   it("uses the @[...]@ form for a path with spaces", async () => {
     const r = await complete(doc("@lem:|"))
     expect(accept("@lem:|", r.suggestions[0])).toBe("@[my folder/note]@lem:spaced|")
+  })
+
+  it("brackets a path with accents, which the renderer cannot read bare", async () => {
+    const r = await complete(doc("@prop:|"))
+    expect(accept("@prop:|", r.suggestions[0])).toBe("@[Álgebra/Teoría]@prop:accents|")
+    const path = await complete("@Álg|")
+    const item = path.suggestions.find((s) => labelOf(s) === "Álgebra/Teoría")!
+    expect(accept("@Álg|", item)).toBe("@[Álgebra/Teoría]@|")
+    // Typing inside the bracket form completes the label after it.
+    const kinds = await complete("@[Álgebra/Teoría]@|")
+    expect(labels(kinds)).toEqual(["prop:"])
+    const names = await complete("@[Álgebra/Teoría]@prop:|")
+    expect(labels(names)).toEqual(["accents"])
+  })
+
+  it("replaces the rest of the label past the caret, not the punctuation after it", async () => {
+    const sentence = doc("see @thm:| Next.")
+    const r = await complete(sentence)
+    expect(accept(sentence, r.suggestions[0])).toBe(doc("see @thm:mixing| Next."))
+    const dash = doc("a @thm:|-style proof")
+    expect(accept(dash, (await complete(dash)).suggestions[0])).toBe(
+      doc("a @thm:mixing|-style proof"),
+    )
+    const period = doc("so @thm:mi|xing.")
+    expect(accept(period, (await complete(period)).suggestions[0])).toBe(doc("so @thm:mixing|."))
+    // A label that continues past the caret is still replaced as a whole.
+    const inner = doc("so @thm:mi|xing-two.")
+    expect(accept(inner, (await complete(inner)).suggestions[0])).toBe(doc("so @thm:mixing|."))
+  })
+
+  it("does the same after a cross-file path", async () => {
+    const text = "see @notes/mixing-times@thm:|."
+    const r = await complete(text)
+    expect(accept(text, r.suggestions[0])).toBe("see @notes/mixing-times@thm:cheeger|.")
   })
 
   it("never offers an equation, figure, table or section of another file", async () => {
@@ -467,6 +503,22 @@ describe("frontmatter", () => {
   it("stays out of the way once the closing fence is behind the cursor", async () => {
     const r = await complete("---\ntitle: A\n---\nlang: |")
     expect(labels(r)).not.toContain("en")
+  })
+
+  const fm = (text: string) => new FakeModel(text)
+
+  it("is not a header when a leading --- is a thematic break above prose", async () => {
+    expect(labels(await complete("---\nA first paragraph.\nti|"))).not.toContain("title")
+    expect(labels(await complete("---\n\nText\nti|"))).not.toContain("title")
+    expect(wantsSuggest(fm("---\nProse here\nti"), 3, "ti")).toBe(false)
+    expect(wantsSuggest(fm("---\n\nText\nti"), 4, "ti")).toBe(false)
+  })
+
+  it("is still a header while it is typed, before any closing fence", async () => {
+    expect(labels(await complete("---\ntitle: A\nau|"))).toContain("author")
+    expect(labels(await complete("---\n|"))).toContain("title")
+    expect(wantsSuggest(fm("---\ntitle: A\nau"), 3, "au")).toBe(true)
+    expect(wantsSuggest(fm("---\ntags:\n  - a\nau"), 4, "au")).toBe(true)
   })
 
   it("does not treat a document without a leading --- as frontmatter", async () => {
@@ -687,6 +739,13 @@ describe("Enter on an opening fence", () => {
     const d = doc([":::theorem[Main]"])
     const edit = resolveBlockCloserEnter(d.get, d.count, 1, 17, "\n")
     expect(edit).toEqual({ text: "\n\n:::", caretLine: 2 })
+  })
+
+  it("does nothing inside a fenced code block", () => {
+    const d = doc(["```md", ":::theorem", "```"])
+    expect(resolveBlockCloserEnter(d.get, d.count, 2, 11, "\n")).toBeNull()
+    const after = doc(["```", "x", "```", ":::theorem"])
+    expect(resolveBlockCloserEnter(after.get, after.count, 4, 11, "\n")).not.toBeNull()
   })
 
   it("does nothing when a later fence already closes it", () => {

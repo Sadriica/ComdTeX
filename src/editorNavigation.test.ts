@@ -13,10 +13,10 @@ import {
   cancelToken,
   createFakeMonaco,
   editorModel,
-  type FakeModel,
+  FakeModel,
   type FakeMonaco,
 } from "./fakeMonaco.testutil"
-import { resetEditorNavigation } from "./navHost"
+import { bibScanCount, resetEditorNavigation } from "./navHost"
 import type { NavFile } from "./navScan"
 
 const A_TEXT = [
@@ -215,6 +215,152 @@ describe("editor navigation providers", () => {
   })
 })
 
+describe("LaTeX documents", () => {
+  const TEX = [
+    "\\section{Intro}\\label{sec:intro}",
+    "As in \\ref{sec:intro} and \\cite{key1}.",
+  ].join("\n")
+
+  function setup() {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.tex",
+      getFiles: () => [{ path: "/v/a.tex", name: "a.tex", content: "" }],
+      getBibPath: () => "/v/references.bib",
+      readText: async () => BIB,
+    })
+    const model = new FakeModel(TEX, new FakeUri("inmemory", "/model/9"), "latex")
+    return { fake, model, p: createNavigationProviders(fake.api) }
+  }
+
+  it("jumps from \\ref to its \\label in the editor's own model", async () => {
+    const { model, p } = setup()
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(2, 12),
+      cancelToken,
+    )) as { uri: FakeUri; targetSelectionRange: { startLineNumber: number } }[]
+    expect(hit.uri).toBe(model.uri)
+    expect(hit.targetSelectionRange.startLineNumber).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("takes \\cite{key} to its entry in references.bib", async () => {
+    const { model, p } = setup()
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(2, 35),
+      cancelToken,
+    )) as { uri: FakeUri; targetSelectionRange: { startLineNumber: number } }[]
+    expect(hit.uri.toString()).toBe("file:///v/references.bib")
+    expect(hit.targetSelectionRange.startLineNumber).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("lists the usages of a label and underlines references and citations", async () => {
+    const { model, p } = setup()
+    const refs = (await p.references.provideReferences(
+      model as never,
+      pos(1, 28),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as unknown[]
+    expect(refs).toHaveLength(2)
+    const { links } = (await p.links.provideLinks(model as never, cancelToken))!
+    expect(links).toHaveLength(2)
+    resetEditorNavigation()
+  })
+
+  it("registers the providers for latex as well as markdown", () => {
+    const fake = createFakeMonaco()
+    registerEditorNavigation(fake.api, ["markdown", "latex"])
+    expect(
+      fake.providers.filter((x) => x.language === "latex" && x.kind === "definition"),
+    ).toHaveLength(1)
+    disposeEditorNavigation()
+    resetEditorNavigation()
+  })
+})
+
+describe("references.bib lookups", () => {
+  const keys = Array.from({ length: 60 }, (_, i) => `key${i}`)
+  const bib = keys.map((k) => `@article{${k},\n  title = {T ${k}}\n}`).join("\n\n")
+  const text = `Cites: ${keys.map((k) => `[@${k}]`).join(" ")}`
+
+  it("scans the bibliography once for all the citations of a note", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.md",
+      getFiles: () => [{ path: "/v/a.md", name: "a.md", content: text }],
+      getBibPath: () => "/v/references.bib",
+      readText: async () => bib,
+    })
+    const p = createNavigationProviders(fake.api)
+    const before = bibScanCount()
+    const { links } = (await p.links.provideLinks(editorModel(text) as never, cancelToken))!
+    expect(links).toHaveLength(60)
+    expect(bibScanCount() - before).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("uses the bib path the host builds, even when it is built asynchronously", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.md",
+      getFiles: () => [{ path: "/v/a.md", name: "a.md", content: text }],
+      getBibPath: async () => "C:\\vault\\references.bib",
+      readText: async () => bib,
+    })
+    const p = createNavigationProviders(fake.api)
+    const { links } = (await p.links.provideLinks(editorModel(text) as never, cancelToken))!
+    const query = new URLSearchParams((links[0].url as FakeUri).query)
+    expect(query.get("path")).toBe("C:\\vault\\references.bib")
+    resetEditorNavigation()
+  })
+})
+
+describe("find usages across many notes", () => {
+  it("keeps every model of the result list alive, however long the list is", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    const many: NavFile[] = [
+      { path: "/v/a.md", name: "a.md", content: A_TEXT },
+      ...Array.from({ length: 60 }, (_, i) => ({
+        path: `/v/n/note-${i}.md`,
+        name: `note-${i}.md`,
+        content: `uses @lem:x in note ${i}`,
+      })),
+    ]
+    configureEditorNavigation({ getActivePath: () => "/v/a.md", getFiles: () => many })
+    const p = createNavigationProviders(fake.api)
+    const model = editorModel(A_TEXT)
+    const hits = (await p.references.provideReferences(
+      model as never,
+      pos(5, 8),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    const uris = new Set(hits.map((h) => h.uri.toString()))
+    expect(uris.size).toBeGreaterThan(50)
+    for (const uri of uris) {
+      const shadow = fake.models.get(uri)
+      if (shadow) expect(shadow.disposed, uri).toBe(false)
+    }
+    // A later request may trim what the previous one left behind, never its own results.
+    const again = (await p.references.provideReferences(
+      model as never,
+      pos(5, 8),
+      { includeDeclaration: true },
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    for (const h of again) expect(fake.models.get(h.uri.toString())?.disposed ?? false).toBe(false)
+    resetEditorNavigation()
+  })
+})
+
 describe("editor navigation registration", () => {
   let fake: FakeMonaco
   let opened: [string, number, number][]
@@ -274,6 +420,42 @@ describe("editor navigation registration", () => {
     })
     expect(handled).toBe(true)
     expect(opened).toEqual([["/v/sub/b.md", 5, 11]])
+  })
+
+  it("makes an editor read-only while it shows a shadow model, and only then", async () => {
+    registerEditorNavigation(fake.api)
+    const p = createNavigationProviders(fake.api)
+    const model = editorModel("see @sub/b@thm:y")
+    const [hit] = (await p.definition.provideDefinition(
+      model as never,
+      pos(1, 6),
+      cancelToken,
+    )) as { uri: FakeUri }[]
+    const shadow = fake.models.get(hit.uri.toString())!
+
+    const options: Record<string, unknown>[] = []
+    let onModel: () => void = () => {}
+    let current: unknown = shadow
+    const peek = {
+      getModel: () => current,
+      updateOptions: (o: Record<string, unknown>) => options.push(o),
+      onDidChangeModel: (l: () => void) => {
+        onModel = l
+        return { dispose() {} }
+      },
+    }
+    for (const listener of fake.createListeners) listener(peek)
+    expect(options).toEqual([{ readOnly: true }])
+
+    // The same editor moving to a real model gets its flag back.
+    current = model
+    onModel()
+    expect(options).toEqual([{ readOnly: true }, { readOnly: false }])
+
+    // An editor that never showed a shadow is left alone.
+    const main = { ...peek, getModel: () => model, updateOptions: vi.fn() }
+    for (const listener of fake.createListeners) listener(main)
+    expect(main.updateOptions).not.toHaveBeenCalled()
   })
 
   it("leaves resources it does not own to Monaco", () => {

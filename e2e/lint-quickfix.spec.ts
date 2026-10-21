@@ -167,3 +167,47 @@ test("Add a BibTeX entry appends a stub to references.bib and clears the marker"
     )
     .toBe(0)
 })
+
+test("closing an unclosed $$ inside an environment puts the fence before the :::", async ({
+  page,
+}) => {
+  await installDeterminism(page)
+  await installFakeVault(page, {
+    settings: { theme: "vs-dark" },
+    tabs: ["notes/open-math.md"],
+    files: {
+      "notes/open-math.md": ":::theorem[Open]{#thm:open}\n$$\nx^2 + y^2\n:::\n\nAfter the block.\n",
+    },
+  })
+  await page.goto("/")
+  await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
+  await expect(page.locator(".view-lines")).toContainText("x^2 + y^2")
+  await expect(page.locator(".squiggly-error, .squiggly-warning").first()).toBeVisible({
+    timeout: 10_000,
+  })
+
+  const menu = await openQuickFixes(page, "$$", "$$")
+  await expect(menu).toContainText("Close the $$ block")
+  await page.keyboard.press("Enter")
+
+  // Monaco keeps view lines in DOM order of creation: read them top to bottom.
+  const lines = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".monaco-editor .view-line")]
+        .map((l) => ({ top: parseFloat((l as HTMLElement).style.top), text: l.textContent ?? "" }))
+        .sort((a, b) => a.top - b.top)
+        .map((l) => l.text.replace(/\u00a0/g, " ")),
+    )
+  await expect
+    .poll(lines)
+    .toEqual([
+      ":::theorem[Open]{#thm:open}",
+      "$$",
+      "x^2 + y^2",
+      "$$",
+      ":::",
+      "",
+      "After the block.",
+      "",
+    ])
+})

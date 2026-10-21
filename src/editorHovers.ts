@@ -15,8 +15,20 @@
  */
 import type * as monacoApi from "monaco-editor"
 import { envDisplayLabel } from "./environments"
-import { getNavHost, getNavSnapshot, type NavModel, type NavSnapshot } from "./navHost"
-import { constructAt, constructsInLine, type FileNav, type LineConstruct } from "./navScan"
+import {
+  getNavHost,
+  getNavSnapshot,
+  isLatexModel,
+  type NavModel,
+  type NavSnapshot,
+} from "./navHost"
+import {
+  constructAt,
+  constructsInLine,
+  indexFile,
+  type FileNav,
+  type LineConstruct,
+} from "./navScan"
 
 // ── Bibliography entries (fed by App through monacoSetup.updateBibHoverEntries) ─
 
@@ -90,7 +102,8 @@ async function noteCard(
   if (!nav.text.trim()) {
     // The text cache has not reached this note yet: read it, asynchronously.
     const raw = await host.readText(file.path).catch(() => null)
-    if (raw) nav = { ...file, text: raw, lines: () => raw.split("\n") }
+    // Index the text just read: the headings of the stale entry are empty.
+    if (raw) nav = indexFile({ path: file.path, name: file.name, content: raw })
   }
   const heading = c.heading ? db.findHeading(nav, c.heading) : null
   const source = heading ? sectionText(nav, heading.line) : stripFrontmatter(nav.text)
@@ -162,13 +175,14 @@ export function createHoverProvider(monaco: typeof monacoApi): monacoApi.languag
         }
       }
 
-      const c = constructAt(lineText, col0)
+      const latex = isLatexModel(model)
+      const c = constructAt(lineText, col0, latex)
       if (!c || c.type === "labelDef") return null
       const strings = getNavHost().getStrings()
 
       if (c.type === "cite") {
         // Every key of the group, so `[@a; @b]` shows both whichever is hovered.
-        const keys = constructsInLine(lineText)
+        const keys = constructsInLine(lineText, latex)
           .filter((x) => x.type === "cite" && x.groupStart === c.groupStart)
           .map((x) => (x as Extract<LineConstruct, { type: "cite" }>).key)
         return {

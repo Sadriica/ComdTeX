@@ -20,6 +20,7 @@ import {
   type LintContext,
   type LintVaultDoc,
 } from "./contentLinter"
+import { crossFileRefText, refPathTarget } from "./crossFileRef"
 import { findTableBlock, normalizeTableBlock } from "./markdownEditing"
 import type { T } from "./i18n/types"
 
@@ -183,11 +184,13 @@ function replaceFixes(input: FixInput, from: number, to: number, options: string
 }
 
 function fixDisplayMath({ model, marker, actions }: FixInput) {
-  // Close the block at the end of the paragraph it opens: the first blank line,
-  // or the end of the document.
+  // Close the block at the end of the paragraph it opens: before the first blank
+  // line, the closing `:::` of the environment it sits in (or the next one), or a
+  // heading, whichever comes first; else the end of the document.
   let last = marker.startLineNumber
   for (let line = marker.startLineNumber + 1; line <= model.getLineCount(); line++) {
-    if (model.getLineContent(line).trim() === "") break
+    const text = model.getLineContent(line)
+    if (text.trim() === "" || /^\s*:::/.test(text) || /^#{1,6}\s/.test(text)) break
     last = line
   }
   const at = endOfLine(model, last)
@@ -287,10 +290,6 @@ function relPathOf(doc: LintVaultDoc, ctx: LintContext): string {
   return vaultRelativeDocPath(doc.path, ctx.vaultPath)
 }
 
-function crossFileRef(rel: string, id: string): string {
-  return /\s/.test(rel) ? `@[${rel}]@${id}` : `@${rel}@${id}`
-}
-
 function fixRef(input: FixInput, code: string) {
   const { model, marker, covered, actions, ctx } = input
   const ref = parseRef(covered)
@@ -300,7 +299,14 @@ function fixRef(input: FixInput, code: string) {
 
   if (code === "ref-doc-missing" && ref.path !== undefined) {
     const paths = (ctx.vaultDocs ?? []).map((d) => relPathOf(d, ctx))
-    return replaceFixes(input, ref.pathFrom, ref.pathTo, closestMatches(ref.path, paths))
+    const bracketed = covered[1] === "["
+    // A bare path that now needs brackets (an accent, a space) gets them.
+    return replaceFixes(
+      input,
+      ref.pathFrom,
+      ref.pathTo,
+      closestMatches(ref.path, paths).map((p) => (bracketed ? p : refPathTarget(p))),
+    )
   }
 
   if (code === "ref-label-missing" && ref.path !== undefined) {
@@ -315,7 +321,7 @@ function fixRef(input: FixInput, code: string) {
   if (code === "ref-other-note" && ENV_REF_KINDS.includes(ref.kind) && ctx.vaultDocs) {
     const owner = ctx.vaultDocs.find((d) => d.path !== ctx.docPath && d.labels.has(wantedId))
     if (owner) {
-      const text = crossFileRef(relPathOf(owner, ctx), wantedId)
+      const text = crossFileRefText(relPathOf(owner, ctx), wantedId)
       out.push(
         quickFix(actions.useCrossFileRef(text), marker, {
           edits: [textEdit(model, markerRange(marker), text)],
@@ -407,6 +413,19 @@ function fixGap({ marker, actions, aiEnabled }: FixInput) {
   ]
 }
 
+/** Top-level comma-separated slots of an argument list, empty ones counted. */
+function countArgSlots(content: string): number {
+  if (content.trim() === "") return 0
+  let depth = 0
+  let slots = 1
+  for (const ch of content) {
+    if (ch === "(" || ch === "[") depth++
+    else if (ch === ")" || ch === "]") depth--
+    else if (ch === "," && depth === 0) slots++
+  }
+  return slots
+}
+
 function fixArity({ model, marker, covered, actions }: FixInput) {
   const m = /^(\w+)\s*\(/.exec(covered)
   if (!m) return []
@@ -419,7 +438,11 @@ function fixArity({ model, marker, covered, actions }: FixInput) {
   const args = splitArgs(balanced.content).filter((a) => a.length > 0)
   const range = markerRange(marker)
   if (args.length < expected) {
-    const text = `${covered.slice(0, balanced.end - 1)}${", ".repeat(expected - args.length)}${covered.slice(balanced.end - 1)}`
+    // Slots already written, empty ones included ("frac(a, )" has two): only
+    // the missing ones are added, so the fix is not offered twice for the same gap.
+    const slots = countArgSlots(balanced.content)
+    if (slots >= expected) return []
+    const text = `${covered.slice(0, balanced.end - 1)}${", ".repeat(expected - slots)}${covered.slice(balanced.end - 1)}`
     return [
       quickFix(actions.addMissingArgs(name), marker, { edits: [textEdit(model, range, text)] }),
     ]

@@ -25,9 +25,24 @@ export function frontmatterEnd(
     const text = model.getLineContent(n).trim()
     if (text === "---" || text === "...") return n >= lineNumber ? n : undefined
   }
-  // No closing fence in reach: the header is still being typed.
-  return lineNumber <= SCAN_LIMIT ? null : undefined
+  // No closing fence in reach: the header is either still being typed or it was
+  // never a header (a thematic break above prose). Line 2 may be the line being
+  // typed; further down, the lines above the cursor must look like YAML, the
+  // second one a key or a list item, or this is prose and stays quiet.
+  if (lineNumber > SCAN_LIMIT) return undefined
+  if (lineNumber === 2) return null
+  for (let n = 2; n < lineNumber; n++) {
+    const text = model.getLineContent(n)
+    if (n === 2 ? !YAML_ENTRY.test(text) : text.trim() !== "" && !YAML_LINE.test(text)) {
+      return undefined
+    }
+  }
+  return null
 }
+
+// A key, a list item or a comment (line 2), and any line the YAML tokenizer would also accept.
+const YAML_ENTRY = /^\s*(?:-\s|[\w.-]+\s*:(?:\s|$)|#)/
+const YAML_LINE = /^(?:\s+\S|-\s|[\w.-]+\s*:(?:\s|$)|#)/
 
 function existingKeys(model: CompletionModel, end: number | null, cursorLine: number): Set<string> {
   const keys = new Set<string>()

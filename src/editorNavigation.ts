@@ -24,9 +24,11 @@ import type * as monacoApi from "monaco-editor"
 import { registerEditorHovers } from "./editorHovers"
 import {
   NAV_SCHEME,
+  beginShadowRequest,
   ensureShadowModel,
   getNavHost,
   getNavSnapshot,
+  isLatexModel,
   locateBibEntry,
   pathOfShadowUri,
   readBibText,
@@ -137,8 +139,13 @@ export function createNavigationProviders(monaco: typeof monacoApi): NavigationP
   const definition: monacoApi.languages.DefinitionProvider = {
     async provideDefinition(m, position: Pos) {
       const model = m as unknown as NavModel
-      const c = constructAt(m.getLineContent(position.lineNumber), position.column - 1)
+      const c = constructAt(
+        m.getLineContent(position.lineNumber),
+        position.column - 1,
+        isLatexModel(model),
+      )
       if (!c) return null
+      beginShadowRequest()
       const snap = getNavSnapshot(model)
       const resolved = await resolveConstruct(snap, c, snap.activePath)
       if (resolved.length === 0) return null
@@ -167,8 +174,13 @@ export function createNavigationProviders(monaco: typeof monacoApi): NavigationP
   const references: monacoApi.languages.ReferenceProvider = {
     async provideReferences(m, position: Pos, context) {
       const model = m as unknown as NavModel
-      const c = constructAt(m.getLineContent(position.lineNumber), position.column - 1)
+      const c = constructAt(
+        m.getLineContent(position.lineNumber),
+        position.column - 1,
+        isLatexModel(model),
+      )
       if (!c) return null
+      beginShadowRequest()
       const snap = getNavSnapshot(model)
       const { db } = snap
       const out: monacoApi.languages.Location[] = []
@@ -216,8 +228,9 @@ export function createNavigationProviders(monaco: typeof monacoApi): NavigationP
       let bibReady = false
       for (let line = 1; line <= total; line++) {
         const text = m.getLineContent(line)
-        if (!text.includes("@") && !text.includes("[[")) continue
-        for (const c of constructsInLine(text)) {
+        const latex = isLatexModel(model)
+        if (!(latex ? text.includes("\\") : text.includes("@") || text.includes("[["))) continue
+        for (const c of constructsInLine(text, latex)) {
           if (c.type === "labelDef") continue
           if (c.type === "cite" && !bibReady) {
             await readBibText()
@@ -285,6 +298,7 @@ export function registerEditorNavigation(
     )
   }
   registered.push(registerEditorHovers(monaco, languages))
+  registered.push(lockShadowEditors(monaco))
 
   registered.push(
     monaco.editor.registerEditorOpener({
@@ -314,6 +328,33 @@ export function registerEditorNavigation(
   return { dispose: disposeEditorNavigation }
 }
 
+/**
+ * A shadow model is a throwaway copy of a note for the references peek; nothing
+ * ever saves it, so typing into its embedded editor would silently lose the
+ * text. Any editor that shows one is made read-only (the peek editors are
+ * created by Monaco, hence the global hook) and gets its flag back when it
+ * moves to a real model.
+ */
+function lockShadowEditors(monaco: typeof monacoApi): monacoApi.IDisposable {
+  const locked = new WeakSet<object>()
+  const apply = (editor: monacoApi.editor.ICodeEditor) => {
+    const model = editor.getModel()
+    const shadow = model !== null && pathOfShadowUri(model.uri) !== null
+    if (shadow) {
+      locked.add(editor)
+      editor.updateOptions({ readOnly: true })
+    } else if (locked.has(editor)) {
+      locked.delete(editor)
+      editor.updateOptions({ readOnly: false })
+    }
+  }
+  const created = monaco.editor.onDidCreateEditor((editor) => {
+    apply(editor)
+    editor.onDidChangeModel(() => apply(editor))
+  })
+  return { dispose: () => created.dispose() }
+}
+
 export function disposeEditorNavigation(): void {
   for (const d of registered) d.dispose()
   registered = []
@@ -339,6 +380,15 @@ export async function findUsages(editor: EditorLike): Promise<void> {
 }
 
 /** True when the caret sits on something that navigation understands. */
-export function canNavigateAt(model: Pick<NavModel, "getLineContent">, position: Pos): boolean {
-  return constructAt(model.getLineContent(position.lineNumber), position.column - 1) !== null
+export function canNavigateAt(
+  model: Pick<NavModel, "getLineContent" | "getLanguageId">,
+  position: Pos,
+): boolean {
+  return (
+    constructAt(
+      model.getLineContent(position.lineNumber),
+      position.column - 1,
+      isLatexModel(model),
+    ) !== null
+  )
 }

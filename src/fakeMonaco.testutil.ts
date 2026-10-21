@@ -39,6 +39,9 @@ export class FakeModel {
   get id() {
     return this.uri.toString()
   }
+  getLanguageId() {
+    return this.language
+  }
   getValue() {
     return this.text
   }
@@ -67,6 +70,8 @@ export interface FakeMonaco {
   editorOpeners: monacoApi.editor.ICodeEditorOpener[]
   linkOpeners: monacoApi.editor.ILinkOpener[]
   disposed: string[]
+  /** Listeners of `editor.onDidCreateEditor`; call them with an editor to simulate one appearing. */
+  createListeners: ((editor: unknown) => void)[]
 }
 
 export function createFakeMonaco(): FakeMonaco {
@@ -75,6 +80,7 @@ export function createFakeMonaco(): FakeMonaco {
   const editorOpeners: monacoApi.editor.ICodeEditorOpener[] = []
   const linkOpeners: monacoApi.editor.ILinkOpener[] = []
   const disposed: string[] = []
+  const createListeners: ((editor: unknown) => void)[] = []
 
   const register = (kind: string) => (language: string, provider: unknown) => {
     const entry = { kind, language, provider }
@@ -107,6 +113,10 @@ export function createFakeMonaco(): FakeMonaco {
         models.set(uri.toString(), model)
         return model
       },
+      onDidCreateEditor: (listener: (editor: unknown) => void) => {
+        createListeners.push(listener)
+        return { dispose: () => createListeners.splice(createListeners.indexOf(listener), 1) }
+      },
       registerEditorOpener: (opener: monacoApi.editor.ICodeEditorOpener) => {
         editorOpeners.push(opener)
         return { dispose: () => editorOpeners.splice(editorOpeners.indexOf(opener), 1) }
@@ -118,7 +128,7 @@ export function createFakeMonaco(): FakeMonaco {
     },
   } as unknown as typeof monacoApi
 
-  return { api, models, providers, editorOpeners, linkOpeners, disposed }
+  return { api, models, providers, editorOpeners, linkOpeners, disposed, createListeners }
 }
 
 /** The model the editor shows (anonymous in-memory URI, as in the app). */

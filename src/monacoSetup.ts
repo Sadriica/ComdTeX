@@ -8,7 +8,7 @@ import { parseKeepMarks } from "./keepMarks"
 import { computeFoldRanges, resolveEnterOverride } from "./markdownEditing"
 import { pathBasename } from "./pathUtils"
 import { registerTypstLanguage } from "./typstLanguage"
-import { registerComdtexLanguage, shorthandNames } from "./comdtexLanguage"
+import { EDITOR_LANGUAGES, registerComdtexLanguage, shorthandNames } from "./comdtexLanguage"
 import { registerLatexLanguage } from "./latexLanguage"
 import { findDisplayMathBlocks } from "./useDisplayMathPreview"
 import {
@@ -23,6 +23,8 @@ import {
   SPECIAL_BLOCK_COMPLETIONS,
 } from "./completion"
 import { renderHoverKatex } from "./completion/katexPreview"
+import type { CompletionTriggers } from "./completion/triggers"
+import { setupAutoCloseGuards } from "./autoClose"
 
 // The completion code lives in src/completion/. These re-exports keep the
 // names other modules (App.tsx, commands.ts, the tests) already import.
@@ -129,7 +131,7 @@ export function setupMonaco(monaco: typeof monacoApi) {
 
   // Go to definition, find usages, link underlines and the hover cards for
   // ComdTeX syntax live in editorNavigation.ts / editorHovers.ts.
-  registerEditorNavigation(monaco)
+  registerEditorNavigation(monaco, EDITOR_LANGUAGES)
 }
 
 // ── Typewriter mode ───────────────────────────────────────────────────────────
@@ -371,6 +373,8 @@ export function setupEditorCommands(
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const snippetCtrl = () => editor.getContribution<any>("snippetController2")
+  // Assigned below; the Enter handler reads it at keystroke time.
+  const triggers: { current?: CompletionTriggers } = {}
 
   editor.onKeyDown((e) => {
     if (e.keyCode !== monaco.KeyCode.Tab) return
@@ -431,7 +435,13 @@ export function setupEditorCommands(
     if (snippetCtrl()?.isInSnippet?.()) return
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const suggest = editor.getContribution<any>("editor.contrib.suggestController")
-    if (suggest?.model?.state) return
+    if (suggest?.model?.state) {
+      const at = editor.getPosition()
+      const here = editor.getModel()
+      // A widget that opened by itself in math is not an answer to Enter.
+      if (!at || !here || !triggers.current?.refusesEnter(here, at)) return
+      editor.trigger("keyboard", "hideSuggestWidget", null)
+    }
 
     const model = editor.getModel()
     const selection = editor.getSelection()
@@ -513,7 +523,8 @@ export function setupEditorCommands(
 
   // Keep the suggest widget coming in frontmatter, :::csv bodies, multi-cites
   // and math, without enabling quickSuggestions for prose.
-  setupCompletionTriggers(editor)
+  triggers.current = setupCompletionTriggers(editor)
+  setupAutoCloseGuards(editor, monaco)
 
   // quickSuggestions is off globally (App.tsx editor options) so the widget
   // doesn't pop while writing prose. Inside a special block with a catalog we

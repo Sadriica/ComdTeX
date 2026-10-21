@@ -1,4 +1,5 @@
 import type { BibEntry } from "./bibtex"
+import { crossFileRefText } from "./crossFileRef"
 import { foldText, prepareText, rankItems, type FuzzyField, type Prepared } from "./fuzzy"
 import type { LineEdit } from "./cursorContext"
 import type { StructuralLabel } from "./structuralLabels"
@@ -355,7 +356,7 @@ export function referenceText(
   const rel =
     buildFileEntries([{ path: label.filePath }], vaultRoot)[0]?.rel.replace(/\.[^./]+$/, "") ??
     label.filePath
-  return /\s/.test(rel) ? `@[${rel}]@${label.id}` : `@${rel}@${label.id}`
+  return crossFileRefText(rel, label.id)
 }
 
 // ── Citations (`[`) ─────────────────────────────────────────────────────────
