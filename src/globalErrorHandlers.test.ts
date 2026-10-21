@@ -58,7 +58,7 @@ describe("installGlobalErrorHandlers", () => {
     expect(toasts).toHaveLength(1)
   })
 
-  it("ignores Monaco's cancellation rejections but not other errors", () => {
+  it("ignores Monaco's Canceled rejection from a disposed editor", () => {
     const target = fakeTarget()
     installGlobalErrorHandlers(target as unknown as Window, () => 1000)
     const canceled = new Error("Canceled")

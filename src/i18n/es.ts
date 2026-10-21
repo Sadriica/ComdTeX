@@ -1819,6 +1819,17 @@ export const es: T = {
     replace: "Reemplazar",
   },
 
+  editorNav: {
+    followLink: "Ir al destino",
+    goToDefinition: "Ir a la definición",
+    findUsages: "Buscar usos",
+    unresolved: (what) => `No encontrado: ${what}`,
+    equation: (n) => `Ecuación (${n})`,
+    inFile: (file, line) => `${file}, línea ${line}`,
+    footnote: "Nota al pie",
+    emptyNote: "(nota vacía)",
+  },
+
   breadcrumb: {
     location: "Ubicación",
     back: "Atrás",

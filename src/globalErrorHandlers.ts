@@ -4,13 +4,15 @@ import { en, es } from "./i18n"
 /** Minimum gap between two "something went wrong" toasts. */
 export const GLOBAL_ERROR_TOAST_INTERVAL_MS = 10_000
 
-/** Benign browser notices that are not real failures (layout feedback loops). */
+/**
+ * Benign notices that are not real failures: layout feedback loops, and
+ * Monaco's own "Canceled" rejection, which its word highlighter raises when an
+ * editor is disposed with a request pending (a tab switch right after a click,
+ * e.g. following a link).
+ */
 export function isBenignError(detail: unknown): boolean {
-  // Monaco rejects in-flight work (word highlight, hover) with an Error named
-  // "Canceled" when the model changes; that is its normal cancellation path.
-  if (detail instanceof Error && detail.name === "Canceled" && detail.message === "Canceled")
-    return true
   const text = detail instanceof Error ? detail.message : typeof detail === "string" ? detail : ""
+  if (detail instanceof Error && detail.name === "Canceled" && text === "Canceled") return true
   return /ResizeObserver loop (completed with undelivered notifications|limit exceeded)/.test(text)
 }
 
@@ -40,7 +42,11 @@ export function installGlobalErrorHandlers(
     showToast(message(), "error")
   }
 
-  const onRejection = (e: PromiseRejectionEvent) => report("Unhandled promise rejection", e.reason)
+  const onRejection = (e: PromiseRejectionEvent) => {
+    // A benign rejection is handled here: keep the browser from also logging it.
+    if (isBenignError(e.reason)) e.preventDefault?.()
+    report("Unhandled promise rejection", e.reason)
+  }
   const onError = (e: ErrorEvent) => report("Uncaught error", e.error ?? e.message)
 
   target.addEventListener("unhandledrejection", onRejection)
