@@ -153,3 +153,14 @@ test("a thematic break above prose is not a header: Enter never accepts a key", 
   await page.keyboard.type("x")
   await expect.poll(() => text(page)).toBe("---\nA first paragraph.\nti\nx")
 })
+
+test("Enter on a ::: line inside a code fence does not write a closer", async ({ page }) => {
+  await openEmpty(page)
+  await page.keyboard.type("```md")
+  await page.keyboard.press("Enter")
+  await page.keyboard.type(":::remark")
+  await page.keyboard.press("Escape")
+  await page.keyboard.press("Enter")
+  await page.keyboard.type("x")
+  await expect.poll(() => text(page)).toBe("```md\n:::remark\nx")
+})

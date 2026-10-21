@@ -3,6 +3,8 @@
 // The Enter key has ONE handler (`setupEditorCommands` in monacoSetup.ts, next
 // to list continuation); this module only decides, it does not listen.
 
+import { inFencedCode } from "../fences"
+
 const OPENER = /^:::(?:sm\s+|lg\s+)?[A-Za-z][\w-]*(?:\[[^\]]*\])?\s*(?:\{#[\w:.-]+\})?\s*$/
 const OPENS = /^:::(?:sm\s+|lg\s+)?[A-Za-z][\w-]*/
 
@@ -27,6 +29,8 @@ export function resolveBlockCloserEnter(
 ): BlockCloserEdit | null {
   const line = getLine(lineNumber)
   if (column !== line.length + 1 || !OPENER.test(line.trim())) return null
+  // Inside a code fence `:::note` is text, not a block to close.
+  if (inFencedCode(getLine, lineNumber)) return null
 
   // Walk forward: a bare `:::` at depth zero already closes this block.
   let depth = 0

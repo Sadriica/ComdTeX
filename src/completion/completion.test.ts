@@ -741,6 +741,13 @@ describe("Enter on an opening fence", () => {
     expect(edit).toEqual({ text: "\n\n:::", caretLine: 2 })
   })
 
+  it("does nothing inside a fenced code block", () => {
+    const d = doc(["```md", ":::theorem", "```"])
+    expect(resolveBlockCloserEnter(d.get, d.count, 2, 11, "\n")).toBeNull()
+    const after = doc(["```", "x", "```", ":::theorem"])
+    expect(resolveBlockCloserEnter(after.get, after.count, 4, 11, "\n")).not.toBeNull()
+  })
+
   it("does nothing when a later fence already closes it", () => {
     const d = doc([":::theorem", "text", ":::"])
     expect(resolveBlockCloserEnter(d.get, d.count, 1, 11, "\n")).toBeNull()

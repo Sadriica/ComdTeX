@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { inFencedCode, keepsAutoClosedBacktick, keepsAutoClosedDollar } from "./autoClose"
+import { keepsAutoClosedBacktick, keepsAutoClosedDollar } from "./autoClose"
+import { inFencedCode } from "./fences"
 import { isInMath } from "./completion/triggers"
 
 const lines = (text: string) => {
