@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useId } from "react"
 import { useT } from "./i18n"
 import { Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
+import { shortcutKeys } from "./appShortcuts"
 
 interface HelpModalProps {
   open: boolean
@@ -20,31 +21,41 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
   const shortcuts: ShortcutItem[] = useMemo(
     () => [
       { group: t.help.file },
-      { key: "Ctrl+S", desc: t.help.save },
-      { key: "Ctrl+Shift+S", desc: t.help.saveAs },
-      { key: "Ctrl+P", desc: t.help.commandPalette },
-      { key: "Ctrl+;", desc: t.help.quickSwitcher },
-      { key: "Ctrl+Shift+D", desc: t.help.dailyNote },
+      { key: shortcutKeys("save"), desc: t.help.save },
+      { key: shortcutKeys("saveAs"), desc: t.help.saveAs },
+      { key: shortcutKeys("quickOpen"), desc: t.help.quickSwitcher },
+      { key: shortcutKeys("quickOpenAlt"), desc: t.help.quickSwitcher },
+      { key: shortcutKeys("commandPalette"), desc: t.help.commandPalette },
+      { key: shortcutKeys("dailyNote"), desc: t.help.dailyNote },
+
+      { group: t.palette.modesTitle },
+      { key: ">", desc: t.palette.modes.commands.hint },
+      { key: "@", desc: t.palette.modes.outline.hint },
+      { key: "#", desc: t.palette.modes.labels.hint },
+      { key: "[", desc: t.palette.modes.cite.hint },
+      { key: ":", desc: t.palette.modes.line.hint },
+      { key: "note#", desc: t.palette.modes.files.hint },
+      { key: "?", desc: t.palette.modes.help.hint },
 
       { group: t.help.edit },
-      { key: "Ctrl+F", desc: t.help.findInFile },
-      { key: "Ctrl+Shift+F", desc: t.help.searchVault },
+      { key: shortcutKeys("find"), desc: t.help.findInFile },
+      { key: shortcutKeys("searchVault"), desc: t.help.searchVault },
       { key: "Ctrl+D", desc: t.help.selectNextOccurrence },
       { key: "Ctrl+Z", desc: t.help.undo },
       { key: "Ctrl+Y", desc: t.help.redo },
 
       { group: t.help.view },
-      { key: "F11", desc: t.help.focusMode },
+      { key: shortcutKeys("focusMode"), desc: t.help.focusMode },
       { key: "Escape", desc: t.help.exitFocus },
-      { key: "Ctrl+Shift+P", desc: t.help.togglePreview },
+      { key: shortcutKeys("togglePreview"), desc: t.help.togglePreview },
       { key: "Ctrl++/-", desc: t.help.zoomInOut },
-      { key: "Ctrl+0", desc: t.help.resetZoom },
-      { key: "Ctrl+Tab", desc: t.help.nextTab },
-      { key: "Ctrl+Shift+Tab", desc: t.help.prevTab },
-      { key: "Ctrl+W", desc: t.help.closeTab },
-      { key: "Ctrl+Shift+A", desc: t.help.openAiAssistant },
-      { key: "Ctrl+Shift+O", desc: t.help.insertTocShortcut },
-      { key: "Ctrl+Shift+E", desc: t.help.toggleOutline },
+      { key: shortcutKeys("resetZoom"), desc: t.help.resetZoom },
+      { key: shortcutKeys("nextTab"), desc: t.help.nextTab },
+      { key: shortcutKeys("prevTab"), desc: t.help.prevTab },
+      { key: shortcutKeys("closeTab"), desc: t.help.closeTab },
+      { key: shortcutKeys("aiPanel"), desc: t.help.openAiAssistant },
+      { key: shortcutKeys("insertToc"), desc: t.help.insertTocShortcut },
+      { key: shortcutKeys("toggleOutline"), desc: t.help.toggleOutline },
       { key: "?", desc: t.help.thisHelp },
 
       { group: t.help.editor },

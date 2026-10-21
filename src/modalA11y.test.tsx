@@ -5,7 +5,7 @@ import { useRef, useState } from "react"
 import HelpModal from "./HelpModal"
 import BookmarksPopup from "./BookmarksPopup"
 import ClosedTabsPopup from "./ClosedTabsPopup"
-import QuickSwitcher from "./QuickSwitcher"
+import CommandPalette from "./CommandPalette"
 import OnboardingTour from "./OnboardingTour"
 import CitationManager from "./CitationManager"
 import TableEditor from "./TableEditor"
@@ -45,9 +45,20 @@ describe("modal dialog semantics", () => {
     render(<ClosedTabsPopup open paths={[]} onSelect={() => {}} onClose={() => {}} />)
     expectLabelledDialog()
   })
-  it("QuickSwitcher", () => {
+  it("CommandPalette", () => {
     render(
-      <QuickSwitcher open files={[]} recentFiles={[]} onSelect={() => {}} onClose={() => {}} />,
+      <CommandPalette
+        open
+        initialMode="files"
+        onClose={() => {}}
+        files={[]}
+        vaultRoot={null}
+        commands={[]}
+        activeFilePath={null}
+        onOpenPath={() => {}}
+        labels={[]}
+        bib={new Map()}
+      />,
     )
     expectLabelledDialog()
   })

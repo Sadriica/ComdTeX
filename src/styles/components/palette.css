@@ -1,98 +1,3 @@
-/* ── Quick switcher: popover surface (modals.css) + a result list ── */
-.quick-switcher {
-  display: flex;
-  flex-direction: column;
-  width: 520px;
-  max-width: 100%;
-  max-height: 100%;
-  overflow: hidden;
-}
-.quick-switcher input {
-  flex: none;
-  width: 100%;
-  padding: var(--space-5) var(--space-6);
-  background: transparent;
-  color: var(--fg);
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  font-size: var(--text-lg);
-}
-.quick-switcher input::placeholder,
-.palette-input::placeholder {
-  color: var(--fg-subtle);
-}
-.quick-switcher input:focus-visible,
-.palette-input:focus-visible {
-  outline: none;
-  border-bottom-color: var(--accent);
-}
-.quick-switcher-results {
-  max-height: 320px;
-  padding: var(--space-2);
-  overflow-y: auto;
-}
-.quick-switcher-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  width: 100%;
-  min-height: 28px;
-  padding: 0 var(--space-4);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.quick-switcher-item:hover,
-.quick-switcher-item.selected {
-  background: var(--bg-selected);
-}
-.quick-switcher-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  color: var(--fg-muted);
-}
-.quick-switcher-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.quick-switcher-path {
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--fg-muted);
-  font-size: var(--text-sm);
-}
-.quick-switcher-empty {
-  padding: var(--space-6);
-  text-align: center;
-  color: var(--fg-muted);
-}
-.quick-switcher-footer {
-  display: flex;
-  gap: var(--space-5);
-  flex: none;
-  padding: var(--space-3) var(--space-6);
-  border-top: 1px solid var(--border);
-  color: var(--fg-muted);
-  font-size: var(--text-xs);
-}
-.quick-switcher-footer span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-}
 .katex-wrapper {
   position: relative;
   cursor: pointer;
@@ -122,19 +27,55 @@
   overflow: hidden;
 }
 
-.palette-input {
+.palette-inputrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   flex: none;
-  width: 100%;
-  padding: var(--space-5) var(--space-6);
+  padding-left: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+/* Mode chip: the prefix that selected the mode, then its name. */
+.palette-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  padding: 0 var(--space-4);
+  background: var(--bg-sunken);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: 1.8;
+  white-space: nowrap;
+}
+.palette-chip-prefix {
+  color: var(--link);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.palette-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6) var(--space-5) 0;
   background: transparent;
   color: var(--fg);
   border: 0;
-  border-bottom: 1px solid var(--border);
   border-radius: 0;
   font-size: var(--text-lg);
 }
-/* The input is always focused, so the ring is a bottom accent line instead of
-   a box around it. */
+.palette-input::placeholder {
+  color: var(--fg-subtle);
+}
+/* The input is always focused, so the ring is a bottom accent line on its row
+   instead of a box around it. */
+.palette-input:focus-visible {
+  outline: none;
+}
+.palette-inputrow:focus-within {
+  border-bottom-color: var(--accent);
+}
 
 .palette-list {
   padding: var(--space-2);
@@ -163,6 +104,87 @@
 }
 .palette-item-selected {
   background: var(--bg-selected);
+}
+.palette-item-inert {
+  color: var(--fg-muted);
+  cursor: default;
+}
+.palette-hit {
+  background: transparent;
+  color: var(--link);
+  font-weight: 700;
+}
+.palette-keys {
+  display: inline-flex;
+  gap: var(--space-2);
+  flex: none;
+  margin-left: auto;
+}
+.palette-check {
+  display: inline-flex;
+  flex: none;
+  color: var(--ok);
+}
+/* Pin toggle: visible on the selected row, and always on a pinned one. */
+.palette-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  opacity: 0;
+  cursor: pointer;
+}
+.palette-item:hover .palette-pin,
+.palette-item-selected .palette-pin,
+.palette-pin-on {
+  opacity: 1;
+}
+.palette-pin:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.palette-pin-on {
+  color: var(--accent);
+}
+
+/* Screen-reader-only live region with the result count. */
+.palette-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.palette-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  flex: none;
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+.palette-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.palette-footer-note {
+  flex-basis: 100%;
+  color: var(--fg);
 }
 
 /* Icon slot: fixed width so titles line up whatever glyph or icon is in it. */
@@ -217,18 +239,6 @@
   margin-left: var(--space-2);
   color: var(--fg-muted);
   font-size: var(--text-sm);
-}
-
-/* Right-aligned chip. Commands without a shortcut put a short description
-   here, so it may shrink and ellipsise instead of pushing the title out. */
-.cmd-shortcut {
-  display: block;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 55%;
-  margin-left: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .palette-breadcrumb {

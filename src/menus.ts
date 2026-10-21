@@ -7,6 +7,8 @@ import type { SidebarMode } from "./App"
 import type { T } from "./i18n"
 import type { DepStatus } from "./checkDeps"
 import type { useExportActions } from "./useExportActions"
+import type { PaletteMode } from "./paletteTypes"
+import { shortcutKeys } from "./appShortcuts"
 import { showToast } from "./toastService"
 
 export interface BuildMenusCtx {
@@ -21,7 +23,7 @@ export interface BuildMenusCtx {
   handleSaveAs: () => void
   handleFind: () => void
   openPanel: (m: SidebarMode) => void
-  setPaletteOpen: (open: boolean) => void
+  openPalette: (mode: PaletteMode) => void
   setFocusMode: (fn: (f: boolean) => boolean) => void
   handleOpenMacros: () => void
   handleOpenBib: () => void
@@ -60,7 +62,7 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
     handleSaveAs,
     handleFind,
     openPanel,
-    setPaletteOpen,
+    openPalette,
     setFocusMode,
     handleOpenMacros,
     handleOpenBib,
@@ -213,7 +215,16 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
         { label: t.menus.findInFile, shortcut: "Ctrl+F", disabled: !hasFile, action: handleFind },
         { label: t.menus.searchVault, shortcut: "Ctrl+Shift+F", action: () => openPanel("search") },
         { separator: true },
-        { label: t.menus.commandPalette, shortcut: "Ctrl+P", action: () => setPaletteOpen(true) },
+        {
+          label: t.menus.goToFile,
+          shortcut: shortcutKeys("quickOpen"),
+          action: () => openPalette("files"),
+        },
+        {
+          label: t.menus.commandPalette,
+          shortcut: shortcutKeys("commandPalette"),
+          action: () => openPalette("commands"),
+        },
       ],
     },
     {

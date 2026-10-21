@@ -6,7 +6,7 @@ function makeHandlers() {
     toggleFocusMode: vi.fn(),
     exitFocusMode: vi.fn(),
     openCommandPalette: vi.fn(),
-    openQuickSwitcher: vi.fn(),
+    openFilesPalette: vi.fn(),
     togglePreview: vi.fn(),
     toggleBookmark: vi.fn(),
     goToBookmark: vi.fn(),
@@ -72,7 +72,7 @@ describe("handleGlobalShortcut", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
   })
 
-  it("maps Ctrl+; to quick switcher", () => {
+  it("maps Ctrl+; to the files palette", () => {
     const handlers = makeHandlers()
     const event = makeEvent(";", { ctrlKey: true })
     const handled = handleGlobalShortcut(
@@ -81,7 +81,7 @@ describe("handleGlobalShortcut", () => {
       handlers,
     )
     expect(handled).toBe(true)
-    expect(handlers.openQuickSwitcher).toHaveBeenCalledTimes(1)
+    expect(handlers.openFilesPalette).toHaveBeenCalledTimes(1)
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
   })
 
