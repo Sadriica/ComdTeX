@@ -61,3 +61,20 @@ export function keepFileExtension(newName: string, originalName: string): string
   if (typed && KNOWN_FILE_EXTS.has(typed)) return newName
   return `${newName}.${orig}`
 }
+
+/**
+ * Default location for a native "save as" dialog: next to the note it exports,
+ * named after it. `newExt` replaces the note's extension (`.pdf`, or a suffix
+ * such as `-anki-cards.txt`); without it the name stays as is. With no note,
+ * `fallback` (a bare name) is used.
+ */
+export function suggestedSavePath(
+  file: { path: string; name: string } | null | undefined,
+  newExt?: string,
+  fallback?: string,
+): string | undefined {
+  if (!file) return fallback
+  const base = newExt ? file.name.replace(/\.[^.]+$/, newExt) : file.name
+  const dir = pathDirname(file.path)
+  return dir ? `${dir}/${base}` : base
+}

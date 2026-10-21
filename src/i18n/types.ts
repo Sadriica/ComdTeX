@@ -161,7 +161,28 @@ export interface T {
     newFromTemplateHere: string
     folderRules: string
     saveAsTemplate: string
-    creatingIn: (folder: string) => string
+    newFolderInline: string
+    revealLabel: string
+  }
+
+  naming: {
+    /** Inline validation messages under a name input (file tree, dialogs). */
+    problems: {
+      empty: string
+      tooLong: string
+      invalidChars: string
+      dotOnly: string
+      edge: string
+      reserved: string
+      exists: (name: string) => string
+      existsCase: (name: string) => string
+    }
+    ok: string
+    cancel: string
+    commentDialogTitle: string
+    templateNameDialogTitle: string
+    newNoteDestination: (path: string) => string
+    missingNoteCreate: (name: string) => string
   }
 
   search: {
@@ -422,6 +443,8 @@ export interface T {
     title: string
     filenameLabel: string
     filenamePlaceholder: string
+    folderLabel: string
+    folderRoot: string
     cancel: string
     create: string
     useTemplates: string
@@ -476,6 +499,8 @@ export interface T {
     searchVault: string
     focusMode: string
     newFromTemplate: string
+    newFile: string
+    newFolder: string
     editMacros: string
     editBib: string
     settings: string
@@ -590,7 +615,7 @@ export interface T {
     resultCount: (n: number) => string
     showingFirst: (shown: number, total: number) => string
     createNote: (name: string) => string
-    createNoteIn: (folder: string) => string
+    createNoteBlocked: (reason: string) => string
     noteCreateFailed: string
     goToLine: (line: number, column?: number) => string
     lineHint: (count: number) => string
@@ -1103,6 +1128,8 @@ export interface T {
   }
 
   vault: {
+    createVaultTitle: string
+    newVaultName: string
     nameEmpty: string
     nameTooLong: string
     nameInvalidChars: string

@@ -17,7 +17,7 @@ import { openPath } from "@tauri-apps/plugin-opener"
 import { renderMarkdown } from "./renderer"
 import calloutIconsCss from "./styles/components/callout-icons.css?inline"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
-import { pathJoin, pathDirname } from "./pathUtils"
+import { pathJoin, pathDirname, suggestedSavePath } from "./pathUtils"
 import { MACROS_FILENAME } from "./macros"
 import type { KatexMacros } from "./macros"
 import type { BibEntry } from "./bibtex"
@@ -93,7 +93,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const path = await save({
       title: t.app.dialogExportMd,
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+      defaultPath: suggestedSavePath(vaultRef.current.openFile, ".md", "export.md"),
     })
     if (!path) return
     // Export Markdown produces clean Obsidian/GFM Markdown (lossy by design).
@@ -122,7 +122,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const path = await save({
       title: t.app.dialogExportTex,
       filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
+      defaultPath: suggestedSavePath(vaultRef.current.openFile, ".tex", "export.tex"),
     })
     if (!path) return
     // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png), so
@@ -211,7 +211,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const path = await save({
       title: t.palette.exportProjectTex,
       filters: [{ name: "LaTeX", extensions: ["tex"] }],
-      defaultPath: `${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
+      defaultPath: `${vaultRef.current.vaultPath ?? "."}/${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
     })
     if (!path) return
     await writeTextFile(path, tex)
@@ -562,7 +562,10 @@ export function useExportActions(ctx: ExportActionsCtx) {
       showToast(t.app.pandocMissingDocx, "error", 6000)
       return
     }
-    const outPath = await save({ filters: [{ name: "Word Document", extensions: ["docx"] }] })
+    const outPath = await save({
+      filters: [{ name: "Word Document", extensions: ["docx"] }],
+      defaultPath: suggestedSavePath(file, ".docx"),
+    })
     if (!outPath) return
     // Derive the temp path by APPENDING, not by swapping a `.docx` suffix: the
     // GTK save dialog on Linux doesn't reliably auto-append the filter
@@ -599,7 +602,10 @@ export function useExportActions(ctx: ExportActionsCtx) {
       showToast(t.app.pandocMissingBeamer, "error", 6000)
       return
     }
-    const outPath = await save({ filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }] })
+    const outPath = await save({
+      filters: [{ name: "PDF Slides (Beamer)", extensions: ["pdf"] }],
+      defaultPath: suggestedSavePath(vaultRef.current.openFile, "-slides.pdf"),
+    })
     if (!outPath) return
     // Append rather than swap the `.pdf` suffix: see handleExportDocx: an
     // extension-less outPath would otherwise make tmpPath === outPath and the
@@ -637,7 +643,7 @@ export function useExportActions(ctx: ExportActionsCtx) {
       const path = await save({
         title: t.palette.exportReveal,
         filters: [{ name: "HTML", extensions: ["html"] }],
-        defaultPath: openFile.name.replace(/\.[^.]+$/, ".html"),
+        defaultPath: suggestedSavePath(openFile, ".html"),
       })
       if (!path) return
       await writeTextFile(path, html)
@@ -708,7 +714,7 @@ ${html}
     const path = await save({
       title: t.palette.exportHtml,
       filters: [{ name: "HTML", extensions: ["html"] }],
-      defaultPath: openFile.name.replace(/\.[^.]+$/, ".html"),
+      defaultPath: suggestedSavePath(openFile, ".html"),
     })
     if (!path) return
     await writeTextFile(path, standalone)
@@ -722,7 +728,7 @@ ${html}
     const path = await save({
       title: t.palette.exportObsidian,
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: vaultRef.current.openFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+      defaultPath: suggestedSavePath(vaultRef.current.openFile, ".md", "export.md"),
     })
     if (!path) return
     ;(await loadActions()).warnLossyExport(

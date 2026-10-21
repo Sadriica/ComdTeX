@@ -93,7 +93,13 @@ import {
 } from "./wikilinks"
 import { findVaultFile, type ResolvableFile } from "./vaultResolve"
 import { syncPosture } from "./syncPosture"
-import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
+import {
+  pathJoin,
+  pathDirname,
+  pathBasename,
+  displayBasename,
+  suggestedSavePath,
+} from "./pathUtils"
 import type { FileNode } from "./types"
 import { writeTextFileAtomic } from "./atomicWrite"
 import TitleBar from "./TitleBar"
@@ -101,7 +107,15 @@ import MenuBar from "./MenuBar"
 import type { MenuDef, MenuEntry } from "./MenuBar"
 import Toolbar from "./Toolbar"
 import TabBar from "./TabBar"
-import FileTree from "./FileTree"
+import FileTree, { type TreeCreateRequest, type TreeRevealRequest } from "./FileTree"
+import TextPromptModal, { type TextPromptRequest } from "./TextPromptModal"
+import {
+  displayDestination,
+  nameProblemText,
+  relativeFolder,
+  targetFolder,
+  validateName,
+} from "./fileNaming"
 import SearchPanel from "./SearchPanel"
 import OutlinePanel from "./OutlinePanel"
 import { reorderSection } from "./outlineReorder"
@@ -855,6 +869,37 @@ function AppContent({
       return alreadyShowing
     })
   }, [])
+  // ── The app's own text prompt (replaces window.prompt) ───────────────────
+  const [textPrompt, setTextPrompt] = useState<TextPromptRequest | null>(null)
+  const promptResolve = useRef<((value: string | null) => void) | null>(null)
+  const askText = useCallback(
+    (req: TextPromptRequest) =>
+      new Promise<string | null>((resolve) => {
+        promptResolve.current = resolve
+        setTextPrompt(req)
+      }),
+    [],
+  )
+  const handlePromptResult = useCallback((value: string | null) => {
+    promptResolve.current?.(value)
+    promptResolve.current = null
+    setTextPrompt(null)
+  }, [])
+
+  // Create-the-missing-note helpers, defined further down (they need the folder
+  // rules); the preview click handler above reads them through this ref.
+  const linkNotesRef = useRef<{
+    plan: (
+      link: string,
+      fromPath: string | null | undefined,
+    ) => { bare: string; rel: string; problem: string | null } | null
+    create: (
+      link: string,
+      fromPath: string | null | undefined,
+      open: boolean,
+    ) => Promise<string | null>
+  } | null>(null)
+
   // Stable callbacks for FileTree so its React.memo holds: otherwise the inline
   // arrows would change identity every render and the (potentially huge) file
   // tree would re-render on every keystroke (the "big vault = slow typing" cause).
@@ -1845,7 +1890,7 @@ function AppContent({
               const path = await save({
                 title: t.menus.saveAs,
                 filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
-                defaultPath: vault.openFile?.name,
+                defaultPath: suggestedSavePath(vault.openFile),
               })
               if (!path) return
               // Faithful save (masked, extension-aware): not a lossy export.
@@ -2544,7 +2589,7 @@ function AppContent({
           const path = await save({
             title: t.menus.saveAs,
             filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
-            defaultPath: vault.openFile?.name,
+            defaultPath: suggestedSavePath(vault.openFile),
           })
           if (!path) return
           // Faithful save (masked, extension-aware): not a lossy export.
@@ -2947,11 +2992,12 @@ function AppContent({
     if (!pos) return
     const line = pos.lineNumber
     const lineText = file.content.split("\n")[line - 1] ?? ""
-    // Use a native prompt: keeps the implementation tiny and matches other
-    // quick text-input flows (e.g. file rename) elsewhere in the app.
-    const body = window.prompt(t.comments.promptForBody, "")
-    if (body === null) return
-    const trimmed = body.trim()
+    // The app's own dialog: native prompts are blocked or ugly in Tauri webviews.
+    const trimmed = await askText({
+      title: t.naming.commentDialogTitle,
+      label: t.comments.promptForBody,
+      multiline: true,
+    })
     if (!trimmed) return
     const comment: Comment = {
       id: generateCommentId(),
@@ -2973,7 +3019,7 @@ function AppContent({
       setComments((prev) => prev.filter((c) => c.id !== comment.id))
       showToast(e instanceof Error ? e.message : String(e), "error")
     }
-  }, [t, openPanel])
+  }, [t, openPanel, askText])
 
   const handleDeleteComment = useCallback(
     async (id: string) => {
@@ -3464,6 +3510,25 @@ function AppContent({
             if (line >= 0) pendingJumpRef.current = line + 1
           }
           handleOpenFileNode(node)
+        } else {
+          // A link to a note that does not exist yet: offer to create it, saying
+          // exactly where (next to this note, or where the link's own path says).
+          const linkNotes = linkNotesRef.current
+          const plan = linkNotes?.plan(wikiTarget, vault.openFile?.path)
+          if (linkNotes && plan && !plan.problem) {
+            void (async () => {
+              let ok = false
+              try {
+                ok = await tauriConfirm(
+                  `${t.naming.missingNoteCreate(plan.bare)}\n${t.naming.newNoteDestination(plan.rel)}`,
+                  { title: "ComdTeX" },
+                )
+              } catch {
+                /* dialog failed: create nothing */
+              }
+              if (ok) await linkNotes.create(wikiTarget, vault.openFile?.path, true)
+            })()
+          }
         }
         return
       }
@@ -3498,7 +3563,7 @@ function AppContent({
         }
       }
     },
-    [vault, vaultFiles, handleOpenFileNode, t.app.copiedLatex],
+    [vault, vaultFiles, handleOpenFileNode, t],
   )
 
   // ── Wikilink hover preview ────────────────────────────────────────────────
@@ -3674,7 +3739,7 @@ function AppContent({
     const path = await save({
       title: t.menus.saveAs,
       filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
-      defaultPath: vaultRef.current.openFile?.name,
+      defaultPath: suggestedSavePath(vaultRef.current.openFile),
     })
     if (!path) return
     // Save As must persist the document faithfully (round-trippable), so write
@@ -3709,7 +3774,8 @@ function AppContent({
     const defaultName = `vault-backup-${stamp}.zip`
     const outPath = await save({
       filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
-      defaultPath: defaultName,
+      // Beside the vault folder, not wherever the dialog last was.
+      defaultPath: `${pathDirname(vault.vaultPath)}/${defaultName}`,
     })
     if (!outPath) return
     try {
@@ -4095,7 +4161,6 @@ function AppContent({
     rules: FolderRules | null
   } | null>(null)
   /** Folder preselected as the destination by "New from template" on a folder. */
-  const [templateTargetDir, setTemplateTargetDir] = useState<string | undefined>(undefined)
 
   // Read the rules BEFORE opening: the modal seeds its form from them on mount,
   // so handing it a null that fills in later would leave the form blank.
@@ -4138,7 +4203,12 @@ function AppContent({
    * override the user's explicit choice.
    */
   const createFileWithRules = useCallback(
-    async (name: string, parentDir?: string, explicitContent?: string) => {
+    async (
+      name: string,
+      parentDir?: string,
+      explicitContent?: string,
+      opts?: { open?: boolean },
+    ): Promise<string | null> => {
       const dir = parentDir ?? vaultRef.current.vaultPath
       const rules = dir ? await folderRules.resolve(dir) : null
 
@@ -4151,34 +4221,175 @@ function AppContent({
           : undefined
         content = template ? processTemplateVariables(template.content, fileName) : ""
       }
-      await vaultRef.current.createFile(fileName, applyFolderFrontmatter(rules, content), parentDir)
+      return vaultRef.current.createFile(
+        fileName,
+        applyFolderFrontmatter(rules, content),
+        parentDir,
+        opts,
+      )
     },
     [folderRules],
   )
 
+  // ── Where new things go ───────────────────────────────────────────────────
+  // ONE rule for every create flow (tree buttons, context menu, palette,
+  // template picker, quick fix): the selected folder, else the folder of the
+  // selected or active file, else the vault root (fileNaming.targetFolder).
+  // The tree owns the selection and reports it here.
+  const treeSelectionRef = useRef<{ path: string | null; isDir: boolean }>({
+    path: null,
+    isDir: false,
+  })
+  const handleTreeSelection = useCallback((path: string | null, isDir: boolean) => {
+    treeSelectionRef.current = { path, isDir }
+  }, [])
+  const resolveCreateDir = useCallback((): string => {
+    const root = vaultRef.current.vaultPath ?? ""
+    return targetFolder({
+      vaultRoot: root,
+      selectedPath: treeSelectionRef.current.path,
+      selectedIsDir: treeSelectionRef.current.isDir,
+      activePath: vaultRef.current.openFile?.path,
+    })
+  }, [])
+  const getCreateFolderRel = useCallback(
+    () => relativeFolder(vaultRef.current.vaultPath ?? "", resolveCreateDir()),
+    [resolveCreateDir],
+  )
+
+  const [treeCreateReq, setTreeCreateReq] = useState<TreeCreateRequest | null>(null)
+  const [treeRevealReq, setTreeRevealReq] = useState<TreeRevealRequest | null>(null)
+  const treeNonce = useRef(0)
+  /** Open the inline "new file / folder" row in the tree, in the target folder. */
+  const startInlineCreate = useCallback(
+    (kind: "file" | "folder") => {
+      openPanel("files")
+      setTreeCreateReq({ kind, nonce: ++treeNonce.current })
+    },
+    [openPanel],
+  )
+  /** Select a path in the tree, expanding to it and scrolling it into view. */
+  const revealInTree = useCallback((path: string) => {
+    setTreeRevealReq({ path, nonce: ++treeNonce.current })
+  }, [])
+
   const handleTreeCreateFile = useCallback(
-    (name: string, parentDir?: string) => {
-      void createFileWithRules(name, parentDir)
+    async (name: string, parentDir?: string) => {
+      await createFileWithRules(name, parentDir)
     },
     [createFileWithRules],
   )
 
-  const handleTreeCreateFolder = useCallback((name: string, parentDir?: string) => {
-    void vaultRef.current.createFolder(name, parentDir)
-  }, [])
+  const handleTreeCreateFolder = useCallback(
+    (name: string, parentDir?: string) => vaultRef.current.createFolder(name, parentDir),
+    [],
+  )
 
-  const handleNewFromTemplateIn = useCallback((parentDir: string) => {
-    setTemplateTargetDir(parentDir)
-    setTemplateOpen(true)
-  }, [])
+  const [templateFolderDefault, setTemplateFolderDefault] = useState("")
+  /** Opens the template picker aimed at `dir`, or at the shared target folder. */
+  const openTemplatePicker = useCallback(
+    (dir?: string) => {
+      setTemplateFolderDefault(dir ?? resolveCreateDir())
+      setTemplateOpen(true)
+    },
+    [resolveCreateDir],
+  )
+  const handleNewFromTemplateIn = useCallback(
+    (parentDir: string) => openTemplatePicker(parentDir),
+    [openTemplatePicker],
+  )
+  const setTemplateOpenAtTarget = useCallback(
+    (open: boolean) => (open ? openTemplatePicker() : setTemplateOpen(false)),
+    [openTemplatePicker],
+  )
+  // Every folder of the vault, root first, with the names already in it.
+  const templateFolders = useMemo(() => {
+    const root = vault.vaultPath
+    if (!root) return []
+    const out = [{ path: root, rel: "", names: vault.tree.map((n) => n.name) }]
+    const walk = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        if (n.type !== "dir") continue
+        out.push({
+          path: n.path,
+          rel: relativeFolder(root, n.path),
+          names: (n.children ?? []).map((c) => c.name),
+        })
+        if (n.children) walk(n.children)
+      }
+    }
+    walk(vault.tree)
+    return out
+  }, [vault.tree, vault.vaultPath])
 
   const handleCreateFromTemplate = useCallback(
-    async (name: string, content: string) => {
-      await createFileWithRules(name, templateTargetDir, content)
-      setTemplateTargetDir(undefined)
+    async (name: string, content: string, parentDir: string) => {
+      const root = vaultRef.current.vaultPath
+      await createFileWithRules(name, parentDir === root ? undefined : parentDir, content)
     },
-    [createFileWithRules, templateTargetDir],
+    [createFileWithRules],
   )
+
+  /**
+   * Create the note a `[[link]]` points to. It goes where the link says (a path
+   * such as `physics/intro` names its folder), otherwise next to the note that
+   * holds the link, otherwise the vault root; the tree reveals it afterwards.
+   * `open: false` leaves the writer where they are (quick fix).
+   */
+  /** Where `[[link]]` would be created, vault-relative (null: no vault or a bad name). */
+  const planNoteFromLink = useCallback(
+    (link: string, fromPath: string | null | undefined) => {
+      const root = vaultRef.current.vaultPath
+      if (!root) return null
+      const bare = link.trim().replace(/\.(md|tex|typ)$/i, "")
+      const segs = bare.split("/").filter(Boolean)
+      const name = segs.pop() ?? ""
+      const folderRel = segs.length
+        ? segs.join("/")
+        : relativeFolder(root, targetFolder({ vaultRoot: root, activePath: fromPath }))
+      let problem: string | null = null
+      for (const part of [...segs, name]) {
+        const p = validateName(part, "folder", [])
+        if (p) {
+          problem = nameProblemText(t.naming.problems, p, part)
+          break
+        }
+      }
+      return { bare, name, folderRel, rel: displayDestination(folderRel, `${name}.md`), problem }
+    },
+    [t],
+  )
+
+  const createNoteFromLink = useCallback(
+    async (link: string, fromPath: string | null | undefined, open: boolean) => {
+      const v = vaultRef.current
+      const root = v.vaultPath
+      const plan = planNoteFromLink(link, fromPath)
+      if (!root || !plan) return null
+      if (findByName(v.tree, plan.bare)) {
+        showToast(t.vault.alreadyExists(plan.bare), "error")
+        return null
+      }
+      if (plan.problem) {
+        showToast(plan.problem, "error")
+        return null
+      }
+      const { name } = plan
+      const dir = plan.folderRel ? await pathJoin(root, ...plan.folderRel.split("/")) : root
+      const created = await createFileWithRules(
+        name,
+        dir === root ? undefined : dir,
+        `# ${name}\n`,
+        { open },
+      )
+      if (created) revealInTree(created)
+      return created
+    },
+    [createFileWithRules, revealInTree, planNoteFromLink, t],
+  )
+  useEffect(() => {
+    linkNotesRef.current = { plan: planNoteFromLink, create: createNoteFromLink }
+  }, [planNoteFromLink, createNoteFromLink])
 
   /**
    * Split the active document at its H2s into sibling files, replacing each
@@ -4336,24 +4547,21 @@ function AppContent({
         editorRef.current?.setPosition({ lineNumber: line, column })
         void handleFillGaps("cursor")
       },
+      // Next to the referring note (or where the link's own path says), without
+      // leaving the document; the tree selects the new file.
       createNote: async (name) => {
         const v = vaultRef.current
-        if (!v.vaultPath) return false
-        if (findByName(v.tree, name)) {
-          showToast(t.vault.alreadyExists(name), "error")
-          return false
-        }
-        const previous = v.activeTabPath
-        await v.createFile(name, `# ${name}\n`)
-        // createFile opens what it creates; settle, then confirm it exists and
-        // put the writer back where they were.
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        const created = vaultRef.current.openTabs.some(
-          (tab) => tab.name.replace(/\.[^.]+$/, "").toLowerCase() === name.toLowerCase(),
+        const created = await createNoteFromLink(name, v.openFile?.path, false)
+        if (!created || !v.vaultPath) return false
+        showToast(
+          t.lint.actions.noteCreated(
+            displayDestination(
+              relativeFolder(v.vaultPath, pathDirname(created)),
+              displayBasename(created),
+            ),
+          ),
+          "success",
         )
-        if (!created) return false
-        if (previous) vaultRef.current.switchTab(previous)
-        showToast(t.lint.actions.noteCreated(name), "success")
         return true
       },
       addBibStub: async (key) => {
@@ -4382,7 +4590,7 @@ function AppContent({
       },
     })
     return () => setCodeActionHost(null)
-  }, [t, handleFillGaps])
+  }, [t, handleFillGaps, createNoteFromLink])
 
   /** Turn an existing note into a reusable custom template. */
   const handleSaveAsTemplate = useCallback(
@@ -4394,7 +4602,11 @@ function AppContent({
           ? openTab.content
           : toEditorContent(node.path, await readTextFile(node.path))
         const suggested = node.name.replace(/\.[^.]+$/, "")
-        const name = window.prompt(t.folderRules.templateNamePrompt, suggested)?.trim()
+        const name = await askText({
+          title: t.naming.templateNameDialogTitle,
+          label: t.folderRules.templateNamePrompt,
+          initial: suggested,
+        })
         if (!name) return
         saveCustomTemplate({
           name,
@@ -4407,7 +4619,7 @@ function AppContent({
         showToast(e instanceof Error ? e.message : String(e), "error")
       }
     },
-    [t],
+    [t, askText],
   )
 
   /**
@@ -4488,7 +4700,7 @@ function AppContent({
   )
 
   const handleRenameFile = useCallback(
-    async (oldPath: string, newName: string) => {
+    async (oldPath: string, newName: string): Promise<string | null> => {
       const oldBasename = displayBasename(oldPath).replace(/\.[^.]+$/, "")
       const newBasename = newName.replace(/\.[^.]+$/, "")
 
@@ -4525,7 +4737,8 @@ function AppContent({
       }
 
       const renamed = await vault.renameFile(oldPath, newName)
-      if (!renamed || !refactor) return
+      if (!renamed) return null
+      if (!refactor) return renamed
 
       let refactorCount = 0
       for (const path of refactor.paths) {
@@ -4542,6 +4755,7 @@ function AppContent({
         refactorCount += matches ? matches.length : 0
       }
       if (refactorCount > 0) showToast(t.vault.renameRefactorDone(refactorCount), "success")
+      return renamed
       // Stable deps (open tabs read via ref) so FileTree's React.memo holds while typing.
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4619,9 +4833,10 @@ function AppContent({
         }
 
         try {
-          const safeFileName = sanitizeFileName(file.name)
           const assetsDir = await pathJoin(vault.vaultPath, "assets")
           await mkdir(assetsDir, { recursive: true })
+          // Never clobber an asset already in assets/ (same rule as paste).
+          const safeFileName = await uniqueAssetName(assetsDir, sanitizeFileName(file.name))
           const destPath = await pathJoin(assetsDir, safeFileName)
           await copyFile(sourcePath, destPath)
           await vault.loadVault()
@@ -4648,7 +4863,7 @@ function AppContent({
         }
       }
     },
-    [vault, t],
+    [vault, t, uniqueAssetName],
   )
 
   // ── Image paste from clipboard (Ctrl+V) ──────────────────────────────────
@@ -4800,9 +5015,9 @@ function AppContent({
         const content = processTemplateVariables(tplRaw, filename)
         await writeTextFileAtomic(filePath, content)
         await vaultRef.current.loadVault()
-        showToast(t.app.dailyNoteCreated(filename), "success")
+        showToast(t.app.dailyNoteCreated(displayDestination(folder, filename)), "success")
       } else {
-        showToast(t.app.dailyNoteOpened(filename), "info")
+        showToast(t.app.dailyNoteOpened(displayDestination(folder, filename)), "info")
       }
       await vaultRef.current.openFilePath(filePath)
     } catch (err) {
@@ -4873,7 +5088,8 @@ function AppContent({
         handleVaultBackup,
         openCmdkRef,
         selectVault: vault.selectVault,
-        setTemplateOpen,
+        setTemplateOpen: setTemplateOpenAtTarget,
+        startInlineCreate,
         handleOpenDailyNote,
         handleOpenMacros,
         handleOpenBib,
@@ -4892,6 +5108,8 @@ function AppContent({
       }),
     [
       t,
+      setTemplateOpenAtTarget,
+      startInlineCreate,
       deps,
       exportActions,
       handleSave,
@@ -4961,7 +5179,8 @@ function AppContent({
         deps,
         exportActions,
         selectVault: vault.selectVault,
-        setTemplateOpen,
+        setTemplateOpen: setTemplateOpenAtTarget,
+        startInlineCreate,
         handleSave,
         handleSaveAs,
         handleFind,
@@ -4979,6 +5198,8 @@ function AppContent({
       }),
     [
       t,
+      setTemplateOpenAtTarget,
+      startInlineCreate,
       hasFile,
       hasVault,
       deps,
@@ -5085,9 +5306,11 @@ function AppContent({
       if (!root) return
       void (async () => {
         const parentDir = folderRel ? await pathJoin(root, ...folderRel.split("/")) : root
-        await createFileWithRules(fileName, parentDir)
+        // The note opens with the cursor in it; the tree selects it through the active tab.
+        await createFileWithRules(fileName, parentDir === root ? undefined : parentDir)
       })()
     },
+    getCreateFolderRel,
   }
   const paletteEl = (
     <CommandPalette
@@ -5234,6 +5457,9 @@ function AppContent({
                     onMoveFile={vault.moveFile}
                     conflictPaths={cloudConflictPaths}
                     onConflictClick={handleConflictClick}
+                    createRequest={treeCreateReq}
+                    revealRequest={treeRevealReq}
+                    onSelectionChange={handleTreeSelection}
                   />
                 )}
                 {sidebarMode === "search" && (
@@ -5408,9 +5634,9 @@ function AppContent({
                         handleOpenFileNode(node)
                         setSidebarMode("files")
                       }}
-                      onCreateNote={async (name) => {
-                        await vault.createFile(`${name}.md`, `# ${name}\n`)
-                      }}
+                      onCreateNote={async (name, fromPath) =>
+                        (await createNoteFromLink(name, fromPath, true)) !== null
+                      }
                       onRemoveLink={async (path, line, link) => {
                         const content = await currentText(path)
                         const lines = content.split("\n")
@@ -5739,7 +5965,10 @@ function AppContent({
           open={templateOpen}
           onClose={() => setTemplateOpen(false)}
           onCreate={handleCreateFromTemplate}
+          folders={templateFolders}
+          defaultFolder={templateFolderDefault}
         />
+        <TextPromptModal request={textPrompt} onResult={handlePromptResult} />
 
         {/* Focus view, detached from the top bar. Deliberately NOT a sidebar
             panel: starting or resetting a timer is a glance-and-click action,

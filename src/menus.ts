@@ -19,6 +19,8 @@ export interface BuildMenusCtx {
   exportActions: ReturnType<typeof useExportActions>
   selectVault: () => void
   setTemplateOpen: (open: boolean) => void
+  /** Inline create in the file tree, at the shared target folder. */
+  startInlineCreate: (kind: "file" | "folder") => void
   handleSave: () => void
   handleSaveAs: () => void
   handleFind: () => void
@@ -58,6 +60,7 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
     exportActions,
     selectVault,
     setTemplateOpen,
+    startInlineCreate,
     handleSave,
     handleSaveAs,
     handleFind,
@@ -80,6 +83,16 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
       entries: [
         { label: t.menus.openVault, action: selectVault },
         { separator: true },
+        {
+          label: t.palette.newFile,
+          disabled: !hasVault,
+          action: () => startInlineCreate("file"),
+        },
+        {
+          label: t.palette.newFolder,
+          disabled: !hasVault,
+          action: () => startInlineCreate("folder"),
+        },
         {
           label: t.menus.newFromTemplate,
           disabled: !hasVault,

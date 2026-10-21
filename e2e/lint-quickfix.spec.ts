@@ -124,10 +124,17 @@ test("Create note makes the missing note without leaving the document", async ({
   await expect(menu).toContainText('Create note "brand-new-note"')
   await page.keyboard.press("Enter")
 
-  await expect(page.locator(".toast-container")).toContainText('Created note "brand-new-note"')
-  // The writer stays on the note they were editing; the new one is in the tab bar.
+  // Next to the referring note (notes/), and the toast says where.
+  await expect(page.locator(".toast-container")).toContainText(
+    'Created note "notes/brand-new-note.md"',
+  )
+  // The writer stays on the note they were editing and no tab is added; the
+  // tree shows and selects the new file.
   await expect(page.locator(".view-lines")).toContainText("By @thm:mian")
-  await expect(page.locator(".tab-bar, [role=tablist]").first()).toContainText("brand-new-note")
+  await expect(page.locator(".tab-bar, [role=tablist]").first()).not.toContainText("brand-new-note")
+  await expect(page.getByRole("treeitem", { name: "brand-new-note.md", exact: true })).toHaveClass(
+    /tree-focused/,
+  )
   // The link is no longer broken once the vault refreshes.
   await expect
     .poll(

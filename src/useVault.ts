@@ -1,9 +1,17 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
 import { readDir, readTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
+import { documentDir } from "@tauri-apps/api/path"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
 import { allowVaultDir } from "./vaultScope"
+import {
+  finalName,
+  initialCursorFor,
+  nameProblemText,
+  stripCursorMarker,
+  validateName,
+} from "./fileNaming"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
 import { useT, type T } from "./i18n"
@@ -688,19 +696,6 @@ export function useVault(options: UseVaultOptions | number = {}) {
   })
   const t = useT()
 
-  const validate = useCallback(
-    (name: string): { valid: boolean; error?: string } => {
-      if (!name || !name.trim()) return { valid: false, error: t.vault.nameEmpty }
-      if (name.length > 255) return { valid: false, error: t.vault.nameTooLong }
-      if (/[<>:"|?*\\]/.test(name)) return { valid: false, error: t.vault.nameInvalidChars }
-      if (name.startsWith(".")) return { valid: false, error: t.vault.nameStartsDot }
-      if (/^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i.test(name))
-        return { valid: false, error: t.vault.nameReserved }
-      return { valid: true }
-    },
-    [t],
-  )
-
   const [vaultPath, setVaultPath] = useState<string | null>(() => {
     // Defensive: if a previous run somehow stored a system path (e.g. "/"),
     // refuse to load it on startup so we don't tree-walk the whole filesystem.
@@ -1032,10 +1027,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
     // Ask for the new folder path via a save-style dialog
     let chosen: string | null
     try {
-      chosen = await save({
-        title: "Crear nueva carpeta de vault",
-        defaultPath: "mi-vault",
-      })
+      // Suggest a folder inside Documents rather than leaving the dialog wherever
+      // it was last; the user can type any other path.
+      let defaultPath: string = t.vault.newVaultName
+      try {
+        defaultPath = await pathJoin(await documentDir(), t.vault.newVaultName)
+      } catch {
+        /* no documents folder: keep the bare name */
+      }
+      chosen = await save({ title: t.vault.createVaultTitle, defaultPath })
     } catch (e) {
       showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
       return
@@ -1606,36 +1606,45 @@ export function useVault(options: UseVaultOptions | number = {}) {
     [vaultPath],
   )
 
+  /**
+   * Create a file and (by default) open it with the cursor where the author
+   * starts typing. Returns the new path, or null when nothing was created
+   * (invalid name, already exists, write failure; each already toasted).
+   * `open: false` creates it without touching the tabs (quick fixes, generators).
+   */
   const createFile = useCallback(
-    async (name: string, content = "", parentDir?: string) => {
-      if (!vaultPath) return
-      const v = validate(name.replace(/\.[^.]+$/, ""))
-      if (!v.valid) {
-        showToast(v.error!, "error")
-        return
+    async (
+      name: string,
+      content = "",
+      parentDir?: string,
+      opts: { open?: boolean } = {},
+    ): Promise<string | null> => {
+      if (!vaultPath) return null
+      const fileName = finalName(name, "file")
+      const problem = validateName(name, "file", [])
+      if (problem && problem !== "exists") {
+        showToast(nameProblemText(t.naming.problems, problem, fileName), "error")
+        return null
       }
-      const fileName =
-        name.endsWith(".md") ||
-        name.endsWith(".tex") ||
-        name.endsWith(".bib") ||
-        name.endsWith(".typ")
-          ? name
-          : `${name}.md`
       const targetDir = resolveParentDir(parentDir)
       const filePath = await pathJoin(targetDir, fileName)
       // writeTextFileAtomic renames onto the target, which would silently replace
       // an existing note with this one.
       if (await pathExists(filePath)) {
         showToast(t.vault.alreadyExists(fileName), "error")
-        return
+        return null
       }
       try {
         forgetLineEnding(filePath)
-        await writeTextFileAtomic(filePath, toDiskContent(filePath, content))
+        const body = stripCursorMarker(content)
+        // A link such as [[physics/intro]] names a folder that may not exist yet.
+        if (!(await pathExists(targetDir))) await mkdir(targetDir, { recursive: true })
+        await writeTextFileAtomic(filePath, toDiskContent(filePath, body))
         await refreshTree(vaultPath)
         // Brand-new path: make sure no stale cache entry lingers (shouldn't
         // normally exist, but a rename/delete race could leave one behind).
         searchIndexRef.current.invalidate(filePath)
+        if (opts.open === false) return filePath
         // Baseline for the external-change guard. Without it a freshly created
         // file is saved unguarded for the rest of the session.
         let cachedMtime: number | undefined
@@ -1647,18 +1656,28 @@ export function useVault(options: UseVaultOptions | number = {}) {
         const newTab: OpenFile = {
           path: filePath,
           name: fileName,
-          content: toEditorContent(filePath, content),
+          content: toEditorContent(filePath, body),
           isDirty: false,
           mode: editorModeForPath(filePath),
           cachedMtime,
         }
+        // The editor mounts after the tab is active; it asks for this spot.
+        const cursor = initialCursorFor(content)
+        pendingReveal.current = {
+          path: filePath,
+          line: cursor.line,
+          column: cursor.column,
+          at: Date.now(),
+        }
         setOpenTabs((tabs) => [...tabs, newTab])
         setActiveTabPath(filePath)
+        return filePath
       } catch (e) {
         showToast(t.vault.errorCreating(e instanceof Error ? e.message : String(e)), "error")
+        return null
       }
     },
-    [vaultPath, refreshTree, validate, resolveParentDir, t],
+    [vaultPath, refreshTree, resolveParentDir, t],
   )
 
   const deleteFile = useCallback(
@@ -1790,11 +1809,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
   )
 
   const renameFile = useCallback(
-    async (oldPath: string, newName: string): Promise<boolean> => {
-      const v = validate(newName.replace(/\.[^.]+$/, ""))
-      if (!v.valid) {
-        showToast(v.error!, "error")
-        return false
+    async (oldPath: string, newName: string): Promise<string | null> => {
+      // Name rules only; "already exists" is checked against the disk below.
+      const problem = validateName(newName, "folder", [])
+      if (problem) {
+        showToast(nameProblemText(t.naming.problems, problem, newName), "error")
+        return null
       }
       const dir = pathDirname(oldPath)
       const newPath = await pathJoin(dir, newName)
@@ -1806,7 +1826,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
         (await pathExists(newPath))
       ) {
         showToast(t.vault.alreadyExists(newName), "error")
-        return false
+        return null
       }
       try {
         await rename(oldPath, newPath)
@@ -1815,28 +1835,28 @@ export function useVault(options: UseVaultOptions | number = {}) {
         rekeyPaths(oldPath, newPath)
         if (vaultPath) await refreshTree(vaultPath)
         showToast(t.vault.renamed(newName), "success")
-        return true
+        return newPath
       } catch (e) {
         showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
-        return false
+        return null
       }
     },
-    [vaultPath, refreshTree, validate, rekeyPaths, t],
+    [vaultPath, refreshTree, rekeyPaths, t],
   )
 
   const moveFile = useCallback(
-    async (oldPath: string, targetFolderPath: string) => {
+    async (oldPath: string, targetFolderPath: string): Promise<string | null> => {
       const name = pathBasename(oldPath)
       const newPath = await pathJoin(targetFolderPath, name)
-      if (oldPath === newPath) return
+      if (oldPath === newPath) return null
       // A folder cannot move into itself.
       if (isSameOrUnder(targetFolderPath, oldPath)) {
         showToast(t.vault.moveError, "error")
-        return
+        return null
       }
       if (await pathExists(newPath)) {
         showToast(t.vault.alreadyExists(name), "error")
-        return
+        return null
       }
       try {
         await rename(oldPath, newPath)
@@ -1844,30 +1864,40 @@ export function useVault(options: UseVaultOptions | number = {}) {
         rekeyPaths(oldPath, newPath)
         if (vaultPath) await refreshTree(vaultPath)
         showToast(t.vault.moved(name), "success")
+        return newPath
       } catch (e) {
         showToast(t.vault.moveError, "error")
         console.error(e)
+        return null
       }
     },
     [vaultPath, refreshTree, rekeyPaths, t],
   )
 
   const createFolder = useCallback(
-    async (name: string, parentDir?: string) => {
-      if (!vaultPath) return
-      const v = validate(name)
-      if (!v.valid) {
-        showToast(v.error!, "error")
-        return
+    async (name: string, parentDir?: string): Promise<string | null> => {
+      if (!vaultPath) return null
+      const problem = validateName(name, "folder", [])
+      if (problem) {
+        showToast(nameProblemText(t.naming.problems, problem, name), "error")
+        return null
       }
       try {
-        await mkdir(await pathJoin(resolveParentDir(parentDir), name), { recursive: true })
+        const folderPath = await pathJoin(resolveParentDir(parentDir), name)
+        // mkdir -p succeeds on an existing folder: say so instead of "creating" nothing.
+        if (await pathExists(folderPath)) {
+          showToast(t.vault.alreadyExists(name), "error")
+          return null
+        }
+        await mkdir(folderPath, { recursive: true })
         await refreshTree(vaultPath)
+        return folderPath
       } catch (e) {
         showToast(t.vault.errorCreatingFolder(e instanceof Error ? e.message : String(e)), "error")
+        return null
       }
     },
-    [vaultPath, refreshTree, validate, resolveParentDir, t],
+    [vaultPath, refreshTree, resolveParentDir, t],
   )
 
   /**

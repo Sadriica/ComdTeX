@@ -116,7 +116,8 @@ interface VaultStatsPanelProps {
   openTabs: OpenFile[]
   wikiNames: Set<string>
   onOpenFile?: (path: string, line?: number) => void
-  onCreateNote?: (name: string) => Promise<void>
+  /** Resolves to false when nothing was created (the host already said why). */
+  onCreateNote?: (name: string, fromPath: string) => Promise<boolean | void>
   onRemoveLink?: (path: string, line: number, link: string) => Promise<void>
 }
 
@@ -146,8 +147,8 @@ export default function VaultStatsPanel({
   const handleCreateNote = async (b: BrokenLink) => {
     if (!onCreateNote) return
     try {
-      await onCreateNote(b.link)
-      showToast(t.brokenLinks.noteCreated(b.link), "success")
+      const created = await onCreateNote(b.link, b.path)
+      if (created !== false) showToast(t.brokenLinks.noteCreated(b.link), "success")
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), "error")
     }

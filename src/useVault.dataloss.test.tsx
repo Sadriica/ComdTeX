@@ -202,20 +202,20 @@ describe("useVault data-loss guards", () => {
       expect(disk(`${VAULT}/sub/b.md`)).toBe("SUB-B")
     })
 
-    it("reports whether a rename happened", async () => {
+    it("reports the new path when a rename happened, null when it was refused", async () => {
       fsMock.touch(`${VAULT}/a.md`, "A")
       fsMock.touch(`${VAULT}/b.md`, "B")
       const { result } = renderHook(() => useVault())
-      let refused: boolean | undefined
-      let done: boolean | undefined
+      let refused: string | null | undefined
+      let done: string | null | undefined
       await act(async () => {
         refused = await result.current.renameFile(`${VAULT}/a.md`, "b.md")
       })
       await act(async () => {
         done = await result.current.renameFile(`${VAULT}/a.md`, "c.md")
       })
-      expect(refused).toBe(false)
-      expect(done).toBe(true)
+      expect(refused).toBeNull()
+      expect(done).toBe(`${VAULT}/c.md`)
     })
 
     it("keeps the other program's version when renaming a note with an open conflict", async () => {

@@ -156,7 +156,27 @@ export const en: T = {
     newFromTemplateHere: "New from template…",
     folderRules: "Folder rules…",
     saveAsTemplate: "Save as template…",
-    creatingIn: (folder: string) => `in ${folder}`,
+    newFolderInline: "New folder",
+    revealLabel: "Reveal in the file tree",
+  },
+
+  naming: {
+    problems: {
+      empty: "Type a name",
+      tooLong: "Name too long (max. 255 characters)",
+      invalidChars: 'These characters are not allowed: < > : " | ? * \\ /',
+      dotOnly: "A name cannot be only dots",
+      edge: "A name cannot start or end with a space or a dot",
+      reserved: "Reserved name on Windows",
+      exists: (name) => `"${name}" already exists in this folder`,
+      existsCase: (name) => `"${name}" already exists here (names ignore capitals on some systems)`,
+    },
+    ok: "OK",
+    cancel: "Cancel",
+    commentDialogTitle: "Add a comment",
+    templateNameDialogTitle: "Save as template",
+    newNoteDestination: (path) => `Creates ${path}`,
+    missingNoteCreate: (name) => `Create note "${name}"`,
   },
 
   search: {
@@ -441,6 +461,8 @@ export const en: T = {
     title: "New file from template",
     filenameLabel: "File name",
     filenamePlaceholder: "my-document.md",
+    folderLabel: "Folder",
+    folderRoot: "Vault root",
     cancel: "Cancel",
     create: "Create",
     useTemplates: "Use templates",
@@ -494,6 +516,8 @@ export const en: T = {
     searchVault: "Search in vault",
     focusMode: "Focus mode",
     newFromTemplate: "New from template",
+    newFile: "New file",
+    newFolder: "New folder",
     editMacros: "Edit macros.md",
     editBib: "Edit references.bib",
     settings: "Settings",
@@ -641,8 +665,8 @@ export const en: T = {
     listLabel: "Palette results",
     resultCount: (n) => (n === 0 ? "No results" : n === 1 ? "1 result" : `${n} results`),
     showingFirst: (shown, total) => `Showing ${shown} of ${total}: keep typing to narrow`,
-    createNote: (name) => `Create note "${name}"`,
-    createNoteIn: (folder) => (folder ? `in ${folder}` : "in the vault root"),
+    createNote: (path) => `Create ${path}`,
+    createNoteBlocked: (reason) => `Cannot create a note: ${reason}`,
     noteCreateFailed: "Could not create the note",
     goToLine: (line, column) =>
       column ? `Go to line ${line}, column ${column}` : `Go to line ${line}`,
@@ -1178,6 +1202,8 @@ export const en: T = {
   },
 
   vault: {
+    createVaultTitle: "Create a new vault folder",
+    newVaultName: "my-vault",
     nameEmpty: "Name cannot be empty",
     nameTooLong: "Name too long (max. 255 characters)",
     nameInvalidChars: 'Invalid characters: < > : " | ? * \\',
