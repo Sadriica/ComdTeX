@@ -1,11 +1,26 @@
 import type { FileNode } from "./types"
 
-/** Return a set of all file base-names (without extension) in the vault tree. */
+/**
+ * Return a set of all file base-names (without extension) in the vault tree.
+ * Trailing path forms (`notes/intro`, `physics/notes/intro`) are in the set
+ * too: the editor writes `[[physics/intro]]` when two notes share a name, and
+ * that link must not render as broken.
+ */
 export function getFileNameSet(tree: FileNode[]): Set<string> {
   const names = new Set<string>()
   const collect = (nodes: FileNode[]) => {
     for (const n of nodes) {
-      if (n.type === "file") names.add(n.name.replace(/\.[^.]+$/, "").toLowerCase())
+      if (n.type === "file") {
+        const stem = n.path
+          .replace(/\\/g, "/")
+          .replace(/\.[^./]+$/, "")
+          .toLowerCase()
+          .split("/")
+        for (let depth = 1; depth <= Math.min(stem.length, 4); depth++) {
+          names.add(stem.slice(-depth).join("/"))
+        }
+        names.add(n.name.replace(/\.[^.]+$/, "").toLowerCase())
+      }
       if (n.children) collect(n.children)
     }
   }
@@ -28,6 +43,11 @@ export function flatFiles(tree: FileNode[]): FileNode[] {
 
 /** Find a file node by base name (case-insensitive, ignores extension). */
 export function findByName(tree: FileNode[], name: string): FileNode | null {
+  // A path form (`physics/intro`) picks one of several same-named notes.
+  if (name.includes("/")) {
+    const byPath = findByVaultRelPath(tree, name)
+    if (byPath) return byPath
+  }
   const lower = name.toLowerCase()
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
