@@ -223,53 +223,57 @@ export default function TemplateModal({
                     </div>
                   </div>
                 ))}
-              <div className="template-filename-row">
-                <label className="template-filename-label" htmlFor="template-folder">
-                  {t.templateModal.folderLabel}
-                </label>
-                <select
-                  id="template-folder"
-                  className="template-filename-input"
-                  value={folder?.path ?? ""}
-                  onChange={(e) => setPickedFolder(e.target.value)}
-                >
-                  {folders.map((f) => (
-                    <option key={f.path} value={f.path}>
-                      {f.rel || t.templateModal.folderRoot}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="template-filename-row">
-                <label className="template-filename-label" htmlFor="template-filename">
-                  {t.templateModal.filenameLabel}
-                </label>
-                <input
-                  id="template-filename"
-                  className="template-filename-input"
-                  placeholder={t.templateModal.filenamePlaceholder}
-                  value={name}
-                  aria-invalid={problem ? true : undefined}
-                  aria-describedby="template-destination"
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                  autoFocus
-                />
-              </div>
-              <div
-                id="template-destination"
-                className={`template-destination${problem ? " template-destination-error" : ""}`}
-                aria-live="polite"
-              >
-                {problem
-                  ? nameProblemText(t.naming.problems, problem, fileName)
-                  : destination
-                    ? t.naming.newNoteDestination(destination)
-                    : ""}
-              </div>
             </>
           )}
         </div>
+        {!editingTemplate && (
+          <div className="template-name-block">
+            <div className="template-filename-row">
+              <label className="template-filename-label" htmlFor="template-folder">
+                {t.templateModal.folderLabel}
+              </label>
+              <select
+                id="template-folder"
+                className="template-filename-input"
+                value={folder?.path ?? ""}
+                onChange={(e) => setPickedFolder(e.target.value)}
+              >
+                {folders.map((f) => (
+                  <option key={f.path} value={f.path}>
+                    {f.rel || t.templateModal.folderRoot}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="template-filename-row">
+              <label className="template-filename-label" htmlFor="template-filename">
+                {t.templateModal.filenameLabel}
+              </label>
+              <input
+                id="template-filename"
+                className="template-filename-input"
+                placeholder={t.templateModal.filenamePlaceholder}
+                value={name}
+                aria-invalid={problem ? true : undefined}
+                aria-describedby="template-destination"
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                autoFocus
+              />
+            </div>
+            <div
+              id="template-destination"
+              className={`template-destination${problem ? " template-destination-error" : ""}`}
+              aria-live="polite"
+            >
+              {problem
+                ? nameProblemText(t.naming.problems, problem, fileName)
+                : destination
+                  ? t.naming.newNoteDestination(destination)
+                  : ""}
+            </div>
+          </div>
+        )}
         <div className="modal-footer">
           <button className="btn-cancel" onClick={close}>
             {t.templateModal.cancel}

@@ -668,6 +668,7 @@
 .tree-rename-input[aria-invalid="true"],
 .tree-rename-input[aria-invalid="true"]:focus {
   border-color: var(--danger);
+  outline-color: var(--danger);
 }
 .tree-name-error {
   padding: var(--space-1) var(--space-4) var(--space-2)
