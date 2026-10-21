@@ -510,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "comdtex"
-version = "1.29.1"
+version = "1.30.0"
 dependencies = [
  "keyring",
  "serde",

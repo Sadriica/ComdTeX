@@ -3,7 +3,15 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.30.0] - 2026-10-21
+
+A new look and a much smarter editor. Highlights:
+
+- **New design**: the slate and chalk palette of the ComdTeX site, in dark, light (paper) and high contrast, with bundled fonts, Lucide icons and a preview that reads like a typeset paper (switch to sans in Settings).
+- **Editor that understands ComdTeX**: its own highlighting for math, environments, labels, references and citations; suggestions that appear as you type `[[`, `[@`, `@thm:`, `[^`, `{#` and `\`; Ctrl+click and F12 to jump to a note, label or BibTeX entry, Shift+F12 for usages; Ctrl+. quick fixes.
+- **Shortcuts changed to the VS Code convention**: Ctrl+P goes to a file, Ctrl+Shift+P (or F1) opens the commands, and the preview toggle moved to **Ctrl+Alt+P**.
+- **Files are created and renamed inline in the tree**, inside the folder they will live in.
+- Many data-safety fixes. This release includes 1.29.1, which was never published on its own.
 
 ### Added
 - **Quick fixes for the editor's warnings (Ctrl+.).** The lightbulb now offers a fix for most markers: close an unclosed `$$` or `:::`, remove a stray `:::`, create the note behind a missing `[[link]]` (it never overwrites an existing one and you stay on the document you were writing), add a BibTeX stub for an unknown `[@key]` to `references.bib`, normalize a ragged table, fill a `{{?}}` gap with the AI (only when the AI is on), add or drop arguments of a shorthand such as `frac(a)`, add a missing footnote definition and rename a duplicate label. Mistyped references, citation keys, note names, block types and cross-file paths get up to three "did you mean" suggestions, and a label that lives in another note can be rewritten to its `@path@kind:name` form. Every fix is a normal edit, so one undo reverts it.
