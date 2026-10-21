@@ -52,6 +52,8 @@ export interface PaletteCommandsCtx {
   openCmdkRef: RefObject<() => void>
   selectVault: () => void
   setTemplateOpen: (open: boolean) => void
+  /** Inline create in the file tree, at the shared target folder. */
+  startInlineCreate: (kind: "file" | "folder") => void
   handleOpenDailyNote: () => void
   handleOpenMacros: () => void
   handleOpenBib: () => void
@@ -103,6 +105,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     openCmdkRef,
     selectVault,
     setTemplateOpen,
+    startInlineCreate,
     handleOpenDailyNote,
     handleOpenMacros,
     handleOpenBib,
@@ -1249,6 +1252,18 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
 
     // ── Vault ────────────────────────────────────────────────────────────────
     { id: "vault", label: t.palette.openVault, category: "Vault", action: selectVault },
+    {
+      id: "newFile",
+      label: t.palette.newFile,
+      category: "Vault",
+      action: () => startInlineCreate("file"),
+    },
+    {
+      id: "newFolder",
+      label: t.palette.newFolder,
+      category: "Vault",
+      action: () => startInlineCreate("folder"),
+    },
     {
       id: "template",
       label: t.palette.newFromTemplate,

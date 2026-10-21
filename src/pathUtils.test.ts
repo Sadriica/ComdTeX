@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { pathBasename, pathDirname } from "./pathUtils"
+import { pathBasename, pathDirname, suggestedSavePath } from "./pathUtils"
 
 describe("pathBasename", () => {
   it("returns last segment of forward-slash path", () => {
@@ -31,5 +31,18 @@ describe("pathDirname", () => {
   })
   it("handles mixed separators using the last one", () => {
     expect(pathDirname("a/b\\c.md")).toBe("a/b")
+  })
+})
+
+describe("suggestedSavePath", () => {
+  it("puts the export next to the note, named after it", () => {
+    const file = { path: "/v/papers/spectral-gap.md", name: "spectral-gap.md" }
+    expect(suggestedSavePath(file, ".pdf")).toBe("/v/papers/spectral-gap.pdf")
+    expect(suggestedSavePath(file, "-anki-cards.txt")).toBe("/v/papers/spectral-gap-anki-cards.txt")
+    expect(suggestedSavePath(file)).toBe("/v/papers/spectral-gap.md")
+  })
+  it("falls back to a bare name without a note", () => {
+    expect(suggestedSavePath(null, ".md", "export.md")).toBe("export.md")
+    expect(suggestedSavePath(undefined)).toBeUndefined()
   })
 })

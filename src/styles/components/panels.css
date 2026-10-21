@@ -148,7 +148,6 @@
 .tag-filter,
 .search-input,
 .search-replace-inputs input,
-.tree-new-input input,
 .tree-rename-input,
 .fm-input,
 .fm-textarea,
@@ -186,7 +185,6 @@
 .tag-filter:focus,
 .search-input:focus,
 .search-replace-inputs input:focus,
-.tree-new-input input:focus,
 .tree-rename-input:focus,
 .fm-input:focus,
 .fm-textarea:focus,
@@ -653,18 +651,31 @@
   outline: 1px dashed var(--accent);
   outline-offset: -1px;
 }
-.tree-new-input {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
+.tree-drop-root {
+  background: var(--accent-soft);
+  outline: 1px dashed var(--accent);
+  outline-offset: -2px;
 }
-.tree-new-target {
-  display: block;
-  padding: 0 0 var(--space-2);
-  overflow: hidden;
-  color: var(--fg-muted);
+
+/* Inline name row: where a new item will live, or the item being renamed.
+   The message sits under the input, aligned with the name column. */
+.tree-row.tree-editing {
+  cursor: default;
+}
+.tree-row.tree-editing:hover {
+  background: transparent;
+}
+.tree-rename-input[aria-invalid="true"],
+.tree-rename-input[aria-invalid="true"]:focus {
+  border-color: var(--danger);
+}
+.tree-name-error {
+  padding: var(--space-1) var(--space-4) var(--space-2)
+    calc(var(--space-4) + var(--depth, 0) * 12px + 30px + var(--space-3));
+  color: var(--danger);
   font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
 }
 
 /* ── Search ──────────────────────────────────────────────────────────────── */

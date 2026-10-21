@@ -95,10 +95,14 @@ describe("files", () => {
       fileName: "New idea.md",
       folderRel: "notes",
       rel: "notes/New idea.md",
+      problem: null,
     })
     expect(createNoteTarget("a/b:c", "")?.fileName).toBe("a-b-c.md")
     expect(createNoteTarget("draft.tex", "x")?.fileName).toBe("draft.tex")
     expect(createNoteTarget("   ", "x")).toBeNull()
+    expect(createNoteTarget("refs.bib", "x")?.fileName).toBe("refs.bib")
+    expect(createNoteTarget("con", "x")?.problem).toBe("reserved")
+    expect(createNoteTarget("ends with dot.", "x")?.problem).toBe("edge")
   })
 })
 

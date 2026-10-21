@@ -28,6 +28,7 @@ import {
   Upload,
 } from "./icons"
 import { rankItems, positionRanges } from "./fuzzy"
+import { nameProblemText } from "./fileNaming"
 import { flattenCommands, rankCommands } from "./paletteCommandSearch"
 import {
   citationEntries,
@@ -208,6 +209,12 @@ export interface CommandPaletteProps {
   onInsertReference?: (text: string) => void
   /** Create `<folderRel>/<fileName>` in the vault and open it. */
   onCreateNote?: (fileName: string, folderRel: string) => void
+  /**
+   * The vault-relative folder a new note goes in: the shared target-folder rule
+   * (selected folder, else the selection's or active note's folder, else root).
+   * Without it the active note's folder is used.
+   */
+  getCreateFolderRel?: () => string
 }
 
 export default function CommandPalette({
@@ -231,6 +238,7 @@ export default function CommandPalette({
   onInsertCitation,
   onInsertReference,
   onCreateNote,
+  getCreateFolderRel,
 }: CommandPaletteProps) {
   const t = useT()
   const [mode, setMode] = useState<PaletteMode>(initialMode)
@@ -481,17 +489,27 @@ export default function CommandPalette({
           run: () => finish(() => cb.current.onOpenPath(r.entry.path)),
         })
         ranked.forEach((r, i) => out.push(fileRow(r, i)))
-        const activeFolder = activeFileFolder(fileEntries, activeFilePath)
+        const activeFolder = getCreateFolderRel?.() ?? activeFileFolder(fileEntries, activeFilePath)
         const target = query.trim() ? createNoteTarget(query, activeFolder) : null
         const exact = target
           ? fileEntries.some((e) => e.rel.toLowerCase() === target.rel.toLowerCase())
           : true
-        if (target && !exact && onCreateNote) {
+        if (target?.problem && !exact && onCreateNote) {
+          out.push({
+            key: "msg:create",
+            kind: "message",
+            label: t.palette.createNoteBlocked(
+              nameProblemText(t.naming.problems, target.problem, target.fileName),
+            ),
+            inert: true,
+          })
+        } else if (target && !exact && onCreateNote) {
+          // The full destination is the label: the user sees where the note will
+          // land before pressing Enter.
           out.push({
             key: "create",
             kind: "create",
-            label: t.palette.createNote(target.fileName),
-            detail: t.palette.createNoteIn(target.folderRel),
+            label: t.palette.createNote(target.rel),
             icon: <Icon icon={FilePlus} size={14} />,
             run: () => finish(() => cb.current.onCreateNote?.(target.fileName, target.folderRel)),
           })

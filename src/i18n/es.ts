@@ -156,7 +156,28 @@ export const es: T = {
     newFromTemplateHere: "Nuevo desde plantilla…",
     folderRules: "Reglas de la carpeta…",
     saveAsTemplate: "Guardar como plantilla…",
-    creatingIn: (folder: string) => `en ${folder}`,
+    newFolderInline: "Nueva carpeta",
+    revealLabel: "Mostrar en el árbol de archivos",
+  },
+
+  naming: {
+    problems: {
+      empty: "Escribe un nombre",
+      tooLong: "Nombre demasiado largo (máx. 255 caracteres)",
+      invalidChars: 'Estos caracteres no están permitidos: < > : " | ? * \\ /',
+      dotOnly: "Un nombre no puede ser solo puntos",
+      edge: "Un nombre no puede empezar ni terminar con espacio o punto",
+      reserved: "Nombre reservado en Windows",
+      exists: (name) => `"${name}" ya existe en esta carpeta`,
+      existsCase: (name) =>
+        `"${name}" ya existe aquí (en algunos sistemas las mayúsculas no cuentan)`,
+    },
+    ok: "Aceptar",
+    cancel: "Cancelar",
+    commentDialogTitle: "Añadir un comentario",
+    templateNameDialogTitle: "Guardar como plantilla",
+    newNoteDestination: (path) => `Crea ${path}`,
+    missingNoteCreate: (name) => `Crear la nota "${name}"`,
   },
 
   search: {
@@ -443,6 +464,8 @@ export const es: T = {
     title: "Nuevo archivo desde plantilla",
     filenameLabel: "Nombre del archivo",
     filenamePlaceholder: "mi-documento.md",
+    folderLabel: "Carpeta",
+    folderRoot: "Raíz del vault",
     cancel: "Cancelar",
     create: "Crear",
     useTemplates: "Usar plantillas",
@@ -497,6 +520,8 @@ export const es: T = {
     searchVault: "Buscar en vault",
     focusMode: "Modo enfoque",
     newFromTemplate: "Nuevo desde plantilla",
+    newFile: "Nuevo archivo",
+    newFolder: "Nueva carpeta",
     editMacros: "Editar macros.md",
     editBib: "Editar references.bib",
     settings: "Configuración",
@@ -643,8 +668,8 @@ export const es: T = {
     listLabel: "Resultados de la paleta",
     resultCount: (n) => (n === 0 ? "Sin resultados" : n === 1 ? "1 resultado" : `${n} resultados`),
     showingFirst: (shown, total) => `Mostrando ${shown} de ${total}: sigue escribiendo para acotar`,
-    createNote: (name) => `Crear nota "${name}"`,
-    createNoteIn: (folder) => (folder ? `en ${folder}` : "en la raíz del vault"),
+    createNote: (path) => `Crear ${path}`,
+    createNoteBlocked: (reason) => `No se puede crear la nota: ${reason}`,
     noteCreateFailed: "No se pudo crear la nota",
     goToLine: (line, column) =>
       column ? `Ir a la línea ${line}, columna ${column}` : `Ir a la línea ${line}`,
@@ -1181,6 +1206,8 @@ export const es: T = {
   },
 
   vault: {
+    createVaultTitle: "Crear nueva carpeta de vault",
+    newVaultName: "mi-vault",
     nameEmpty: "El nombre no puede estar vacío",
     nameTooLong: "Nombre demasiado largo (máx. 255 caracteres)",
     nameInvalidChars: 'Caracteres inválidos: < > : " | ? * \\',

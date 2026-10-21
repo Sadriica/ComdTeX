@@ -3,6 +3,7 @@ import { foldText, rankItems, type FuzzyField } from "./fuzzy"
 import type { LineEdit } from "./cursorContext"
 import type { StructuralLabel } from "./structuralLabels"
 import type { PaletteMode } from "./paletteTypes"
+import { displayDestination, finalName, validateName, type NameProblem } from "./fileNaming"
 
 /**
  * Data sources for the palette modes. Pure functions over data the app already
@@ -166,16 +167,22 @@ export function resolveNote(entries: readonly FileEntry[], note: string): FileEn
 export function createNoteTarget(
   query: string,
   currentFolderRel: string,
-): { fileName: string; folderRel: string; rel: string } | null {
+): { fileName: string; folderRel: string; rel: string; problem: NameProblem | null } | null {
   const cleaned = query
     .trim()
     .replace(/[\\/:*?"<>|]+/g, "-")
     .replace(/\s+/g, " ")
     .replace(/^[-.\s]+|[-\s]+$/g, "")
   if (!cleaned) return null
-  const fileName = /\.(md|tex|typ)$/i.test(cleaned) ? cleaned : `${cleaned}.md`
+  const fileName = finalName(cleaned, "file")
   const folderRel = currentFolderRel.replace(/^\/+|\/+$/g, "")
-  return { fileName, folderRel, rel: folderRel ? `${folderRel}/${fileName}` : fileName }
+  return {
+    fileName,
+    folderRel,
+    rel: displayDestination(folderRel, fileName),
+    // Existing names are the file rows above the create row; this catches the rest.
+    problem: validateName(cleaned, "file", []),
+  }
 }
 
 // ── Outline of a document (the `@` mode and note#heading) ───────────────────

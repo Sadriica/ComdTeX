@@ -175,16 +175,31 @@ describe("files mode", () => {
   it("offers to create a note when nothing matches, by row and by Shift+Enter", () => {
     const { props, input } = setup()
     type(input, "brand new idea")
-    expect(labels()).toEqual(['Create note "brand new idea.md"'])
+    // The label is the full destination, so the user sees where it will land.
+    expect(labels()).toEqual(["Create papers/brand new idea.md"])
     key(input, "Enter", { shiftKey: true })
     expect(props.onCreateNote).toHaveBeenCalledWith("brand new idea.md", "papers")
+  })
+
+  it("follows the shared target folder rule when the host provides it", () => {
+    const { props, input } = setup({ getCreateFolderRel: () => "notes/deep" })
+    type(input, "draft")
+    expect(labels()).toContain("Create notes/deep/draft.md")
+    key(input, "Enter", { shiftKey: true })
+    expect(props.onCreateNote).toHaveBeenCalledWith("draft.md", "notes/deep")
+  })
+
+  it("says why a name cannot be created instead of offering a bad row", () => {
+    const { input } = setup()
+    type(input, "con")
+    expect(labels()).toEqual(["Cannot create a note: Reserved name on Windows"])
   })
 
   it("still offers Create after real matches, as the last row", () => {
     const { input } = setup()
     type(input, "notes")
     const all = labels()
-    expect(all[all.length - 1]).toMatch(/^Create note/)
+    expect(all[all.length - 1]).toMatch(/^Create papers\/notes\.md$/)
   })
 
   it("jumps to a heading of another note with note#heading", () => {

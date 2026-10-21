@@ -21,7 +21,7 @@ import { collectLocalImagePaths } from "./exportBundle"
 import { imageCandidates } from "./imagePaths"
 import { extractFrontmatter } from "./frontmatter"
 import { MACROS_FILENAME } from "./macros"
-import { pathJoin, pathBasename, pathDirname } from "./pathUtils"
+import { pathJoin, pathBasename, pathDirname, suggestedSavePath } from "./pathUtils"
 import { composeProjectMarkdown, type ProjectFile } from "./projectExport"
 import { resolveDocumentContent } from "./documentResolve"
 import { lossyExportWarnings } from "./exportCompatibility"
@@ -308,7 +308,7 @@ export async function saveCurrentFileAs(
   const path = await save({
     title: ctx.dialogs.saveAs,
     filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
-    defaultPath: ctx.activeFile?.name,
+    defaultPath: suggestedSavePath(ctx.activeFile),
   })
   if (!path) return
   await writeTextFile(path, toDiskContent(path, content))
@@ -321,7 +321,7 @@ export async function exportMarkdown(ctx: ExportActionsContext) {
   const path = await save({
     title: ctx.dialogs.exportMd,
     filters: [{ name: "Markdown", extensions: ["md"] }],
-    defaultPath: ctx.activeFile?.name.replace(/\.[^.]+$/, ".md") ?? "export.md",
+    defaultPath: suggestedSavePath(ctx.activeFile, ".md", "export.md"),
   })
   if (!path) return
   await writeTextFile(path, toExportMarkdownContent(content))
@@ -334,7 +334,7 @@ export async function exportLatex(ctx: ExportActionsContext) {
   const outPathEarly = await save({
     title: ctx.dialogs.exportTex,
     filters: [{ name: "LaTeX", extensions: ["tex"] }],
-    defaultPath: ctx.activeFile?.name.replace(/\.[^.]+$/, ".tex") ?? "export.tex",
+    defaultPath: suggestedSavePath(ctx.activeFile, ".tex", "export.tex"),
   })
   if (!outPathEarly) return
 
@@ -392,7 +392,7 @@ export async function exportProjectLatex(ctx: ExportActionsContext) {
   const path = await save({
     title: ctx.dialogs.exportTex,
     filters: [{ name: "LaTeX", extensions: ["tex"] }],
-    defaultPath: `${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
+    defaultPath: `${ctx.vaultPath}/${title.replace(/[^\w.-]+/g, "-").toLowerCase()}.tex`,
   })
   if (!path) return
 
@@ -776,7 +776,11 @@ export async function backupVault(ctx: ExportActionsContext) {
     ctx.toast(ctx.messages.zipMissing, "error", 6000)
     return
   }
-  const outPath = await save({ filters: [{ name: "ZIP Archive", extensions: ["zip"] }] })
+  const outPath = await save({
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    // Beside the vault folder, named after it.
+    defaultPath: `${pathDirname(ctx.vaultPath) || "."}/${pathBasename(ctx.vaultPath) || "vault"}-backup.zip`,
+  })
   if (!outPath) return
   try {
     const vaultName = pathBasename(ctx.vaultPath) || "vault"
@@ -823,7 +827,7 @@ export async function exportRevealHtml(ctx: ExportActionsContext) {
     const path = await save({
       title: ctx.dialogs.exportReveal,
       filters: [{ name: "HTML", extensions: ["html"] }],
-      defaultPath: ctx.activeFile.name.replace(/\.[^.]+$/, ".html"),
+      defaultPath: suggestedSavePath(ctx.activeFile, ".html"),
     })
     if (!path) return
     await writeTextFile(path, html)
@@ -1023,7 +1027,7 @@ export async function exportTypst(ctx: TypstExportContext) {
   const outPath = await save({
     title: ctx.dialogTitle,
     filters: [{ name: "Typst", extensions: ["typ"] }],
-    defaultPath: file.name.replace(/\.[^.]+$/, ".typ"),
+    defaultPath: suggestedSavePath(file, ".typ"),
   })
   if (!outPath) return
   warnLossyExport(content, "latex", ctx.messages.lossWarning, ctx.toast)
@@ -1067,7 +1071,7 @@ export async function exportTypstPdf(ctx: TypstExportContext) {
   const outPath = await save({
     title: ctx.dialogTitle,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
-    defaultPath: file.name.replace(/\.[^.]+$/, ".pdf"),
+    defaultPath: suggestedSavePath(file, ".pdf"),
   })
   if (!outPath) return
   warnLossyExport(content, "latex", ctx.messages.lossWarning, ctx.toast)
@@ -1113,7 +1117,7 @@ export async function exportAnkiCardsToFile(
   }
   const path = await save({
     filters: [{ name: "Anki cards", extensions: ["txt"] }],
-    defaultPath: ctx.activeFile?.name.replace(/\.[^.]+$/, "-anki-cards.txt") ?? "anki-cards.txt",
+    defaultPath: suggestedSavePath(ctx.activeFile, "-anki-cards.txt", "anki-cards.txt"),
   })
   if (!path) return
   await writeTextFile(path, exportAnkiTsv(cards))

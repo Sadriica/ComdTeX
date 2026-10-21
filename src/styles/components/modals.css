@@ -443,3 +443,28 @@
     background: transparent;
   }
 }
+
+/* ── Text prompt (replaces window.prompt) ── */
+.prompt-label {
+  color: var(--fg-muted);
+  font-size: var(--text-md);
+}
+.prompt-field {
+  width: 100%;
+  flex: none;
+}
+
+/* Where the new file will land, or why it cannot be created. */
+.template-destination {
+  min-height: 1.45em;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+.template-destination-error {
+  color: var(--danger);
+}
+.template-filename-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
