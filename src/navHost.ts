@@ -42,8 +42,8 @@ export interface NavigationHost {
   getFiles(): NavFile[]
   /** Freshest text of an open tab, if the app has one. */
   getLiveText?(path: string): string | undefined
-  /** Absolute path of references.bib, or null without a vault. */
-  getBibPath(): string | null
+  /** Absolute path of references.bib (built with the platform's path join, as tabs are), or null without a vault. */
+  getBibPath(): string | null | Promise<string | null>
   /** Raw text of a vault file (asynchronous; used for references.bib only). */
   readText(path: string): Promise<string | null>
   /** Open a file (or just move the caret when it is the current one) at a position. */
@@ -72,6 +72,7 @@ export function resetEditorNavigation(): void {
   host = noopHost
   snapshotCache = null
   bibCache = null
+  bibIndex = null
 }
 
 export function getNavHost(): NavigationHost {
@@ -250,7 +251,7 @@ let bibCache: { at: number; path: string; text: string } | null = null
 const BIB_TTL_MS = 3000
 
 export async function readBibText(force = false): Promise<{ path: string; text: string } | null> {
-  const path = host.getBibPath()
+  const path = await host.getBibPath()
   if (!path) return null
   const now = Date.now()
   if (!force && bibCache && bibCache.path === path && now - bibCache.at < BIB_TTL_MS)
@@ -269,16 +270,38 @@ export interface BibLocation {
   col: number
 }
 
-/** Where `@type{key,` starts in references.bib. */
-export function findBibEntry(text: string, key: string): { line: number; col: number } | null {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const re = new RegExp(`^\\s*@\\w+\\s*[{(]\\s*(${escaped})\\s*,`, "i")
+// One scan per bib text, not one per citation: a note with 200 `[@key]` asks for
+// 200 lookups on every link refresh.
+const BIB_ENTRY_RE = /^\s*@\w+\s*[{(]\s*([^\s,]+)\s*,/
+let bibIndex: { text: string; entries: Map<string, { line: number; col: number }> } | null = null
+let bibScans = 0
+
+/** How many times a bib text has been scanned (for tests). */
+export function bibScanCount(): number {
+  return bibScans
+}
+
+function bibEntries(text: string): Map<string, { line: number; col: number }> {
+  if (bibIndex && bibIndex.text === text) return bibIndex.entries
+  bibScans++
+  const entries = new Map<string, { line: number; col: number }>()
   const lines = text.split("\n")
   for (let i = 0; i < lines.length; i++) {
-    const m = re.exec(lines[i])
-    if (m) return { line: i + 1, col: m[0].indexOf(m[1], m[0].search(/[{(]/) + 1) }
+    const m = BIB_ENTRY_RE.exec(lines[i])
+    if (!m) continue
+    const lower = m[1].toLowerCase()
+    // The first entry wins, as it did when each lookup scanned from the top.
+    if (!entries.has(lower)) {
+      entries.set(lower, { line: i + 1, col: m[0].indexOf(m[1], m[0].search(/[{(]/) + 1) })
+    }
   }
-  return null
+  bibIndex = { text, entries }
+  return entries
+}
+
+/** Where `@type{key,` starts in references.bib. */
+export function findBibEntry(text: string, key: string): { line: number; col: number } | null {
+  return bibEntries(text).get(key.toLowerCase()) ?? null
 }
 
 export async function locateBibEntry(key: string): Promise<BibLocation | null> {

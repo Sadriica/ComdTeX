@@ -16,7 +16,7 @@ import {
   type FakeModel,
   type FakeMonaco,
 } from "./fakeMonaco.testutil"
-import { resetEditorNavigation } from "./navHost"
+import { bibScanCount, resetEditorNavigation } from "./navHost"
 import type { NavFile } from "./navScan"
 
 const A_TEXT = [
@@ -212,6 +212,45 @@ describe("editor navigation providers", () => {
       expect(new URLSearchParams(first.query).get("path")).toBe("/v/a.md")
       expect(new URLSearchParams(first.query).get("line")).toBe("2")
     })
+  })
+})
+
+describe("references.bib lookups", () => {
+  const keys = Array.from({ length: 60 }, (_, i) => `key${i}`)
+  const bib = keys.map((k) => `@article{${k},\n  title = {T ${k}}\n}`).join("\n\n")
+  const text = `Cites: ${keys.map((k) => `[@${k}]`).join(" ")}`
+
+  it("scans the bibliography once for all the citations of a note", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.md",
+      getFiles: () => [{ path: "/v/a.md", name: "a.md", content: text }],
+      getBibPath: () => "/v/references.bib",
+      readText: async () => bib,
+    })
+    const p = createNavigationProviders(fake.api)
+    const before = bibScanCount()
+    const { links } = (await p.links.provideLinks(editorModel(text) as never, cancelToken))!
+    expect(links).toHaveLength(60)
+    expect(bibScanCount() - before).toBe(1)
+    resetEditorNavigation()
+  })
+
+  it("uses the bib path the host builds, even when it is built asynchronously", async () => {
+    resetEditorNavigation()
+    const fake = createFakeMonaco()
+    configureEditorNavigation({
+      getActivePath: () => "/v/a.md",
+      getFiles: () => [{ path: "/v/a.md", name: "a.md", content: text }],
+      getBibPath: async () => "C:\\vault\\references.bib",
+      readText: async () => bib,
+    })
+    const p = createNavigationProviders(fake.api)
+    const { links } = (await p.links.provideLinks(editorModel(text) as never, cancelToken))!
+    const query = new URLSearchParams((links[0].url as FakeUri).query)
+    expect(query.get("path")).toBe("C:\\vault\\references.bib")
+    resetEditorNavigation()
   })
 })
 

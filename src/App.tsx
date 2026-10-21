@@ -2951,8 +2951,9 @@ function AppContent({
       getActivePath: () => activeFilePathRef.current,
       getFiles: () => vaultFilesRef.current,
       getLiveText: (path) => vaultRef.current.getLiveContent(path),
-      getBibPath: () =>
-        vaultRef.current.vaultPath ? `${vaultRef.current.vaultPath}/${BIBTEX_FILENAME}` : null,
+      // The same join the tabs use, so the opened tab matches on Windows too.
+      getBibPath: async () =>
+        vaultRef.current.vaultPath ? pathJoin(vaultRef.current.vaultPath, BIBTEX_FILENAME) : null,
       readText: async (path) => {
         try {
           return await readTextFile(path)
