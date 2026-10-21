@@ -89,6 +89,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **No more `<!--cmdx type=... -->` line in the editor.** Callouts that no environment reproduces exactly (folded ones, `[!theorem]` without a prefix, `[!NOTE]`, `[!my-type]`) now stay ordinary callouts in the editor and are saved as written. Editor text from older builds that still carries the marker loads and saves correctly.
 - **Theorems keep their numbers outside LaTeX.** DOCX, Typst, Beamer, Markdown, Obsidian and Reveal.js exports lost environment numbering and printed references as raw `@thm:x`. They now read "Teorema 2 (Title)" and "Teorema 2", the same as the preview. A reference to an environment in another note cannot be numbered there, and the pre-export notice says so.
 - **Writing statistics survive a restart.** The Focus panel kept words, active time and pomodoros only for the running session. Totals are now kept per day (up to a year), the daily goal counts the whole day, and a Today section shows today and the last seven days.
+- **Typing a code fence no longer leaves a stray backtick.** Typing three backticks now gives exactly three, and a fenced block typed with Enter closes exactly as typed; inline `code` still closes its backtick.
+- **A dollar sign is no longer closed where it is not math.** "costs $5 each" and `echo $HOME` (in a code fence or inline code) keep a single `$`; a `$` is closed only after whitespace or an opening bracket. A price is no longer taken for the start of math, so Enter after "costs $5 and sum" breaks the line instead of accepting a shorthand, and Enter never accepts a suggestion that opened by itself in math until you move the selection.
 
 ## [1.29.1] - 2026-10-15
 
