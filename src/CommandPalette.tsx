@@ -52,6 +52,7 @@ import {
   recordCommandUse,
   savePalettePrefs,
   togglePinned,
+  prunePinned,
   type PalettePrefs,
 } from "./palettePrefs"
 import { shortcutForCommand, splitKeys } from "./appShortcuts"
@@ -197,8 +198,13 @@ export interface CommandPaletteProps {
   onOpenPath: (path: string, line?: number) => void
   /** Text of the current document, read once when the palette opens. */
   getDocumentText?: () => string | null
-  /** Text of another note, from the app's vault cache (no disk read). */
+  /**
+   * Text of another note when it is at hand: the live editor buffer of an open
+   * tab, else the vault cache. Null when the note is not cached.
+   */
   getFileText?: (path: string) => string | null
+  /** Reads a note that `getFileText` did not have (async; the palette shows a loading row). */
+  loadFileText?: (path: string) => Promise<string>
   getCursorContext?: () => CursorContext | null
   labels: StructuralLabel[]
   bib: ReadonlyMap<string, BibEntry>
@@ -223,6 +229,7 @@ export default function CommandPalette({
   onOpenPath,
   getDocumentText,
   getFileText,
+  loadFileText,
   getCursorContext,
   labels,
   bib,
@@ -278,7 +285,32 @@ export default function CommandPalette({
   }, [open])
 
   const fileEntries = useMemo(() => buildFileEntries(files, vaultRoot), [files, vaultRoot])
+  // `note#heading` for a note nothing had cached: read it once, show "Loading".
+  const [loadedNotes, setLoadedNotes] = useState<Record<string, string>>({})
+  const requestedNotes = useRef(new Set<string>())
+  useEffect(() => {
+    if (!open || mode !== "files" || !loadFileText) return
+    const nq = parseNoteQuery(query)
+    const note = nq ? resolveNote(fileEntries, nq.note) : null
+    if (!note || getFileText?.(note.path) != null || requestedNotes.current.has(note.path)) return
+    requestedNotes.current.add(note.path)
+    loadFileText(note.path)
+      .then((text) => setLoadedNotes((m) => ({ ...m, [note.path]: text })))
+      .catch(() => setLoadedNotes((m) => ({ ...m, [note.path]: "" })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, query, fileEntries, loadFileText])
   const { leaves, all: commandById } = useMemo(() => flattenCommands(commands), [commands])
+  // Once per opening: note pins whose command has gone and forget the ones that
+  // stay gone (see prunePinned). Runs against the commands this opening has.
+  useEffect(() => {
+    if (!open) return
+    setPrefs((current) => {
+      const next = prunePinned(current, (id) => commandById.has(id))
+      if (next !== current) savePalettePrefs(next)
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
   const outline = useMemo(
     () => (mode === "outline" && docText ? documentOutline(docText) : []),
     [mode, docText],
@@ -430,12 +462,20 @@ export default function CommandPalette({
       const noteQuery = parseNoteQuery(query)
       if (noteQuery) {
         const note = resolveNote(fileEntries, noteQuery.note)
-        const text = note && getFileText ? getFileText(note.path) : null
+        const text = note ? (getFileText?.(note.path) ?? loadedNotes[note.path] ?? null) : null
+        const loadingNote = !!note && text === null && !!loadFileText && !(note.path in loadedNotes)
         if (!note) {
           out.push({
             key: "msg:note",
             kind: "message",
             label: t.palette.noteNotFound(noteQuery.note),
+            inert: true,
+          })
+        } else if (loadingNote) {
+          out.push({
+            key: "msg:loading",
+            kind: "message",
+            label: t.palette.loadingNote,
             inert: true,
           })
         } else {
@@ -486,6 +526,14 @@ export default function CommandPalette({
         const exact = target
           ? fileEntries.some((e) => e.rel.toLowerCase() === target.rel.toLowerCase())
           : true
+        if (target && !exact && !onCreateNote && !vaultRoot) {
+          out.push({
+            key: "msg:create",
+            kind: "message",
+            label: t.palette.createNeedsVault,
+            inert: true,
+          })
+        }
         if (target && !exact && onCreateNote) {
           out.push({
             key: "create",
@@ -619,6 +667,7 @@ export default function CommandPalette({
     leaves,
     commandById,
     fileEntries,
+    loadedNotes,
     recentFiles,
     activeFilePath,
     labels,
@@ -660,6 +709,8 @@ export default function CommandPalette({
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.key === "Escape") {
       e.preventDefault()
+      // The window listener must not also act on this Escape (focus mode, etc.).
+      e.stopPropagation()
       if (inSubLevel) back()
       else onClose()
       return
@@ -691,7 +742,7 @@ export default function CommandPalette({
     } else if (e.key === "Backspace" && query === "" && !inSubLevel && mode !== "files") {
       e.preventDefault()
       switchMode("files")
-    } else if (e.altKey && e.code === "KeyP") {
+    } else if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyP") {
       // Pin / unpin the selected command (Alt+P: the key itself is the mnemonic).
       const row = rows[active]
       if (row?.pinId) {
@@ -713,7 +764,8 @@ export default function CommandPalette({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={t.palette.placeholder}
+        data-palette=""
+        aria-label={`${t.palette.placeholder}: ${modeName}`}
         data-mode={mode}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -813,7 +865,7 @@ export default function CommandPalette({
                 </span>
                 {row.detail && <span className="palette-desc">{row.detail}</span>}
                 {row.checked && (
-                  <span className="palette-check" aria-label="on">
+                  <span className="palette-check" aria-label={t.palette.checked}>
                     <Icon icon={Check} size={14} />
                   </span>
                 )}

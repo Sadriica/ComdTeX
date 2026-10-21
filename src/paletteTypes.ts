@@ -8,6 +8,10 @@ export interface CursorContext {
   lineNumber: number
   column: number
   line: string
+  /** Text of the `block` opener line, so an edit can tell the buffer moved on. */
+  blockOpener?: string | null
+  /** URI of the editor model the context was read from (guards stale edits). */
+  modelUri?: string
   hasSelection: boolean
   /** Inside `$...$` or a `$$` block. */
   inMath: "inline" | "display" | null

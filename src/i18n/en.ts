@@ -590,6 +590,7 @@ export const en: T = {
       group: "Here",
       mathToDisplay: "Convert to display math",
       changeEnvType: "Change environment type",
+      staleEdit: "The text changed since the palette opened, so nothing was edited.",
     },
     groups: {
       pinned: "Pinned",
@@ -600,6 +601,7 @@ export const en: T = {
     },
     pin: "Pin command",
     unpin: "Unpin command",
+    checked: "On",
     modes: {
       files: {
         name: "Files",
@@ -651,6 +653,8 @@ export const en: T = {
     noLabels: "No labels in this vault yet",
     noCitations: "No entries in references.bib",
     noHeadings: (note) => `No headings found in "${note}"`,
+    loadingNote: "Reading the note…",
+    createNeedsVault: "Open a vault to create notes",
     noteNotFound: (note) => `No note matches "${note}"`,
     inThisFile: "this file",
     insertCitationHint: "Insert citation",
@@ -1041,6 +1045,7 @@ export const en: T = {
   },
 
   menus: {
+    documentsFilter: "Documents",
     file: "File",
     edit: "Edit",
     view: "View",

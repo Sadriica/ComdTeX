@@ -147,7 +147,7 @@ import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
 import type { UpdateInfo } from "./useUpdater"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 import { commitPreview } from "./previewMorph"
-import { handleGlobalShortcut } from "./appShortcuts"
+import { handleGlobalShortcut, modalBlocksShortcut } from "./appShortcuts"
 import { useTouchpadGestures } from "./useTouchpadGestures"
 import ErrorBoundary, { LazyRegion } from "./ErrorBoundary"
 import WelcomeScreen from "./WelcomeScreen"
@@ -747,7 +747,6 @@ function AppContent({
     [],
   )
   const closePalette = useCallback(() => setPaletteReq((r) => ({ ...r, open: false })), [])
-  const pendingGotoRef = useRef<{ path: string; line: number } | null>(null)
   const [paletteLabels, setPaletteLabels] = useState<StructuralLabel[]>([])
   const [closedTabsOpen, setClosedTabsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -1778,7 +1777,8 @@ function AppContent({
       // the editor is focused, but the palette/menu present this as a global
       // shortcut, so handle it here (regardless of focus) too. Both paths call
       // openPanel("search").
-      const key = e.key.toLowerCase()
+      if (modalBlocksShortcut(e)) return
+      const key = e.key?.toLowerCase() ?? ""
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "f") {
         e.preventDefault()
         openPanel("search")
@@ -1819,10 +1819,11 @@ function AppContent({
           },
           goToBookmark: (slot: number) => {
             const line = bookmarksRef.current[slot]
-            if (!line || !editorRef.current) return
+            if (!line || !editorRef.current) return false
             editorRef.current.revealLineInCenter(line)
             editorRef.current.setPosition({ lineNumber: line, column: 1 })
             editorRef.current.focus()
+            return true
           },
           showBookmarks: () => setBookmarksOpen(true),
           togglePreview: () => updateSettings({ previewVisible: !settings.previewVisible }),
@@ -1844,7 +1845,7 @@ function AppContent({
             void (async () => {
               const path = await save({
                 title: t.menus.saveAs,
-                filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+                filters: [{ name: t.menus.documentsFilter, extensions: ["md", "tex"] }],
                 defaultPath: vault.openFile?.name,
               })
               if (!path) return
@@ -2513,16 +2514,6 @@ function AppContent({
         togglePreview: () =>
           updateSettings({ previewVisible: !settingsRef.current.previewVisible }),
       }))
-      // A palette jump to a line in a file that was not open: apply it now that
-      // the file's editor exists.
-      const pendingGoto = pendingGotoRef.current
-      if (pendingGoto && pendingGoto.path === vaultRef.current.activeTabPath) {
-        pendingGotoRef.current = null
-        setTimeout(() => {
-          editor.setPosition({ lineNumber: pendingGoto.line, column: 1 })
-          editor.revealLineInCenter(pendingGoto.line)
-        }, 0)
-      }
       // Note: Monaco has built-in spell-check via browser (no config needed)
       linterDisposableRef.current?.dispose()
       linterDisposableRef.current = setupContentLinter(editor, monaco, () => ({
@@ -2543,7 +2534,7 @@ function AppContent({
         void (async () => {
           const path = await save({
             title: t.menus.saveAs,
-            filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+            filters: [{ name: t.menus.documentsFilter, extensions: ["md", "tex"] }],
             defaultPath: vault.openFile?.name,
           })
           if (!path) return
@@ -3078,6 +3069,7 @@ function AppContent({
   // ── Navigation keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (modalBlocksShortcut(e)) return
       if (e.altKey && e.key === "ArrowLeft") {
         e.preventDefault()
         goBack()
@@ -3087,7 +3079,7 @@ function AppContent({
         goForward()
       }
       // Ctrl/Cmd + Shift + M → add a comment on the current line.
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key?.toLowerCase() === "m") {
         e.preventDefault()
         void handleAddCommentAtCursor()
       }
@@ -3673,7 +3665,7 @@ function AppContent({
     if (!editor) return
     const path = await save({
       title: t.menus.saveAs,
-      filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+      filters: [{ name: t.menus.documentsFilter, extensions: ["md", "tex"] }],
       defaultPath: vaultRef.current.openFile?.name,
     })
     if (!path) return
@@ -5021,19 +5013,30 @@ function AppContent({
   // (file tree, label index, bib map, open buffers); nothing here scans the disk.
   const paletteCtx = {
     getDocumentText: () => editorRef.current?.getValue() ?? vault.openFile?.content ?? null,
-    getFileText: (path: string) =>
-      vaultFilesRef.current.find((f) => f.path === path)?.content ?? null,
+    // The live buffer first: an open note's cached copy is whatever the vault
+    // last read, not what the user has typed since.
+    // `vaultFiles` holds "" for a note nobody has read yet, which must read as
+    // "not cached" so the palette loads it instead of reporting no headings.
+    getFileText: (path: string) => {
+      const live = vaultRef.current.getLiveContent(path)
+      if (live !== undefined) return live
+      return vaultFilesRef.current.find((f) => f.path === path)?.content || null
+    },
+    loadFileText: currentText,
     getCursorContext: () => {
       const editor = editorRef.current
       const model = editor?.getModel()
       const pos = editor?.getPosition()
       if (!editor || !model || !pos) return null
-      return computeCursorContext(
-        model.getValue(),
-        pos.lineNumber,
-        pos.column,
-        !editor.getSelection()?.isEmpty(),
-      )
+      return {
+        ...computeCursorContext(
+          model.getValue(),
+          pos.lineNumber,
+          pos.column,
+          !editor.getSelection()?.isEmpty(),
+        ),
+        modelUri: model.uri.toString(),
+      }
     },
     lineCount: () => editorRef.current?.getModel()?.getLineCount() ?? 1,
     onGoToLine: (line: number, column = 1) => {
@@ -5043,13 +5046,15 @@ function AppContent({
       editor?.focus()
     },
     onOpenPath: (path: string, line?: number) => {
-      const node = findVaultNodeByPath(path)
-      if (!node) return
-      if (line && vault.activeTabPath === path) {
-        paletteCtx.onGoToLine(line)
+      // A jump to a line goes through the same open-at path as every other
+      // navigation: its target expires on its own and a failed open leaves
+      // nothing behind to fire on a later one.
+      if (line) {
+        openEditorLocation(path, line, 1)
         return
       }
-      if (line) pendingGotoRef.current = { path, line }
+      const node = findVaultNodeByPath(path)
+      if (!node) return
       handleOpenFileNode(node)
     },
     onInsertCitation: (key: string) => {
@@ -5080,14 +5085,17 @@ function AppContent({
       editor.executeEdits("palette-ref", [{ range: selection, text, forceMoveMarkers: true }])
       editor.focus()
     },
-    onCreateNote: (fileName: string, folderRel: string) => {
-      const root = vault.vaultPath
-      if (!root) return
-      void (async () => {
-        const parentDir = folderRel ? await pathJoin(root, ...folderRel.split("/")) : root
-        await createFileWithRules(fileName, parentDir)
-      })()
-    },
+    // With no vault there is nowhere to write: the palette explains instead.
+    onCreateNote: vault.vaultPath
+      ? (fileName: string, folderRel: string) => {
+          const root = vault.vaultPath
+          if (!root) return
+          void (async () => {
+            const parentDir = folderRel ? await pathJoin(root, ...folderRel.split("/")) : root
+            await createFileWithRules(fileName, parentDir)
+          })()
+        }
+      : undefined,
   }
   const paletteEl = (
     <CommandPalette

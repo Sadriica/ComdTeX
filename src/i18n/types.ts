@@ -571,6 +571,8 @@ export interface T {
       group: string
       mathToDisplay: string
       changeEnvType: string
+      /** Toast when the buffer changed between opening the palette and applying an edit. */
+      staleEdit: string
     }
     groups: {
       pinned: string
@@ -581,6 +583,8 @@ export interface T {
     }
     pin: string
     unpin: string
+    /** Screen-reader label of the mark on an enabled toggle row. */
+    checked: string
     modes: Record<
       "files" | "commands" | "outline" | "labels" | "cite" | "line" | "help",
       { name: string; placeholder: string; hint: string }
@@ -598,6 +602,9 @@ export interface T {
     noLabels: string
     noCitations: string
     noHeadings: (note: string) => string
+    loadingNote: string
+    /** Shown where "Create note" would be when no vault is open. */
+    createNeedsVault: string
     noteNotFound: (note: string) => string
     inThisFile: string
     insertCitationHint: string
@@ -965,6 +972,8 @@ export interface T {
   }
 
   menus: {
+    /** Name of the .md/.tex filter in the Save As dialog. */
+    documentsFilter: string
     file: string
     edit: string
     view: string

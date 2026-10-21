@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { LANGS, LanguageContext } from "./i18n"
 import CommandPalette, { PALETTE_MAX_ROWS, type CommandPaletteProps } from "./CommandPalette"
 import { parseBibtex } from "./bibtex"
@@ -195,6 +195,25 @@ describe("files mode", () => {
     expect(props.onOpenPath).toHaveBeenCalledWith(`${ROOT}/notes/mixing-times.md`, 3)
   })
 
+  it("reads a note nothing had cached asynchronously and shows its headings", async () => {
+    const loadFileText = vi.fn(() => Promise.resolve("# Alpha\n\n## Late heading\n"))
+    const { props, input } = setup({ getFileText: () => null, loadFileText })
+    type(input, "mixing#late")
+    expect(screen.getByRole("option").textContent).toContain("Reading the note")
+    await waitFor(() => expect(labels()).toEqual(["Late heading"]))
+    expect(loadFileText).toHaveBeenCalledTimes(1)
+    expect(loadFileText).toHaveBeenCalledWith(`${ROOT}/notes/mixing-times.md`)
+    key(input, "Enter")
+    expect(props.onOpenPath).toHaveBeenCalledWith(`${ROOT}/notes/mixing-times.md`, 3)
+  })
+
+  it("says why there is no Create note row when no vault is open", () => {
+    const { input } = setup({ vaultRoot: null, files: [], onCreateNote: undefined })
+    type(input, "brand new idea")
+    expect(screen.getByRole("option").textContent).toContain("Open a vault to create notes")
+    expect(screen.queryByText(/^Create note/)).toBeNull()
+  })
+
   it("explains an unknown note in note#heading", () => {
     const { input } = setup()
     type(input, "zzzzzz#x")
@@ -316,6 +335,42 @@ describe("recents and pins", () => {
     setup({ initialMode: "commands" })
     expect(screen.getByText("Pinned")).toBeTruthy()
     expect(labels().slice(0, 2)).toEqual(["Find in file", "Table editor"])
+  })
+
+  it("does not pin on Ctrl+Alt+P (that is the preview toggle)", () => {
+    const { input } = setup({ initialMode: "commands" })
+    type(input, "find")
+    key(input, "p", { altKey: true, ctrlKey: true, code: "KeyP" })
+    expect(loadPalettePrefs().pinned).toEqual([])
+    key(input, "p", { altKey: true, metaKey: true, code: "KeyP" })
+    expect(loadPalettePrefs().pinned).toEqual([])
+  })
+
+  it("drops a pin whose command stays gone for several openings", () => {
+    localStorage.setItem(
+      STORAGE_KEYS.PALETTE_PREFS,
+      JSON.stringify({ v: 1, recent: [], pinned: ["save", "removed:cmd"] }),
+    )
+    for (let i = 0; i < 5; i++) {
+      const { view } = setup({ initialMode: "commands" })
+      view.unmount()
+      cleanup()
+    }
+    expect(loadPalettePrefs().pinned).toEqual(["save"])
+  })
+
+  it("Escape does not reach window listeners", () => {
+    const { input } = setup({ initialMode: "commands" })
+    const seen = vi.fn()
+    window.addEventListener("keydown", seen)
+    key(input, "Escape")
+    window.removeEventListener("keydown", seen)
+    expect(seen).not.toHaveBeenCalled()
+  })
+
+  it("names the dialog after its current mode", () => {
+    setup({ initialMode: "commands" })
+    expect(screen.getByRole("dialog").getAttribute("aria-label")).toMatch(/Commands/)
   })
 
   it("unpins from the button", () => {

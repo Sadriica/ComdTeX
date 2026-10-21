@@ -592,6 +592,7 @@ export const es: T = {
       group: "Aquí",
       mathToDisplay: "Convertir a ecuación en bloque",
       changeEnvType: "Cambiar el tipo de entorno",
+      staleEdit: "El texto cambió desde que se abrió la paleta, así que no se editó nada.",
     },
     groups: {
       pinned: "Fijados",
@@ -602,6 +603,7 @@ export const es: T = {
     },
     pin: "Fijar comando",
     unpin: "Quitar comando fijado",
+    checked: "Activado",
     modes: {
       files: {
         name: "Archivos",
@@ -653,6 +655,8 @@ export const es: T = {
     noLabels: "Todavía no hay etiquetas en este vault",
     noCitations: "No hay entradas en references.bib",
     noHeadings: (note) => `No se encontraron encabezados en "${note}"`,
+    loadingNote: "Leyendo la nota…",
+    createNeedsVault: "Abre un vault para crear notas",
     noteNotFound: (note) => `Ninguna nota coincide con "${note}"`,
     inThisFile: "este archivo",
     insertCitationHint: "Insertar cita",
@@ -1043,6 +1047,7 @@ export const es: T = {
   },
 
   menus: {
+    documentsFilter: "Documentos",
     file: "Archivo",
     edit: "Editar",
     view: "Ver",
