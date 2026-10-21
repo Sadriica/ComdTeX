@@ -58,10 +58,10 @@ test("command palette searches editor snippets such as flowchart", async ({ page
   await page.goto("/")
   await expect(page.locator(".welcome-logo")).toBeVisible()
 
-  await page.keyboard.press("Control+p")
+  await page.keyboard.press("Control+Shift+p")
   await page.locator(".palette-input").fill("flowchart")
 
-  await expect(page.getByRole("button", { name: /flowchart\s+:::flowchart/ })).toBeVisible()
+  await expect(page.getByRole("option").filter({ hasText: ":::flowchart" }).first()).toBeVisible()
 })
 
 test("the classic menu bar works from the keyboard", async ({ page }) => {

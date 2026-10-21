@@ -419,7 +419,9 @@ export default function CommandPalette({
           out.push(
             commandRow(r.flat.cmd, {
               positions: r.positions,
-              detail: r.flat.parents.length ? r.flat.parents.join(" › ") : undefined,
+              detail:
+                r.flat.cmd.description ??
+                (r.flat.parents.length ? r.flat.parents.join(" › ") : undefined),
             }),
           )
         }

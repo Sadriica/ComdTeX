@@ -5,7 +5,7 @@ tags: [grafos, notas]
 
 # Notas sobre grafos expansores
 
-Un grafo es *expansor* si todo subconjunto pequeño tiene muchos vecinos. El tiempo de mezcla satisface
+Un grafo es _expansor_ si todo subconjunto pequeño tiene muchos vecinos. El tiempo de mezcla satisface
 
 $$
 t_{\mathrm{mez}} \le \frac{\log n}{\gamma}
@@ -23,3 +23,4 @@ Para todo grafo regular, $\gamma/2 \le h(G) \le \sqrt{2\gamma}$.
 > Revisa también [[mixing-times]] y la ecuación @eq:mez.
 
 - [ ] Traducir el resumen al español
+$$
