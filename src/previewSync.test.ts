@@ -49,3 +49,66 @@ describe("preview to editor line mapping on a real paper", () => {
     expect(lines[Number(theorem?.getAttribute("data-source-line")) - 1]).toContain(":::theorem")
   })
 })
+
+describe("preview to editor line mapping across every fixture note", () => {
+  const notes = import.meta.glob("../e2e/fixtures/vault/**/*.md", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>
+  // Display math, tables, callouts and figures never read like their source,
+  // so they are matched by kind; each must still land on its own kind of line.
+  const KIND_LINE: [string, RegExp][] = [
+    ["div.eq-block", /\$\$/],
+    ["figure.tbl-block", /^\s*\|/],
+    ["div.callout", /^\s*>\s*\[!/],
+    ["figure.fig-block", /!\[/],
+  ]
+
+  for (const [path, raw] of Object.entries(notes)) {
+    it(`annotates every block of ${path.split("/vault/")[1]} on a line of its kind`, () => {
+      const lines = raw.split("\n")
+      const root = document.createElement("div")
+      root.innerHTML = renderMarkdown(raw)
+      const els = [
+        ...root.querySelectorAll<HTMLElement>(
+          "h1, h2, h3, h4, p, li, blockquote, figure, .env-wrap, .callout, .eq-block",
+        ),
+      ].filter(
+        (el) =>
+          !el.closest(".frontmatter-header, .bibliography, .footnotes") &&
+          (el.textContent ?? "").trim() !== "",
+      )
+      for (const el of els) {
+        const line = el.getAttribute("data-source-line")
+        expect(
+          line,
+          `${el.tagName}.${el.className}: ${el.textContent?.slice(0, 40)}`,
+        ).not.toBeNull()
+        for (const [selector, re] of KIND_LINE) {
+          if (el.matches(selector)) expect(lines[Number(line) - 1]).toMatch(re)
+        }
+      }
+    })
+  }
+})
+
+describe("display math in the middle of a paragraph", () => {
+  it("keeps the blocks after it on their own lines", () => {
+    const raw = [
+      "Before $$y$$ after.",
+      "",
+      "| a | b |",
+      "|---|---|",
+      "| 1 | 2 |",
+      "",
+      "Closing words here.",
+    ].join("\n")
+    const root = document.createElement("div")
+    root.innerHTML = renderMarkdown(raw)
+    expect(root.querySelector(".eq-block")?.getAttribute("data-source-line")).toBe("1")
+    expect(root.querySelector("figure.tbl-block")?.getAttribute("data-source-line")).toBe("3")
+    const last = [...root.querySelectorAll("p")].find((p) => p.textContent?.includes("Closing"))
+    expect(last?.getAttribute("data-source-line")).toBe("7")
+  })
+})

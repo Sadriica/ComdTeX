@@ -483,7 +483,8 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
 }
 
 const ANNOTATABLE_SELECTOR =
-  "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figure.tbl-block, div.callout, div.env-wrap"
+  "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figure.tbl-block, div.callout, div.env-wrap, " +
+  "div.eq-block, figure.fig-block"
 
 /**
  * Walk the rendered HTML and add `data-source-line="N"` to block elements
@@ -555,6 +556,12 @@ export function annotateSourceLinesIn(root: ParentNode, raw: string): void {
 const MATCH_WINDOW = 400
 const SIGNATURE_LEN = 32
 const MIN_PREFIX = 4
+// Blocks whose text never matches their source (a rendered equation, a table,
+// a callout whose title is generated) are keyed by kind instead. The control
+// character keeps a marker from ever prefix-matching real text.
+const MATH_MARK = "\u0001math"
+const TABLE_MARK = "\u0001table"
+const CALLOUT_MARK = "\u0001callout"
 
 interface SignatureEntry {
   line: number
@@ -599,8 +606,14 @@ function buildSignatureEntries(raw: string): SignatureEntry[] {
   let inFence = false
   let fenceFirstPending = false
   let inFrontmatter = false
+  let inMath = false
+  let inTable = false
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim()
+    if (inMath) {
+      if ((trimmed.match(/\$\$/g)?.length ?? 0) % 2 === 1) inMath = false
+      continue
+    }
     if (/^(```|~~~)/.test(trimmed)) {
       inFence = !inFence
       fenceFirstPending = inFence
@@ -623,10 +636,30 @@ function buildSignatureEntries(raw: string): SignatureEntry[] {
       if (trimmed === "---") inFrontmatter = false
       continue
     }
-    if (!trimmed || /^:::/.test(trimmed)) continue
-    if (/^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?$/.test(trimmed)) continue
+    if (!trimmed || /^:::/.test(trimmed)) {
+      inTable = false
+      continue
+    }
+    if (TABLE_SEPARATOR_RE.test(trimmed)) continue
+    if (trimmed.startsWith("|")) {
+      // A table is one block: its header row, when the next line separates.
+      if (!inTable && TABLE_SEPARATOR_RE.test(lines[i + 1]?.trim() ?? "")) {
+        out.push({ line: i + 1, sig: TABLE_MARK })
+        inTable = true
+      }
+      continue
+    }
+    inTable = false
+    if (/^>\s*\[![\w-]+\]/.test(trimmed)) {
+      out.push({ line: i + 1, sig: CALLOUT_MARK })
+      continue
+    }
     const sig = sourceSignature(trimmed)
     if (sig) out.push({ line: i + 1, sig })
+    // Each display equation opening on this line, after the line's own text.
+    const opens = trimmed.match(/\$\$/g)?.length ?? 0
+    for (let k = 0; k < Math.ceil(opens / 2); k++) out.push({ line: i + 1, sig: MATH_MARK })
+    if (opens % 2 === 1) inMath = true
   }
   lastEntriesRaw = raw
   lastEntries = out
@@ -639,9 +672,14 @@ let lastEntries: SignatureEntry[] = []
 const NOT_SOURCE_TEXT =
   ".katex, .katex-display, .eq-ref, .eq-ref-broken, .env-ref, .env-ref-broken, .fig-ref, " +
   ".fig-ref-broken, .xref, .xref-broken, .cite-ref, .cite-broken, sup, .footnote-ref, " +
-  ".sec-num, .callout-icon, .math-env-qed, .callout-title"
+  ".sec-num, .callout-icon, .math-env-qed, .callout-title, .fig-number"
+
+const TABLE_SEPARATOR_RE = /^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?$/
 
 function elementSignature(el: Element): string {
+  if (el.matches("div.eq-block")) return MATH_MARK
+  if (el.matches("figure.tbl-block")) return TABLE_MARK
+  if (el.matches("div.callout")) return CALLOUT_MARK
   if (el.tagName.toLowerCase() === "pre") {
     const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
     return first ? signature(first) : ""
