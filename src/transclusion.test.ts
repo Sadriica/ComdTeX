@@ -64,6 +64,15 @@ describe("processBlockIds + attachBlockIds", () => {
     expect(out).toContain("let x = 0 ^id")
   })
 
+  it("keeps exponents at the end of a line of math", () => {
+    const input = ["$$", "x^2", "a + b ^n", "$$", "", "Ends in $y^2$ and x^2"].join("\n")
+    expect(processBlockIds(input)).toBe(input)
+  })
+
+  it("still finds an id on its own line", () => {
+    expect(processBlockIds("A table\n^tbl")).toContain("<!--block:tbl-->")
+  })
+
   it("attachBlockIds hoists the comment to its parent block id", () => {
     const html = "<p>Important. <!--block:foo--></p>"
     const out = attachBlockIds(html)
