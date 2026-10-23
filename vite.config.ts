@@ -90,7 +90,7 @@ export default defineConfig(async () => ({
         "src/**/*.d.ts",
         "src/**/generated/**",
         "src/**/vendor/**",
-        // Pure translation-data files — huge string maps with no logic; the
+        // Pure translation-data files: huge string maps with no logic; the
         // parity test guards their structure, and counting them drags the
         // global ratio down without measuring any real code path.
         "src/i18n/es.ts",
@@ -98,7 +98,7 @@ export default defineConfig(async () => ({
         "src/i18n/types.ts",
         "src/templates.ts",
       ],
-      // Regression floor, not a target — set a few points below the measured
+      // Regression floor, not a target: set a few points below the measured
       // baseline (`npm run test:coverage`) so CI catches drops without blocking
       // on today's level. Raise these as coverage improves (App.tsx and the AI
       // layer are the big untested surfaces). Baseline measured 2026-07 after
@@ -129,7 +129,7 @@ export default defineConfig(async () => ({
             // lazy boundary. Without its own group, rolldown parks it in the
             // monaco chunk and the entry then preloads ~3.7 MB of Monaco.
             { name: "preload-helper", test: /vite[\\/]preload-helper/, priority: 100 },
-            // Monaco is huge — split it so the initial chunk loads faster
+            // Monaco is huge, split it so the initial chunk loads faster
             { name: "monaco-editor", test: /[\\/]node_modules[\\/]monaco-editor/ },
             // Keep react in its own chunk
             { name: "react-vendor", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },

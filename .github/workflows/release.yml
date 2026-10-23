@@ -169,7 +169,7 @@ jobs:
             echo ""
             echo "| Platform | File |"
             echo "|---|---|"
-            echo "| Linux (all distros, including Arch) | \`.AppImage\` — portable, no installation required |"
+            echo "| Linux (all distros, including Arch) | \`.AppImage\`: portable, no installation required |"
             echo "| Linux Debian/Ubuntu | \`.deb\` |"
             echo "| Windows | \`.exe\` (NSIS installer) |"
             echo ""
@@ -179,8 +179,8 @@ jobs:
             echo "ComdTeX checks for updates automatically on startup and installs them with one click."
             echo ""
             echo "### Optional dependencies"
-            echo "- \`pandoc\` — required for PDF, DOCX and Beamer export"
-            echo "- \`zip\` — required for vault backup"
+            echo "- \`pandoc\`: required for PDF, DOCX and Beamer export"
+            echo "- \`zip\`: required for vault backup"
             echo ""
             echo "## Changes"
             echo ""
@@ -223,7 +223,7 @@ jobs:
           echo "squashfs offset: $OFFSET"
           unsquashfs -o "$OFFSET" -d squashfs-root "$APPIMAGE"
 
-          # Remove bundled libwayland-egl — incompatible with Mesa 24+.
+          # Remove bundled libwayland-egl: incompatible with Mesa 24+.
           rm -f squashfs-root/usr/lib/libwayland-egl.so.1
 
           # Remove forced GDK_BACKEND=x11 and add WEBKIT_DISABLE_DMABUF_RENDERER.

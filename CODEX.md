@@ -237,7 +237,7 @@ npm run test:coverage: 52.5% statements / 47% branches / 40.8% functions / 53.6%
 cargo test --lib (src-tauri): 5 tests passed
 ```
 
-Before tagging, the full gate list lives in `CLAUDE.md` (Release workflow). `release.yml` runs a `verify` job (lint, types, tests, clippy, rustfmt) that the build jobs depend on; `ci.yml` also runs `format:check`, `cargo test` and the coverage floor.
+Before tagging, run the full gate list in the README (Development section). `release.yml` runs a `verify` job (lint, types, tests, clippy, rustfmt) that the build jobs depend on; `ci.yml` also runs `format:check`, `cargo test` and the coverage floor.
 
 Expected non-blocking warning:
 

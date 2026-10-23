@@ -25,7 +25,7 @@ public/wasm-tex/texlive/
 ```
 
 The engine requests names like `xcolor.sty`, `spanish.ldf`, `t1cmtt.fd`,
-`ecrm1200.tfm` — the kpathsea *format* number in the remote protocol is
+`ecrm1200.tfm`: the kpathsea *format* number in the remote protocol is
 ignored for local lookups, so one flat directory covers all types.
 
 ## Populating

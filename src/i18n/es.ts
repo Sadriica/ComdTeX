@@ -78,7 +78,7 @@ export const es: T = {
     lbl_heading1: "H1  # Título",
     lbl_heading2: "H2  ## Título",
     lbl_heading3: "H3  ### Título",
-    lbl_separator: "—  Separador",
+    lbl_separator: "---  Separador",
     lbl_list: "•  Lista",
     lbl_orderedList: "1. Lista numerada",
     lbl_taskList: "Lista tareas",

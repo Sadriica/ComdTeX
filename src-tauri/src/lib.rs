@@ -10,8 +10,8 @@ const DOT_FILES_IN_VAULT: &[&str] = &[".comdtex-comments.json"];
 /// Extends the runtime fs-plugin scope and asset-protocol scope to allow
 /// access to the user's vault folder, which lives at an arbitrary,
 /// user-chosen path on disk and therefore cannot be granted statically in
-/// `capabilities/default.json` (see the "Tauri v2: important notes" /
-/// scope-hardening section in CLAUDE.md).
+/// `capabilities/default.json`; the frontend grants it through
+/// `src/vaultScope.ts` on every vault open.
 ///
 /// The frontend MUST call this (via `src/vaultScope.ts`'s `allowVaultDir`)
 /// every time a vault is opened, or all fs/asset access to files inside the
@@ -146,8 +146,7 @@ fn allow_vault_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
 }
 
 /// OS-keychain-backed secret storage, used to keep the AI provider API key
-/// (and any other future secrets) out of localStorage/plaintext JSON. See
-/// the "AI assistant: BYO provider" section in CLAUDE.md: the key used to
+/// (and any other future secrets) out of localStorage/plaintext JSON. The key used to
 /// live in `settings.aiApiKey` inside `localStorage`; it is now written
 /// through here to the platform keychain (Secret Service on Linux, Keychain
 /// on macOS, Credential Manager on Windows) via the `keyring` crate.

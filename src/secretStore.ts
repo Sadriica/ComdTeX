@@ -2,8 +2,7 @@
  * OS-keychain-backed secret storage.
  *
  * Secrets like the AI provider API key (`settings.aiApiKey`) used to be
- * serialized in plaintext inside `localStorage` (`comdtex_settings`); see
- * the "AI assistant: BYO provider" section in CLAUDE.md. This module routes
+ * serialized in plaintext inside `localStorage` (`comdtex_settings`). This module routes
  * secrets through the Rust `set_secret` / `get_secret` / `delete_secret`
  * commands (src-tauri/src/lib.rs), which use the `keyring` crate to reach
  * the platform keychain (Secret Service on Linux, Keychain on macOS,

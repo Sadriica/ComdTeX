@@ -1,6 +1,6 @@
 // Extracted from App.tsx: the export/import/compile handlers. These are thin
 // wrappers over exportActions.ts, moved verbatim (no behavior change) to keep
-// App.tsx smaller. See CLAUDE.md: App.tsx is a documented refactor target.
+// App.tsx smaller.
 import { useCallback, useLayoutEffect, useMemo, useRef, type RefObject } from "react"
 import type * as monaco from "monaco-editor"
 import { save } from "@tauri-apps/plugin-dialog"

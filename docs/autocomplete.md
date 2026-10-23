@@ -150,7 +150,7 @@ first source that recognises its context; each source is its own module.
 | In-app syntax reference | `src/HelpPanel.tsx` |
 
 Adding a shorthand touches all of: `preprocessor.ts`, `completion/catalog.ts`,
-`Toolbar.tsx`, `HelpPanel.tsx`, and both i18n catalogs; see `CLAUDE.md`. Its
+`Toolbar.tsx`, `HelpPanel.tsx`, and both i18n catalogs. Its
 argument count belongs in `EXPECTED_ARGS` (`contentLinter.ts`), which also
 drives the signature help. When a special block's grammar changes, update its
 catalog in `SPECIAL_BLOCK_COMPLETIONS` too.

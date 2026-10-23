@@ -20,7 +20,7 @@ Add an optional category with a `word: ` prefix:
 
 ```markdown
 Un ^^def: grupo abeliano^^ tiene operación conmutativa.
-El teorema exige compacidad — ^^duda: revisar la hipótesis^^.
+El teorema exige compacidad; ^^duda: revisar la hipótesis^^.
 La constante vale ^^dato: 6.022e23^^.
 ```
 
@@ -58,12 +58,12 @@ The panel reads your documents directly, so it is always in sync; there is no se
 
 ## def
 
-- grupo abeliano — `algebra.md:12`
-- anillo — `algebra.md:40`
+- grupo abeliano (`algebra.md:12`)
+- anillo (`algebra.md:40`)
 
 ## duda
 
-- revisar la hipótesis — `topologia.md:7`
+- revisar la hipótesis (`topologia.md:7`)
 ```
 
 This is a one-off snapshot, on demand. Nothing is auto-written.

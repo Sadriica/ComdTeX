@@ -1,7 +1,6 @@
 // Extracted from App.tsx: the Command Palette entries factory. Declarative
 // data built from handlers + translations: moved verbatim (no behavior
-// change) to keep App.tsx smaller. See CLAUDE.md: App.tsx is a documented
-// refactor target.
+// change) to keep App.tsx smaller.
 import { createElement, type RefObject } from "react"
 import type { editor as MonacoEditor } from "monaco-editor"
 import type { CursorContext, PaletteCommand, PaletteMode } from "./paletteTypes"
