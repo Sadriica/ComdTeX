@@ -95,7 +95,8 @@ export function serializeFolderRules(rules: FolderRules): string {
   const out: Record<string, unknown> = { version: rules.version || 1 }
   if (rules.defaultTemplate) out.defaultTemplate = rules.defaultTemplate
   if (rules.filenamePattern) out.filenamePattern = rules.filenamePattern
-  if (rules.frontmatter && Object.keys(rules.frontmatter).length > 0) out.frontmatter = rules.frontmatter
+  if (rules.frontmatter && Object.keys(rules.frontmatter).length > 0)
+    out.frontmatter = rules.frontmatter
   if (rules.generated && rules.generated.length > 0) out.generated = rules.generated
   return `${JSON.stringify(out, null, 2)}\n`
 }
@@ -121,15 +122,19 @@ export function resolveRulesForDir(
     .filter((rules): rules is FolderRules => rules !== undefined)
   if (applicable.length === 0) return null
 
-  const merged = applicable.reduce<FolderRules>((inherited, rules) => ({
-    version: rules.version,
-    defaultTemplate: rules.defaultTemplate ?? inherited.defaultTemplate,
-    filenamePattern: rules.filenamePattern ?? inherited.filenamePattern,
-    frontmatter: (rules.frontmatter || inherited.frontmatter)
-      ? { ...inherited.frontmatter, ...rules.frontmatter }
-      : undefined,
-    generated: rules.generated,
-  }), { version: 1 })
+  const merged = applicable.reduce<FolderRules>(
+    (inherited, rules) => ({
+      version: rules.version,
+      defaultTemplate: rules.defaultTemplate ?? inherited.defaultTemplate,
+      filenamePattern: rules.filenamePattern ?? inherited.filenamePattern,
+      frontmatter:
+        rules.frontmatter || inherited.frontmatter
+          ? { ...inherited.frontmatter, ...rules.frontmatter }
+          : undefined,
+      generated: rules.generated,
+    }),
+    { version: 1 },
+  )
   // Generated files are NOT inherited: they name a concrete file inside the
   // folder that declared them, so inheriting would recreate a parent's index in
   // every subfolder. Only the target folder's own declaration survives; the

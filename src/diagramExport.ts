@@ -22,7 +22,7 @@ import { renderGraphSVG } from "./graphViz"
 import { renderPlotHTML } from "./functionPlot"
 import { renderCommDiagSVG } from "./commDiag"
 import { buildTruthTable } from "./truthTable"
-import { MERMAID_CONFIG } from "./mermaidConfig"
+import { getActiveMermaidConfig } from "./mermaidConfig"
 
 export interface SpecialBlock {
   type: string
@@ -36,7 +36,8 @@ export interface SpecialBlock {
   end: number
 }
 
-const OPEN_RE = /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[([^\]]*)\])?\s*(\S+)?\s*$/
+const OPEN_RE =
+  /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[([^\]]*)\])?\s*(\S+)?\s*$/
 
 /** Scan a document for special blocks (fenced code is respected). */
 export function findSpecialBlocks(md: string): SpecialBlock[] {
@@ -44,7 +45,10 @@ export function findSpecialBlocks(md: string): SpecialBlock[] {
   const out: SpecialBlock[] = []
   let inFence = false
   for (let i = 0; i < lines.length; i++) {
-    if (/^(```|~~~)/.test(lines[i])) { inFence = !inFence; continue }
+    if (/^(```|~~~)/.test(lines[i])) {
+      inFence = !inFence
+      continue
+    }
     if (inFence) continue
     const open = OPEN_RE.exec(lines[i])
     if (!open) continue
@@ -84,7 +88,10 @@ export function hasRasterBlocks(md: string): boolean {
 /** A truth block as a plain Markdown table every export understands. */
 export function truthBlockToMarkdown(body: string): string | null {
   try {
-    const exprs = body.split("\n").map((l) => l.trim()).filter(Boolean)
+    const exprs = body
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
     if (exprs.length === 0) return null
     const { vars, exprs: cols, rows } = buildTruthTable(exprs)
     const header = [...vars, ...cols]
@@ -118,9 +125,12 @@ const PRINT_VARS: Record<string, string> = {
 }
 
 export function svgForPrint(svg: string): string {
-  let out = svg.replace(/var\((--[\w-]+)(?:,\s*([^)]+))?\)/g, (_m, name: string, fallback?: string) => {
-    return PRINT_VARS[name] ?? (fallback ? fallback.trim() : "#1a1a1a")
-  })
+  let out = svg.replace(
+    /var\((--[\w-]+)(?:,\s*([^)]+))?\)/g,
+    (_m, name: string, fallback?: string) => {
+      return PRINT_VARS[name] ?? (fallback ? fallback.trim() : "#1a1a1a")
+    },
+  )
   // Rasterization needs explicit pixel dimensions; percentage widths render 0.
   const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(out)
   if (vb) {
@@ -163,12 +173,19 @@ export async function diagramToSvg(block: SpecialBlock): Promise<string | null> 
         // theme; switch to a print theme just for this render, then restore,
         // so an open preview never inherits the export's palette.
         const mermaid = await loadMermaid()
-        mermaid.initialize({ ...MERMAID_CONFIG, theme: "neutral", themeVariables: { background: "#ffffff" } } as Parameters<typeof mermaid.initialize>[0])
+        mermaid.initialize({
+          ...getActiveMermaidConfig(),
+          theme: "neutral",
+          themeVariables: { background: "#ffffff" },
+        } as Parameters<typeof mermaid.initialize>[0])
         try {
-          const { svg } = await mermaid.render(`comdtex-export-${Math.abs(hash(block.body))}`, block.body)
+          const { svg } = await mermaid.render(
+            `comdtex-export-${Math.abs(hash(block.body))}`,
+            block.body,
+          )
           return extractSvg(svg)
         } finally {
-          mermaid.initialize(MERMAID_CONFIG as Parameters<typeof mermaid.initialize>[0])
+          mermaid.initialize(getActiveMermaidConfig() as Parameters<typeof mermaid.initialize>[0])
         }
       }
       case "excalidraw": {
@@ -176,7 +193,11 @@ export async function diagramToSvg(block: SpecialBlock): Promise<string | null> 
         const { exportToSvg } = await import("@excalidraw/excalidraw")
         const el = await exportToSvg({
           elements: scene.elements ?? [],
-          appState: { ...(scene.appState ?? {}), exportBackground: true, viewBackgroundColor: "#ffffff" },
+          appState: {
+            ...(scene.appState ?? {}),
+            exportBackground: true,
+            viewBackgroundColor: "#ffffff",
+          },
           files: scene.files ?? null,
         })
         return el.outerHTML
@@ -217,7 +238,9 @@ export async function svgToPngBytes(svg: string, scale = 2): Promise<Uint8Array 
       ctx.fillStyle = "#ffffff"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"))
+      const pngBlob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      )
       if (!pngBlob) return null
       return new Uint8Array(await pngBlob.arrayBuffer())
     } finally {
@@ -261,7 +284,12 @@ export async function replaceDiagramsForExport(
 
     if (block.type === "truth") {
       const table = truthBlockToMarkdown(block.body)
-      if (table) replacements.push({ start: block.start, end: block.end, text: [`**${caption}**`, "", table] })
+      if (table)
+        replacements.push({
+          start: block.start,
+          end: block.end,
+          text: [`**${caption}**`, "", table],
+        })
       continue
     }
 

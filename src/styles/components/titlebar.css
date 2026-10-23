@@ -1,0 +1,88 @@
+/* ── App header: one compact row = classic menus, window title, window controls ──
+   The title bar and the classic menu bar share the row; the sectioned toolbar
+   (menubar.css) is the second row. Chrome tokens only. */
+.app {
+  --chrome-row: 32px;
+}
+
+.app-header {
+  position: relative;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  height: var(--chrome-row);
+  flex-shrink: 0;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.titlebar {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.titlebar-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-5);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar-controls {
+  display: flex;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+/* Native-sized hit areas: 46 x 32. */
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: var(--chrome-row);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  /* Flat (text) presentation so glyphs never render as coloured emoji. */
+  font-variant-emoji: text;
+  transition: var(--transition-ui);
+}
+.titlebar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.titlebar-btn:active {
+  background: var(--bg-active);
+}
+.titlebar-btn:focus-visible {
+  outline-offset: -3px;
+}
+.titlebar-btn:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+}
+.titlebar-close:hover,
+.titlebar-close:active {
+  background: var(--danger);
+  color: var(--bg-app);
+}
+
+/* Focus mode and print hide the whole header. */
+.focus-mode .app-header {
+  display: none;
+}

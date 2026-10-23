@@ -1,5 +1,6 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useId } from "react"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 import { displayBasename } from "./pathUtils"
 import { loadCustomTemplates, TEMPLATES } from "./templates"
@@ -42,6 +43,7 @@ export default function FolderRulesModal(props: FolderRulesModalProps) {
 function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   useFocusTrap(modalRef, dirPath !== null, onClose)
 
   const [defaultTemplate, setDefaultTemplate] = useState(rules?.defaultTemplate ?? "")
@@ -49,8 +51,10 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
   const [generated, setGenerated] = useState<GeneratedFileRule[]>(rules?.generated ?? [])
   const [frontmatterYaml, setFrontmatterYaml] = useState(() =>
     rules?.frontmatter && Object.keys(rules.frontmatter).length > 0
-      // serializeFrontmatter emits the --- fences; the textarea shows the body.
-      ? serializeFrontmatter(rules.frontmatter).replace(/^---\n/, "").replace(/\n---$/, "")
+      ? // serializeFrontmatter emits the --- fences; the textarea shows the body.
+        serializeFrontmatter(rules.frontmatter)
+          .replace(/^---\n/, "")
+          .replace(/\n---$/, "")
       : "",
   )
 
@@ -81,24 +85,40 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
   }
 
   const updateGenerated = (index: number, patch: Partial<GeneratedFileRule>) => {
-    setGenerated((g) => g.map((rule, i) => {
-      if (i !== index) return rule
-      const next = { ...rule, ...patch }
-      // Changing the type while the filename is still the previous default is
-      // almost certainly not intentional; follow it along.
-      if (patch.type && rule.file === DEFAULT_FILENAMES[rule.type]) {
-        next.file = DEFAULT_FILENAMES[patch.type]
-      }
-      return next
-    }))
+    setGenerated((g) =>
+      g.map((rule, i) => {
+        if (i !== index) return rule
+        const next = { ...rule, ...patch }
+        // Changing the type while the filename is still the previous default is
+        // almost certainly not intentional; follow it along.
+        if (patch.type && rule.file === DEFAULT_FILENAMES[rule.type]) {
+          next.file = DEFAULT_FILENAMES[patch.type]
+        }
+        return next
+      }),
+    )
   }
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal modal-wide" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal modal-wide"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
-          <span>{t.folderRules.title(displayBasename(dirPath))}</span>
-          <button className="modal-close" onClick={onClose} aria-label={t.folderRules.close}>✕</button>
+          <span id={titleId}>{t.folderRules.title(displayBasename(dirPath))}</span>
+          <button
+            className="modal-close"
+            onClick={onClose}
+            aria-label={t.folderRules.close}
+            title={t.folderRules.close}
+          >
+            <Icon icon={X} size={14} />
+          </button>
         </div>
 
         <div className="modal-body folder-rules-body">
@@ -109,7 +129,9 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
             <select value={defaultTemplate} onChange={(e) => setDefaultTemplate(e.target.value)}>
               <option value="">{t.folderRules.noTemplate}</option>
               {templates.map((tpl) => (
-                <option key={tpl.id} value={tpl.id}>{t.templates[tpl.id]?.name ?? tpl.name}</option>
+                <option key={tpl.id} value={tpl.id}>
+                  {t.templates[tpl.id]?.name ?? tpl.name}
+                </option>
               ))}
             </select>
           </label>
@@ -130,7 +152,7 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
             <textarea
               rows={5}
               value={frontmatterYaml}
-              placeholder={"materia: Álgebra II\ntags: [\"algebra\"]"}
+              placeholder={'materia: Álgebra II\ntags: ["algebra"]'}
               onChange={(e) => setFrontmatterYaml(e.target.value)}
             />
             <small>{t.folderRules.frontmatterHint}</small>
@@ -153,13 +175,17 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
                   onChange={(e) => updateGenerated(i, { type: e.target.value as GeneratorType })}
                 >
                   {GENERATOR_TYPES.map((type) => (
-                    <option key={type} value={type}>{t.folderRules.generatorNames[type]}</option>
+                    <option key={type} value={type}>
+                      {t.folderRules.generatorNames[type]}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={rule.scope}
                   aria-label={t.folderRules.generatedScope}
-                  onChange={(e) => updateGenerated(i, { scope: e.target.value as "folder" | "vault" })}
+                  onChange={(e) =>
+                    updateGenerated(i, { scope: e.target.value as "folder" | "vault" })
+                  }
                 >
                   <option value="folder">{t.folderRules.scopeFolder}</option>
                   <option value="vault">{t.folderRules.scopeVault}</option>
@@ -168,16 +194,25 @@ function FolderRulesForm({ dirPath, rules, onClose, onSave }: FolderRulesModalPr
                   className="folder-rules-remove"
                   aria-label={t.folderRules.removeGenerated}
                   onClick={() => setGenerated((g) => g.filter((_, n) => n !== i))}
-                >✕</button>
+                  title={t.folderRules.removeGenerated}
+                >
+                  <Icon icon={X} size={14} />
+                </button>
               </div>
             ))}
-            <button className="folder-rules-add" onClick={addGenerated}>{t.folderRules.addGenerated}</button>
+            <button className="folder-rules-add" onClick={addGenerated}>
+              {t.folderRules.addGenerated}
+            </button>
           </div>
         </div>
 
         <div className="modal-footer">
-          <button onClick={onClose}>{t.folderRules.cancel}</button>
-          <button className="btn-create" onClick={handleSave}>{t.folderRules.save}</button>
+          <button className="btn-cancel" onClick={onClose}>
+            {t.folderRules.cancel}
+          </button>
+          <button className="btn-create" onClick={handleSave}>
+            {t.folderRules.save}
+          </button>
         </div>
       </div>
     </div>

@@ -33,6 +33,8 @@ For a mixed outcome, open the file in the editor instead: the conflicting region
 
 ## Notes
 
+- Every Git command the app runs goes through one helper, `runGit` in `src/gitApi.ts`, with `-c core.fsmonitor=false -c core.hooksPath=<null device> -c protocol.ext.allow=never -c core.quotepath=false`. This keeps a cloned repository from running its own code when you open it as a vault. A consequence: **your own Git hooks do not run for commits made from the app**. Commit from a terminal if you rely on them.
+- Status is read with `git status --porcelain=v1 -z`, so file names with spaces or accents and renamed files are handled. The panel tells apart "git is not installed" (the command cannot be started), "this folder is not a repository" (exit 128) and any other Git error, which it shows as is.
 - The advanced sections of the Git panel (branches, staging, stash, remotes) remain available; the guided section is a layer, not a replacement.
 - Works with any Git host, not only GitHub; the create button simply opens GitHub because it is where most coauthors already are.
 - Private repository + Git history means your drafts stay yours, versioned, and off anyone's servers except the host you chose. This is the same local-first stance as the rest of ComdTeX.

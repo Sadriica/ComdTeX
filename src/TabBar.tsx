@@ -2,6 +2,7 @@ import { memo, useState } from "react"
 import type { OpenFile } from "./types"
 import type { LintSummary } from "./contentLinter"
 import { useT } from "./i18n"
+import { Circle, Icon, Pin, X } from "./icons"
 
 interface TabBarProps {
   tabs: OpenFile[]
@@ -14,7 +15,16 @@ interface TabBarProps {
   onReorder?: (from: number, to: number) => void
 }
 
-function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPaths, onTogglePin, onReorder }: TabBarProps) {
+function TabBar({
+  tabs,
+  activeTabPath,
+  onSwitch,
+  onClose,
+  lintCounts,
+  pinnedPaths,
+  onTogglePin,
+  onReorder,
+}: TabBarProps) {
   const t = useT()
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
@@ -37,13 +47,27 @@ function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPath
             onClick={() => onSwitch(tab.path)}
             title={tab.path}
             draggable
-            onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragIdx(idx) }}
-            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }}
-            onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) onReorder?.(dragIdx, idx); setDragIdx(null) }}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move"
+              setDragIdx(idx)
+            }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (dragIdx !== null && dragIdx !== idx) onReorder?.(dragIdx, idx)
+              setDragIdx(null)
+            }}
             onDragEnd={() => setDragIdx(null)}
           >
             <span className="tab-name">{tab.name}</span>
-            {tab.isDirty && <span className="tab-dirty">●</span>}
+            {tab.isDirty && (
+              <span className="tab-dirty" aria-hidden="true">
+                <Icon icon={Circle} size={14} className="icon-filled" />
+              </span>
+            )}
             {hasErrors && (
               <span className="tab-lint-error" title={`${errors} error${errors === 1 ? "" : "s"}`}>
                 {errors}
@@ -57,17 +81,26 @@ function TabBar({ tabs, activeTabPath, onSwitch, onClose, lintCounts, pinnedPath
             <button
               className={`tab-pin${isPinned ? " tab-pinned" : ""}`}
               title={isPinned ? t.tabBar.unpin : t.tabBar.pin}
-              onClick={(e) => { e.stopPropagation(); onTogglePin?.(tab.path) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin?.(tab.path)
+              }}
               aria-label={isPinned ? t.tabBar.unpinAriaLabel : t.tabBar.pinAriaLabel}
             >
-              {isPinned ? "📌" : "·"}
+              <Icon icon={Pin} size={14} style={isPinned ? { fill: "currentColor" } : undefined} />
             </button>
             {!isPinned && (
               <button
                 className="tab-close"
                 title={t.titleBar.close}
-                onClick={(e) => { e.stopPropagation(); onClose(tab.path) }}
-              >×</button>
+                aria-label={t.titleBar.close}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose(tab.path)
+                }}
+              >
+                <Icon icon={X} size={14} />
+              </button>
             )}
           </div>
         )
@@ -103,13 +136,15 @@ function samePinnedPaths(a?: Set<string>, b?: Set<string>): boolean {
   return true
 }
 
-export default memo(TabBar, (prev, next) =>
-  prev.activeTabPath === next.activeTabPath &&
-  prev.onSwitch === next.onSwitch &&
-  prev.onClose === next.onClose &&
-  prev.onTogglePin === next.onTogglePin &&
-  prev.onReorder === next.onReorder &&
-  prev.lintCounts === next.lintCounts &&
-  samePinnedPaths(prev.pinnedPaths, next.pinnedPaths) &&
-  sameTabsForDisplay(prev.tabs, next.tabs)
+export default memo(
+  TabBar,
+  (prev, next) =>
+    prev.activeTabPath === next.activeTabPath &&
+    prev.onSwitch === next.onSwitch &&
+    prev.onClose === next.onClose &&
+    prev.onTogglePin === next.onTogglePin &&
+    prev.onReorder === next.onReorder &&
+    prev.lintCounts === next.lintCounts &&
+    samePinnedPaths(prev.pinnedPaths, next.pinnedPaths) &&
+    sameTabsForDisplay(prev.tabs, next.tabs),
 )

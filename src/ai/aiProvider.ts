@@ -17,6 +17,7 @@
 // `keyring` commands, with a namespaced localStorage fallback when the
 // keychain is unavailable), not on `settings.aiApiKey` directly.
 
+import { Command } from "@tauri-apps/plugin-shell"
 import type { Settings } from "../useSettings"
 // Built-in ComdTeX system prompt. Imported as a raw string (Vite `?raw`) and
 // prepended to every request so any provider knows ComdTeX's syntax deeply and
@@ -76,11 +77,29 @@ export interface ProviderPreset {
 }
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
-  { id: "anthropic",         label: "Anthropic (Claude)",        needsBaseUrl: false, isCli: false, defaultModel: "claude-3-5-sonnet-latest" },
-  { id: "openai",            label: "OpenAI",                    needsBaseUrl: false, isCli: false, defaultModel: "gpt-4o-mini" },
-  { id: "gemini",            label: "Google Gemini",             needsBaseUrl: false, isCli: false, defaultModel: "gemini-1.5-flash" },
-  { id: "openai-compatible", label: "OpenAI-compatible (custom)", needsBaseUrl: true,  isCli: false, defaultModel: "" },
-  { id: "cli",               label: "Local agent CLI",           needsBaseUrl: false, isCli: true,  defaultModel: "" },
+  {
+    id: "anthropic",
+    label: "Anthropic (Claude)",
+    needsBaseUrl: false,
+    isCli: false,
+    defaultModel: "claude-opus-5-5",
+  },
+  { id: "openai", label: "OpenAI", needsBaseUrl: false, isCli: false, defaultModel: "gpt-5.6" },
+  {
+    id: "gemini",
+    label: "Google Gemini",
+    needsBaseUrl: false,
+    isCli: false,
+    defaultModel: "gemini-3.6-flash",
+  },
+  {
+    id: "openai-compatible",
+    label: "OpenAI-compatible (custom)",
+    needsBaseUrl: true,
+    isCli: false,
+    defaultModel: "",
+  },
+  { id: "cli", label: "Local agent CLI", needsBaseUrl: false, isCli: true, defaultModel: "" },
 ]
 
 export function getPreset(id: string): ProviderPreset {
@@ -133,10 +152,7 @@ function assertSafeBaseUrl(raw: string): void {
 // SSE helpers: parse a `fetch` ReadableStream of `data: …` lines.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function* iterSse(
-  res: Response,
-  signal?: AbortSignal,
-): AsyncGenerator<string> {
+async function* iterSse(res: Response, signal?: AbortSignal): AsyncGenerator<string> {
   const body = res.body
   if (!body) return
   const reader = body.getReader()
@@ -195,9 +211,12 @@ interface HttpConfig {
 
 function resolveBaseUrl(cfg: HttpConfig): string {
   switch (cfg.providerId) {
-    case "anthropic": return "https://api.anthropic.com"
-    case "openai":    return "https://api.openai.com/v1"
-    case "gemini":    return "https://generativelanguage.googleapis.com"
+    case "anthropic":
+      return "https://api.anthropic.com"
+    case "openai":
+      return "https://api.openai.com/v1"
+    case "gemini":
+      return "https://generativelanguage.googleapis.com"
     case "openai-compatible": {
       const u = cfg.baseUrl.trim().replace(/\/+$/, "")
       if (!u) throw new AiError("missing-base-url")
@@ -208,7 +227,8 @@ function resolveBaseUrl(cfg: HttpConfig): string {
       // through Rust, so the webview CSP no longer decides who you may use.
       return u
     }
-    default: throw new AiError("not-http-provider")
+    default:
+      throw new AiError("not-http-provider")
   }
 }
 
@@ -220,11 +240,14 @@ class HttpProvider {
       throw new AiError("missing-api-key")
     }
     switch (this.cfg.providerId) {
-      case "anthropic": return this.sendAnthropic(messages, opts)
-      case "gemini":    return this.sendGemini(messages, opts)
+      case "anthropic":
+        return this.sendAnthropic(messages, opts)
+      case "gemini":
+        return this.sendGemini(messages, opts)
       case "openai":
       case "openai-compatible":
-      default:          return this.sendOpenAI(messages, opts)
+      default:
+        return this.sendOpenAI(messages, opts)
     }
   }
 
@@ -253,8 +276,13 @@ class HttpProvider {
         try {
           const json = JSON.parse(data)
           const delta = json.choices?.[0]?.delta?.content
-          if (typeof delta === "string" && delta) { full += delta; opts.onToken?.(delta) }
-        } catch { /* ignore keep-alive / partial */ }
+          if (typeof delta === "string" && delta) {
+            full += delta
+            opts.onToken?.(delta)
+          }
+        } catch {
+          /* ignore keep-alive / partial */
+        }
       }
     } catch (e) {
       // Only treat partial output as a (cancelled) success when the USER
@@ -268,7 +296,10 @@ class HttpProvider {
   // Anthropic /v1/messages.
   private async sendAnthropic(messages: ChatMessage[], opts: SendOptions): Promise<string> {
     const base = resolveBaseUrl(this.cfg)
-    const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n")
+    const system = messages
+      .filter((m) => m.role === "system")
+      .map((m) => m.content)
+      .join("\n\n")
     const convo = messages.filter((m) => m.role !== "system")
     const res = await netFetch(`${base}/v1/messages`, {
       method: "POST",
@@ -297,9 +328,14 @@ class HttpProvider {
           const json = JSON.parse(data)
           if (json.type === "content_block_delta") {
             const text = json.delta?.text
-            if (typeof text === "string" && text) { full += text; opts.onToken?.(text) }
+            if (typeof text === "string" && text) {
+              full += text
+              opts.onToken?.(text)
+            }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     } catch (e) {
       // Partial output only counts as a result on explicit user abort.
@@ -312,10 +348,16 @@ class HttpProvider {
   // Gemini generateContent (streaming via streamGenerateContent + SSE).
   private async sendGemini(messages: ChatMessage[], opts: SendOptions): Promise<string> {
     const base = resolveBaseUrl(this.cfg)
-    const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n")
+    const system = messages
+      .filter((m) => m.role === "system")
+      .map((m) => m.content)
+      .join("\n\n")
     const contents = messages
       .filter((m) => m.role !== "system")
-      .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }))
     const url =
       `${base}/v1beta/models/${encodeURIComponent(this.cfg.model)}:streamGenerateContent` +
       `?alt=sse&key=${encodeURIComponent(this.cfg.apiKey)}`
@@ -339,10 +381,15 @@ class HttpProvider {
           const parts = json.candidates?.[0]?.content?.parts
           if (Array.isArray(parts)) {
             for (const p of parts) {
-              if (typeof p.text === "string" && p.text) { full += p.text; opts.onToken?.(p.text) }
+              if (typeof p.text === "string" && p.text) {
+                full += p.text
+                opts.onToken?.(p.text)
+              }
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     } catch (e) {
       // Partial output only counts as a result on explicit user abort.
@@ -355,7 +402,11 @@ class HttpProvider {
 
 async function errText(res: Response): Promise<string> {
   let detail = ""
-  try { detail = await res.text() } catch { /* ignore */ }
+  try {
+    detail = await res.text()
+  } catch {
+    /* ignore */
+  }
   return `HTTP ${res.status}${detail ? `: ${detail.slice(0, 500)}` : ""}`
 }
 
@@ -372,7 +423,11 @@ class CliProvider {
 
     // Flatten the conversation into a single prompt for the one-shot call.
     const prompt = messages
-      .map((m) => (m.role === "system" ? m.content : `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`))
+      .map((m) =>
+        m.role === "system"
+          ? m.content
+          : `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`,
+      )
       .join("\n\n")
 
     // The shell allow-list (capabilities/default.json) only scopes specific
@@ -391,7 +446,6 @@ class CliProvider {
     const args = [...tokens.slice(1), "--", prompt]
 
     // Lazy import so the shell plugin isn't pulled in unless the CLI is used.
-    const { Command } = await import("@tauri-apps/plugin-shell")
     const cmd = Command.create(name, args)
 
     let full = ""
@@ -449,12 +503,12 @@ export async function sendMessage(
  */
 export type AiCheckCode =
   | "ok"
-  | "incomplete"    // a required field is empty
-  | "bad-url"       // not https:// or loopback
-  | "unauthorized"  // the key is missing, wrong or expired
-  | "no-model"      // the endpoint answered, that model is not there
-  | "unreachable"   // no answer at all: host, port, DNS, or offline
-  | "failed"        // it answered with something else
+  | "incomplete" // a required field is empty
+  | "bad-url" // not https:// or loopback
+  | "unauthorized" // the key is missing, wrong or expired
+  | "no-model" // the endpoint answered, that model is not there
+  | "unreachable" // no answer at all: host, port, DNS, or offline
+  | "failed" // it answered with something else
 
 export interface AiCheck {
   code: AiCheckCode
@@ -496,7 +550,11 @@ export function classifyAiFailure(raw: string): AiCheckCode {
   if (/\b404\b|model.*(not found|does not exist|unavailable)|unknown model/.test(low)) {
     return "no-model"
   }
-  if (/failed to fetch|network error|econnrefused|enotfound|timed? ?out|dns|unreachable|refused/.test(low)) {
+  if (
+    /failed to fetch|network error|econnrefused|enotfound|timed? ?out|dns|unreachable|refused/.test(
+      low,
+    )
+  ) {
     return "unreachable"
   }
   return "failed"
@@ -534,7 +592,9 @@ export async function warmUp(settings: Settings, signal?: AbortSignal): Promise<
       apiKey: settings.aiApiKey,
       model: settings.aiModel,
     }).send(ping, { signal, maxTokens: 1 })
-  } catch { /* warm-up is best-effort: ignore all failures */ }
+  } catch {
+    /* warm-up is best-effort: ignore all failures */
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -589,12 +649,20 @@ export async function sendInlineEdit(
 ): Promise<string> {
   const parts: string[] = [`Instruction: ${req.instruction}`]
   if (req.hasSelection) {
-    parts.push("Edit the following selected text and return the edited version:\n```\n" + req.selection + "\n```")
+    parts.push(
+      "Edit the following selected text and return the edited version:\n```\n" +
+        req.selection +
+        "\n```",
+    )
   } else {
     parts.push("There is no selection. Generate the text to insert at the cursor.")
   }
   if (req.documentContext && req.documentContext.trim()) {
-    parts.push("For context only (do not repeat it), here is the surrounding document:\n```\n" + req.documentContext + "\n```")
+    parts.push(
+      "For context only (do not repeat it), here is the surrounding document:\n```\n" +
+        req.documentContext +
+        "\n```",
+    )
   }
   const messages: ChatMessage[] = [
     { role: "system", content: INLINE_EDIT_SYSTEM },

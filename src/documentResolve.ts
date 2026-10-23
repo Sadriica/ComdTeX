@@ -25,10 +25,7 @@ import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
  * declarations and CSV blocks BEFORE it is embedded, and the host document
  * is expanded after.
  */
-export function resolveDocumentContent(
-  raw: string,
-  resolver?: TransclusionResolver,
-): string {
+export function resolveDocumentContent(raw: string, resolver?: TransclusionResolver): string {
   if (!resolver) return raw
   const resolveEmbedded: TransclusionResolver = (target) => {
     const content = resolver(target)

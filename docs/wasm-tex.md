@@ -86,7 +86,7 @@ What this means in practice:
 | ------------------------------------------- | ------------------------------ |
 | Toggle "Use built-in LaTeX engine (WASM)"   | Settings → PDF compilation     |
 | Status indicator (`TeX: WASM` / `local`)    | Bottom status bar              |
-| Palette command "Compile PDF (WASM engine)" | Ctrl+P, search "compile pdf"   |
+| Palette command "Compile PDF (WASM engine)" | Ctrl+Shift+P, search "compile pdf"   |
 
 Behaviour:
 

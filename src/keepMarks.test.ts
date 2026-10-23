@@ -462,14 +462,18 @@ describe("Anki cloze and keep marks are disjoint", () => {
   })
 
   it("still converts `{{X}}` clozes inside a :::definition", () => {
-    const cards = extractAnkiCards(":::definition[Grupo]\nUn {{grupo abeliano}} es conmutativo.\n:::")
+    const cards = extractAnkiCards(
+      ":::definition[Grupo]\nUn {{grupo abeliano}} es conmutativo.\n:::",
+    )
     expect(cards).toHaveLength(1)
     expect(cards[0].type).toBe("Cloze")
     expect(cards[0].back).toBe("Un {{c1::grupo abeliano}} es conmutativo.")
   })
 
   it("does NOT turn a `^^…^^` keep mark inside a definition into a cloze", () => {
-    const cards = extractAnkiCards(":::definition[Grupo]\nUn ^^def: grupo abeliano^^ es conmutativo.\n:::")
+    const cards = extractAnkiCards(
+      ":::definition[Grupo]\nUn ^^def: grupo abeliano^^ es conmutativo.\n:::",
+    )
     expect(cards).toHaveLength(1)
     expect(cards[0].type).toBe("Basic")
     expect(cards[0].back).toBe("Un grupo abeliano es conmutativo.")
@@ -482,7 +486,9 @@ describe("Anki cloze and keep marks are disjoint", () => {
   })
 
   it("lets a cloze and a keep mark coexist in one definition", () => {
-    const cards = extractAnkiCards(":::definition[G]\nUn {{grupo}} ^^duda: revisar^^ abeliano.\n:::")
+    const cards = extractAnkiCards(
+      ":::definition[G]\nUn {{grupo}} ^^duda: revisar^^ abeliano.\n:::",
+    )
     expect(cards[0].type).toBe("Cloze")
     expect(cards[0].back).toBe("Un {{c1::grupo}} revisar abeliano.")
   })
@@ -502,7 +508,12 @@ describe("scanVaultKeepMarks", () => {
   it("collects marks across the whole vault with file + line", () => {
     const entries = scanVaultKeepMarks(files)
     expect(entries).toHaveLength(4)
-    expect(entries[0]).toMatchObject({ filePath: "/v/a.md", fileName: "a.md", line: 1, text: "grupo" })
+    expect(entries[0]).toMatchObject({
+      filePath: "/v/a.md",
+      fileName: "a.md",
+      line: 1,
+      text: "grupo",
+    })
     expect(entries[3]).toMatchObject({ fileName: "b.md", line: 3, text: "suelto", category: null })
   })
 

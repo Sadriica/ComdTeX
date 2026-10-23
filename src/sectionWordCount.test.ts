@@ -109,7 +109,7 @@ describe("computeSectionWordCounts", () => {
   })
 
   it("excludes ComdTeX environment marker lines (:::type[title] and :::)", () => {
-    const content = '# Title\n:::theorem[Pythagoras]\na squared plus b squared\n:::'
+    const content = "# Title\n:::theorem[Pythagoras]\na squared plus b squared\n:::"
     const map = computeSectionWordCounts(content)
     expect(map.get(1)).toBe(5) // "a", "squared", "plus", "b", "squared"
   })

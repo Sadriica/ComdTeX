@@ -1,20 +1,30 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
 import { renderMarkdown, annotateSourceLines, buildParagraphLineMap } from "./renderer"
+import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 
 describe("renderMarkdown", () => {
   it("numbers headings without exposing internal anchor text", () => {
     const html = renderMarkdown("# Intro\n\n## Details")
 
-    expect(html).toMatch(/<h1[^>]*>1 Intro<\/h1>/)
-    expect(html).toMatch(/<h2[^>]*>1\.1 Details<\/h2>/)
+    expect(html).toMatch(/<h1[^>]*><span class="sec-num">1<\/span> Intro<\/h1>/)
+    expect(html).toMatch(/<h2[^>]*><span class="sec-num">1\.1<\/span> Details<\/h2>/)
     expect(html).not.toContain("{#sec-")
   })
 
-  it("keeps soft line breaks in plain paragraphs for preview CSS to display", () => {
+  it("keeps the section number as plain text next to its span", () => {
+    const html = renderMarkdown("# Intro\n\n## Details")
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelector("h1")?.textContent).toBe("1 Intro")
+    expect(doc.querySelector("h2")?.textContent).toBe("1.1 Details")
+  })
+
+  it("turns soft line breaks in plain paragraphs into <br>, without needing pre-wrap CSS", () => {
     const html = renderMarkdown("Datos:\nIncognitas:\nSolucion:")
 
-    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+    expect(html.replace(/ data-source-line="\d+"/g, "")).toContain(
+      "<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>",
+    )
   })
 
   it("preserves leading indentation on paragraph continuation lines", () => {
@@ -25,11 +35,33 @@ describe("renderMarkdown", () => {
     expect(html).toContain('class="katex"')
   })
 
-  it("keeps soft line breaks inside prose environments for preview CSS to display", () => {
+  it("keeps nested list items nested instead of reading their indent as paragraph indentation", () => {
+    const html = renderMarkdown("- one\n  - nested\n- two\n  continued")
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelectorAll("ul ul li")).toHaveLength(1)
+    expect(doc.querySelector("ul ul li")?.textContent?.trim()).toBe("nested")
+    expect(html).not.toContain("md-soft-indent")
+  })
+
+  it("leaves no stray <br> or empty paragraph around block-level environments and equations", () => {
+    const html = renderMarkdown(
+      ":::definition\nA.\n:::\n:::remark\nB.\n:::\ntext before\n$$\nx=1\n$$\ntext after",
+    )
+    expect(html).not.toMatch(/<br>\s*<div/)
+    expect(html).not.toMatch(/<\/div>\s*<br>/)
+    expect(html).not.toMatch(/<p>\s*<\/p>/)
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    expect(doc.querySelectorAll("p").length).toBeGreaterThan(0)
+    for (const p of doc.querySelectorAll("p")) expect(p.textContent?.trim()).not.toBe("")
+  })
+
+  it("keeps soft line breaks inside prose environments as <br>", () => {
     const html = renderMarkdown(":::example\nDatos:\nIncognitas:\nSolucion:\n:::")
 
     expect(html).toContain('class="math-env math-env-example"')
-    expect(html).toContain("<p>Datos:\nIncognitas:\nSolucion:</p>")
+    expect(html.replace(/ data-source-line="\d+"/g, "")).toContain(
+      "<p>Datos:<br>\nIncognitas:<br>\nSolucion:</p>",
+    )
   })
 
   it("renders markdown formatting inside prose environments", () => {
@@ -83,15 +115,11 @@ describe("renderMarkdown", () => {
       expect(html).not.toContain("(?)")
 
       // Equations rendered in textual order: 1, 2, 3.
-      const eqNumbers = [...html.matchAll(/class="eq-number">\((\d+)\)/g)].map(
-        (m) => m[1],
-      )
+      const eqNumbers = [...html.matchAll(/class="eq-number">\((\d+)\)/g)].map((m) => m[1])
       expect(eqNumbers).toEqual(["1", "2", "3"])
 
       // References resolve to the same numbers in the same order.
-      const refNumbers = [...html.matchAll(/class="eq-ref">\((\d+)\)/g)].map(
-        (m) => m[1],
-      )
+      const refNumbers = [...html.matchAll(/class="eq-ref">\((\d+)\)/g)].map((m) => m[1])
       expect(refNumbers).toEqual(["1", "2", "3"])
     })
 
@@ -134,14 +162,14 @@ describe("renderMarkdown", () => {
   describe("source-line annotations (preview ↔ editor sync)", () => {
     it("indexes lists, blockquotes, headings, and paragraphs in buildParagraphLineMap", () => {
       const raw = [
-        "# Heading one",       // 1
-        "",                     // 2
-        "Plain paragraph text.",// 3
-        "",                     // 4
-        "- first item",         // 5
-        "- second item",        // 6
-        "",                     // 7
-        "> quoted line",        // 8
+        "# Heading one", // 1
+        "", // 2
+        "Plain paragraph text.", // 3
+        "", // 4
+        "- first item", // 5
+        "- second item", // 6
+        "", // 7
+        "> quoted line", // 8
       ].join("\n")
       const map = buildParagraphLineMap(raw)
       expect(map.get("Heading one")).toEqual([1])
@@ -153,12 +181,12 @@ describe("renderMarkdown", () => {
 
     it("annotates rendered headings, paragraphs and list items with data-source-line", () => {
       const raw = [
-        "# Title",        // line 1
-        "",                // 2
-        "First paragraph.",// 3
-        "",                // 4
-        "- one",           // 5
-        "- two",           // 6
+        "# Title", // line 1
+        "", // 2
+        "First paragraph.", // 3
+        "", // 4
+        "- one", // 5
+        "- two", // 6
       ].join("\n")
       const html = renderMarkdown(raw)
       expect(html).toMatch(/<h1[^>]*data-source-line="1"/)
@@ -181,13 +209,13 @@ describe("renderMarkdown", () => {
     // off), and clicking it in the preview did not move the editor at all.
     it("annotates an indented code block with the line its content starts on", () => {
       const raw = [
-        "Guia PMI #8:",                 // 1
-        "",                              // 2
-        "    -> Estandar",               // 3  <- indented code block starts here
-        "        -> Aspectos",           // 4
-        "        -> Sistema de valor",   // 5
-        "",                              // 6
-        "Acta de constitucion.",         // 7
+        "Guia PMI #8:", // 1
+        "", // 2
+        "    -> Estandar", // 3  <- indented code block starts here
+        "        -> Aspectos", // 4
+        "        -> Sistema de valor", // 5
+        "", // 6
+        "Acta de constitucion.", // 7
       ].join("\n")
       const html = renderMarkdown(raw)
       // The <pre> is keyed by its FIRST content line, not its joined textContent.
@@ -207,29 +235,30 @@ describe("renderMarkdown", () => {
 
     it("annotates a fenced code block with its first content line", () => {
       const raw = [
-        "Example:",   // 1
-        "",            // 2
-        "```js",       // 3
+        "Example:", // 1
+        "", // 2
+        "```js", // 3
         "const a = 1", // 4  <- first content line
         "const b = 2", // 5
-        "```",         // 6
-        "",            // 7
-        "After.",      // 8
+        "```", // 6
+        "", // 7
+        "After.", // 8
       ].join("\n")
       const html = renderMarkdown(raw)
       expect(html).toMatch(/<pre[^>]*data-source-line="4"/)
       expect(html).toMatch(/<p[^>]*data-source-line="8"[^>]*>After/)
-      // Fenced content is still rendered verbatim (no regression).
-      expect(html).toContain("const a = 1")
-      expect(html).toContain("const b = 2")
+      // Fenced content is still rendered verbatim (no regression); the
+      // highlighter only adds token spans around it.
+      const text = new DOMParser().parseFromString(html, "text/html").querySelector("pre")
+      expect(text?.textContent).toBe("const a = 1\nconst b = 2\n")
     })
 
     it("does not let fenced code content shadow identical prose lines", () => {
       const raw = [
-        "```",          // 1
+        "```", // 1
         "duplicate me", // 2
-        "```",          // 3
-        "",             // 4
+        "```", // 3
+        "", // 4
         "duplicate me", // 5
       ].join("\n")
       const html = renderMarkdown(raw)
@@ -248,7 +277,7 @@ describe("renderMarkdown", () => {
   })
 
   describe(":::code environment", () => {
-    it(":::code python yields class=\"language-python\"", () => {
+    it(':::code python yields class="language-python"', () => {
       const html = renderMarkdown(":::code python\nx = 1\n:::")
       expect(html).toContain('<code class="language-python">x = 1</code>')
     })
@@ -269,14 +298,34 @@ describe("renderMarkdown", () => {
       const html = renderMarkdown("line1\n\n:::code\nbody\n:::")
       // The wrapper is annotated with the `:::code` line (3); the inner <pre>
       // is separately annotated with the line its body starts on (4).
-      expect(html).toMatch(/<div class="env-wrap" data-source-line="3"><pre[^>]*><code>body<\/code><\/pre><\/div>/)
+      expect(html).toMatch(
+        /<div class="env-wrap" data-source-line="3"><pre[^>]*><code>body<\/code><\/pre><\/div>/,
+      )
       expect(html).toMatch(/<pre[^>]*data-source-line="4"/)
     })
 
     it("triple-backtick fences still render normally (regression)", () => {
       const html = renderMarkdown("```python\nx = 1\n```")
       expect(html).toContain("language-python")
-      expect(html).toContain("x = 1")
+      const pre = new DOMParser().parseFromString(html, "text/html").querySelector("pre")
+      expect(pre?.textContent).toBe("x = 1\n")
+    })
+
+    it("highlights known languages with token spans only, and leaves unknown ones plain", () => {
+      const known = renderMarkdown('```python\ndef f(x):\n    return "a" + 1  # note\n```')
+      expect(known).toContain('<span class="tok-kw">def</span>')
+      expect(known).toContain('<span class="tok-fn">f</span>')
+      expect(known).toContain('<span class="tok-str">"a"</span>')
+      expect(known).toContain('<span class="tok-com"># note</span>')
+
+      const unknown = renderMarkdown("```brainfuck\n+++[->+<]\n```")
+      expect(unknown).not.toContain("tok-")
+      expect(unknown).toContain("-&gt;")
+    })
+
+    it("does not highlight mermaid blocks, which the diagram pass reads as plain text", () => {
+      const html = renderMarkdown("```mermaid\ngraph TD\n  A --> B\n```")
+      expect(html).not.toContain("tok-")
     })
   })
 
@@ -326,8 +375,10 @@ describe("renderMarkdown", () => {
       expect(html).toContain('href="#details"')
       expect(html).toContain('href="#conclusion"')
       // Matching ids assigned to the rendered headings for navigation.
-      expect(html).toMatch(/<h1[^>]*id="intro"[^>]*>1 Intro<\/h1>/)
-      expect(html).toMatch(/<h2[^>]*id="details"[^>]*>1\.1 Details<\/h2>/)
+      expect(html).toMatch(/<h1[^>]*id="intro"[^>]*><span class="sec-num">1<\/span> Intro<\/h1>/)
+      expect(html).toMatch(
+        /<h2[^>]*id="details"[^>]*><span class="sec-num">1\.1<\/span> Details<\/h2>/,
+      )
     })
 
     it("also accepts the single-bracket [toc] form, case-insensitively", () => {
@@ -387,7 +438,8 @@ describe("renderMarkdown", () => {
     })
 
     it("leaves a @eq ref and [[wikilink]] inside inline code untouched", () => {
-      const text = "$$ x = 1 $$ {#eq:foo}\n\nUse `@eq:foo` and `[[Note]]` literally; ref @eq:foo links."
+      const text =
+        "$$ x = 1 $$ {#eq:foo}\n\nUse `@eq:foo` and `[[Note]]` literally; ref @eq:foo links."
       const html = renderMarkdown(text, {}, undefined, new Set(["Note"]))
       // Inside code: kept verbatim, not turned into a link.
       expect(html).toContain("<code>@eq:foo</code>")
@@ -425,7 +477,12 @@ describe("cross-file environment refs (end-to-end)", () => {
   it("renders a cross-file ref as a link with the target's number", () => {
     const html = renderMarkdown(
       "Como vimos en @gp/calendario@def:valor y sigue",
-      {}, undefined, undefined, undefined, undefined, envRefResolver,
+      {},
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      envRefResolver,
     )
     expect(html).toContain("Definición 2")
     expect(html).toContain('data-target="gp/calendario"')
@@ -435,12 +492,24 @@ describe("cross-file environment refs (end-to-end)", () => {
     // The `@` stays LEADING (`@doc@def:x`, never `[doc]@def:x`) precisely so a
     // cross-file ref can never be mistaken for a `[@key]` citation, and a
     // citation is never eaten by the ref resolver. Both must survive one render.
-    const bib = new Map([["knuth1984", {
-      key: "knuth1984", type: "article", fields: { author: "Knuth", year: "1984", title: "Literate Programming" },
-    }]])
+    const bib = new Map([
+      [
+        "knuth1984",
+        {
+          key: "knuth1984",
+          type: "article",
+          fields: { author: "Knuth", year: "1984", title: "Literate Programming" },
+        },
+      ],
+    ])
     const html = renderMarkdown(
       "Cita [@knuth1984] y ref @gp/calendario@def:valor y sigue",
-      {}, undefined, undefined, bib as never, undefined, envRefResolver,
+      {},
+      undefined,
+      undefined,
+      bib as never,
+      undefined,
+      envRefResolver,
     )
     // The citation rendered as a citation (not as an env ref)…
     expect(html).toContain("cite-ref")
@@ -454,7 +523,12 @@ describe("cross-file environment refs (end-to-end)", () => {
   it("leaves a cross-file ref inside a code span verbatim", () => {
     const html = renderMarkdown(
       "Escribe `@gp/calendario@def:valor` para citar.",
-      {}, undefined, undefined, undefined, undefined, envRefResolver,
+      {},
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      envRefResolver,
     )
     expect(html).toContain("@gp/calendario@def:valor")
     expect(html).not.toContain("env-ref-cross")
@@ -463,5 +537,37 @@ describe("cross-file environment refs (end-to-end)", () => {
   it("renders a broken cross-ref without a resolver instead of throwing", () => {
     const html = renderMarkdown("Ver @gp/calendario@def:valor y sigue")
     expect(html).toContain("env-ref-broken")
+  })
+})
+
+describe("callouts kept as written in the editor", () => {
+  it("renders a fold marker as part of the syntax, not of the title", () => {
+    const html = renderMarkdown("> [!tip]- Hi\n> body")
+    expect(html).toContain("callout-tip")
+    expect(html).toContain("Hi</div>")
+    expect(html).not.toContain("- Hi")
+  })
+
+  it("renders a hyphenated type as a callout", () => {
+    const html = renderMarkdown("> [!my-type] Hello\n> body")
+    expect(html).toContain("callout-my-type")
+  })
+
+  it("marks the icon with a data-icon hook instead of baking in a glyph", () => {
+    const html = renderMarkdown("> [!tip] Hi\n> body")
+    expect(html).toContain('<span class="callout-icon" data-icon="tip" aria-hidden="true"></span>')
+    expect(html).not.toMatch(/\u{1F4A1}|\u2139|\u26A0/u)
+  })
+
+  it("maps aliases to one icon key and falls back for unknown types", () => {
+    expect(renderMarkdown("> [!caution] x\n> b")).toContain('data-icon="warning"')
+    expect(renderMarkdown("> [!lemma] x\n> b")).toContain('data-icon="theorem"')
+    expect(renderMarkdown("> [!my-type] x\n> b")).toContain('data-icon="abstract"')
+  })
+
+  it("keeps the icon hook through the sanitizer", () => {
+    const html = sanitizeRenderedHtml(renderMarkdown("> [!note] Hi\n> body"))
+    expect(html).toContain('class="callout-icon"')
+    expect(html).toContain('data-icon="info"')
   })
 })

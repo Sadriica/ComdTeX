@@ -9,6 +9,8 @@ describe("toc", () => {
       { level: 1, text: "Introducción", slug: "intro", label: "intro", line: 1 },
       { level: 2, text: "Método Ágil", slug: "metodo-agil", label: null, line: 3 },
     ])
-    expect(buildTocMarkdown(content)).toBe("- [Introducción](#intro)\n  - [Método Ágil](#metodo-agil)")
+    expect(buildTocMarkdown(content)).toBe(
+      "- [Introducción](#intro)\n  - [Método Ágil](#metodo-agil)",
+    )
   })
 })

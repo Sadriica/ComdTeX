@@ -1,0 +1,203 @@
+/* ── Excalidraw embed (:::excalidraw) ─────────────────────────────────────── */
+.excalidraw-block {
+  margin: 1em 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.excalidraw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-5);
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.excalidraw-title {
+  font-weight: 600;
+}
+.excalidraw-edit {
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  transition: var(--transition-ui);
+}
+.excalidraw-edit:hover {
+  background: var(--bg-hover);
+}
+.excalidraw-edit:active {
+  background: var(--bg-active);
+}
+.excalidraw-canvas {
+  padding: var(--space-4);
+  text-align: center;
+}
+.excalidraw-canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+.excalidraw-placeholder {
+  padding: 2em 1em;
+  text-align: center;
+  color: var(--fg-muted);
+  font-style: italic;
+  cursor: pointer;
+}
+
+/* ── Excalidraw editor modal (chrome only; the canvas UI is Excalidraw's own) ── */
+.excalidraw-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.excalidraw-modal {
+  width: 92vw;
+  height: 88vh;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* anchors .excalidraw-confirm-overlay */
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+}
+.excalidraw-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+.excalidraw-modal-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--fg);
+}
+.excalidraw-modal-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+.excalidraw-modal-actions button,
+.excalidraw-confirm-actions button {
+  min-height: 26px;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  transition: var(--transition-ui);
+}
+.excalidraw-modal-cancel {
+  background: transparent;
+  color: var(--fg);
+}
+.excalidraw-modal-cancel:hover {
+  background: var(--bg-hover);
+}
+.excalidraw-modal-save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.excalidraw-modal-save:hover {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+}
+.excalidraw-modal-save:active {
+  background: color-mix(in oklch, var(--accent) 78%, var(--fg));
+}
+.excalidraw-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+  z-index: var(--z-sticky);
+}
+.excalidraw-confirm {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 26rem;
+  box-shadow: var(--shadow-3);
+}
+.excalidraw-confirm-text {
+  color: var(--fg);
+  margin: 0 0 var(--space-5);
+}
+.excalidraw-confirm-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: flex-end;
+}
+.excalidraw-confirm-discard {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+.excalidraw-confirm-discard:hover {
+  background: var(--danger-bg);
+}
+.excalidraw-modal-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.excalidraw-modal-canvas .excalidraw,
+.excalidraw-modal-canvas .excalidraw-container {
+  height: 100%;
+}
+.excalidraw-modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-muted);
+}
+
+/* ── Panel filter box (PanelSearch) ─────────────────────────────────────── */
+
+/* ── Focus-session clock in the top bar ─────────────────────────────────── */
+
+/* ── Focus view, detached from the top bar ──────────────────────────────── */
+/* Anchored to the top-right rather than rendered in the sidebar: the timer is
+   glanced at and clicked, and it should not displace the file tree. The `top`
+   offset clears the title bar + both menu rows. Popover layer: over the
+   editor and menus, under modals. Surface from modals.css. */
+.focus-popover {
+  position: fixed;
+  top: 78px;
+  right: var(--space-5);
+  z-index: var(--z-popover);
+  width: 300px;
+  max-height: min(70vh, 620px);
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .focus-popover {
+    transition:
+      opacity var(--dur-med) var(--ease-standard),
+      transform var(--dur-med) var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+      transform: translateY(calc(-1 * var(--space-3)));
+    }
+  }
+}

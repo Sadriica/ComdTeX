@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { CITE_STYLES } from "./citeStyles"
 import { parseBibtex, resolveCitations, renderBibliography, citationsToLatex } from "./bibtex"
 
 const SAMPLE_BIB = `
@@ -129,6 +130,13 @@ describe("renderBibliography", () => {
     expect(html).toContain("TeXbook")
   })
 
+  it("lays out a missing entry with the same number and content parts as a found one", () => {
+    const html = renderBibliography(["ghost"], new Map())
+    expect(html).toMatch(
+      /<div class="bib-entry bib-missing"[^>]*>\s*<span class="bib-number">\[1\]<\/span>\s*<span class="bib-content">[^<]*<code>ghost<\/code><\/span><\/div>/,
+    )
+  })
+
   it("renders missing entry with bib-missing class", () => {
     const html = renderBibliography(["nonexistent"], bibMap)
     expect(html).toContain("bib-missing")
@@ -166,5 +174,53 @@ describe("citationsToLatex", () => {
 
   it("leaves non-citation text untouched", () => {
     expect(citationsToLatex("No citations here.")).toBe("No citations here.")
+  })
+})
+
+describe("grouped citations", () => {
+  const bib = parseBibtex(
+    "@book{a, author={Rudin, W.}, year={1976}, title={A}}\n@book{b, author={Smith, J.}, year={2001}, title={B}}",
+  )
+
+  it("renders [@a; @b] as one bracket", () => {
+    const { text, citedKeys } = resolveCitations("See [@a; @b].", bib)
+    expect(citedKeys).toEqual(["a", "b"])
+    expect(text).toContain("<sup>[<a ")
+    expect(text).toContain(">1</a>, <a ")
+    expect(text).toContain(">2</a>]</sup>")
+    expect(text).not.toContain("[@")
+  })
+
+  it("keeps a per-item note in the group", () => {
+    const { text } = resolveCitations("[@a; @b, p. 3]", bib)
+    expect(text).toContain(">2, p. 3</a>]</sup>")
+  })
+
+  it("keeps [@a][@b] as two separate markers", () => {
+    const { text } = resolveCitations("[@a][@b]", bib)
+    expect(text.match(/<sup>/g)).toHaveLength(2)
+  })
+
+  it("keeps a semicolon inside a single note", () => {
+    const { citedKeys, text } = resolveCitations("[@a, see p. 3; 4]", bib)
+    expect(citedKeys).toEqual(["a"])
+    expect(text).toContain("see p. 3; 4")
+  })
+
+  it("joins author-year groups with semicolons inside one parenthesis", () => {
+    const { text } = resolveCitations("[@a; @b]", bib, CITE_STYLES["author-year"])
+    expect(text.startsWith("(")).toBe(true)
+    expect(text.endsWith(")")).toBe(true)
+    expect(text).toContain("; ")
+  })
+
+  it("flags a missing key in a group", () => {
+    const { text } = resolveCitations("[@a; @nope]", bib)
+    expect(text).toContain("cite-broken")
+  })
+
+  it("emits one \\cite for a group", () => {
+    expect(citationsToLatex("[@a; @b]")).toBe("\\cite{a,b}")
+    expect(citationsToLatex("[@a; @b, p. 3]")).toBe("\\cite{a,b}")
   })
 })

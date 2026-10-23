@@ -25,7 +25,9 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
 
   const handleDeleteCopy = async (c: ConflictEntry) => {
     try {
-      const ok = await tauriConfirm(t.cloudSync.confirmDeleteCopy(c.conflictName), { kind: "warning" })
+      const ok = await tauriConfirm(t.cloudSync.confirmDeleteCopy(c.conflictName), {
+        kind: "warning",
+      })
       if (!ok) return
       await remove(c.conflictPath)
       showToast(t.cloudSync.deletedToast(c.conflictName), "success")
@@ -39,7 +41,9 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
     if (!c.basePath) return
     const basePath = c.basePath
     try {
-      const ok = await tauriConfirm(t.cloudSync.confirmKeepCopy(c.conflictName), { kind: "warning" })
+      const ok = await tauriConfirm(t.cloudSync.confirmKeepCopy(c.conflictName), {
+        kind: "warning",
+      })
       if (!ok) return
       // Crash-safe replace: never delete the original before the copy is in
       // place. Move the original aside to a temp backup, promote the copy, then
@@ -61,7 +65,11 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
       }
       // Replacement succeeded; removing the backup is best-effort (a leftover
       // backup is harmless, and not worth failing the whole action over).
-      try { await remove(backupPath) } catch { /* leave stray backup */ }
+      try {
+        await remove(backupPath)
+      } catch {
+        /* leave stray backup */
+      }
       showToast(t.cloudSync.keptCopyToast(c.baseName), "success")
       onResolved()
     } catch (err) {
@@ -108,27 +116,19 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
               <div className="cloud-sync-warning">{t.cloudSync.conflictMissingOriginal}</div>
             )}
             <div className="cloud-sync-actions">
-              <button onClick={() => handleOpenBoth(c)}>
-                {t.cloudSync.actionOpenBoth}
-              </button>
+              <button onClick={() => handleOpenBoth(c)}>{t.cloudSync.actionOpenBoth}</button>
               {c.basePath && (
-                <button onClick={() => handleDeleteCopy(c)}>
-                  {t.cloudSync.actionKeepMine}
-                </button>
+                <button onClick={() => handleDeleteCopy(c)}>{t.cloudSync.actionKeepMine}</button>
               )}
               {c.basePath && (
-                <button onClick={() => handleKeepCopy(c)}>
-                  {t.cloudSync.actionKeepCopy}
-                </button>
+                <button onClick={() => handleKeepCopy(c)}>{t.cloudSync.actionKeepCopy}</button>
               )}
               {!c.basePath && (
                 <button onClick={() => handleDeleteCopy(c)} className="danger">
                   {t.cloudSync.actionDeleteCopy}
                 </button>
               )}
-              <button onClick={() => handleReveal(c)}>
-                {t.cloudSync.actionRevealInFolder}
-              </button>
+              <button onClick={() => handleReveal(c)}>{t.cloudSync.actionRevealInFolder}</button>
             </div>
           </li>
         ))}

@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest"
-import { getFileNameSet, flatFiles, findByName, processWikilinks, matchesVaultRelPath, findByVaultRelPath } from "./wikilinks"
+import {
+  getFileNameSet,
+  flatFiles,
+  findByName,
+  processWikilinks,
+  matchesVaultRelPath,
+  findByVaultRelPath,
+} from "./wikilinks"
 import type { FileNode } from "./types"
 
 const tree: FileNode[] = [
@@ -9,11 +16,11 @@ const tree: FileNode[] = [
     type: "dir",
     children: [
       { name: "topology.md", path: "/vault/math/topology.md", type: "file", ext: "md" },
-      { name: "algebra.md",  path: "/vault/math/algebra.md",  type: "file", ext: "md" },
+      { name: "algebra.md", path: "/vault/math/algebra.md", type: "file", ext: "md" },
     ],
   },
-  { name: "notes.md",    path: "/vault/notes.md",    type: "file", ext: "md" },
-  { name: "report.tex",  path: "/vault/report.tex",  type: "file", ext: "tex" },
+  { name: "notes.md", path: "/vault/notes.md", type: "file", ext: "md" },
+  { name: "report.tex", path: "/vault/report.tex", type: "file", ext: "tex" },
 ]
 
 describe("getFileNameSet", () => {
@@ -107,7 +114,7 @@ describe("processWikilinks", () => {
   })
 
   it("escapes HTML in target name", () => {
-    const html = processWikilinks('[[<script>alert(1)</script>]]', names)
+    const html = processWikilinks("[[<script>alert(1)</script>]]", names)
     expect(html).not.toContain("<script>")
     expect(html).toContain("&lt;script&gt;")
   })
@@ -157,12 +164,18 @@ describe("matchesVaultRelPath", () => {
 
 describe("findByVaultRelPath", () => {
   const tree: FileNode[] = [
-    { name: "gp", path: "/v/gp", type: "dir", children: [
-      { name: "calendario.md", path: "/v/gp/calendario.md", type: "file" },
-    ] },
-    { name: "otro", path: "/v/otro", type: "dir", children: [
-      { name: "calendario.md", path: "/v/otro/calendario.md", type: "file" },
-    ] },
+    {
+      name: "gp",
+      path: "/v/gp",
+      type: "dir",
+      children: [{ name: "calendario.md", path: "/v/gp/calendario.md", type: "file" }],
+    },
+    {
+      name: "otro",
+      path: "/v/otro",
+      type: "dir",
+      children: [{ name: "calendario.md", path: "/v/otro/calendario.md", type: "file" }],
+    },
   ]
 
   it("finds the file addressed by its folder-qualified path", () => {

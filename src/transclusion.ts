@@ -16,7 +16,12 @@ function extractHeadingSection(content: string, heading: string): string {
   const start = lines.findIndex((line) => {
     const match = /^(#{1,6})\s+(.+)$/.exec(line)
     if (!match) return false
-    return match[2].replace(/\s*\{#[\w:.-]+\}\s*$/, "").trim().toLowerCase() === normalizedHeading
+    return (
+      match[2]
+        .replace(/\s*\{#[\w:.-]+\}\s*$/, "")
+        .trim()
+        .toLowerCase() === normalizedHeading
+    )
   })
   if (start < 0) return content
 
@@ -32,7 +37,9 @@ function extractHeadingSection(content: string, heading: string): string {
   return lines.slice(start, end).join("\n")
 }
 
-const BLOCK_ID_TRAILING_RE = /\s*\^([\w-]+)\s*$/
+// Obsidian's rule: the id stands on its own or after whitespace, so `x^2` at
+// the end of a line of math is an exponent, not an id.
+const BLOCK_ID_TRAILING_RE = /(?:^|[ \t]+)\^([\w-]+)[ \t]*$/
 
 /**
  * Extract the paragraph (block) whose trailing `^id` matches `id`. A block is
@@ -107,14 +114,24 @@ export function resolveTransclusions(
 export function processBlockIds(text: string): string {
   const lines = text.split("\n")
   let inFence = false
-  return lines.map((line) => {
-    if (/^```/.test(line.trim())) { inFence = !inFence; return line }
-    if (inFence) return line
-    const m = BLOCK_ID_TRAILING_RE.exec(line)
-    if (!m) return line
-    const id = m[1]
-    return line.replace(BLOCK_ID_TRAILING_RE, ` <!--block:${id}-->`)
-  }).join("\n")
+  let inMath = false
+  return lines
+    .map((line) => {
+      if (/^```/.test(line.trim())) {
+        inFence = !inFence
+        return line
+      }
+      if (inFence) return line
+      // Lines inside or opening a display-math block are math, never ids.
+      const wasInMath = inMath
+      if ((line.match(/\$\$/g)?.length ?? 0) % 2 === 1) inMath = !inMath
+      if (wasInMath || inMath) return line
+      const m = BLOCK_ID_TRAILING_RE.exec(line)
+      if (!m) return line
+      const id = m[1]
+      return line.replace(BLOCK_ID_TRAILING_RE, ` <!--block:${id}-->`)
+    })
+    .join("\n")
 }
 
 /**

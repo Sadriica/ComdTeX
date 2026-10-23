@@ -31,43 +31,110 @@ interface UnitToken {
 // name → [siunitx macro, preview abbreviation]
 const UNITS: Record<string, [string, string]> = {
   // SI base
-  m: ["meter", "m"], s: ["second", "s"], kg: ["kilogram", "kg"], g: ["gram", "g"],
-  mol: ["mole", "mol"], K: ["kelvin", "K"], A: ["ampere", "A"], cd: ["candela", "cd"],
+  m: ["meter", "m"],
+  s: ["second", "s"],
+  kg: ["kilogram", "kg"],
+  g: ["gram", "g"],
+  mol: ["mole", "mol"],
+  K: ["kelvin", "K"],
+  A: ["ampere", "A"],
+  cd: ["candela", "cd"],
   // SI derived
-  Hz: ["hertz", "Hz"], N: ["newton", "N"], Pa: ["pascal", "Pa"], J: ["joule", "J"],
-  W: ["watt", "W"], C: ["coulomb", "C"], V: ["volt", "V"], F: ["farad", "F"],
-  ohm: ["ohm", "\\Omega"], S: ["siemens", "S"], T: ["tesla", "T"], H: ["henry", "H"],
-  lm: ["lumen", "lm"], lx: ["lux", "lx"], Bq: ["becquerel", "Bq"], Gy: ["gray", "Gy"],
-  Sv: ["sievert", "Sv"], kat: ["katal", "kat"], rad: ["radian", "rad"], sr: ["steradian", "sr"],
+  Hz: ["hertz", "Hz"],
+  N: ["newton", "N"],
+  Pa: ["pascal", "Pa"],
+  J: ["joule", "J"],
+  W: ["watt", "W"],
+  C: ["coulomb", "C"],
+  V: ["volt", "V"],
+  F: ["farad", "F"],
+  ohm: ["ohm", "\\Omega"],
+  S: ["siemens", "S"],
+  T: ["tesla", "T"],
+  H: ["henry", "H"],
+  lm: ["lumen", "lm"],
+  lx: ["lux", "lx"],
+  Bq: ["becquerel", "Bq"],
+  Gy: ["gray", "Gy"],
+  Sv: ["sievert", "Sv"],
+  kat: ["katal", "kat"],
+  rad: ["radian", "rad"],
+  sr: ["steradian", "sr"],
   // Accepted non-SI, common in papers
-  L: ["litre", "L"], l: ["litre", "l"], t: ["tonne", "t"], min: ["minute", "min"],
-  h: ["hour", "h"], d: ["day", "d"], au: ["astronomicalunit", "au"],
-  eV: ["electronvolt", "eV"], u: ["atomicmassunit", "u"], Da: ["dalton", "Da"],
-  bar: ["bar", "bar"], percent: ["percent", "\\%"],
-  degC: ["celsius", "^{\\circ}C"], degF: ["fahrenheit", "^{\\circ}F"], deg: ["degree", "^{\\circ}"],
-  arcmin: ["arcminute", "'"], arcsec: ["arcsecond", "''"],
+  L: ["litre", "L"],
+  l: ["litre", "l"],
+  t: ["tonne", "t"],
+  min: ["minute", "min"],
+  h: ["hour", "h"],
+  d: ["day", "d"],
+  au: ["astronomicalunit", "au"],
+  eV: ["electronvolt", "eV"],
+  u: ["atomicmassunit", "u"],
+  Da: ["dalton", "Da"],
+  bar: ["bar", "bar"],
+  percent: ["percent", "\\%"],
+  degC: ["celsius", "^{\\circ}C"],
+  degF: ["fahrenheit", "^{\\circ}F"],
+  deg: ["degree", "^{\\circ}"],
+  arcmin: ["arcminute", "'"],
+  arcsec: ["arcsecond", "''"],
   // Astronomy (siunitx has no macros for these: they ride as text)
-  pc: ["", "pc"], kpc: ["", "kpc"], Mpc: ["", "Mpc"], ly: ["", "ly"],
-  Msun: ["", "M_{\\odot}"], Lsun: ["", "L_{\\odot}"], Rsun: ["", "R_{\\odot}"],
-  Jy: ["", "Jy"], mag: ["", "mag"],
+  pc: ["", "pc"],
+  kpc: ["", "kpc"],
+  Mpc: ["", "Mpc"],
+  ly: ["", "ly"],
+  Msun: ["", "M_{\\odot}"],
+  Lsun: ["", "L_{\\odot}"],
+  Rsun: ["", "R_{\\odot}"],
+  Jy: ["", "Jy"],
+  mag: ["", "mag"],
   // Biology and chemistry
-  M: ["", "M"], bp: ["", "bp"], kb: ["", "kb"], Da_: ["", "Da"], rpm: ["", "rpm"],
-  cfu: ["", "CFU"], OD: ["", "OD"],
+  M: ["", "M"],
+  bp: ["", "bp"],
+  kb: ["", "kb"],
+  Da_: ["", "Da"],
+  rpm: ["", "rpm"],
+  cfu: ["", "CFU"],
+  OD: ["", "OD"],
 }
 
 // prefix → [siunitx macro, preview abbreviation]
 const PREFIXES: Record<string, [string, string]> = {
-  q: ["quecto", "q"], r: ["ronto", "r"], y: ["yocto", "y"], z: ["zepto", "z"],
-  a: ["atto", "a"], f: ["femto", "f"], p: ["pico", "p"], n: ["nano", "n"],
-  u: ["micro", "\\mu"], µ: ["micro", "\\mu"], μ: ["micro", "\\mu"],
-  m: ["milli", "m"], c: ["centi", "c"], D: ["deca", "da"], da: ["deca", "da"],
-  h: ["hecto", "h"], k: ["kilo", "k"], M: ["mega", "M"], G: ["giga", "G"],
-  T: ["tera", "T"], P: ["peta", "P"], E: ["exa", "E"], Z: ["zetta", "Z"],
-  Y: ["yotta", "Y"], R: ["ronna", "R"], Q: ["quetta", "Q"],
+  q: ["quecto", "q"],
+  r: ["ronto", "r"],
+  y: ["yocto", "y"],
+  z: ["zepto", "z"],
+  a: ["atto", "a"],
+  f: ["femto", "f"],
+  p: ["pico", "p"],
+  n: ["nano", "n"],
+  u: ["micro", "\\mu"],
+  µ: ["micro", "\\mu"],
+  μ: ["micro", "\\mu"],
+  m: ["milli", "m"],
+  c: ["centi", "c"],
+  D: ["deca", "da"],
+  da: ["deca", "da"],
+  h: ["hecto", "h"],
+  k: ["kilo", "k"],
+  M: ["mega", "M"],
+  G: ["giga", "G"],
+  T: ["tera", "T"],
+  P: ["peta", "P"],
+  E: ["exa", "E"],
+  Z: ["zetta", "Z"],
+  Y: ["yotta", "Y"],
+  R: ["ronna", "R"],
+  Q: ["quetta", "Q"],
 }
 
 /** Split a written unit into prefix and base, e.g. "km" → kilo + meter. */
-function splitPrefixed(raw: string): { prefix: string; unit: string; short: string; literal: string } {
+function splitPrefixed(raw: string): {
+  prefix: string
+  unit: string
+  short: string
+  literal: string
+} {
   if (UNITS[raw]) {
     const [macro, short] = UNITS[raw]
     return { prefix: "", unit: macro, short, literal: raw }
@@ -95,7 +162,10 @@ export function parseUnits(expr: string): UnitToken[] {
   for (const chunk of expr.split(/([/*\s])/)) {
     const piece = chunk.trim()
     if (!piece) continue
-    if (piece === "/") { sign = -1; continue }
+    if (piece === "/") {
+      sign = -1
+      continue
+    }
     if (piece === "*") continue
     const m = /^([A-Za-zµμ_]+)(?:\^?(-?\d+))?$/.exec(piece)
     if (!m) continue
@@ -106,7 +176,11 @@ export function parseUnits(expr: string): UnitToken[] {
 }
 
 const POWER_MACROS: Record<number, string> = {
-  2: "\\squared", 3: "\\cubed", [-1]: "", [-2]: "\\squared", [-3]: "\\cubed",
+  2: "\\squared",
+  3: "\\cubed",
+  [-1]: "",
+  [-2]: "\\squared",
+  [-3]: "\\cubed",
 }
 
 /** siunitx unit macros, e.g. "\meter\per\second\squared". */
@@ -117,7 +191,9 @@ export function unitsToSiunitx(expr: string): string {
     // A known unit becomes its macro (with its prefix macro in front);
     // anything else rides as upright text inside the siunitx argument.
     const prefixed = t.unit
-      ? (t.prefix ? `\\${t.prefix}\\${t.unit}` : `\\${t.unit}`)
+      ? t.prefix
+        ? `\\${t.prefix}\\${t.unit}`
+        : `\\${t.unit}`
       : `\\text{${t.literal}}`
     if (t.exp < 0) {
       out += `\\per${prefixed}`

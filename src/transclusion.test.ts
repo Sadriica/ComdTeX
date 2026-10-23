@@ -5,12 +5,12 @@ import { resolveTransclusions, processBlockIds, attachBlockIds } from "./transcl
 describe("resolveTransclusions", () => {
   it("embeds full notes and strips frontmatter", () => {
     const result = resolveTransclusions("Antes\n![[Nota]]", (target) =>
-      target === "Nota" ? "---\ntitle: Nota\n---\n# Nota\nContenido" : null
+      target === "Nota" ? "---\ntitle: Nota\n---\n# Nota\nContenido" : null,
     )
 
     expect(result).toContain("# Nota\nContenido")
     expect(result).not.toContain("title: Nota")
-    expect(result).toContain("class=\"transclusion\"")
+    expect(result).toContain('class="transclusion"')
   })
 
   it("emits a transclusion-header showing the source", () => {
@@ -62,6 +62,15 @@ describe("processBlockIds + attachBlockIds", () => {
     const input = ["```", "let x = 0 ^id", "```"].join("\n")
     const out = processBlockIds(input)
     expect(out).toContain("let x = 0 ^id")
+  })
+
+  it("keeps exponents at the end of a line of math", () => {
+    const input = ["$$", "x^2", "a + b ^n", "$$", "", "Ends in $y^2$ and x^2"].join("\n")
+    expect(processBlockIds(input)).toBe(input)
+  })
+
+  it("still finds an id on its own line", () => {
+    expect(processBlockIds("A table\n^tbl")).toContain("<!--block:tbl-->")
   })
 
   it("attachBlockIds hoists the comment to its parent block id", () => {

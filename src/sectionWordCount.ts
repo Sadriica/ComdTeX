@@ -1,6 +1,6 @@
 export interface SectionCount {
-  headingLine: number  // 1-based line number of the heading
-  words: number        // word count of the section body (not including the heading itself)
+  headingLine: number // 1-based line number of the heading
+  words: number // word count of the section body (not including the heading itself)
 }
 
 function stripNonWords(text: string): string {
@@ -33,9 +33,7 @@ function stripNonWords(text: string): string {
 
 function countWords(text: string): number {
   const stripped = stripNonWords(text)
-  return stripped
-    .split(/\s+/)
-    .filter(token => token.length > 0 && /[a-zA-Z0-9À-ɏ]/.test(token))
+  return stripped.split(/\s+/).filter((token) => token.length > 0 && /[a-zA-Z0-9À-ɏ]/.test(token))
     .length
 }
 
@@ -54,7 +52,10 @@ export function computeSectionWordCounts(content: string): Map<number, number> {
   const fmEnd = skipFrontmatter(lines)
 
   // Identify heading lines: line number (1-based) and level
-  interface HeadingInfo { lineIdx: number; level: number }
+  interface HeadingInfo {
+    lineIdx: number
+    level: number
+  }
   const headings: HeadingInfo[] = []
   for (let i = fmEnd; i < lines.length; i++) {
     const m = /^(#{1,6})\s+/.exec(lines[i])
@@ -65,7 +66,7 @@ export function computeSectionWordCounts(content: string): Map<number, number> {
 
   for (let hi = 0; hi < headings.length; hi++) {
     const { lineIdx, level } = headings[hi]
-    const headingLine = lineIdx + 1  // 1-based
+    const headingLine = lineIdx + 1 // 1-based
 
     // Section body starts right after the heading line
     const bodyStart = lineIdx + 1

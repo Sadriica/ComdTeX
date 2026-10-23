@@ -30,9 +30,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
 }))
 
 vi.mock("@tauri-apps/api/path", () => ({
-  join: vi.fn(async (...parts: string[]) =>
-    parts.join("/").replace(/\/+/g, "/"),
-  ),
+  join: vi.fn(async (...parts: string[]) => parts.join("/").replace(/\/+/g, "/")),
 }))
 
 import {
@@ -180,10 +178,7 @@ describe("comments storage", () => {
 
   describe("deleteComment", () => {
     it("removes the comment with the given id", async () => {
-      await saveComments(VAULT, [
-        makeComment({ id: "keep" }),
-        makeComment({ id: "drop" }),
-      ])
+      await saveComments(VAULT, [makeComment({ id: "keep" }), makeComment({ id: "drop" })])
       await deleteComment(VAULT, "drop")
       const all = await loadComments(VAULT)
       expect(all.map((c) => c.id)).toEqual(["keep"])

@@ -1,4 +1,5 @@
 import { CITE_STYLES, type CiteStyle } from "./citeStyles"
+import { activeDocTerms } from "./docLang"
 /**
  * Minimal BibTeX parser and citation renderer.
  *
@@ -23,9 +24,14 @@ function extractBraces(text: string, start: number): string {
   let result = ""
   while (i < text.length) {
     const ch = text[i]
-    if (ch === "{") { depth++; if (depth > 1) result += ch }
-    else if (ch === "}") { depth--; if (depth === 0) break; result += ch }
-    else if (depth > 0) result += ch
+    if (ch === "{") {
+      depth++
+      if (depth > 1) result += ch
+    } else if (ch === "}") {
+      depth--
+      if (depth === 0) break
+      result += ch
+    } else if (depth > 0) result += ch
     i++
   }
   return result
@@ -64,13 +70,47 @@ export function parseBibtex(src: string): Map<string, BibEntry> {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 // ── Citation rendering ────────────────────────────────────────────────────────
 
-/** Replace [@key] and [@key, note] with numbered citations. Returns modified
- *  text and the ordered list of cited keys. */
+export interface CitationItem {
+  key: string
+  note?: string
+}
+
+/** Matches every bracket that opens with `[@`; `parseCitationGroup` decides if it is a citation. */
+export const CITATION_GROUP_RE = /\[(@[^\]\n]*)\]/g
+
+const CITE_ITEM_RE = /^@([\w:.-]+)(?:,\s*([\s\S]*))?$/
+
+/**
+ * Parses the inside of a citation bracket: `@a`, `@a, p. 3` or the pandoc
+ * grouping `@a; @b, p. 3`. Returns null when it is not a citation at all.
+ * A `;` that is not followed by another `@key` belongs to the note.
+ */
+export function parseCitationGroup(inner: string): CitationItem[] | null {
+  const parts = inner.split(";").map((p) => p.trim())
+  if (parts.length > 1 && parts.every((p) => CITE_ITEM_RE.test(p))) {
+    return parts.map((p) => {
+      const m = CITE_ITEM_RE.exec(p)!
+      const note = m[2]?.trim()
+      return note ? { key: m[1], note } : { key: m[1] }
+    })
+  }
+  const m = CITE_ITEM_RE.exec(inner.trim())
+  if (!m) return null
+  const note = m[2]?.trim()
+  return [note ? { key: m[1], note } : { key: m[1] }]
+}
+
+/** Replace [@key], [@key, note] and [@a; @b] with numbered citations. Returns
+ *  modified text and the ordered list of cited keys. */
 export function resolveCitations(
   text: string,
   bibMap: Map<string, BibEntry>,
@@ -79,28 +119,58 @@ export function resolveCitations(
   const order: string[] = []
   const indexMap = new Map<string, number>()
 
-  const result = text.replace(/\[@([\w:.-]+)(?:,\s*([^\]]*))?\]/g, (_, key, note) => {
+  const numberOf = (key: string) => {
     if (!indexMap.has(key)) {
       order.push(key)
       indexMap.set(key, order.length)
     }
-    const n = indexMap.get(key)!
-    const exists = bibMap.has(key)
-    const cls = exists ? "cite-ref" : "cite-ref cite-broken"
-    const title = exists
-      ? `${bibMap.get(key)!.fields.author ?? ""} (${bibMap.get(key)!.fields.year ?? "?"})`
-      : `Clave no encontrada: ${key}`
-    const noteStr = note ? `, ${esc(note)}` : ""
+    return indexMap.get(key)!
+  }
+  const linkFor = (key: string, body: string) => {
     const entry = bibMap.get(key)
-    const marker = entry
-      ? style.inText({ type: entry.type, fields: entry.fields, n })
-      : `[${n}]`
+    const cls = entry ? "cite-ref" : "cite-ref cite-broken"
+    const title = entry
+      ? `${entry.fields.author ?? ""} (${entry.fields.year ?? "?"})`
+      : activeDocTerms().bibliography.keyNotFound(key)
+    return `<a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">${esc(body)}</a>`
+  }
+  const markerFor = (key: string, n: number) => {
+    const entry = bibMap.get(key)
+    return entry ? style.inText({ type: entry.type, fields: entry.fields, n }) : `[${n}]`
+  }
+
+  const result = text.replace(CITATION_GROUP_RE, (whole, inner: string) => {
+    const items = parseCitationGroup(inner)
+    if (!items) return whole
+
+    if (items.length > 1) {
+      const numbered = items.map((it) => ({ ...it, n: numberOf(it.key) }))
+      const markers = numbered.map((it) => markerFor(it.key, it.n))
+      const open = /^[[(]/.test(markers[0]) ? markers[0][0] : "["
+      const close = open === "(" ? ")" : "]"
+      const strip = (m: string) =>
+        (m.startsWith(open) && m.endsWith(close) ? m.slice(1, -1) : m) as string
+      const anyNote = numbered.some((it) => it.note)
+      const links = numbered.map((it, i) => {
+        const innerText = strip(markers[i]) + (it.note ? `, ${it.note}` : "")
+        return linkFor(it.key, innerText)
+      })
+      const joined = `${open}${links.join(anyNote || !style.numbered ? "; " : ", ")}${close}`
+      return style.numbered ? `<sup>${joined}</sup>` : joined
+    }
+
+    const { key, note } = items[0]
+    const n = numberOf(key)
+    const marker = markerFor(key, n)
+    const noteStr = note ? `, ${esc(note)}` : ""
     // Numbered styles ride as superscript; author-year sits inline, which is
     // how those venues actually print it.
     const body = noteStr
-      ? marker.replace(/([\])])?$/, "") + noteStr + (marker.endsWith("]") || marker.endsWith(")") ? marker.slice(-1) : "")
+      ? marker.replace(/([\])])?$/, "") +
+        noteStr +
+        (marker.endsWith("]") || marker.endsWith(")") ? marker.slice(-1) : "")
       : marker
-    const link = `<a class="${cls}" href="#bib-${esc(key)}" title="${esc(title)}">${esc(body)}</a>`
+    const link = linkFor(key, body)
     return style.numbered ? `<sup>${link}</sup>` : link
   })
 
@@ -115,7 +185,8 @@ function formatAuthors(raw: string): string {
     .split(/\s+and\s+/i)
     .map((a) => {
       const parts = a.split(",").map((s) => s.trim())
-      if (parts.length >= 2 && parts[1].trim().length > 0) return `${parts[0]}, ${parts[1].trim()[0]}.`
+      if (parts.length >= 2 && parts[1].trim().length > 0)
+        return `${parts[0]}, ${parts[1].trim()[0]}.`
       return parts[0]
     })
     .join("; ")
@@ -128,7 +199,9 @@ function formatEntry(entry: BibEntry, n: number, style: CiteStyle = CITE_STYLES.
       `<div class="bib-entry" id="bib-${esc(entry.key)}">`,
       style.numbered ? `<span class="bib-number">${n}.</span>` : "",
       `<span class="bib-content">${esc(text)}</span></div>`,
-    ].filter(Boolean).join("\n")
+    ]
+      .filter(Boolean)
+      .join("\n")
   }
   return formatEntryDefault(entry, n)
 }
@@ -137,12 +210,13 @@ function formatEntryDefault(entry: BibEntry, n: number): string {
   const f = entry.fields
   const authors = f.author ? formatAuthors(f.author) : "?"
   const year = f.year ? `(${f.year})` : ""
-  const title = f.title ?? "Sin título"
+  const title = f.title ?? activeDocTerms().bibliography.untitled
 
   let source = ""
   if (entry.type === "article") {
     source = [f.journal, f.volume ? `vol. ${f.volume}` : "", f.pages ? `pp. ${f.pages}` : ""]
-      .filter(Boolean).join(", ")
+      .filter(Boolean)
+      .join(", ")
   } else if (entry.type === "book") {
     source = [f.publisher, f.address].filter(Boolean).join(", ")
   } else if (entry.type === "inproceedings" || entry.type === "incollection") {
@@ -166,19 +240,34 @@ export function renderBibliography(
   style: CiteStyle = CITE_STYLES.default,
 ): string {
   if (citedKeys.length === 0) return ""
+  const terms = activeDocTerms().bibliography
   const items = citedKeys
     .map((key, i) => {
       const entry = bibMap.get(key)
-      if (!entry) return `<div class="bib-entry bib-missing" id="bib-${key}">[${i + 1}] Referencia no encontrada: <code>${key}</code></div>`
+      if (!entry) {
+        // Same grid parts as a found entry, so the text does not fall into
+        // the narrow number column.
+        const number = style.id === "default" ? `[${i + 1}]` : style.numbered ? `${i + 1}.` : ""
+        return [
+          `<div class="bib-entry bib-missing" id="bib-${esc(key)}">`,
+          number ? `<span class="bib-number">${number}</span>` : "",
+          `<span class="bib-content">${esc(terms.missing)}: <code>${esc(key)}</code></span></div>`,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      }
       return formatEntry(entry, i + 1, style)
     })
     .join("\n")
 
-  return `<div class="bibliography"><h2>Referencias</h2>${items}</div>`
+  return `<div class="bibliography"><h2>${esc(terms.heading)}</h2>${items}</div>`
 }
 
 // ── LaTeX cite commands ───────────────────────────────────────────────────────
 
 export function citationsToLatex(text: string): string {
-  return text.replace(/\[@([\w:.-]+)(?:,\s*[^\]]*)?\]/g, (_, key) => `\\cite{${key}}`)
+  return text.replace(CITATION_GROUP_RE, (whole, inner: string) => {
+    const items = parseCitationGroup(inner)
+    return items ? `\\cite{${items.map((i) => i.key).join(",")}}` : whole
+  })
 }

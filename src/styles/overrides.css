@@ -1,0 +1,37 @@
+/* Last word before print: rules that must beat every component whatever its
+   specificity. The layer order does that, so none of this needs !important. */
+/* Reduced motion: no animation or transition durations, whatever the component. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s;
+    animation-delay: 0s;
+    animation-iteration-count: 1;
+    transition-duration: 0s;
+    transition-delay: 0s;
+    scroll-behavior: auto;
+  }
+}
+
+/* Forced colours (Windows high contrast): let the system palette win, keep
+   the focus ring and borders visible. */
+@media (forced-colors: active) {
+  .app {
+    background: Canvas;
+    color: CanvasText;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonBorder;
+  }
+  ::selection {
+    background: Highlight;
+    color: HighlightText;
+  }
+}

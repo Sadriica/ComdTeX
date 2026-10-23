@@ -1,0 +1,26 @@
+/* Reset: the browser defaults every component starts from. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* 13px UI root: rem-based sizes (--text-*) scale chrome with browser zoom. */
+html {
+  font-size: 13px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}

@@ -1,50 +1,132 @@
-interface VarNode { kind: "var"; name: string }
-interface UnaryNode { kind: "not"; child: ASTNode }
-interface BinaryNode { kind: "and" | "or" | "implies" | "iff"; left: ASTNode; right: ASTNode }
+interface VarNode {
+  kind: "var"
+  name: string
+}
+interface UnaryNode {
+  kind: "not"
+  child: ASTNode
+}
+interface BinaryNode {
+  kind: "and" | "or" | "implies" | "iff"
+  left: ASTNode
+  right: ASTNode
+}
 type ASTNode = VarNode | UnaryNode | BinaryNode
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 // ── Tokenizer ─────────────────────────────────────────────────────────────────
 
 type TokenKind = "VAR" | "NOT" | "AND" | "OR" | "IMPLIES" | "IFF" | "LPAREN" | "RPAREN" | "EOF"
-interface Token { kind: TokenKind; value: string }
+interface Token {
+  kind: TokenKind
+  value: string
+}
 
 function tokenize(input: string): Token[] {
   const tokens: Token[] = []
   let i = 0
   while (i < input.length) {
     const ch = input[i]
-    if (/\s/.test(ch)) { i++; continue }
+    if (/\s/.test(ch)) {
+      i++
+      continue
+    }
 
-    if (ch === "(") { tokens.push({ kind: "LPAREN", value: "(" }); i++; continue }
-    if (ch === ")") { tokens.push({ kind: "RPAREN", value: ")" }); i++; continue }
+    if (ch === "(") {
+      tokens.push({ kind: "LPAREN", value: "(" })
+      i++
+      continue
+    }
+    if (ch === ")") {
+      tokens.push({ kind: "RPAREN", value: ")" })
+      i++
+      continue
+    }
 
-    if (ch === "¬" || ch === "!") { tokens.push({ kind: "NOT", value: ch }); i++; continue }
+    if (ch === "¬" || ch === "!") {
+      tokens.push({ kind: "NOT", value: ch })
+      i++
+      continue
+    }
 
-    if (ch === "∧" || ch === "*") { tokens.push({ kind: "AND", value: ch }); i++; continue }
-    if (ch === "&" && input[i + 1] === "&") { tokens.push({ kind: "AND", value: "&&" }); i += 2; continue }
+    if (ch === "∧" || ch === "*") {
+      tokens.push({ kind: "AND", value: ch })
+      i++
+      continue
+    }
+    if (ch === "&" && input[i + 1] === "&") {
+      tokens.push({ kind: "AND", value: "&&" })
+      i += 2
+      continue
+    }
 
-    if (ch === "∨" || ch === "+") { tokens.push({ kind: "OR", value: ch }); i++; continue }
-    if (ch === "|" && input[i + 1] === "|") { tokens.push({ kind: "OR", value: "||" }); i += 2; continue }
+    if (ch === "∨" || ch === "+") {
+      tokens.push({ kind: "OR", value: ch })
+      i++
+      continue
+    }
+    if (ch === "|" && input[i + 1] === "|") {
+      tokens.push({ kind: "OR", value: "||" })
+      i += 2
+      continue
+    }
 
-    if (ch === "→") { tokens.push({ kind: "IMPLIES", value: "→" }); i++; continue }
-    if (ch === "-" && input[i + 1] === ">") { tokens.push({ kind: "IMPLIES", value: "->" }); i += 2; continue }
+    if (ch === "→") {
+      tokens.push({ kind: "IMPLIES", value: "→" })
+      i++
+      continue
+    }
+    if (ch === "-" && input[i + 1] === ">") {
+      tokens.push({ kind: "IMPLIES", value: "->" })
+      i += 2
+      continue
+    }
 
-    if (ch === "↔" || ch === "≡") { tokens.push({ kind: "IFF", value: ch }); i++; continue }
-    if (ch === "<" && input[i + 1] === "-" && input[i + 2] === ">") { tokens.push({ kind: "IFF", value: "<->" }); i += 3; continue }
+    if (ch === "↔" || ch === "≡") {
+      tokens.push({ kind: "IFF", value: ch })
+      i++
+      continue
+    }
+    if (ch === "<" && input[i + 1] === "-" && input[i + 2] === ">") {
+      tokens.push({ kind: "IFF", value: "<->" })
+      i += 3
+      continue
+    }
 
     if (/[a-zA-Z]/.test(ch)) {
       let word = ""
-      while (i < input.length && /[a-zA-Z0-9_]/.test(input[i])) { word += input[i]; i++ }
+      while (i < input.length && /[a-zA-Z0-9_]/.test(input[i])) {
+        word += input[i]
+        i++
+      }
       const up = word.toUpperCase()
-      if (up === "NOT") { tokens.push({ kind: "NOT", value: word }); continue }
-      if (up === "AND") { tokens.push({ kind: "AND", value: word }); continue }
-      if (up === "OR") { tokens.push({ kind: "OR", value: word }); continue }
-      if (up === "IMPLIES") { tokens.push({ kind: "IMPLIES", value: word }); continue }
-      if (up === "IFF") { tokens.push({ kind: "IFF", value: word }); continue }
+      if (up === "NOT") {
+        tokens.push({ kind: "NOT", value: word })
+        continue
+      }
+      if (up === "AND") {
+        tokens.push({ kind: "AND", value: word })
+        continue
+      }
+      if (up === "OR") {
+        tokens.push({ kind: "OR", value: word })
+        continue
+      }
+      if (up === "IMPLIES") {
+        tokens.push({ kind: "IMPLIES", value: word })
+        continue
+      }
+      if (up === "IFF") {
+        tokens.push({ kind: "IFF", value: word })
+        continue
+      }
       tokens.push({ kind: "VAR", value: word })
       continue
     }
@@ -62,10 +144,16 @@ class Parser {
   private tokens: Token[]
   private pos = 0
 
-  constructor(tokens: Token[]) { this.tokens = tokens }
+  constructor(tokens: Token[]) {
+    this.tokens = tokens
+  }
 
-  private peek(): Token { return this.tokens[this.pos] }
-  private consume(): Token { return this.tokens[this.pos++] }
+  private peek(): Token {
+    return this.tokens[this.pos]
+  }
+  private consume(): Token {
+    return this.tokens[this.pos++]
+  }
   private expect(kind: TokenKind): Token {
     const t = this.peek()
     if (t.kind !== kind) throw new Error(`Expected ${kind} but got ${t.kind} ('${t.value}')`)
@@ -122,7 +210,10 @@ class Parser {
 
   parseAtom(): ASTNode {
     const t = this.peek()
-    if (t.kind === "VAR") { this.consume(); return { kind: "var", name: t.value } }
+    if (t.kind === "VAR") {
+      this.consume()
+      return { kind: "var", name: t.value }
+    }
     if (t.kind === "LPAREN") {
       this.consume()
       const inner = this.parseIff()
@@ -134,7 +225,8 @@ class Parser {
 
   parse(): ASTNode {
     const node = this.parseIff()
-    if (this.peek().kind !== "EOF") throw new Error(`Unexpected token after expression: '${this.peek().value}'`)
+    if (this.peek().kind !== "EOF")
+      throw new Error(`Unexpected token after expression: '${this.peek().value}'`)
     return node
   }
 }
@@ -152,11 +244,16 @@ export function evalExpr(ast: ASTNode, assignment: Record<string, boolean>): boo
       if (!(ast.name in assignment)) throw new Error(`Unassigned variable: ${ast.name}`)
       return assignment[ast.name]
     }
-    case "not": return !evalExpr(ast.child, assignment)
-    case "and": return evalExpr(ast.left, assignment) && evalExpr(ast.right, assignment)
-    case "or": return evalExpr(ast.left, assignment) || evalExpr(ast.right, assignment)
-    case "implies": return !evalExpr(ast.left, assignment) || evalExpr(ast.right, assignment)
-    case "iff": return evalExpr(ast.left, assignment) === evalExpr(ast.right, assignment)
+    case "not":
+      return !evalExpr(ast.child, assignment)
+    case "and":
+      return evalExpr(ast.left, assignment) && evalExpr(ast.right, assignment)
+    case "or":
+      return evalExpr(ast.left, assignment) || evalExpr(ast.right, assignment)
+    case "implies":
+      return !evalExpr(ast.left, assignment) || evalExpr(ast.right, assignment)
+    case "iff":
+      return evalExpr(ast.left, assignment) === evalExpr(ast.right, assignment)
   }
 }
 
@@ -168,11 +265,21 @@ export function extractVars(ast: ASTNode): string[] {
   function visit(node: ASTNode) {
     switch (node.kind) {
       case "var":
-        if (!seen.has(node.name)) { seen.add(node.name); order.push(node.name) }
+        if (!seen.has(node.name)) {
+          seen.add(node.name)
+          order.push(node.name)
+        }
         break
-      case "not": visit(node.child); break
-      case "and": case "or": case "implies": case "iff":
-        visit(node.left); visit(node.right); break
+      case "not":
+        visit(node.child)
+        break
+      case "and":
+      case "or":
+      case "implies":
+      case "iff":
+        visit(node.left)
+        visit(node.right)
+        break
     }
   }
   visit(ast)
@@ -181,13 +288,20 @@ export function extractVars(ast: ASTNode): string[] {
 
 // ── Truth table builder ───────────────────────────────────────────────────────
 
-export function buildTruthTable(exprs: string[]): { vars: string[]; exprs: string[]; rows: boolean[][] } {
-  const asts = exprs.map(e => parseBoolExpr(e))
+export function buildTruthTable(exprs: string[]): {
+  vars: string[]
+  exprs: string[]
+  rows: boolean[][]
+} {
+  const asts = exprs.map((e) => parseBoolExpr(e))
   const seenVars = new Set<string>()
   const vars: string[] = []
   for (const ast of asts) {
     for (const v of extractVars(ast)) {
-      if (!seenVars.has(v)) { seenVars.add(v); vars.push(v) }
+      if (!seenVars.has(v)) {
+        seenVars.add(v)
+        vars.push(v)
+      }
     }
   }
   const n = vars.length
@@ -198,7 +312,7 @@ export function buildTruthTable(exprs: string[]): { vars: string[]; exprs: strin
     for (let vi = 0; vi < n; vi++) {
       assignment[vars[vi]] = ((mask >> (n - 1 - vi)) & 1) === 0
     }
-    const row: boolean[] = vars.map(v => assignment[v])
+    const row: boolean[] = vars.map((v) => assignment[v])
     for (const ast of asts) {
       row.push(evalExpr(ast, assignment))
     }
@@ -211,8 +325,12 @@ export function buildTruthTable(exprs: string[]): { vars: string[]; exprs: strin
 
 export function renderTruthTableHTML(title: string, content: string, number = ""): string {
   try {
-    const exprLines = content.split("\n").map(l => l.trim()).filter(l => l.length > 0)
-    if (exprLines.length === 0) return `<div class="tt-error">Truth table error: no expressions provided</div>`
+    const exprLines = content
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+    if (exprLines.length === 0)
+      return `<div class="tt-error">Truth table error: no expressions provided</div>`
 
     let table: ReturnType<typeof buildTruthTable>
     try {
@@ -229,7 +347,7 @@ export function renderTruthTableHTML(title: string, content: string, number = ""
     const nExprs = table.exprs.length
 
     const headerCells: string[] = [
-      ...table.vars.map(v => `<th>${escHtml(v)}</th>`),
+      ...table.vars.map((v) => `<th>${escHtml(v)}</th>`),
       ...table.exprs.map((e, i) => {
         const isLast = i === nExprs - 1
         const cls = isLast ? "tt-expr tt-last" : "tt-expr"
@@ -237,7 +355,7 @@ export function renderTruthTableHTML(title: string, content: string, number = ""
       }),
     ]
 
-    const bodyRows = table.rows.map(row => {
+    const bodyRows = table.rows.map((row) => {
       const cells: string[] = []
       for (let i = 0; i < nVars; i++) {
         cells.push(`<td>${row[i] ? "T" : "F"}</td>`)
@@ -255,9 +373,7 @@ export function renderTruthTableHTML(title: string, content: string, number = ""
       return `<tr>${cells.join("")}</tr>`
     })
 
-    const headerText = title
-      ? `Truth Table ${number}: ${escHtml(title)}`
-      : `Truth Table ${number}`
+    const headerText = title ? `Truth Table ${number}: ${escHtml(title)}` : `Truth Table ${number}`
     const titleHTML = `<div class="tt-title">${headerText}</div>`
 
     return [
@@ -268,7 +384,9 @@ export function renderTruthTableHTML(title: string, content: string, number = ""
       `<tbody>${bodyRows.join("")}</tbody>`,
       `</table>`,
       `</div>`,
-    ].filter(Boolean).join("\n")
+    ]
+      .filter(Boolean)
+      .join("\n")
   } catch (e) {
     return `<div class="tt-error">Truth table error: ${escHtml(String(e).replace(/^Error:\s*/, ""))}</div>`
   }

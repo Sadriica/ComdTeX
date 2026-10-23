@@ -29,7 +29,10 @@ interface ParsedGraph {
 // ── Parser ────────────────────────────────────────────────────────────────────
 
 export function parseGraph(content: string): ParsedGraph {
-  const lines = content.split("\n").map(l => l.trim()).filter(l => l.length > 0)
+  const lines = content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
 
   const nodeSet = new Set<string>()
   const nodeOrder: string[] = []
@@ -110,8 +113,10 @@ function esc(s: string): string {
 }
 
 function shortenEndpoints(
-  x1: number, y1: number,
-  x2: number, y2: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
   r: number,
 ): { x1: number; y1: number; x2: number; y2: number } {
   const dx = x2 - x1
@@ -167,8 +172,8 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
   svgParts.push(`<defs>`)
   svgParts.push(
     `<marker id="arrow-${uid}" markerWidth="8" markerHeight="8" refX="8" refY="3" orient="auto">` +
-    `<path d="M0,0 L0,6 L8,3 z" fill="#7c9cbf"/>` +
-    `</marker>`,
+      `<path d="M0,0 L0,6 L8,3 z" fill="#7c9cbf"/>` +
+      `</marker>`,
   )
   svgParts.push(`</defs>`)
 
@@ -185,13 +190,13 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
       const cy = fromPos.y - NODE_R
       svgParts.push(
         `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${NODE_R * 0.7}" ` +
-        `fill="none" stroke="#7c9cbf" stroke-width="1.5"/>`,
+          `fill="none" stroke="#7c9cbf" stroke-width="1.5"/>`,
       )
       if (edge.weight) {
         svgParts.push(
           `<text x="${(cx + NODE_R + 4).toFixed(1)}" y="${(cy - NODE_R).toFixed(1)}" ` +
-          `font-size="9" fill="#a0bfd0" text-anchor="middle" dominant-baseline="central"` +
-          ` font-family="monospace">${esc(edge.weight)}</text>`,
+            `font-size="9" fill="#a0bfd0" text-anchor="middle" dominant-baseline="central"` +
+            ` font-family="monospace">${esc(edge.weight)}</text>`,
         )
       }
       continue
@@ -204,11 +209,7 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
     const totalPairs = edgePairCount.get(pairKey) ?? 1
     const offset = totalPairs > 1 ? (pairIdx - (totalPairs - 1) / 2) * 8 : 0
 
-    const { x1, y1, x2, y2 } = shortenEndpoints(
-      fromPos.x, fromPos.y,
-      toPos.x, toPos.y,
-      NODE_R,
-    )
+    const { x1, y1, x2, y2 } = shortenEndpoints(fromPos.x, fromPos.y, toPos.x, toPos.y, NODE_R)
 
     // Perpendicular offset for parallel edges
     const dx = toPos.x - fromPos.x
@@ -217,16 +218,16 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
     const ox = len > 0 ? (-dy / len) * offset : 0
     const oy = len > 0 ? (dx / len) * offset : 0
 
-    const rx1 = x1 + ox, ry1 = y1 + oy
-    const rx2 = x2 + ox, ry2 = y2 + oy
+    const rx1 = x1 + ox,
+      ry1 = y1 + oy
+    const rx2 = x2 + ox,
+      ry2 = y2 + oy
 
-    const markerAttr = edge.directed
-      ? ` marker-end="url(#arrow-${uid})"`
-      : ""
+    const markerAttr = edge.directed ? ` marker-end="url(#arrow-${uid})"` : ""
 
     svgParts.push(
       `<line x1="${rx1.toFixed(1)}" y1="${ry1.toFixed(1)}" x2="${rx2.toFixed(1)}" y2="${ry2.toFixed(1)}" ` +
-      `stroke="#7c9cbf" stroke-width="1.5"${markerAttr}/>`,
+        `stroke="#7c9cbf" stroke-width="1.5"${markerAttr}/>`,
     )
 
     // Weight label at midpoint
@@ -235,7 +236,7 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
       const my = (ry1 + ry2) / 2 + (len > 0 ? (dx / len) * 6 : 0)
       svgParts.push(
         `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" font-size="9" fill="#a0bfd0" ` +
-        `text-anchor="middle" dominant-baseline="central" font-family="monospace">${esc(edge.weight)}</text>`,
+          `text-anchor="middle" dominant-baseline="central" font-family="monospace">${esc(edge.weight)}</text>`,
       )
     }
   }
@@ -247,18 +248,16 @@ export function renderGraphSVG(title: string, content: string, number = ""): str
     const fontSize = node.length <= 3 ? 11 : 9
     svgParts.push(
       `<circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="${NODE_R}" ` +
-      `fill="#1e3a52" stroke="#7c9cbf" stroke-width="1.5"/>`,
+        `fill="#1e3a52" stroke="#7c9cbf" stroke-width="1.5"/>`,
     )
     svgParts.push(
       `<text x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" ` +
-      `font-size="${fontSize}" fill="#e0e0e0" text-anchor="middle" dominant-baseline="central" ` +
-      `font-family="monospace">${esc(node)}</text>`,
+        `font-size="${fontSize}" fill="#e0e0e0" text-anchor="middle" dominant-baseline="central" ` +
+        `font-family="monospace">${esc(node)}</text>`,
     )
   }
 
-  const headerText = title
-    ? `Graph ${number}: ${esc(title)}`
-    : `Graph ${number}`
+  const headerText = title ? `Graph ${number}: ${esc(title)}` : `Graph ${number}`
   const titleDiv = `<div class="graph-title">${headerText}</div>`
 
   const svg =

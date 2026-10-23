@@ -56,6 +56,94 @@ const YOUTUBE_EMBED = /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com)\/
 const LINK_ATTRS = new Set(["href"])
 const MEDIA_URL_ATTRS = new Set(["src", "xlink:href", "poster"])
 
+// ── Inline style / <style> policy ────────────────────────────────────────────
+//
+// KaTeX relies on inline `style` attributes, so the attribute stays allowed.
+// What is NOT allowed is anything that lets a document escape its own box and
+// cover or restyle the app: out-of-flow positioning, large z-index values,
+// and external resources (`url(...)`, `@import`, `expression(...)`).
+const DANGEROUS_POSITION_RE = /^\s*(fixed|absolute|sticky)\b/i
+const MAX_SAFE_Z_INDEX = 10
+
+function isDangerousDeclaration(decl: string): boolean {
+  const idx = decl.indexOf(":")
+  if (idx < 0) return false
+  const prop = decl.slice(0, idx).trim().toLowerCase()
+  const value = decl.slice(idx + 1)
+  if (prop === "position") return DANGEROUS_POSITION_RE.test(value)
+  if (prop === "z-index") {
+    const n = Number.parseInt(value, 10)
+    return !Number.isFinite(n) || n > MAX_SAFE_Z_INDEX
+  }
+  const lower = value.toLowerCase()
+  return /url\(|expression\(|@import|javascript:|behavior|-moz-binding/.test(lower)
+}
+
+export function filterInlineStyle(style: string): string {
+  return style
+    .split(";")
+    .filter((decl) => !isDangerousDeclaration(decl))
+    .join(";")
+}
+
+// `<style>` is dropped everywhere EXCEPT inside an SVG whose id prefixes
+// every rule (this is exactly how Mermaid themes its diagrams:
+// `#mermaid-123 .node rect{...}`). Anything unscoped (`body{display:none}`)
+// would restyle the whole app, so it is removed.
+function isScopedSvgStyle(node: Element): boolean {
+  const svg = node.closest?.("svg")
+  const id = svg?.getAttribute("id")
+  if (!svg || !id || !/^[A-Za-z][\w-]*$/.test(id)) return false
+  const css = (node.textContent ?? "").replace(/\/\*[\s\S]*?\*\//g, "")
+  if (/@import|@font-face|@namespace|expression\(|javascript:|<|url\((?!\s*['"]?#)/i.test(css))
+    return false
+  // Walk top-level rules by brace depth.
+  let i = 0
+  while (i < css.length) {
+    const open = css.indexOf("{", i)
+    if (open < 0) return css.slice(i).trim() === ""
+    const head = css.slice(i, open).trim()
+    let depth = 1
+    let j = open + 1
+    while (j < css.length && depth > 0) {
+      if (css[j] === "{") depth++
+      else if (css[j] === "}") depth--
+      j++
+    }
+    if (depth !== 0) return false
+    if (head.startsWith("@")) {
+      if (!/^@(-webkit-)?keyframes\b/i.test(head)) return false
+    } else {
+      for (const sel of head.split(",")) {
+        const t = sel.trim()
+        if (!t.startsWith(`#${id}`)) return false
+        const next = t.charAt(id.length + 1)
+        if (next && !/[\s.:[>+~]/.test(next)) return false
+      }
+    }
+    i = j
+  }
+  return true
+}
+
+// Form controls are never legitimate rendered content: a <form action=...>
+// with inputs is a phishing surface. The ONE exception is the task-list
+// checkbox the renderer emits itself (`<input type="checkbox"
+// class="preview-checkbox" data-line>`), which the preview click handler
+// toggles.
+const FORBIDDEN_FORM_TAGS = new Set([
+  "form",
+  "button",
+  "textarea",
+  "select",
+  "option",
+  "optgroup",
+  "fieldset",
+  "datalist",
+  "output",
+])
+const FORM_ATTRS = ["action", "formaction", "formmethod", "formtarget", "form", "name", "method"]
+
 let purifyConfigured = false
 
 function configurePurify() {
@@ -70,6 +158,16 @@ function configurePurify() {
   // only reachable here because it's in the profile's ALLOWED_ATTR set).
   DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
     const name = data.attrName.toLowerCase()
+
+    if (name === "style") {
+      const filtered = filterInlineStyle(data.attrValue)
+      if (filtered.trim() === "") {
+        data.keepAttr = false
+      } else {
+        data.attrValue = filtered
+      }
+      return
+    }
 
     if (LINK_ATTRS.has(name)) {
       if (isSafeLinkUrl(data.attrValue)) {
@@ -86,6 +184,31 @@ function configurePurify() {
       } else {
         data.keepAttr = false
       }
+    }
+  })
+
+  // Drop <style> (unless scoped inside an SVG), form controls, and form
+  // wiring attributes.
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    const tag = node.tagName?.toLowerCase()
+    if (!tag) return
+    if (tag === "style") {
+      if (!isScopedSvgStyle(node)) node.remove()
+      return
+    }
+    if (FORBIDDEN_FORM_TAGS.has(tag)) {
+      node.remove()
+      return
+    }
+    if (tag === "input") {
+      const isTaskCheckbox =
+        node.getAttribute("type")?.toLowerCase() === "checkbox" &&
+        node.classList?.contains("preview-checkbox")
+      if (!isTaskCheckbox) {
+        node.remove()
+        return
+      }
+      for (const attr of FORM_ATTRS) node.removeAttribute(attr)
     }
   })
 

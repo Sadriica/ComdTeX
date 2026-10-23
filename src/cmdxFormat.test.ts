@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest"
-import { analyzeConversion, isCmdxFormat, parseCmdxDocument, toCmdx, toStorage, detectStorageFormat, toDiskContent, toEditorContent } from "./cmdxFormat"
+import {
+  analyzeConversion,
+  isCmdxFormat,
+  parseCmdxDocument,
+  toCmdx,
+  toStorage,
+  detectStorageFormat,
+  toDiskContent,
+  toEditorContent,
+} from "./cmdxFormat"
 
 describe("cmdxFormat", () => {
   describe("isCmdxFormat", () => {
@@ -157,7 +166,16 @@ describe("cmdxFormat", () => {
     it("preserves every special block verbatim across a disk round-trip", () => {
       // Regression: an excalidraw block was flattened to `> [!note]` on save
       // because `excalidraw` was missing from SPECIAL_ENVS, destroying drawings.
-      const specials = ["pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw"]
+      const specials = [
+        "pseudocode",
+        "flowchart",
+        "truth",
+        "graph",
+        "plot",
+        "commdiag",
+        "code",
+        "excalidraw",
+      ]
       for (const env of specials) {
         const block = `:::${env}\nrAW b0dy: ${env} | a==b | f(x) :::keep\n:::`
         const onDisk = toDiskContent("note.md", block)
@@ -194,7 +212,10 @@ describe("cmdxFormat", () => {
     })
 
     it("warns about preserved LaTeX constructs that CMDX does not interpret", () => {
-      const report = analyzeConversion("\\documentclass{article}\n\\newcommand{\\R}{\\mathbb{R}}\n\\begin{tikzpicture}\n\\end{tikzpicture}", "tex")
+      const report = analyzeConversion(
+        "\\documentclass{article}\n\\newcommand{\\R}{\\mathbb{R}}\n\\begin{tikzpicture}\n\\end{tikzpicture}",
+        "tex",
+      )
       expect(report.warnings.map((w) => w.code)).toContain("latex-preamble-preserved")
       expect(report.warnings.map((w) => w.code)).toContain("custom-latex-macro-preserved")
       expect(report.warnings.map((w) => w.code)).toContain("unsupported-latex-environment")
@@ -213,18 +234,19 @@ describe("cmdxFormat", () => {
 
   describe("parseCmdxDocument", () => {
     it("parses text and nested environments into an AST", () => {
-      const ast = parseCmdxDocument([
-        "# Intro",
-        ":::theorem[Main] {#thm:main}",
-        "Body",
-        ":::proof",
-        "Done",
-        ":::",
-        ":::",
-      ].join("\n"))
+      const ast = parseCmdxDocument(
+        ["# Intro", ":::theorem[Main] {#thm:main}", "Body", ":::proof", "Done", ":::", ":::"].join(
+          "\n",
+        ),
+      )
 
       expect(ast[0]).toMatchObject({ type: "text", content: "# Intro" })
-      expect(ast[1]).toMatchObject({ type: "environment", name: "theorem", title: "Main", label: "thm:main" })
+      expect(ast[1]).toMatchObject({
+        type: "environment",
+        name: "theorem",
+        title: "Main",
+        label: "thm:main",
+      })
       if (ast[1].type !== "environment") throw new Error("expected environment")
       expect(ast[1].children[0]).toMatchObject({ type: "text", content: "Body" })
       expect(ast[1].children[1]).toMatchObject({ type: "environment", name: "proof" })

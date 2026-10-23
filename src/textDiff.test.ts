@@ -67,15 +67,27 @@ describe("diffLineSummary", () => {
   })
 
   it("counts added lines", () => {
-    expect(diffLineSummary("a\nb", "a\nx\ny\nb")).toEqual({ added: 2, removed: 0, identical: false })
+    expect(diffLineSummary("a\nb", "a\nx\ny\nb")).toEqual({
+      added: 2,
+      removed: 0,
+      identical: false,
+    })
   })
 
   it("counts removed lines", () => {
-    expect(diffLineSummary("a\nx\ny\nb", "a\nb")).toEqual({ added: 0, removed: 2, identical: false })
+    expect(diffLineSummary("a\nx\ny\nb", "a\nb")).toEqual({
+      added: 0,
+      removed: 2,
+      identical: false,
+    })
   })
 
   it("counts a modified line as one removed and one added", () => {
-    expect(diffLineSummary("a\nviejo\nb", "a\nnuevo\nb")).toEqual({ added: 1, removed: 1, identical: false })
+    expect(diffLineSummary("a\nviejo\nb", "a\nnuevo\nb")).toEqual({
+      added: 1,
+      removed: 1,
+      identical: false,
+    })
   })
 
   it("handles a completely different document", () => {

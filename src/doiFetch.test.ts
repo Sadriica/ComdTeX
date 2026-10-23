@@ -18,7 +18,10 @@ describe("ADS bibcodes", () => {
 describe("INSPIRE references", () => {
   it("parses recids, URLs and arXiv ids", async () => {
     const { parseInspireInput } = await import("./doiFetch")
-    expect(parseInspireInput("https://inspirehep.net/literature/1234567")).toEqual({ kind: "recid", value: "1234567" })
+    expect(parseInspireInput("https://inspirehep.net/literature/1234567")).toEqual({
+      kind: "recid",
+      value: "1234567",
+    })
     expect(parseInspireInput("inspire:98765")).toEqual({ kind: "recid", value: "98765" })
     expect(parseInspireInput("arXiv:2301.00001")).toEqual({ kind: "arxiv", value: "2301.00001" })
   })

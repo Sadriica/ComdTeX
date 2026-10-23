@@ -4,6 +4,7 @@ import katex from "katex"
 // exactly as it will in the LaTeX export (which loads the mhchem package).
 import "katex/contrib/mhchem"
 import type { KatexMacros } from "./macros"
+import { isDisplayMathFence, singleLineDisplayMath } from "./displayMathFence"
 
 interface MathBlock {
   startLine: number
@@ -11,7 +12,9 @@ interface MathBlock {
   expr: string
 }
 
-function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] {
+export function findDisplayMathBlocks(
+  model: Pick<monacoApi.editor.ITextModel, "getLineCount" | "getLineContent">,
+): MathBlock[] {
   const blocks: MathBlock[] = []
   const lineCount = model.getLineCount()
   let i = 1
@@ -19,19 +22,20 @@ function findDisplayMathBlocks(model: monacoApi.editor.ITextModel): MathBlock[] 
     const line = model.getLineContent(i).trim()
     if (line.startsWith("$$")) {
       const startLine = i
-      const rest = line.slice(2).trimEnd()
-      // Single-line: $$ expr $$
-      if (rest.endsWith("$$") && rest.length > 2) {
-        blocks.push({ startLine, endLine: i, expr: rest.slice(0, -2).trim() })
+      // Single-line: $$ expr $$ (optionally labelled)
+      const single = singleLineDisplayMath(line)
+      if (single !== null) {
+        blocks.push({ startLine, endLine: i, expr: single })
         i++
         continue
       }
-      // Multi-line: collect until closing $$
+      // Multi-line: collect until the closing fence, which may carry a label
+      const rest = line.slice(2).trim()
       const exprLines: string[] = rest ? [rest] : []
       i++
       while (i <= lineCount) {
         const inner = model.getLineContent(i)
-        if (inner.trim() === "$$") {
+        if (isDisplayMathFence(inner)) {
           blocks.push({ startLine, endLine: i, expr: exprLines.join("\n") })
           break
         }
@@ -52,7 +56,10 @@ const mathHtmlCache = new Map<string, string | null>()
 let mathHtmlCacheMacros: KatexMacros | null = null
 
 function renderMathHtml(expr: string, macros: KatexMacros): string | null {
-  if (macros !== mathHtmlCacheMacros) { mathHtmlCache.clear(); mathHtmlCacheMacros = macros }
+  if (macros !== mathHtmlCacheMacros) {
+    mathHtmlCache.clear()
+    mathHtmlCacheMacros = macros
+  }
   const key = expr.trim()
   const cached = mathHtmlCache.get(key)
   if (cached !== undefined) return cached
@@ -99,13 +106,25 @@ export function setupDisplayMathPreview(
 
   function update() {
     const model = editor.getModel()
-    if (!model) { removeAllZones(); return }
-    if (!getEnabled()) { removeAllZones(); return }
-    try { updateZones(model) } catch {
+    if (!model) {
+      removeAllZones()
+      return
+    }
+    if (!getEnabled()) {
+      removeAllZones()
+      return
+    }
+    try {
+      updateZones(model)
+    } catch {
       // Monaco can throw transient view-zone/layout errors during editor
       // (re)mount or rapid model changes (e.g. "this.domNode.domNode"); reset and
       // carry on instead of surfacing an unhandled error.
-      try { removeAllZones() } catch { /* ignore */ }
+      try {
+        removeAllZones()
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -114,9 +133,7 @@ export function setupDisplayMathPreview(
     const blocks = findDisplayMathBlocks(model)
     const macros = getMacros()
 
-    const toShow = blocks.filter(
-      (b) => !(cursorLine >= b.startLine && cursorLine <= b.endLine),
-    )
+    const toShow = blocks.filter((b) => !(cursorLine >= b.startLine && cursorLine <= b.endLine))
 
     // Build decoration ranges to dim source lines
     const decorationRanges: monacoApi.editor.IModelDeltaDecoration[] = toShow.map((b) => ({
@@ -197,7 +214,10 @@ export function setupDisplayMathPreview(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   const scheduleUpdate = () => {
     if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => { debounceTimer = null; update() }, 140)
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null
+      update()
+    }, 140)
   }
 
   // Defer the first pass: running it synchronously inside onMount (before the
@@ -207,7 +227,10 @@ export function setupDisplayMathPreview(
 
   const d1 = editor.onDidChangeCursorPosition(scheduleUpdate)
   const d2 = editor.onDidChangeModelContent(scheduleUpdate)
-  const d3 = editor.onDidChangeModel(() => { removeAllZones(); scheduleUpdate() })
+  const d3 = editor.onDidChangeModel(() => {
+    removeAllZones()
+    scheduleUpdate()
+  })
 
   return {
     dispose() {

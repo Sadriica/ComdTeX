@@ -1,0 +1,441 @@
+/* AI assistant panel: a calm chat document. User turns are compact bubbles on
+   the right, assistant turns are full-width prose in the UI font. */
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+  color: var(--fg);
+}
+
+/* Buttons: primary, default (ghost) and stop share one shape. */
+.ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  transition: var(--transition-ui);
+}
+.ai-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.ai-btn:active:not(:disabled) {
+  background: var(--bg-active);
+}
+.ai-btn:disabled {
+  color: var(--fg-subtle);
+  border-color: var(--border);
+  cursor: default;
+}
+.ai-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.ai-btn-primary:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 88%, var(--fg));
+  border-color: transparent;
+}
+.ai-btn-primary:active:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 78%, var(--fg));
+}
+.ai-btn-primary:disabled {
+  background: var(--bg-hover);
+  border-color: var(--border);
+  color: var(--fg-subtle);
+}
+.ai-btn-stop {
+  background: transparent;
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.ai-btn-stop:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+/* Disabled-state screen (AI is off): short explanation and a way to Settings. */
+.ai-off {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-7) var(--space-6);
+  text-align: center;
+}
+.ai-off-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+.ai-off-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+.ai-off-message strong {
+  color: var(--fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.ai-off-message p {
+  max-width: 26ch;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  text-wrap: balance;
+}
+
+/* Conversation history dropdown */
+.ai-history {
+  max-height: 220px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: 0 var(--space-3) 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.ai-history-item:hover {
+  background: var(--bg-hover);
+}
+.ai-history-item.active {
+  background: var(--bg-selected);
+}
+.ai-history-title {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) 0;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-history-item.active .ai-history-title {
+  font-weight: 600;
+}
+.ai-history-del {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+  transition: var(--transition-ui);
+}
+.ai-history-del:hover {
+  color: var(--danger);
+  background: var(--bg-active);
+}
+
+/* Message list */
+.ai-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.ai-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ai-bubble-role {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* The speaker is obvious from the bubble; keep the label for screen readers. */
+.ai-bubble-user .ai-bubble-role {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.ai-bubble-user {
+  align-items: flex-end;
+}
+.ai-bubble-user .ai-bubble-body {
+  max-width: 88%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--fg);
+}
+.ai-bubble-user-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-bubble-body {
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+/* Assistant prose */
+.ai-bubble-assistant .ai-bubble-body {
+  overflow-x: auto;
+}
+.ai-bubble-assistant .ai-bubble-body > * + * {
+  margin-top: var(--space-4);
+}
+.ai-bubble-assistant .ai-bubble-body h1,
+.ai-bubble-assistant .ai-bubble-body h2,
+.ai-bubble-assistant .ai-bubble-body h3,
+.ai-bubble-assistant .ai-bubble-body h4 {
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+.ai-bubble-assistant .ai-bubble-body ul,
+.ai-bubble-assistant .ai-bubble-body ol {
+  padding-left: var(--space-7);
+}
+.ai-bubble-assistant .ai-bubble-body li + li {
+  margin-top: var(--space-2);
+}
+.ai-bubble-assistant .ai-bubble-body a {
+  color: var(--link);
+}
+.ai-bubble-assistant .ai-bubble-body blockquote {
+  padding-left: var(--space-5);
+  border-left: 2px solid var(--border-strong);
+  color: var(--fg-muted);
+}
+.ai-bubble-assistant .ai-bubble-body code {
+  padding: 0 var(--space-2);
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
+  color: var(--code-fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.ai-bubble-assistant .ai-bubble-body pre {
+  padding: var(--space-4) var(--space-5);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+.ai-bubble-assistant .ai-bubble-body pre code {
+  padding: 0;
+  background: none;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.ai-bubble-assistant .ai-bubble-body table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.ai-bubble-assistant .ai-bubble-body th,
+.ai-bubble-assistant .ai-bubble-body td {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+}
+
+.ai-bubble-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Live response feedback: caret on the streaming text and "typing" dots while
+   waiting for the first token. */
+.ai-streaming-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: var(--space-1);
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: ai-blink 1s step-start infinite;
+}
+@keyframes ai-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ai-typing-wrap {
+  padding: var(--space-1) 0;
+}
+.ai-typing {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.ai-typing > span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fg-muted);
+  animation: ai-bounce 1.2s infinite ease-in-out both;
+}
+.ai-typing > span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.ai-typing > span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes ai-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  35% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-cursor,
+  .ai-typing > span {
+    animation: none;
+  }
+  .ai-cursor {
+    opacity: 1;
+  }
+  .ai-typing > span {
+    opacity: 0.6;
+  }
+}
+
+/* Composer */
+.ai-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+.ai-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.ai-chip {
+  min-height: 22px;
+  padding: 0 var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  transition: var(--transition-ui);
+}
+.ai-chip:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.ai-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--fg);
+}
+.ai-chip:disabled {
+  color: var(--fg-subtle);
+  border-color: var(--border);
+  cursor: default;
+}
+.ai-actions-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ai-action-item {
+  min-height: 22px;
+  padding: 0 var(--space-4);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  transition: var(--transition-ui);
+}
+.ai-action-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+.ai-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ai-input {
+  width: 100%;
+  min-height: 56px;
+  max-height: 200px;
+  resize: none;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+.ai-input::placeholder {
+  color: var(--fg-subtle);
+}
+.ai-input:focus {
+  border-color: var(--accent);
+}
+.ai-input-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+.ai-off-icon .icon {
+  width: 22px;
+  height: 22px;
+}

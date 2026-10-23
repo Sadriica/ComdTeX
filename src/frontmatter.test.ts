@@ -35,7 +35,7 @@ describe("extractFrontmatter", () => {
   })
 
   it("unquotes double- and single-quoted string values", () => {
-    const doc = '---\ntitle: "Quoted Title"\nauthor: \'Single Quoted\'\n---\nBody'
+    const doc = "---\ntitle: \"Quoted Title\"\nauthor: 'Single Quoted'\n---\nBody"
     const result = extractFrontmatter(doc)!
     expect(result.data.title).toBe("Quoted Title")
     expect(result.data.author).toBe("Single Quoted")
@@ -48,7 +48,7 @@ describe("extractFrontmatter", () => {
   })
 
   it("parses inline arrays", () => {
-    const doc = "---\ntags: [calculus, linear-algebra, \"multi word\"]\n---\nBody"
+    const doc = '---\ntags: [calculus, linear-algebra, "multi word"]\n---\nBody'
     const result = extractFrontmatter(doc)!
     expect(result.data.tags).toEqual(["calculus", "linear-algebra", "multi word"])
   })
@@ -127,7 +127,11 @@ describe("serializeFrontmatter / round-trip", () => {
   })
 
   it("skips undefined/null values", () => {
-    const yaml = serializeFrontmatter({ title: "Foo", author: undefined, date: null as unknown as undefined })
+    const yaml = serializeFrontmatter({
+      title: "Foo",
+      author: undefined,
+      date: null as unknown as undefined,
+    })
     expect(yaml).toContain("title: Foo")
     expect(yaml).not.toContain("author")
     expect(yaml).not.toContain("date")

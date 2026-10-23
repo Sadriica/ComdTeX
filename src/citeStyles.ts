@@ -124,22 +124,30 @@ const vancouver: CiteStyle = {
     const authors = f.author ? authorsVancouver(parseAuthors(f.author)) : ""
     const title = f.title ? `${f.title}.` : ""
     if (type === "book") {
-      return joinNonEmpty([
-        authors && `${authors}.`,
-        title,
-        f.edition && `${f.edition} ed.`,
-        joinNonEmpty([f.address, f.publisher], ": "),
-        f.year && `${f.year}.`,
-      ], " ")
+      return joinNonEmpty(
+        [
+          authors && `${authors}.`,
+          title,
+          f.edition && `${f.edition} ed.`,
+          joinNonEmpty([f.address, f.publisher], ": "),
+          f.year && `${f.year}.`,
+        ],
+        " ",
+      )
     }
     const vol = joinNonEmpty([f.volume, f.number && `(${f.number})`], "")
     const tail = joinNonEmpty([vol, f.pages && `:${f.pages}`], "")
-    return joinNonEmpty([
-      authors && `${authors}.`,
-      title,
-      f.journal || f.booktitle,
-      joinNonEmpty([f.year, tail && `;${tail}`], ""),
-    ], " ").replace(/\s+;/, ";") + "."
+    return (
+      joinNonEmpty(
+        [
+          authors && `${authors}.`,
+          title,
+          f.journal || f.booktitle,
+          joinNonEmpty([f.year, tail && `;${tail}`], ""),
+        ],
+        " ",
+      ).replace(/\s+;/, ";") + "."
+    )
   },
 }
 
@@ -164,16 +172,22 @@ const apa: CiteStyle = {
     const authors = f.author ? authorsApa(parseAuthors(f.author)) : ""
     const year = `(${f.year ?? "n.d."}).`
     if (type === "book") {
-      return joinNonEmpty([authors, year, f.title && `${f.title}.`, f.publisher && `${f.publisher}.`], " ")
+      return joinNonEmpty(
+        [authors, year, f.title && `${f.title}.`, f.publisher && `${f.publisher}.`],
+        " ",
+      )
     }
     const vol = joinNonEmpty([f.volume, f.number && `(${f.number})`], "")
-    return joinNonEmpty([
-      authors,
-      year,
-      f.title && `${f.title}.`,
-      f.journal || f.booktitle,
-      joinNonEmpty([vol, f.pages], ", ") && `${joinNonEmpty([vol, f.pages], ", ")}.`,
-    ], " ")
+    return joinNonEmpty(
+      [
+        authors,
+        year,
+        f.title && `${f.title}.`,
+        f.journal || f.booktitle,
+        joinNonEmpty([vol, f.pages], ", ") && `${joinNonEmpty([vol, f.pages], ", ")}.`,
+      ],
+      " ",
+    )
   },
 }
 
@@ -189,14 +203,17 @@ const authorYear: CiteStyle = {
   reference: ({ fields: f }) => {
     const people = f.author ? parseAuthors(f.author) : []
     const authors = people.map((p) => `${p.last}, ${p.initials}`).join("; ")
-    return joinNonEmpty([
-      authors && `${authors}`,
-      f.year && `${f.year}.`,
-      f.title && `${f.title}.`,
-      f.journal || f.booktitle,
-      f.volume,
-      f.pages,
-    ], ", ")
+    return joinNonEmpty(
+      [
+        authors && `${authors}`,
+        f.year && `${f.year}.`,
+        f.title && `${f.title}.`,
+        f.journal || f.booktitle,
+        f.volume,
+        f.pages,
+      ],
+      ", ",
+    )
   },
 }
 
@@ -208,12 +225,19 @@ const defaultStyle: CiteStyle = {
   natbib: null,
   inText: ({ n }) => `[${n}]`,
   reference: ({ type, fields: f }) => {
-    const authors = f.author ? parseAuthors(f.author).map((p) => `${p.last}, ${p.initials}.`).join("; ") : "?"
+    const authors = f.author
+      ? parseAuthors(f.author)
+          .map((p) => `${p.last}, ${p.initials}.`)
+          .join("; ")
+      : "?"
     const year = f.year ? `(${f.year})` : ""
     const title = f.title ?? ""
     let source = ""
     if (type === "article") {
-      source = joinNonEmpty([f.journal, f.volume && `vol. ${f.volume}`, f.pages && `pp. ${f.pages}`], ", ")
+      source = joinNonEmpty(
+        [f.journal, f.volume && `vol. ${f.volume}`, f.pages && `pp. ${f.pages}`],
+        ", ",
+      )
     } else if (type === "book") {
       source = joinNonEmpty([f.publisher, f.address], ", ")
     } else if (type === "inproceedings" || type === "incollection") {

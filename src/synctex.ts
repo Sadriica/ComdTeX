@@ -265,9 +265,10 @@ export function forwardSync(
   fileOrTag: string | number,
   line: number,
 ): SyncBox | null {
-  const tag = typeof fileOrTag === "number"
-    ? fileOrTag
-    : data.tags.get(fileOrTag) ?? matchTagByBasename(data, fileOrTag)
+  const tag =
+    typeof fileOrTag === "number"
+      ? fileOrTag
+      : (data.tags.get(fileOrTag) ?? matchTagByBasename(data, fileOrTag))
   if (tag == null) return null
 
   let exact: SyncBox | null = null

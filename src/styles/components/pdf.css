@@ -1,0 +1,131 @@
+/* ── PDF preview panel ─────────────────────────────────────────────────── */
+.pdf-preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-surface);
+  color: var(--fg);
+  overflow: hidden;
+}
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
+  flex: 0 0 auto;
+}
+.pdf-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--chrome-fg);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-md);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-ui);
+}
+.pdf-toolbar-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.pdf-toolbar-btn:active:not(:disabled) {
+  background: var(--bg-active);
+}
+.pdf-toolbar-btn.active {
+  background: var(--bg-selected);
+  border-color: var(--accent);
+  color: var(--fg);
+}
+.pdf-toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pdf-toolbar-sep {
+  flex: 1 1 auto;
+}
+.pdf-page-indicator {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  min-width: 4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pages sit on a sunken desk, each on its own sheet with a hairline shadow. */
+.pdf-pages {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: var(--space-7) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--bg-sunken);
+}
+.pdf-page {
+  position: relative;
+  flex-shrink: 0;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-1);
+  outline: 1px solid var(--border);
+}
+.pdf-page canvas {
+  display: block;
+  cursor: crosshair;
+}
+.pdf-page-label {
+  position: absolute;
+  top: calc(var(--space-6) * -1);
+  right: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+.pdf-empty,
+.pdf-error {
+  color: var(--fg-muted);
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  max-width: 280px;
+}
+.pdf-error {
+  color: var(--danger);
+}
+
+/* Dark PDF (opt-in, Settings > PDF). The default keeps pages light: the
+   invert filter repaints every large canvas on scroll and zoom, so it only
+   runs when the person asks for it. */
+.pdf-preview-panel.inverted .pdf-page canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* ── Comments: Monaco gutter glyph ── */
+.comment-glyph::before {
+  content: "💬";
+  font-size: var(--text-sm);
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  line-height: inherit;
+  cursor: pointer;
+}
+.comment-glyph.resolved::before {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.comment-glyph.drifted::before {
+  content: "⚠";
+  color: var(--warn);
+}

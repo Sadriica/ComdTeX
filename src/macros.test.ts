@@ -27,7 +27,9 @@ describe("parseMacros", () => {
   })
 
   it("ignores comment lines starting with %", () => {
-    const macros = parseMacros("% this is a comment\n\\newcommand{\\R}{\\mathbb{R}}\n% \\newcommand{\\Q}{\\mathbb{Q}}")
+    const macros = parseMacros(
+      "% this is a comment\n\\newcommand{\\R}{\\mathbb{R}}\n% \\newcommand{\\Q}{\\mathbb{Q}}",
+    )
     expect(macros).toEqual({ "\\R": "\\mathbb{R}" })
   })
 
@@ -79,9 +81,7 @@ describe("parseMacros", () => {
   })
 
   it("later definitions of the same name overwrite earlier ones", () => {
-    const macros = parseMacros(
-      "\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\R}{\\mathbb{Q}}"
-    )
+    const macros = parseMacros("\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\R}{\\mathbb{Q}}")
     expect(macros).toEqual({ "\\R": "\\mathbb{Q}" })
   })
 

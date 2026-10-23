@@ -46,14 +46,58 @@ export function storageFormatForPath(path: string): StorageFormat | null {
   return null
 }
 
+/**
+ * Line ending each .md/.tex file had when it was last read from disk. The
+ * conversions work on LF text, so without this a CRLF file came back LF on its
+ * first save and every line showed up as changed in git.
+ */
+const crlfPaths = new Set<string>()
+
+/** True when most line breaks in `text` are CRLF. */
+export function usesCrlf(text: string): boolean {
+  const crlf = text.match(/\r\n/g)?.length ?? 0
+  if (crlf === 0) return false
+  const all = text.match(/\n/g)?.length ?? 0
+  return crlf * 2 >= all
+}
+
+function isSameOrUnderPath(p: string, root: string): boolean {
+  return p === root || p.startsWith(root + "/") || p.startsWith(root + "\\")
+}
+
+/**
+ * Drop what is remembered about a path (and everything under it, for a
+ * folder). A file created where a CRLF file used to live is new: it must
+ * not inherit the old file's line ending.
+ */
+export function forgetLineEnding(path: string): void {
+  for (const p of [...crlfPaths]) if (isSameOrUnderPath(p, path)) crlfPaths.delete(p)
+}
+
+/** Carry a file's remembered line ending over to its new path after a rename or move. */
+export function renameLineEnding(oldPath: string, newPath: string): void {
+  forgetLineEnding(newPath)
+  for (const p of [...crlfPaths]) {
+    if (isSameOrUnderPath(p, oldPath)) {
+      crlfPaths.delete(p)
+      crlfPaths.add(newPath + p.slice(oldPath.length))
+    }
+  }
+}
+
 export function toEditorContent(path: string, content: string): string {
   const format = storageFormatForPath(path)
-  return format ? toCmdx(content, format) : content
+  if (!format) return content
+  if (usesCrlf(content)) crlfPaths.add(path)
+  else crlfPaths.delete(path)
+  return toCmdx(content.replace(/\r\n/g, "\n"), format)
 }
 
 export function toDiskContent(path: string, content: string): string {
   const format = storageFormatForPath(path)
-  return format ? toStorage(content, format) : content
+  if (!format) return content
+  const stored = toStorage(content, format)
+  return crlfPaths.has(path) ? stored.replace(/\r?\n/g, "\r\n") : stored
 }
 
 export function analyzeConversion(text: string, format: StorageFormat): ConversionReport {
@@ -119,7 +163,12 @@ function extractBalanced(text: string, start: number): { content: string; end: n
  * Detects if content is already in CMDX format (contains :::env or shorthand syntax).
  */
 export function isCmdxFormat(text: string): boolean {
-  return /^:::\s*(?:(?:sm|lg)\s+)?[\w]+/m.test(text) || /\b(table|mat|pmat|bmat|matf|frac|sqrt|root|sum|int|lim|vec|abs|norm|bf|cal|bb|sup|sub|pder|der)\s*\(/.test(text)
+  return (
+    /^:::\s*(?:(?:sm|lg)\s+)?[\w]+/m.test(text) ||
+    /\b(table|mat|pmat|bmat|matf|frac|sqrt|root|sum|int|lim|vec|abs|norm|bf|cal|bb|sup|sub|pder|der)\s*\(/.test(
+      text,
+    )
+  )
 }
 
 /**
@@ -147,12 +196,51 @@ export function toStorage(text: string, format: StorageFormat): string {
 
 /**
  * Convert CMDX to Markdown (.md) - Obsidian compatible.
+ *
+ * `envLabels: false` drops the `{#label}` on environment callouts. Only the
+ * user-facing exports pass it; storage keeps labels so `@thm:x` refs survive.
  */
-export function toStorageMd(text: string): string {
+export function toStorageMd(text: string, options: { envLabels?: boolean } = {}): string {
+  const envLabels = options.envLabels ?? true
   return withFrontmatter(text, (body) => {
     const { masked, restore } = maskSpecialBlocks(body)
-    return restore(convertCmdxEnvironments(convertFunctions(masked, MARKDOWN_FUNCTIONS), "md"))
+    // Inline code spans are literal text: `table(A, B)` in prose must not turn into a table.
+    const code = maskInlineCode(masked)
+    return restore(
+      code.restore(
+        convertCmdxEnvironments(convertFunctions(code.masked, MARKDOWN_FUNCTIONS), "md", envLabels),
+      ),
+    )
   })
+}
+
+/** Opening fence of a fenced code block (``` or ~~~), or null. */
+function fenceOpen(line: string): { char: string; len: number } | null {
+  const m = /^\s*(`{3,}|~{3,})(.*)$/.exec(line)
+  if (!m) return null
+  if (m[1][0] === "`" && m[2].includes("`")) return null // that is inline code, not a fence
+  return { char: m[1][0], len: m[1].length }
+}
+
+/** Index of the line that closes the fence opened at `start` (last line if unclosed). */
+function fenceEnd(lines: string[], start: number, open: { char: string; len: number }): number {
+  for (let j = start + 1; j < lines.length; j++) {
+    const m = /^\s*(`{3,}|~{3,})\s*$/.exec(lines[j])
+    if (m && m[1][0] === open.char && m[1].length >= open.len) return j
+  }
+  return lines.length - 1
+}
+
+function maskInlineCode(text: string): { masked: string; restore: (s: string) => string } {
+  const slots: string[] = []
+  const masked = text.replace(/(?<!`)(`+)(?!`)[^\n]*?[^`\n]\1(?!`)/g, (m) => {
+    slots.push(m)
+    return `\x00CMDXCODE${slots.length - 1}\x00`
+  })
+  return {
+    masked,
+    restore: (s) => s.replace(/\x00CMDXCODE(\d+)\x00/g, (_, n) => slots[Number(n)] ?? ""),
+  }
 }
 
 /**
@@ -161,7 +249,11 @@ export function toStorageMd(text: string): string {
 export function toStorageTex(text: string): string {
   return withFrontmatter(text, (body) => {
     const { masked, restore } = maskSpecialBlocks(body)
-    return restore(convertTexLabelsAndRefs(convertCmdxEnvironments(convertFunctions(masked, LATEX_FUNCTIONS), "tex")))
+    return restore(
+      convertTexLabelsAndRefs(
+        convertCmdxEnvironments(convertFunctions(masked, LATEX_FUNCTIONS), "tex"),
+      ),
+    )
   })
 }
 
@@ -204,7 +296,8 @@ function excerptAt(text: string, index: number): string {
 
 function findUnbalancedShorthands(text: string): ConversionWarning[] {
   const warnings: ConversionWarning[] = []
-  const re = /\b(table|mat|pmat|bmat|matf|frac|sqrt|root|sum|int|lim|vec|abs|norm|bf|cal|bb|sup|sub|pder|der)\s*\(/g
+  const re =
+    /\b(table|mat|pmat|bmat|matf|frac|sqrt|root|sum|int|lim|vec|abs|norm|bf|cal|bb|sup|sub|pder|der)\s*\(/g
   let match: RegExpExecArray | null
   while ((match = re.exec(text)) !== null) {
     const parenStart = match.index + match[0].length - 1
@@ -221,12 +314,17 @@ function findUnbalancedShorthands(text: string): ConversionWarning[] {
 
 function matrixToLatex(name: string, values: string[]): string {
   const n = values.length
-  let r = 1, c = n
+  let r = 1,
+    c = n
   for (let i = Math.floor(Math.sqrt(n)); i >= 1; i--) {
-    if (n % i === 0) { r = i; c = n / i; break }
+    if (n % i === 0) {
+      r = i
+      c = n / i
+      break
+    }
   }
   const rows = Array.from({ length: r }, (_, i) =>
-    Array.from({ length: c }, (_, j) => values[i * c + j] ?? "0").join(" & ")
+    Array.from({ length: c }, (_, j) => values[i * c + j] ?? "0").join(" & "),
   ).join(" \\\\ ")
   // mat() and bmat() both target \begin{bmatrix}; consistent with preprocessor.ts
   // where mat() also expands to bmatrix. pmat() targets \begin{pmatrix}.
@@ -238,10 +336,7 @@ const MARKDOWN_FUNCTIONS: Record<string, FunctionHandler> = {
   table: (cols) => {
     const headers = cols.filter(Boolean)
     if (headers.length < 2) return headers[0] ? `| ${headers[0]} |` : "table()"
-    return [
-      `| ${headers.join(" | ")} |`,
-      `| ${headers.map(() => "---").join(" | ")} |`,
-    ].join("\n")
+    return [`| ${headers.join(" | ")} |`, `| ${headers.map(() => "---").join(" | ")} |`].join("\n")
   },
 }
 
@@ -284,7 +379,14 @@ const CMDX_ENV_END_RE = /^:::\s*$/
  * irreversibly destroyed the block on every autosave.
  */
 const SPECIAL_ENVS = new Set([
-  "pseudocode", "flowchart", "truth", "graph", "plot", "commdiag", "code", "excalidraw",
+  "pseudocode",
+  "flowchart",
+  "truth",
+  "graph",
+  "plot",
+  "commdiag",
+  "code",
+  "excalidraw",
 ])
 
 // A `:::code` block may carry a language after a space (`:::code python`),
@@ -315,17 +417,34 @@ function isAnyEnvStart(line: string): boolean {
  * across the CMDX↔disk round-trip. Line-based + depth-tracked to match
  * `convertCmdxEnvironments`.
  */
-function maskSpecialBlocks(text: string): { masked: string; restore: (s: string) => string } {
+export function maskSpecialBlocks(text: string): {
+  masked: string
+  restore: (s: string) => string
+} {
   const lines = text.split("\n")
   const slots: string[] = []
   const out: string[] = []
   for (let i = 0; i < lines.length; i++) {
+    const fence = isSpecialEnvStart(lines[i]) ? null : fenceOpen(lines[i])
+    if (fence) {
+      const end = fenceEnd(lines, i, fence)
+      slots.push(lines.slice(i, end + 1).join("\n"))
+      out.push(`\x00CMDXSPECIAL${slots.length - 1}\x00`)
+      i = end
+      continue
+    }
     if (isSpecialEnvStart(lines[i])) {
       let depth = 1
       let close = -1
       for (let j = i + 1; j < lines.length; j++) {
         if (isAnyEnvStart(lines[j])) depth++
-        else if (CMDX_ENV_END_RE.test(lines[j])) { depth--; if (depth === 0) { close = j; break } }
+        else if (CMDX_ENV_END_RE.test(lines[j])) {
+          depth--
+          if (depth === 0) {
+            close = j
+            break
+          }
+        }
       }
       if (close >= 0) {
         slots.push(lines.slice(i, close + 1).join("\n"))
@@ -348,7 +467,10 @@ function maskSpecialBlocks(text: string): { masked: string; restore: (s: string)
         /^((?:[ \t]*>[ \t]?)+)\x00CMDXSPECIAL(\d+)\x00[ \t]*$/gm,
         (_, prefix: string, n: string) => {
           const block = slots[Number(n)] ?? ""
-          return block.split("\n").map((l) => prefix + l).join("\n")
+          return block
+            .split("\n")
+            .map((l) => prefix + l)
+            .join("\n")
         },
       )
       // Any remaining placeholder (the common standalone case, and the TeX path
@@ -363,7 +485,7 @@ function parseCmdxEnvStart(line: string): CmdxEnvStart | null {
   return { rawName: match[1], title: match[2], label: match[3] }
 }
 
-function convertCmdxEnvironments(text: string, format: StorageFormat): string {
+function convertCmdxEnvironments(text: string, format: StorageFormat, envLabels = true): string {
   const lines = text.split("\n")
 
   const convertRange = (start: number, end: number): string[] => {
@@ -390,10 +512,13 @@ function convertCmdxEnvironments(text: string, format: StorageFormat): string {
         continue
       }
 
-      const body = convertRange(i + 1, close).join("\n").trim()
-      out.push(format === "tex"
-        ? cmdxEnvironmentToTex(parsed, body)
-        : cmdxEnvironmentToMarkdown(parsed, body)
+      const body = convertRange(i + 1, close)
+        .join("\n")
+        .trim()
+      out.push(
+        format === "tex"
+          ? cmdxEnvironmentToTex(parsed, body)
+          : cmdxEnvironmentToMarkdown(envLabels ? parsed : { ...parsed, label: undefined }, body),
       )
       i = close
     }
@@ -462,9 +587,24 @@ function findUnclosedCmdxEnvironments(text: string): ConversionWarning[] {
 }
 
 const SUPPORTED_LATEX_ENVS = new Set([
-  "theorem", "lemma", "corollary", "proposition", "definition", "example",
-  "exercise", "proof", "remark", "note", "equation", "align", "gather",
-  "multline", "bmatrix", "matrix", "pmatrix", "vmatrix",
+  "theorem",
+  "lemma",
+  "corollary",
+  "proposition",
+  "definition",
+  "example",
+  "exercise",
+  "proof",
+  "remark",
+  "note",
+  "equation",
+  "align",
+  "gather",
+  "multline",
+  "bmatrix",
+  "matrix",
+  "pmatrix",
+  "vmatrix",
 ])
 
 function findUnsupportedLatex(text: string): ConversionWarning[] {
@@ -506,16 +646,52 @@ function findUnsupportedLatex(text: string): ConversionWarning[] {
   return warnings
 }
 
-function cmdxEnvironmentToMarkdown(envStart: CmdxEnvStart, body: string): string {
-  const name = envStart.rawName.toLowerCase()
-  const callout = OBSIDIAN_CALLOUTS[name] ?? "note"
-  const defaultTitle = ENV_TITLES[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
-  const heading = envStart.title?.trim() ? ` ${defaultTitle}: ${envStart.title.trim()}` : ` ${defaultTitle}`
-  const lines = body ? body.split("\n").map((line) => `> ${line}`) : []
-  return [`> [!${callout}]${heading}`, ...lines].join("\n")
+// Legacy round-trip metadata. Builds up to 1.29.1 wrote the original Obsidian type
+// and fold marker as an HTML comment on the first body line of the env. Nothing
+// writes it any more (such callouts stay callouts in the editor), but editor text
+// that still carries it (drafts, old buffers) is read and stripped on save.
+interface CalloutMeta {
+  type?: string
+  fold?: "+" | "-"
 }
 
-function cmdxEnvironmentToTex(envStart: CmdxEnvStart, body: string): string {
+const CALLOUT_META_RE = /^<!--cmdx\s+(.*?)\s*-->\s*$/
+
+function splitCalloutMeta(body: string): { meta: CalloutMeta; body: string } {
+  const nl = body.indexOf("\n")
+  const first = nl < 0 ? body : body.slice(0, nl)
+  const m = CALLOUT_META_RE.exec(first)
+  if (!m) return { meta: {}, body }
+  const meta: CalloutMeta = {}
+  for (const [, key, value] of m[1].matchAll(/(\w+)=(\S+)/g)) {
+    if (key === "type") meta.type = value
+    else if (key === "fold" && (value === "+" || value === "-")) meta.fold = value
+  }
+  return { meta, body: nl < 0 ? "" : body.slice(nl + 1) }
+}
+
+function cmdxEnvironmentToMarkdown(envStart: CmdxEnvStart, rawBody: string): string {
+  const name = envStart.rawName.toLowerCase()
+  // Older builds put a `<!--cmdx type=... fold=... -->` line in the editor text.
+  // It is still honoured (and stripped) so drafts and files written with it load.
+  const { meta, body } = splitCalloutMeta(rawBody)
+  const callout = meta.type ?? storedCalloutType(name)
+  const title = envStart.title?.trim() ?? ""
+  // The display name rides on the heading (`Theorem: Pyth`) only when the callout
+  // type alone would reopen as a different env. Otherwise the title is written
+  // exactly as typed, so `> [!tip] Hi` stays `> [!tip] Hi`.
+  const prefixed =
+    meta.type === undefined && ENV_TITLES[name] !== undefined && OBSIDIAN_TO_CMDX[callout] !== name
+  const defaultTitle = ENV_TITLES[name]
+  const text = prefixed ? (title ? `${defaultTitle}: ${title}` : defaultTitle) : title
+  const label = envStart.label ? `{#${envStart.label}}` : ""
+  const heading = [text, label].filter(Boolean).join(" ")
+  const lines = body ? body.split("\n").map((line) => `> ${line}`) : []
+  return [`> [!${callout}]${meta.fold ?? ""}${heading ? ` ${heading}` : ""}`, ...lines].join("\n")
+}
+
+function cmdxEnvironmentToTex(envStart: CmdxEnvStart, rawBody: string): string {
+  const body = splitCalloutMeta(rawBody).body
   const name = envStart.rawName.toLowerCase()
   const env = LATEX_ENVS[name] ?? name
   const optTitle = envStart.title?.trim() ? `[${envStart.title.trim()}]` : ""
@@ -552,27 +728,49 @@ export function toCmdxMd(text: string): string {
   return withFrontmatter(text, (body) => convertMarkdownTables(convertMarkdownCallouts(body)))
 }
 
-function isMarkdownTableLine(line: string): boolean {
-  return /^\s*\|.*\|\s*$/.test(line)
+function markdownTableCells(line: string): string[] {
+  return line
+    .trim()
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim())
 }
 
-function isMarkdownSeparatorLine(line: string): boolean {
-  const cells = line.trim().slice(1, -1).split("|").map((cell) => cell.trim())
-  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell))
-}
-
-function markdownTableHeaders(line: string): string[] {
-  return line.trim().slice(1, -1).split("|").map((cell) => cell.trim()).filter(Boolean)
+// Only a bare header + separator (no body rows) is rewritten to `table(A, B)`:
+// that is the one shape `table(...)` converts back to exactly. A table with body
+// rows, alignment colons, escaped pipes, or headers the shorthand cannot carry
+// (commas, brackets, code) stays untouched so saving never drops cells.
+function convertibleTableHeaders(lines: string[], i: number): string[] | null {
+  const header = lines[i]
+  const separator = lines[i + 1]
+  if (separator === undefined) return null
+  const rest = lines[i + 2]
+  if (rest !== undefined && rest.trim() !== "") return null
+  if (!/^\|.*\|\s*$/.test(header) || !/^\|.*\|\s*$/.test(separator)) return null
+  if (header.includes("\\|")) return null
+  const headers = markdownTableCells(header)
+  const separators = markdownTableCells(separator)
+  if (headers.length < 2 || headers.length !== separators.length) return null
+  if (!separators.every((cell) => /^-{3,}$/.test(cell))) return null
+  if (!headers.every((cell) => /^[^,()[\]`\\]+$/.test(cell))) return null
+  return headers
 }
 
 function convertMarkdownTables(text: string): string {
   const lines = text.split("\n")
   const out: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    if (i + 1 < lines.length && isMarkdownTableLine(lines[i]) && isMarkdownSeparatorLine(lines[i + 1])) {
-      out.push(`table(${markdownTableHeaders(lines[i]).join(", ")})`)
+    const fence = fenceOpen(lines[i])
+    if (fence) {
+      const end = fenceEnd(lines, i, fence)
+      out.push(...lines.slice(i, end + 1))
+      i = end
+      continue
+    }
+    const headers = convertibleTableHeaders(lines, i)
+    if (headers) {
+      out.push(`table(${headers.join(", ")})`)
       i += 1
-      while (i + 1 < lines.length && isMarkdownTableLine(lines[i + 1])) i++
       continue
     }
     out.push(lines[i])
@@ -580,16 +778,39 @@ function convertMarkdownTables(text: string): string {
   return out.join("\n")
 }
 
+/**
+ * Re-serialise a would-be env exactly as `toStorageMd` would. Used to prove a
+ * conversion is lossless before committing to it.
+ */
+function envBlockToMarkdown(
+  env: string,
+  title: string,
+  label: string | undefined,
+  body: string,
+): string {
+  const block = [`:::${env}${title ? `[${title}]` : ""}${label ? ` {#${label}}` : ""}`, body, ":::"]
+  const { masked, restore } = maskSpecialBlocks(block.join("\n"))
+  return restore(convertCmdxEnvironments(masked, "md"))
+}
+
 function convertMarkdownCallouts(text: string): string {
   const lines = text.split(/\r?\n/)
   const out: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    const start = /^>\s*\[!([\w-]+)\][+-]?\s*(.*)$/.exec(lines[i])
-    if (!start) {
+    const fence = fenceOpen(lines[i])
+    if (fence) {
+      const end = fenceEnd(lines, i, fence)
+      out.push(...lines.slice(i, end + 1))
+      i = end
+      continue
+    }
+    const opener = /^>\s*\[!([\w-]+)\]/.exec(lines[i])
+    if (!opener) {
       out.push(lines[i])
       continue
     }
 
+    const first = i
     const bodyLines: string[] = []
     while (i + 1 < lines.length) {
       const continuation = /^>\s?(.*)$/.exec(lines[i + 1])
@@ -598,10 +819,29 @@ function convertMarkdownCallouts(text: string): string {
       i++
     }
     // Body is collected first so the recovery heuristic can inspect it.
-    const { env, title } = obsidianCalloutToCmdx(start[1], start[2].trim(), bodyLines.join("\n"))
+    const body = bodyLines.join("\n")
+    const start = /^> \[!([\w-]+)\]([+-]?)(?: (.*))?$/.exec(lines[first])
+    const parsed = start
+      ? obsidianCalloutToCmdx(
+          start[1],
+          start[3] ?? "",
+          body,
+          start[2],
+          lines.slice(first, i + 1).join("\n"),
+        )
+      : null
+    if (!parsed) {
+      // No environment reproduces this callout byte for byte: keep it as the
+      // callout it is. The preview renders it and a save writes it back as is.
+      out.push(...lines.slice(first, i + 1))
+      continue
+    }
 
-    out.push(`:::${env}${title ? `[${title}]` : ""}`)
-    out.push(...bodyLines)
+    out.push(
+      `:::${parsed.env}${parsed.title ? `[${parsed.title}]` : ""}${parsed.label ? ` {#${parsed.label}}` : ""}`,
+    )
+    // Callouts nested inside this one convert the same way.
+    if (bodyLines.length) out.push(convertMarkdownCallouts(body))
     out.push(":::")
   }
   return out.join("\n")
@@ -612,7 +852,7 @@ function convertMarkdownCallouts(text: string): string {
 // "Truth" → "truth", "Flowchart" → "flowchart", … (matches the exact title the
 // old `cmdxEnvironmentToMarkdown` produced via `Capitalize(name)`).
 const SPECIAL_TITLE_TO_ENV: Record<string, string> = Object.fromEntries(
-  [...SPECIAL_ENVS].map((t) => [t.charAt(0).toUpperCase() + t.slice(1), t])
+  [...SPECIAL_ENVS].map((t) => [t.charAt(0).toUpperCase() + t.slice(1), t]),
 )
 
 // "graph", "plot", "code" are common English words a user might genuinely start
@@ -626,12 +866,18 @@ function bodyLooksLikeSpecial(env: string, body: string): boolean {
   if (!b) return false
   switch (env) {
     // edges: `A -- B`, `A -> B`, `A → B`
-    case "graph": return /(^|\n)\s*\S+\s*(--|->|→)\s*\S+/.test(b)
+    case "graph":
+      return /(^|\n)\s*\S+\s*(--|->|→)\s*\S+/.test(b)
     // a function/assignment or a math function or an x-range
-    case "plot": return /=|\b(sin|cos|tan|exp|ln|log|sqrt|abs)\s*\(|\bx(min|max)\b/i.test(b)
+    case "plot":
+      return /=|\b(sin|cos|tan|exp|ln|log|sqrt|abs)\s*\(|\bx(min|max)\b/i.test(b)
     // code-like tokens / common keywords
-    case "code": return /[{};]|\b(def|function|class|return|import|const|let|var|public|private|print|for|while|if|else)\b/.test(b)
-    default: return true
+    case "code":
+      return /[{};]|\b(def|function|class|return|import|const|let|var|public|private|print|for|while|if|else)\b/.test(
+        b,
+      )
+    default:
+      return true
   }
 }
 
@@ -644,11 +890,53 @@ function bodyLooksLikeSpecial(env: string, body: string): boolean {
  */
 function shouldRecoverSpecial(env: string, body: string): boolean {
   if (!AMBIGUOUS_SPECIAL.has(env)) return true
-  try { return bodyLooksLikeSpecial(env, body) } catch { return true }
+  try {
+    return bodyLooksLikeSpecial(env, body)
+  } catch {
+    return true
+  }
 }
 
-function obsidianCalloutToCmdx(type: string, rawTitle: string, body = ""): { env: string; title: string } {
-  const normalizedType = type.toLowerCase()
+interface ParsedCallout {
+  env: string
+  title: string
+  label?: string
+}
+
+/**
+ * Map an Obsidian callout to the environment that reproduces it, or null when
+ * none does (the caller then keeps the callout text as written). Every mapping
+ * is proven by writing the env back with the storage converter and comparing
+ * with the original lines, so open + save of an unchanged file is lossless.
+ * Legacy corruption of special blocks is the one deliberate exception: it is
+ * healed on open.
+ */
+function obsidianCalloutToCmdx(
+  type: string,
+  headingText: string,
+  body: string,
+  fold: string,
+  original: string,
+): ParsedCallout | null {
+  const parsed = fold ? null : calloutEnvFor(type, headingText, body)
+  if (!parsed) return null
+  if (parsed.healed) return parsed
+  const written = envBlockToMarkdown(parsed.env, parsed.title, parsed.label, body.trim())
+  return written === original ? parsed : null
+}
+
+function calloutEnvFor(
+  type: string,
+  headingText: string,
+  body: string,
+): (ParsedCallout & { healed?: boolean }) | null {
+  // Only plain lowercase types map to an env name; `NOTE`, `my-type` stay callouts.
+  if (!/^[a-z][a-z0-9_]*$/.test(type)) return null
+  const normalizedType = type
+  // A trailing `{#label}` on the heading is the env label (see cmdxEnvironmentToMarkdown).
+  const labelMatch = /(?:^|\s)\{#([\w:.-]+)\}$/.exec(headingText)
+  const label = labelMatch?.[1]
+  const rawTitle = labelMatch ? headingText.slice(0, labelMatch.index).trim() : headingText
   // Recovery: a `[!note]` whose title starts with a known special-block name was
   // almost certainly a special block mangled by an older save. Restore it,
   // gated to `note` callouts + exact prefixes + (for ambiguous types) a body
@@ -669,60 +957,96 @@ function obsidianCalloutToCmdx(type: string, rawTitle: string, body = ""): { env
       if (!matchesPrefix) continue
       if (!hadNotePrefix && !shouldRecoverSpecial(env, body)) break // genuine note → keep
       const title = recoverTitle === prefix ? "" : recoverTitle.slice(prefix.length + 1).trim()
-      return { env, title }
+      return { env, title, label, healed: true }
     }
   }
+  // `Theorem: X` style titles name the env, but only when the callout type alone
+  // would not reopen as that env (`abstract` reopens as `lemma`, `note` as `note`).
   for (const [title, env] of Object.entries(OBSIDIAN_TITLE_TO_CMDX)) {
-    if (rawTitle === title) return { env, title: "" }
-    if (rawTitle.startsWith(`${title}:`)) return { env, title: rawTitle.slice(title.length + 1).trim() }
+    if (storedCalloutType(env) !== normalizedType) continue
+    if (OBSIDIAN_TO_CMDX[normalizedType] === env) continue
+    if (rawTitle === title) return { env, title: "", label }
+    if (rawTitle.startsWith(`${title}:`))
+      return { env, title: rawTitle.slice(title.length + 1).trim(), label }
   }
-  return { env: OBSIDIAN_TO_CMDX[normalizedType] ?? "note", title: rawTitle }
+  const mapped = OBSIDIAN_TO_CMDX[normalizedType]
+  if (mapped)
+    return storedCalloutType(mapped) === normalizedType
+      ? { env: mapped, title: rawTitle, label }
+      : null
+  // Unknown type (`danger`, `quote`, ...): its own env, stored back verbatim.
+  // Names that collide with a special block or a titled env stay callouts.
+  if (SPECIAL_ENVS.has(normalizedType) || ENV_TITLES[normalizedType]) return null
+  return { env: normalizedType, title: rawTitle, label }
+}
+
+function storedCalloutType(env: string): string {
+  return OBSIDIAN_CALLOUTS[env] ?? (ENV_TITLES[env] ? "note" : env)
 }
 
 /**
  * Convert LaTeX (.tex) to CMDX.
  */
 export function toCmdxTex(text: string): string {
-  return withFrontmatter(text, (body) => body
-    // Matrices → mat() shorthand
-    .replace(/\\begin\{(bmatrix|matrix|pmatrix|vmatrix)\}([\s\S]*?)\\end\{\1\}/g, (_full, env, content) => {
-      const values = content.trim().split(/&|\\\\/).map((v: string) => v.trim()).filter(Boolean)
-      const name = env === "bmatrix" ? "mat" : env === "pmatrix" ? "pmat" : "mat"
-      return `${name}(${values.join(", ")})`
-    })
-    // LaTeX environments → CMDX environments
-    .replace(/\\begin\{(\w+)\}(\[[^\]]*])?([\s\S]*?)\\end\{\1\}/g, (_full, rawName, optTitle, envBody) => {
-      const name = rawName.toLowerCase()
-      const labelMatch = /\\label\{([\w:.-]+)\}/.exec(envBody)
-      const bodyWithoutLabel = envBody.replace(/\s*\\label\{[\w:.-]+}\s*/, "\n").trim()
-      if (["equation", "align", "gather", "multline"].includes(name)) {
-        return `\\begin{${name}}\n${bodyWithoutLabel}\n${labelMatch ? `\\label{${labelMatch[1]}}\n` : ""}\\end{${name}}`
-      }
-      const title = optTitle ? optTitle.slice(1, -1) : ""
-      return `:::${name}${title ? `[${title}]` : ""}${labelMatch ? ` {#${labelMatch[1]}}` : ""}\n${bodyWithoutLabel}\n:::`
-    })
-    // LaTeX commands → shorthands
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "frac($1, $2)")
-    .replace(/\\sqrt(?:\[(\d+)\])?\{([^}]+)\}/g, (_full, n, x) => n ? `root(${n}, ${x})` : `sqrt(${x})`)
-    .replace(/\\sum_\{([^}]+)\}^\{([^}]+)\}/g, "sum($1, $2)")
-    .replace(/\\int_\{([^}]+)\}^\{([^}]+)\}/g, "int($1, $2)")
-    .replace(/\\lim_\{([^}]+)\s*\\to\s*([^}]+)\}/g, "lim($1, $2)")
-    .replace(/\\vec\{([^}]+)\}/g, "vec($1)")
-    .replace(/\\left\|([^}]+)\\right\|/g, "abs($1)")
-    .replace(/\\left\\\|([^}]+)\\right\\\|/g, "norm($1)")
-    .replace(/\\mathbf\{([^}]+)\}/g, "bf($1)")
-    .replace(/\\mathcal\{([^}]+)\}/g, "cal($1)")
-    .replace(/\\mathbb\{([^}]+)\}/g, "bb($1)")
-    // Labels
-    .replace(/\\label\{((?:eq|fig|sec|tbl|thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise):[\w:.-]+)\}/g, "{#$1}")
-    .replace(/\\eqref\{(eq:[\w:.-]+)\}/g, "@$1")
-    .replace(/\\ref\{((?:fig|sec|tbl|thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise):[\w:.-]+)\}/g, "@$1")
+  return withFrontmatter(text, (body) =>
+    body
+      // Matrices → mat() shorthand
+      .replace(
+        /\\begin\{(bmatrix|matrix|pmatrix|vmatrix)\}([\s\S]*?)\\end\{\1\}/g,
+        (_full, env, content) => {
+          const values = content
+            .trim()
+            .split(/&|\\\\/)
+            .map((v: string) => v.trim())
+            .filter(Boolean)
+          const name = env === "bmatrix" ? "mat" : env === "pmatrix" ? "pmat" : "mat"
+          return `${name}(${values.join(", ")})`
+        },
+      )
+      // LaTeX environments → CMDX environments
+      .replace(
+        /\\begin\{(\w+)\}(\[[^\]]*])?([\s\S]*?)\\end\{\1\}/g,
+        (_full, rawName, optTitle, envBody) => {
+          const name = rawName.toLowerCase()
+          const labelMatch = /\\label\{([\w:.-]+)\}/.exec(envBody)
+          const bodyWithoutLabel = envBody.replace(/\s*\\label\{[\w:.-]+}\s*/, "\n").trim()
+          if (["equation", "align", "gather", "multline"].includes(name)) {
+            return `\\begin{${name}}\n${bodyWithoutLabel}\n${labelMatch ? `\\label{${labelMatch[1]}}\n` : ""}\\end{${name}}`
+          }
+          const title = optTitle ? optTitle.slice(1, -1) : ""
+          return `:::${name}${title ? `[${title}]` : ""}${labelMatch ? ` {#${labelMatch[1]}}` : ""}\n${bodyWithoutLabel}\n:::`
+        },
+      )
+      // LaTeX commands → shorthands
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "frac($1, $2)")
+      .replace(/\\sqrt(?:\[(\d+)\])?\{([^}]+)\}/g, (_full, n, x) =>
+        n ? `root(${n}, ${x})` : `sqrt(${x})`,
+      )
+      .replace(/\\sum_\{([^}]+)\}^\{([^}]+)\}/g, "sum($1, $2)")
+      .replace(/\\int_\{([^}]+)\}^\{([^}]+)\}/g, "int($1, $2)")
+      .replace(/\\lim_\{([^}]+)\s*\\to\s*([^}]+)\}/g, "lim($1, $2)")
+      .replace(/\\vec\{([^}]+)\}/g, "vec($1)")
+      .replace(/\\left\|([^}]+)\\right\|/g, "abs($1)")
+      .replace(/\\left\\\|([^}]+)\\right\\\|/g, "norm($1)")
+      .replace(/\\mathbf\{([^}]+)\}/g, "bf($1)")
+      .replace(/\\mathcal\{([^}]+)\}/g, "cal($1)")
+      .replace(/\\mathbb\{([^}]+)\}/g, "bb($1)")
+      // Labels
+      .replace(
+        /\\label\{((?:eq|fig|sec|tbl|thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise):[\w:.-]+)\}/g,
+        "{#$1}",
+      )
+      .replace(/\\eqref\{(eq:[\w:.-]+)\}/g, "@$1")
+      .replace(
+        /\\ref\{((?:fig|sec|tbl|thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise):[\w:.-]+)\}/g,
+        "@$1",
+      ),
   )
 }
 
 // ── Mappings ────────────────────────────────────────────────────────────────
 
-const OBSIDIAN_CALLOUTS: Record<string, string> = {
+export const OBSIDIAN_CALLOUTS: Record<string, string> = {
   theorem: "abstract",
   lemma: "abstract",
   corollary: "abstract",
@@ -759,7 +1083,7 @@ const OBSIDIAN_TO_CMDX: Record<string, string> = {
   abstract: "lemma",
   question: "exercise",
   success: "proof",
-  info: "note",
+  info: "info",
 }
 
 const ENV_TITLES: Record<string, string> = {
@@ -779,7 +1103,7 @@ const ENV_TITLES: Record<string, string> = {
 }
 
 const OBSIDIAN_TITLE_TO_CMDX: Record<string, string> = Object.fromEntries(
-  Object.entries(ENV_TITLES).map(([env, title]) => [title, env])
+  Object.entries(ENV_TITLES).map(([env, title]) => [title, env]),
 )
 
 const LATEX_ENVS: Record<string, string> = {

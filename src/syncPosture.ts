@@ -52,12 +52,18 @@ export function needsAttention(posture: SyncPosture): boolean {
 }
 
 /** The single next step, or null when the posture is already sound. */
-export function nextStep(posture: SyncPosture): "move-out-of-cloud" | "add-remote" | "start-git" | null {
+export function nextStep(
+  posture: SyncPosture,
+): "move-out-of-cloud" | "add-remote" | "start-git" | null {
   switch (posture) {
-    case "git-in-cloud": return "move-out-of-cloud"
-    case "git-local": return "add-remote"
+    case "git-in-cloud":
+      return "move-out-of-cloud"
+    case "git-local":
+      return "add-remote"
     case "cloud-only":
-    case "local-only": return "start-git"
-    case "git-shared": return null
+    case "local-only":
+      return "start-git"
+    case "git-shared":
+      return null
   }
 }

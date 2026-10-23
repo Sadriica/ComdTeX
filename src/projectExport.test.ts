@@ -3,7 +3,11 @@ import { buildProjectPlan, composeProjectMarkdown } from "./projectExport"
 
 describe("project export", () => {
   const files = [
-    { path: "/v/main.md", name: "main.md", content: "---\ncomdtex.main: true\n---\n# Main\n![[chapter]]\n![[missing]]" },
+    {
+      path: "/v/main.md",
+      name: "main.md",
+      content: "---\ncomdtex.main: true\n---\n# Main\n![[chapter]]\n![[missing]]",
+    },
     { path: "/v/chapter.md", name: "chapter.md", content: "# Chapter\nBody" },
   ]
 

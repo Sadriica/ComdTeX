@@ -32,24 +32,23 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     }
   }, [onClose])
 
-  // Keep menu on screen
-  const style: React.CSSProperties = {
-    position: "fixed",
-    top: y,
-    left: x,
-    zIndex: 5000,
-  }
+  // Only the pointer position is dynamic; position and layer live in CSS.
+  const style: React.CSSProperties = { top: y, left: x }
 
   return (
-    <div ref={ref} className="ctx-menu" style={style}>
+    <div ref={ref} className="ctx-menu" role="menu" style={style}>
       {items.map((item, i) => (
         <button
           key={i}
+          role="menuitem"
           className={`ctx-item${item.danger ? " ctx-danger" : ""}`}
           disabled={item.disabled}
           onMouseDown={(e) => {
             e.preventDefault()
-            if (!item.disabled) { item.action(); onClose() }
+            if (!item.disabled) {
+              item.action()
+              onClose()
+            }
           }}
         >
           {item.label}

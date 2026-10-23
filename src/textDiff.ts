@@ -36,12 +36,18 @@ export function minimalEdit(oldText: string, newText: string): TextEdit | null {
   let suffix = 0
   while (
     suffix < maxSuffix &&
-    oldText.charCodeAt(oldText.length - 1 - suffix) === newText.charCodeAt(newText.length - 1 - suffix)
-  ) suffix++
+    oldText.charCodeAt(oldText.length - 1 - suffix) ===
+      newText.charCodeAt(newText.length - 1 - suffix)
+  )
+    suffix++
 
   // A surrogate pair must not be split down the middle: doing so would emit
   // half a code point and corrupt the character.
-  if (prefix > 0 && isLowSurrogate(oldText.charCodeAt(prefix)) && isHighSurrogate(oldText.charCodeAt(prefix - 1))) {
+  if (
+    prefix > 0 &&
+    isLowSurrogate(oldText.charCodeAt(prefix)) &&
+    isHighSurrogate(oldText.charCodeAt(prefix - 1))
+  ) {
     prefix--
   }
 
@@ -83,7 +89,8 @@ export function diffLineSummary(oldText: string, newText: string): LineDiffSumma
     tail < a.length - head &&
     tail < b.length - head &&
     a[a.length - 1 - tail] === b[b.length - 1 - tail]
-  ) tail++
+  )
+    tail++
 
   return {
     removed: a.length - head - tail,

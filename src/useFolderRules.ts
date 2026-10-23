@@ -68,18 +68,21 @@ export function useFolderRules(vaultPath: string | null): FolderRulesApi {
     }
   }, [])
 
-  const resolve = useCallback(async (dirPath: string): Promise<FolderRules | null> => {
-    if (!vaultPath) return null
-    const chain = ancestorChain(dirPath, vaultPath)
-    const byDir = new Map<string, FolderRules>()
-    // Sequential rather than parallel: the chain is a handful of directories and
-    // most of them have no config, so the exists() checks are cheap.
-    for (const dir of chain) {
-      const rules = await readDir(dir)
-      if (rules) byDir.set(dir, rules)
-    }
-    return resolveRulesForDir(byDir, dirPath, vaultPath)
-  }, [vaultPath, readDir])
+  const resolve = useCallback(
+    async (dirPath: string): Promise<FolderRules | null> => {
+      if (!vaultPath) return null
+      const chain = ancestorChain(dirPath, vaultPath)
+      const byDir = new Map<string, FolderRules>()
+      // Sequential rather than parallel: the chain is a handful of directories and
+      // most of them have no config, so the exists() checks are cheap.
+      for (const dir of chain) {
+        const rules = await readDir(dir)
+        if (rules) byDir.set(dir, rules)
+      }
+      return resolveRulesForDir(byDir, dirPath, vaultPath)
+    },
+    [vaultPath, readDir],
+  )
 
   const readOwn = useCallback((dirPath: string) => readDir(dirPath), [readDir])
 

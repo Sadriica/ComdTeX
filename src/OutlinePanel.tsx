@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, ListTree } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { computeSectionWordCounts } from "./sectionWordCount"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface Heading {
   level: number
@@ -28,16 +30,19 @@ interface OutlinePanelProps {
   onReorder?: (fromLine: number, toLine: number) => void
 }
 
-export default function OutlinePanel({ content, editorRef, activeLine, onReorder }: OutlinePanelProps) {
+export default function OutlinePanel({
+  content,
+  editorRef,
+  activeLine,
+  onReorder,
+}: OutlinePanelProps) {
   const t = useT()
   const headings = useMemo(() => parseHeadings(content), [content])
   const [query, setQuery] = useState("")
   // Keep each heading's ORIGINAL index: it is the reorder key, so filtering with
   // renumbered indices would move the wrong section.
   const visible = useMemo(
-    () => headings
-      .map((h, i) => ({ h, i }))
-      .filter(({ h }) => matchesQuery(h.text, query)),
+    () => headings.map((h, i) => ({ h, i })).filter(({ h }) => matchesQuery(h.text, query)),
     [headings, query],
   )
   const sectionCounts = useMemo(() => computeSectionWordCounts(content), [content])
@@ -50,9 +55,10 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
   const didDragRef = useRef(false)
 
   // Active heading: last heading whose start line <= cursor line
-  const activeIdx = activeLine != null
-    ? headings.reduce((found, h, i) => h.line <= activeLine ? i : found, -1)
-    : -1
+  const activeIdx =
+    activeLine != null
+      ? headings.reduce((found, h, i) => (h.line <= activeLine ? i : found), -1)
+      : -1
 
   // Scroll active heading into view when it changes
   useEffect(() => {
@@ -61,9 +67,14 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
 
   if (headings.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.outlineIcon}</div>
-        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
+      <div className="outline-panel">
+        <PanelHeader title={t.sidebar.outline} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={ListTree} size={16} />
+          </div>
+          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.outlineMessage)}</p>
+        </div>
       </div>
     )
   }
@@ -82,6 +93,7 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
 
   return (
     <div className="outline-panel">
+      <PanelHeader title={t.sidebar.outline} count={headings.length} />
       <PanelSearch
         value={query}
         onChange={setQuery}
@@ -95,17 +107,22 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
         return (
           <button
             key={i}
-            ref={(el) => { itemRefs.current[i] = el }}
+            ref={(el) => {
+              itemRefs.current[i] = el
+            }}
             className={
               "outline-item" +
               (i === activeIdx ? " outline-item-active" : "") +
               (isDragging ? " outline-dragging" : "") +
               (isDropTarget ? " outline-drop-before" : "")
             }
-            style={{ paddingLeft: 8 + (h.level - 1) * 14 }}
+            style={{ "--depth": h.level - 1 } as React.CSSProperties}
             draggable={canReorder}
             onClick={() => {
-              if (didDragRef.current) { didDragRef.current = false; return }
+              if (didDragRef.current) {
+                didDragRef.current = false
+                return
+              }
               jump(h.line)
             }}
             onDragStart={(e) => {
@@ -114,7 +131,11 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
               setDragIdx(i)
               e.dataTransfer.effectAllowed = "move"
               // Some browsers require data to be set for a drag to begin.
-              try { e.dataTransfer.setData("text/plain", String(h.line)) } catch { /* noop */ }
+              try {
+                e.dataTransfer.setData("text/plain", String(h.line))
+              } catch {
+                /* noop */
+              }
             }}
             onDragOver={(e) => {
               if (!canReorder || dragIdx === null) return
@@ -138,15 +159,24 @@ export default function OutlinePanel({ content, editorRef, activeLine, onReorder
               setDragIdx(null)
               setDropIdx(null)
               // Clear the click guard shortly after, in case no click followed.
-              setTimeout(() => { didDragRef.current = false }, 0)
+              setTimeout(() => {
+                didDragRef.current = false
+              }, 0)
             }}
-            title={canReorder ? `${t.outline.lineTitle(h.line)} (${t.outline.dragToReorder})` : t.outline.lineTitle(h.line)}
+            title={
+              canReorder
+                ? `${t.outline.lineTitle(h.line)} (${t.outline.dragToReorder})`
+                : t.outline.lineTitle(h.line)
+            }
             aria-label={canReorder ? `${h.text} (${t.outline.dragToReorder})` : h.text}
           >
             <span className="outline-level">H{h.level}</span>
             <span className="outline-text">{h.text}</span>
             {count !== undefined && count > 0 && (
-              <span className="outline-word-count">{count}{t.outline.wordsAbbr}</span>
+              <span className="outline-word-count">
+                {count}
+                {t.outline.wordsAbbr}
+              </span>
             )}
           </button>
         )

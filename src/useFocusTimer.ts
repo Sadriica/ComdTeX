@@ -17,7 +17,9 @@ import {
   countPomodoro,
   touchFile,
   recordPeak,
+  sessionStats,
 } from "./pomodoro"
+import { type StatsHistory, addToDay, loadHistory, saveHistory, dayKey } from "./writingStats"
 
 /**
  * Word-count rule shared with the StatusBar live count, so the writing-session
@@ -36,6 +38,8 @@ export interface FocusTimer {
   session: WritingSession | null
   /** `Date.now()` of the last tick: drives the live session stats clock. */
   now: number
+  /** Persisted per-day aggregates; survives app restarts. */
+  history: StatsHistory
   startTimer: () => void
   pauseTimer: () => void
   resetTimer: () => void
@@ -52,11 +56,19 @@ export interface FocusTimer {
  * The interval is armed ONLY while the timer is running or a session is open, so
  * an idle timer costs nothing (no per-second re-render of AppContent).
  */
-export function useFocusTimer(config: PomodoroConfig, content: string, activePath?: string | null): FocusTimer {
+export function useFocusTimer(
+  config: PomodoroConfig,
+  content: string,
+  activePath?: string | null,
+): FocusTimer {
   const t = useT()
   const [timer, setTimer] = useState<PomodoroState>(() => createState(config))
   const [session, setSession] = useState<WritingSession | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [history, setHistory] = useState<StatsHistory>(loadHistory)
+  // What the current session has already contributed to the history, so each
+  // beat credits only the increase (a session may span midnight).
+  const creditedRef = useRef({ words: 0, activeSec: 0, pomodoros: 0 })
 
   // Latest content/config/t for the interval closure without re-arming on every
   // keystroke or language change. Updated in an effect (not during render) per
@@ -76,12 +88,19 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
   // interval arms; never read before that, so the placeholder is never used.
   const lastTickRef = useRef(0)
   const activePathRef = useRef(activePath ?? null)
-  useEffect(() => { activePathRef.current = activePath ?? null }, [activePath])
+  useEffect(() => {
+    activePathRef.current = activePath ?? null
+  }, [activePath])
 
-  const phaseLabel = useCallback((phase: Phase): string =>
-    phase === "work" ? tRef.current.focusTimer.phaseWork
-      : phase === "break" ? tRef.current.focusTimer.phaseBreak
-        : tRef.current.focusTimer.phaseLongBreak, [])
+  const phaseLabel = useCallback(
+    (phase: Phase): string =>
+      phase === "work"
+        ? tRef.current.focusTimer.phaseWork
+        : phase === "break"
+          ? tRef.current.focusTimer.phaseBreak
+          : tRef.current.focusTimer.phaseLongBreak,
+    [],
+  )
 
   // Tick the running timer + refresh the session clock. Armed only when there's
   // something live to advance.
@@ -122,6 +141,33 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
     setTimer((prev) => (prev.running ? prev : reset(configRef.current)))
   }, [config.workMin, config.breakMin, config.longBreakMin, config.cyclesBeforeLongBreak])
 
+  // Credit session progress to today's persisted totals. Peak words are used
+  // (monotonic), so deleting text never lowers what was already written.
+  useEffect(() => {
+    if (!session) {
+      creditedRef.current = { words: 0, activeSec: 0, pomodoros: 0 }
+      return
+    }
+    const st = sessionStats(session, now, session.baselineWords + session.peakWordsWritten)
+    const prev = creditedRef.current
+    const delta = {
+      words: Math.max(0, st.peakWordsWritten - prev.words),
+      activeSec: Math.max(0, st.activeSec - prev.activeSec),
+      pomodoros: Math.max(0, st.pomodorosCompleted - prev.pomodoros),
+    }
+    if (delta.words === 0 && delta.activeSec === 0 && delta.pomodoros === 0) return
+    creditedRef.current = {
+      words: prev.words + delta.words,
+      activeSec: prev.activeSec + delta.activeSec,
+      pomodoros: prev.pomodoros + delta.pomodoros,
+    }
+    setHistory((h) => {
+      const next = addToDay(h, dayKey(now), delta)
+      if (next !== h) saveHistory(next)
+      return next
+    })
+  }, [session, now])
+
   const startTimer = useCallback(() => {
     setTimer((prev) => start(prev))
     const ts = Date.now()
@@ -141,5 +187,5 @@ export function useFocusTimer(config: PomodoroConfig, content: string, activePat
     setSession(null)
   }, [])
 
-  return { timer, session, now, startTimer, pauseTimer, resetTimer }
+  return { timer, session, now, history, startTimer, pauseTimer, resetTimer }
 }

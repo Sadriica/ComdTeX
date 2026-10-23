@@ -1,0 +1,72 @@
+/* Document root, and the global behaviours every theme shares: focus ring,
+   selection, scrollbars. Tokens come from tokens.css and themes.css. The reset
+   is reset.css; reduced motion and forced colours live in overrides.css. */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-app);
+  color: var(--fg);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* One focus ring for every theme. Components may restyle it but must keep
+   it visible; --focus-ring is checked for 3:1 against the surfaces. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Mouse focus on text fields keeps the ring (typing target); buttons do not. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: var(--selection);
+  color: inherit;
+}
+
+/* Scrollbars: thin, token coloured. WebKitGTK 2.46 reads the standard
+   properties; the pseudo-element rules are the fallback for older engines. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--scrollbar-radius);
+    border: 2px solid var(--scrollbar-edge);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
+}

@@ -102,7 +102,10 @@ describe("useVault CMDX integration", () => {
 
   it("opens and saves Markdown, LaTeX, and BibTeX through the storage gateway", async () => {
     fsMock.touch(`${VAULT}/note.md`, "> [!note] Title\n> Body")
-    fsMock.touch(`${VAULT}/paper.tex`, "\\begin{theorem}[Named]\\label{thm:named}\nBody\n\\end{theorem}")
+    fsMock.touch(
+      `${VAULT}/paper.tex`,
+      "\\begin{theorem}[Named]\\label{thm:named}\nBody\n\\end{theorem}",
+    )
     fsMock.touch(`${VAULT}/refs.bib`, "@article{knuth84,\n  title = {Literate Programming}\n}")
 
     const { result } = renderHook(() => useVault())
@@ -130,7 +133,9 @@ describe("useVault CMDX integration", () => {
     await act(async () => {
       await result.current.saveFile(`${VAULT}/paper.tex`, "mat(1, 2, 3, 4)")
     })
-    expect(fsMock.files.get(`${VAULT}/paper.tex`)?.content).toBe("\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}")
+    expect(fsMock.files.get(`${VAULT}/paper.tex`)?.content).toBe(
+      "\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}",
+    )
 
     await act(async () => {
       await result.current.openFilePath(`${VAULT}/refs.bib`)
@@ -155,7 +160,10 @@ describe("useVault CMDX integration", () => {
     localStorage.setItem("comdtex_vault", VAULT)
 
     const { result } = renderHook(() => useVault())
-    localStorage.setItem("comdtex_tabs", JSON.stringify([mdPath, texPath, bibPath, "/other/outside.md"]))
+    localStorage.setItem(
+      "comdtex_tabs",
+      JSON.stringify([mdPath, texPath, bibPath, "/other/outside.md"]),
+    )
     localStorage.setItem("comdtex_active", texPath)
 
     await act(async () => {
@@ -167,8 +175,12 @@ describe("useVault CMDX integration", () => {
     expect(result.current.openTabs.find((tab) => tab.path === mdPath)?.content).toBe(
       ":::warning[Careful]\nCheck signs\n:::",
     )
-    expect(result.current.openTabs.find((tab) => tab.path === texPath)?.content).toBe("mat(1, 2, 3, 4)")
-    expect(result.current.openTabs.find((tab) => tab.path === bibPath)?.content).toContain("@book{euclid")
+    expect(result.current.openTabs.find((tab) => tab.path === texPath)?.content).toBe(
+      "mat(1, 2, 3, 4)",
+    )
+    expect(result.current.openTabs.find((tab) => tab.path === bibPath)?.content).toContain(
+      "@book{euclid",
+    )
   })
 
   it("searches and replaces closed files using CMDX editor content", async () => {
@@ -191,7 +203,7 @@ describe("useVault CMDX integration", () => {
       expect(count).toBe(1)
     })
 
-    expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Lemma: Changed")
+    expect(fsMock.files.get(mdPath)?.content).toContain("> [!abstract] Changed")
   })
 
   it("migrates a pending autosave across renameFile (no orphaned old file)", async () => {
@@ -230,7 +242,7 @@ describe("useVault CMDX integration", () => {
     expect(result.current.openTabs.find((tab) => tab.path === newPath)).toBeTruthy()
   })
 
-  it("cancels a pending autosave when replaceInVault rewrites an open file", async () => {
+  it("applies replaceInVault to the unsaved buffer and cancels the pending autosave", async () => {
     const mdPath = `${VAULT}/note.md`
     fsMock.touch(mdPath, "alpha beta")
 
@@ -244,7 +256,7 @@ describe("useVault CMDX integration", () => {
     })
     await waitFor(() => expect(result.current.openFile?.path).toBe(mdPath))
 
-    // Queue a stale autosave that would clobber the replacement if not cancelled.
+    // Unsaved edit: the replacement must land in it, and the queued autosave must not fire later with the pre-replace text.
     act(() => {
       result.current.updateContent("alpha beta STALE")
     })
@@ -258,7 +270,7 @@ describe("useVault CMDX integration", () => {
       await new Promise((r) => setTimeout(r, 60))
     })
 
-    expect(fsMock.files.get(mdPath)?.content).toBe("alpha gamma")
+    expect(fsMock.files.get(mdPath)?.content).toBe("alpha gamma STALE")
   })
 
   it("does not read binary preview files during vault search or replace", async () => {

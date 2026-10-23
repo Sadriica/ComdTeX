@@ -1,35 +1,64 @@
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react"
 import { readDir, readTextFile, mkdir, remove, rename, stat } from "@tauri-apps/plugin-fs"
 import { open, save, message } from "@tauri-apps/plugin-dialog"
+import { documentDir } from "@tauri-apps/api/path"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
 import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
 import { allowVaultDir } from "./vaultScope"
+import {
+  finalName,
+  initialCursorFor,
+  nameProblemText,
+  stripCursorMarker,
+  validateName,
+} from "./fileNaming"
 import type { FileNode, OpenFile, SearchResult } from "./types"
 import { showToast } from "./toastService"
-import { useT } from "./i18n"
-import { analyzeConversion, storageFormatForPath, toEditorContent, toDiskContent } from "./cmdxFormat"
-import { VaultSearchIndex, parseSearchQuery, buildSearchRegex, type SearchCandidate } from "./searchIndex"
+import { useT, type T } from "./i18n"
+import {
+  analyzeConversion,
+  forgetLineEnding,
+  renameLineEnding,
+  storageFormatForPath,
+  toEditorContent,
+  toDiskContent,
+} from "./cmdxFormat"
+import { replaceWith } from "./searchReplace"
+import {
+  VaultSearchIndex,
+  parseSearchQuery,
+  buildSearchRegex,
+  type SearchCandidate,
+} from "./searchIndex"
+import { loadDiskSources } from "./vaultSources"
+import { toggleTaskInContent, type TaskItem } from "./generators"
 import { forgetViewState, renameViewState } from "./editorViewState"
 import { diffLineSummary } from "./textDiff"
 import { STORAGE_KEYS } from "./storageKeys"
 
-const VAULT_KEY   = STORAGE_KEYS.VAULT_PATH
-const TABS_KEY    = STORAGE_KEYS.TABS
-const ACTIVE_KEY  = STORAGE_KEYS.TABS_ACTIVE
-const DRAFTS_KEY  = STORAGE_KEYS.DRAFTS
-const RECENT_KEY  = STORAGE_KEYS.RECENT_VAULTS
-const CLOSED_KEY  = STORAGE_KEYS.CLOSED_TABS
+const VAULT_KEY = STORAGE_KEYS.VAULT_PATH
+const TABS_KEY = STORAGE_KEYS.TABS
+const ACTIVE_KEY = STORAGE_KEYS.TABS_ACTIVE
+const DRAFTS_KEY = STORAGE_KEYS.DRAFTS
+const RECENT_KEY = STORAGE_KEYS.RECENT_VAULTS
+const CLOSED_KEY = STORAGE_KEYS.CLOSED_TABS
 const MAX_RECENT_VAULTS = 5
 const MAX_CLOSED_TABS = 20
 
 function loadRecentVaults(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") }
-  catch { return [] }
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]")
+  } catch {
+    return []
+  }
 }
 
 function loadClosedTabs(): string[] {
-  try { return JSON.parse(localStorage.getItem(CLOSED_KEY) ?? "[]") }
-  catch { return [] }
+  try {
+    return JSON.parse(localStorage.getItem(CLOSED_KEY) ?? "[]")
+  } catch {
+    return []
+  }
 }
 
 function saveClosedTab(path: string) {
@@ -53,14 +82,33 @@ function editorModeForPath(path: string): "md" | "tex" | "pdf" | "typ" {
   return storageFormatForPath(path) === "tex" ? "tex" : "md"
 }
 
-function showConversionWarnings(path: string, content: string, phase: "opening" | "saving") {
+// Restoring tabs and opening a note can read the same file twice in a row;
+// one notice per file and phase is enough.
+const lastConversionNotice = new Map<string, { key: string; at: number }>()
+const CONVERSION_NOTICE_DEDUPE_MS = 5000
+
+function showConversionWarnings(path: string, content: string, phase: "opening" | "saving", t: T) {
   const format = storageFormatForPath(path)
   if (!format) return
   const warnings = analyzeConversion(content, format).warnings
   if (warnings.length === 0) return
   const first = warnings[0]
-  const verb = phase === "opening" ? "abrir" : "guardar"
-  showToast(`CMDX: ${warnings.length} advertencia(s) al ${verb} ${displayBasename(path)}. Línea ${first.line}: ${first.message}`, "info", 7000)
+  const key = `${phase}:${warnings.length}:${first.code}:${first.line}`
+  const now = Date.now()
+  const last = lastConversionNotice.get(path)
+  if (last && last.key === key && now - last.at < CONVERSION_NOTICE_DEDUPE_MS) return
+  lastConversionNotice.set(path, { key, at: now })
+  showToast(
+    t.vault.conversionWarning(
+      warnings.length,
+      phase,
+      displayBasename(path),
+      first.line,
+      t.vault.conversionDetail[first.code],
+    ),
+    "info",
+    7000,
+  )
 }
 
 export const README_FILENAME = "comdtex.md"
@@ -318,7 +366,7 @@ durante el render. Ideal para tesis con un archivo principal y capítulos separa
 > \`note\` \`tip\` \`warning\` \`important\` \`danger\` \`success\` \`question\` \`quote\`.
 
 > [!tip] Atajo
-> Pulsa \`Ctrl+P\` para el palette de comandos, \`Ctrl+Shift+F\` para búsqueda
+> Pulsa \`Ctrl+Shift+P\` para la paleta de comandos, \`Ctrl+P\` para abrir archivos, \`Ctrl+Shift+F\` para búsqueda
 > en todo el vault, \`Ctrl+Tab\` para navegar pestañas.
 
 ---
@@ -340,20 +388,75 @@ table(Concepto, Definición, Ejemplo)
 
 // Extensions that are never plain text
 const BINARY_EXTS = new Set([
-  "png","jpg","jpeg","gif","webp","bmp","svg","ico",
-  "pdf","doc","docx","xls","xlsx","ppt","pptx",
-  "zip","tar","gz","rar","7z",
-  "exe","dll","so","dylib","bin","dat",
-  "mp3","mp4","wav","avi","mov","mkv",
-  "ttf","otf","woff","woff2",
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "bmp",
+  "svg",
+  "ico",
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "zip",
+  "tar",
+  "gz",
+  "rar",
+  "7z",
+  "exe",
+  "dll",
+  "so",
+  "dylib",
+  "bin",
+  "dat",
+  "mp3",
+  "mp4",
+  "wav",
+  "avi",
+  "mov",
+  "mkv",
+  "ttf",
+  "otf",
+  "woff",
+  "woff2",
 ])
 
 // ── File tree ────────────────────────────────────────────────────────────────
 
 const MAX_TREE_DEPTH = 10
-const IGNORED_TREE_DIRS = new Set([
-  "node_modules",
-])
+const IGNORED_TREE_DIRS = new Set(["node_modules"])
+
+/** Every text vault file in tree order, with lazy mtime/content readers. */
+function textCandidates(tree: FileNode[]): SearchCandidate[] {
+  const candidates: SearchCandidate[] = []
+  const collect = (nodes: FileNode[]) => {
+    for (const node of nodes) {
+      if (node.type === "dir" && node.children) collect(node.children)
+      else if (node.type === "file" && isTextVaultFile(node)) {
+        candidates.push({
+          path: node.path,
+          name: node.name,
+          ext: node.ext ?? "",
+          getMtime: async () => {
+            try {
+              return (await stat(node.path)).mtime?.getTime()
+            } catch {
+              return undefined
+            }
+          },
+          readContent: () => readTextFile(node.path),
+        })
+      }
+    }
+  }
+  collect(tree)
+  return candidates
+}
 
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
@@ -378,12 +481,22 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       // unconditionally: an empty folder, or one holding only unsupported
       // files, still belongs in the tree (previously such folders vanished).
       let children: FileNode[] = []
-      try { children = await buildTree(fullPath, depth + 1) }
-      catch { /* keep the directory node, just with no children */ }
+      try {
+        children = await buildTree(fullPath, depth + 1)
+      } catch {
+        /* keep the directory node, just with no children */
+      }
       nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "csv" || ext === "pdf")
+      if (
+        ext === "md" ||
+        ext === "tex" ||
+        ext === "bib" ||
+        ext === "typ" ||
+        ext === "csv" ||
+        ext === "pdf"
+      )
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }
@@ -396,7 +509,11 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
 
 // ── Drafts ────────────────────────────────────────────────────────────────────
 
-interface Draft { path: string; content: string; savedAt: number }
+interface Draft {
+  path: string
+  content: string
+  savedAt: number
+}
 
 // The draft list is held in memory and localStorage is the mirror, not the
 // source of truth. Reading it back meant JSON-parsing up to 20 whole documents
@@ -405,15 +522,20 @@ let draftsCache: Draft[] | null = null
 
 function getDrafts(): Draft[] {
   if (draftsCache) return draftsCache
-  try { draftsCache = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "[]") as Draft[] }
-  catch { draftsCache = [] }
+  try {
+    draftsCache = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "[]") as Draft[]
+  } catch {
+    draftsCache = []
+  }
   return draftsCache
 }
 
 /** Persist the list and keep the memory copy authoritative. */
 function putDrafts(drafts: Draft[]): void {
   draftsCache = drafts
-  try { localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts)) } catch {}
+  try {
+    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
+  } catch {}
 }
 
 /** Test seam: forget the memory copy so a test can seed localStorage. */
@@ -432,15 +554,38 @@ const DRAFT_MAX_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days
  * surface the right message in the active language.
  */
 const SYSTEM_PATHS_UNIX = [
-  "/", "/proc", "/sys", "/dev", "/run", "/boot", "/etc", "/var", "/usr", "/lib", "/lib64",
-  "/sbin", "/bin", "/srv", "/opt", "/tmp", "/mnt", "/media",
+  "/",
+  "/proc",
+  "/sys",
+  "/dev",
+  "/run",
+  "/boot",
+  "/etc",
+  "/var",
+  "/usr",
+  "/lib",
+  "/lib64",
+  "/sbin",
+  "/bin",
+  "/srv",
+  "/opt",
+  "/tmp",
+  "/mnt",
+  "/media",
 ]
 const SYSTEM_PATHS_WIN = [
-  "c:\\", "c:\\windows", "c:\\program files", "c:\\program files (x86)",
-  "c:\\programdata", "c:\\users",
+  "c:\\",
+  "c:\\windows",
+  "c:\\program files",
+  "c:\\program files (x86)",
+  "c:\\programdata",
+  "c:\\users",
 ]
 
-export function validateVaultPath(path: string): { valid: boolean; reason?: "empty" | "tooShort" | "system" } {
+export function validateVaultPath(path: string): {
+  valid: boolean
+  reason?: "empty" | "tooShort" | "system"
+} {
   if (!path || typeof path !== "string") return { valid: false, reason: "empty" }
   const trimmed = path.replace(/[\\/]+$/, "").trim()
   if (trimmed.length === 0) return { valid: false, reason: "empty" }
@@ -525,6 +670,20 @@ export interface UseVaultOptions {
   onAfterSave?: (path: string, basename: string) => void
 }
 
+/** True when something (file or folder) already lives at `path`. */
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function isSameOrUnder(path: string, dir: string): boolean {
+  return path === dir || path.startsWith(`${dir}/`) || path.startsWith(`${dir}\\`)
+}
+
 export function useVault(options: UseVaultOptions | number = {}) {
   // Backward-compat: original signature was useVault(autoSaveMs?: number).
   const opts: UseVaultOptions = typeof options === "number" ? { autoSaveMs: options } : options
@@ -532,18 +691,10 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // Keep the latest onAfterSave in a ref so saveFile (memoised) always fires the
   // current callback even if the host re-renders with a new function identity.
   const onAfterSaveRef = useRef<UseVaultOptions["onAfterSave"]>(opts.onAfterSave)
-  onAfterSaveRef.current = opts.onAfterSave
+  useLayoutEffect(() => {
+    onAfterSaveRef.current = opts.onAfterSave
+  })
   const t = useT()
-
-  const validate = useCallback((name: string): { valid: boolean; error?: string } => {
-    if (!name || !name.trim()) return { valid: false, error: t.vault.nameEmpty }
-    if (name.length > 255) return { valid: false, error: t.vault.nameTooLong }
-    if (/[<>:"|?*\\]/.test(name)) return { valid: false, error: t.vault.nameInvalidChars }
-    if (name.startsWith(".")) return { valid: false, error: t.vault.nameStartsDot }
-    if (/^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i.test(name))
-      return { valid: false, error: t.vault.nameReserved }
-    return { valid: true }
-  }, [t])
 
   const [vaultPath, setVaultPath] = useState<string | null>(() => {
     // Defensive: if a previous run somehow stored a system path (e.g. "/"),
@@ -551,7 +702,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
     const stored = localStorage.getItem(VAULT_KEY)
     if (!stored) return null
     if (!validateVaultPath(stored).valid) {
-      try { localStorage.removeItem(VAULT_KEY) } catch {}
+      try {
+        localStorage.removeItem(VAULT_KEY)
+      } catch {}
       return null
     }
     return stored
@@ -572,7 +725,9 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // skipped for these until the user decides reload / overwrite / cancel.
   const conflictPaths = useRef<Set<string>>(new Set())
   const activeTabPathRef = useRef<string | null>(null)
-  activeTabPathRef.current = activeTabPath
+  useLayoutEffect(() => {
+    activeTabPathRef.current = activeTabPath
+  })
   // Latest openTabs, mirrored into a ref so callbacks that only NEED to read the
   // current tabs (saveFile, closeTab) don't have to list `openTabs` in their deps.
   // Without this, every keystroke (which mutates an open tab) recreates saveFile →
@@ -593,6 +748,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // per vault: cleared whenever the user switches vaults (selectVault /
   // createVault) so a stale path from a previous vault can never leak in.
   const searchIndexRef = useRef<VaultSearchIndex>(new VaultSearchIndex())
+  // Bumped by writes that change a file without going through a tab (todo
+  // toggle on a closed note), so panels reading the whole vault reload.
+  const [contentVersion, setContentVersion] = useState(0)
+  // saveFile / flushPending are defined after the callbacks that need them
+  // (restoreTabs, selectVault, createVault); these refs break the ordering.
+  const saveFileRef = useRef<
+    (path: string, content: string, o?: { force?: boolean }) => Promise<boolean>
+  >(async () => false)
+  const flushPendingRef = useRef<() => Promise<void>>(async () => {})
 
   const openFile = openTabs.find((tab) => tab.path === activeTabPath) ?? null
 
@@ -601,7 +765,13 @@ export function useVault(options: UseVaultOptions | number = {}) {
   // the persisted paths list rarely does. Skip the localStorage write when the
   // serialized paths are unchanged, so typing doesn't do a setItem per keystroke.
   const lastPersistedTabsRef = useRef<string | null>(null)
+  // The first render has no tabs yet; persisting that empty list would erase the
+  // saved ones before loadVault/restoreTabs gets to read them. Hold off until a
+  // restore was attempted or a tab exists.
+  const tabsHydratedRef = useRef(false)
   useEffect(() => {
+    if (openTabs.length > 0) tabsHydratedRef.current = true
+    if (!tabsHydratedRef.current) return
     const serialized = JSON.stringify(openTabs.map((tab) => tab.path))
     if (serialized === lastPersistedTabsRef.current) return
     lastPersistedTabsRef.current = serialized
@@ -614,157 +784,258 @@ export function useVault(options: UseVaultOptions | number = {}) {
   }, [activeTabPath])
 
   // ── Tree ──────────────────────────────────────────────────────────────────
-  const refreshTree = useCallback(async (path: string) => {
-    try { setTree(await buildTree(path)) }
-    catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
-  }, [t])
+  const refreshTree = useCallback(
+    async (path: string) => {
+      try {
+        setTree(await buildTree(path))
+      } catch (e) {
+        showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+      }
+    },
+    [t],
+  )
 
   // ── Restore tabs on mount ────────────────────────────────────────────────
   // Returns true if at least one tab was restored
-  const restoreTabs = useCallback(async (vaultP: string): Promise<boolean> => {
-    try {
-      const savedPaths: string[] = JSON.parse(localStorage.getItem(TABS_KEY) ?? "[]")
-      const savedActive = localStorage.getItem(ACTIVE_KEY)
-      if (!savedPaths.length) return false
+  const restoreTabs = useCallback(
+    async (vaultP: string): Promise<boolean> => {
+      try {
+        const savedPaths: string[] = JSON.parse(localStorage.getItem(TABS_KEY) ?? "[]")
+        const savedActive = localStorage.getItem(ACTIVE_KEY)
+        if (!savedPaths.length) return false
 
-      const tabs: OpenFile[] = []
-      for (const path of savedPaths) {
-        // Only restore files from the current vault
-        if (!isPathInsideVault(path, vaultP)) continue
-        // Never clobber an already-open tab that has unsaved in-memory edits
-        // with the (older) disk/draft content. restoreTabs runs on refresh
-        // paths too, and reading disk here would silently overwrite text the
-        // user typed within the autosave/draft-flush window.
-        const existingDirty = openTabsRef.current.find((tb) => tb.path === path)
-        if (existingDirty?.isDirty) { tabs.push(existingDirty); continue }
-        const ext = path.split(".").pop()?.toLowerCase() ?? ""
-        // PDFs restore as preview-mode tabs, no text content
-        if (ext === "pdf") {
-          tabs.push({ path, name: displayBasename(path), content: "", isDirty: false, mode: "pdf" })
-          continue
-        }
-        // Skip other binary files
-        if (BINARY_EXTS.has(ext)) continue
-        try {
-          const name = displayBasename(path)
-          // Use draft if present: cleared on save, its presence indicates unsaved changes
-          const draft = getDrafts().find((d) => d.path === path)
-          const content = await readTextFile(path)
-          let cachedMtime: number | undefined
-          try {
-            const info = await stat(path)
-            cachedMtime = info.mtime?.getTime()
-          } catch {
-            // stat optional - some filesystems may not support it
+        const tabs: OpenFile[] = []
+        for (const path of savedPaths) {
+          // Only restore files from the current vault
+          if (!isPathInsideVault(path, vaultP)) continue
+          // Never clobber an already-open tab that has unsaved in-memory edits
+          // with the (older) disk/draft content. restoreTabs runs on refresh
+          // paths too, and reading disk here would silently overwrite text the
+          // user typed within the autosave/draft-flush window.
+          const existingDirty = openTabsRef.current.find((tb) => tb.path === path)
+          if (existingDirty?.isDirty) {
+            tabs.push(existingDirty)
+            continue
           }
-          showConversionWarnings(path, content, "opening")
-          const finalContent = draft ? draft.content : toEditorContent(path, content)
-          tabs.push({ path, name, content: finalContent, isDirty: !!draft, mode: editorModeForPath(path), cachedMtime })
-        } catch { /* file deleted, skip */ }
-      }
-      if (tabs.length > 0) {
-        setOpenTabs(tabs)
-        const active = savedActive && tabs.find((t) => t.path === savedActive)
-          ? savedActive
-          : tabs[0].path
-        setActiveTabPath(active)
-        return true
+          const ext = path.split(".").pop()?.toLowerCase() ?? ""
+          // PDFs restore as preview-mode tabs, no text content
+          if (ext === "pdf") {
+            tabs.push({
+              path,
+              name: displayBasename(path),
+              content: "",
+              isDirty: false,
+              mode: "pdf",
+            })
+            continue
+          }
+          // Skip other binary files
+          if (BINARY_EXTS.has(ext)) continue
+          try {
+            const name = displayBasename(path)
+            // Use draft if present: cleared on save, its presence indicates unsaved changes
+            const draft = getDrafts().find((d) => d.path === path)
+            const content = await readTextFile(path)
+            let cachedMtime: number | undefined
+            try {
+              const info = await stat(path)
+              cachedMtime = info.mtime?.getTime()
+            } catch {
+              // stat optional - some filesystems may not support it
+            }
+            showConversionWarnings(path, content, "opening", t)
+            const diskContent = toEditorContent(path, content)
+            // A draft only wins when it is NEWER than the file on disk. A draft
+            // older than the file's mtime predates an external change (or a save
+            // whose draft cleanup was lost), and restoring it would resurrect
+            // stale text over newer disk content.
+            const draftIsNewer =
+              !!draft && (cachedMtime === undefined || draft.savedAt >= cachedMtime)
+            if (draft && draftIsNewer && draft.content !== diskContent) {
+              // cachedMtime stays the CURRENT disk mtime on purpose: the draft is
+              // newer than the file, so nothing external happened since it was
+              // typed, and any later external change still trips the guard.
+              // pendingContent makes the restored edit actually reach disk
+              // (autosave, tab close, vault switch, quit flush).
+              pendingContent.current.set(path, draft.content)
+              if (!saveTimers.current.has(path)) {
+                saveTimers.current.set(
+                  path,
+                  setTimeout(() => {
+                    saveTimers.current.delete(path)
+                    void saveFileRef.current(path, draft.content)
+                  }, 800),
+                )
+              }
+              tabs.push({
+                path,
+                name,
+                content: draft.content,
+                isDirty: true,
+                mode: editorModeForPath(path),
+                cachedMtime,
+              })
+            } else {
+              if (draft) clearDraft(path)
+              tabs.push({
+                path,
+                name,
+                content: diskContent,
+                isDirty: false,
+                mode: editorModeForPath(path),
+                cachedMtime,
+              })
+            }
+          } catch {
+            /* file deleted, skip */
+          }
+        }
+        if (tabs.length > 0) {
+          setOpenTabs(tabs)
+          const active =
+            savedActive && tabs.find((t) => t.path === savedActive) ? savedActive : tabs[0].path
+          setActiveTabPath(active)
+          return true
+        }
+        return false
+      } catch {
+        /* corrupted storage */
       }
       return false
-    } catch { /* corrupted storage */ }
-    return false
-  }, [])
+    },
+    [t],
+  )
 
   // ── Open or create README.md ─────────────────────────────────────────────
-  const openOrCreateReadme = useCallback(async (vaultP: string) => {
-    const readmePath = await pathJoin(vaultP, README_FILENAME)
-    let content: string
-    try {
-      content = await readTextFile(readmePath)
-      // Migration: older template versions wrote literal `\`` (backslash-backtick)
-      // sequences inside the code-block examples; they rendered as `\\\`\\\`\\\``
-      // in the preview. Rewrite those to plain backticks. Safe: no real Markdown
-      // pairs `\` immediately with a `` ` ``.
-      if (/\\`/.test(content)) {
-        content = content.replace(/\\`/g, "`")
-        try { await writeTextFileAtomic(readmePath, content) }
-        catch { /* migration is best-effort; preview will still be correct */ }
-      }
-    } catch {
-      // Doesn't exist: create it
-      content = README_CONTENT
+  const openOrCreateReadme = useCallback(
+    async (vaultP: string) => {
+      const readmePath = await pathJoin(vaultP, README_FILENAME)
+      let content: string
       try {
-        await writeTextFileAtomic(readmePath, content)
-      } catch (e) {
-        showToast(t.vault.errorCreatingReadme(e instanceof Error ? e.message : String(e)), "error")
-        return
+        content = await readTextFile(readmePath)
+        // Migration: older template versions wrote literal `\`` (backslash-backtick)
+        // sequences inside the code-block examples; they rendered as `\\\`\\\`\\\``
+        // in the preview. Rewrite those to plain backticks. Safe: no real Markdown
+        // pairs `\` immediately with a `` ` ``.
+        if (/\\`/.test(content)) {
+          content = content.replace(/\\`/g, "`")
+          try {
+            await writeTextFileAtomic(readmePath, content)
+          } catch {
+            /* migration is best-effort; preview will still be correct */
+          }
+        }
+      } catch {
+        // Doesn't exist: create it
+        content = README_CONTENT
+        try {
+          await writeTextFileAtomic(readmePath, content)
+        } catch (e) {
+          showToast(
+            t.vault.errorCreatingReadme(e instanceof Error ? e.message : String(e)),
+            "error",
+          )
+          return
+        }
       }
-    }
-    let readmeMtime: number | undefined
-    try { readmeMtime = (await stat(readmePath)).mtime?.getTime() } catch { /* no mtime support */ }
-    const newTab: OpenFile = { path: readmePath, name: README_FILENAME, content: toEditorContent(readmePath, content), isDirty: false, mode: "md", cachedMtime: readmeMtime }
-    setOpenTabs((tabs) => tabs.find((t) => t.path === readmePath) ? tabs : [...tabs, newTab])
-    setActiveTabPath(readmePath)
-  }, [t])
+      let readmeMtime: number | undefined
+      try {
+        readmeMtime = (await stat(readmePath)).mtime?.getTime()
+      } catch {
+        /* no mtime support */
+      }
+      const newTab: OpenFile = {
+        path: readmePath,
+        name: README_FILENAME,
+        content: toEditorContent(readmePath, content),
+        isDirty: false,
+        mode: "md",
+        cachedMtime: readmeMtime,
+      }
+      setOpenTabs((tabs) => (tabs.find((t) => t.path === readmePath) ? tabs : [...tabs, newTab]))
+      setActiveTabPath(readmePath)
+    },
+    [t],
+  )
 
-  const selectVault = useCallback(async (preselected?: string) => {
-    let selected: string | null | string[]
-    // Guard against accidental event-object invocation (e.g. `onClick={selectVault}`,
-    // React passes a SyntheticEvent which would silently skip the dialog).
-    if (typeof preselected === "string" && preselected.length > 0) {
-      selected = preselected
-    } else {
-      try {
-        selected = await open({ directory: true, multiple: false, title: "Seleccionar carpeta del vault" })
-      } catch (e) {
-        showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
+  const selectVault = useCallback(
+    async (preselected?: string) => {
+      let selected: string | null | string[]
+      // Guard against accidental event-object invocation (e.g. `onClick={selectVault}`,
+      // React passes a SyntheticEvent which would silently skip the dialog).
+      if (typeof preselected === "string" && preselected.length > 0) {
+        selected = preselected
+      } else {
+        try {
+          selected = await open({
+            directory: true,
+            multiple: false,
+            title: "Seleccionar carpeta del vault",
+          })
+        } catch (e) {
+          showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
+          return
+        }
+      }
+      if (!selected || typeof selected !== "string") return
+      const validation = validateVaultPath(selected)
+      if (!validation.valid) {
+        showToast(
+          validation.reason === "system"
+            ? t.vault.invalidPathSystem
+            : t.vault.invalidPath(selected),
+          "error",
+          7000,
+        )
         return
       }
-    }
-    if (!selected || typeof selected !== "string") return
-    const validation = validateVaultPath(selected)
-    if (!validation.valid) {
-      showToast(
-        validation.reason === "system" ? t.vault.invalidPathSystem : t.vault.invalidPath(selected),
-        "error",
-        7000,
-      )
-      return
-    }
-    localStorage.setItem(VAULT_KEY, selected)
-    localStorage.removeItem(TABS_KEY)
-    localStorage.removeItem(ACTIVE_KEY)
-    // Track in recent vaults
-    saveRecentVault(selected)
-    setRecentVaults(loadRecentVaults())
-    // Cancel pending autosaves from the previous vault
-    saveTimers.current.forEach(clearTimeout)
-    saveTimers.current.clear()
-    contentCommitTimers.current.forEach(clearTimeout)
-    contentCommitTimers.current.clear()
-    // Drop the previous vault's cached file contents: paths are only unique
-    // within a vault, so a stale entry could otherwise "match" under the new
-    // vault before its real content is ever synced.
-    searchIndexRef.current.clear()
-    setOpenTabs([])
-    setActiveTabPath(null)
-    setVaultPath(selected)
-    // Grant the webview fs + asset access to this vault before any disk I/O.
-    // Without this the plugin-fs scope denies every read/write inside it.
-    try { await allowVaultDir(selected) }
-    catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
-    await refreshTree(selected)
-    await openOrCreateReadme(selected)
-  }, [refreshTree, openOrCreateReadme, t])
+      // Write the previous vault's unsaved edits BEFORE tearing anything down.
+      await flushPendingRef.current()
+      tabsHydratedRef.current = true
+      localStorage.setItem(VAULT_KEY, selected)
+      localStorage.removeItem(TABS_KEY)
+      localStorage.removeItem(ACTIVE_KEY)
+      // Track in recent vaults
+      saveRecentVault(selected)
+      setRecentVaults(loadRecentVaults())
+      // Cancel pending autosaves from the previous vault
+      saveTimers.current.forEach(clearTimeout)
+      saveTimers.current.clear()
+      contentCommitTimers.current.forEach(clearTimeout)
+      contentCommitTimers.current.clear()
+      // Drop the previous vault's cached file contents: paths are only unique
+      // within a vault, so a stale entry could otherwise "match" under the new
+      // vault before its real content is ever synced.
+      searchIndexRef.current.clear()
+      setOpenTabs([])
+      setActiveTabPath(null)
+      setVaultPath(selected)
+      // Grant the webview fs + asset access to this vault before any disk I/O.
+      // Without this the plugin-fs scope denies every read/write inside it.
+      try {
+        await allowVaultDir(selected)
+      } catch (e) {
+        showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+      }
+      await refreshTree(selected)
+      await openOrCreateReadme(selected)
+    },
+    [refreshTree, openOrCreateReadme, t],
+  )
 
   const createVault = useCallback(async () => {
     // Ask for the new folder path via a save-style dialog
     let chosen: string | null
     try {
-      chosen = await save({
-        title: "Crear nueva carpeta de vault",
-        defaultPath: "mi-vault",
-      })
+      // Suggest a folder inside Documents rather than leaving the dialog wherever
+      // it was last; the user can type any other path.
+      let defaultPath: string = t.vault.newVaultName
+      try {
+        defaultPath = await pathJoin(await documentDir(), t.vault.newVaultName)
+      } catch {
+        /* no documents folder: keep the bare name */
+      }
+      chosen = await save({ title: t.vault.createVaultTitle, defaultPath })
     } catch (e) {
       showToast(t.vault.selectVaultError(e instanceof Error ? e.message : String(e)), "error")
       return
@@ -781,9 +1052,15 @@ export function useVault(options: UseVaultOptions | number = {}) {
     }
     // Grant scope BEFORE mkdir: the folder does not exist yet, so the
     // Rust command permits a not-yet-existing path (see allow_vault_dir).
-    try { await allowVaultDir(chosen) }
-    catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error"); return }
+    try {
+      await allowVaultDir(chosen)
+    } catch (e) {
+      showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+      return
+    }
     await mkdir(chosen, { recursive: true })
+    await flushPendingRef.current()
+    tabsHydratedRef.current = true
     localStorage.setItem(VAULT_KEY, chosen)
     localStorage.removeItem(TABS_KEY)
     localStorage.removeItem(ACTIVE_KEY)
@@ -807,97 +1084,148 @@ export function useVault(options: UseVaultOptions | number = {}) {
     try {
       // Re-grant scope on every load (fresh app launch restoring a saved
       // vault, or re-entering loadVault) before touching the filesystem.
-      try { await allowVaultDir(vaultPath) }
-      catch (e) { showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error") }
+      try {
+        await allowVaultDir(vaultPath)
+      } catch (e) {
+        showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+      }
       await refreshTree(vaultPath)
       const restored = await restoreTabs(vaultPath)
       if (!restored) await openOrCreateReadme(vaultPath)
     } finally {
+      tabsHydratedRef.current = true
       setIsLoading(false)
     }
   }, [vaultPath, refreshTree, restoreTabs, openOrCreateReadme, t])
 
-  const openFileNode = useCallback(async (node: FileNode) => {
-    if (openTabs.find((t) => t.path === node.path)) {
-      setActiveTabPath(node.path)
-      return
-    }
-    // PDFs open as a preview-mode tab: no text read, rendered by PdfPreviewPanel.
-    if (node.ext === "pdf") {
-      const pdfTab: OpenFile = { path: node.path, name: node.name, content: "", isDirty: false, mode: "pdf" }
-      setOpenTabs((tabs) => tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, pdfTab])
-      setActiveTabPath(node.path)
-      return
-    }
-    // Skip binaries
-    if (BINARY_EXTS.has(node.ext ?? "")) {
-      showToast(t.vault.binaryFile(node.name), "error")
-      return
-    }
-    try {
-      const content = await readTextFile(node.path)
-      showConversionWarnings(node.path, content, "opening")
-      let cachedMtime: number | undefined
+  const openFileNode = useCallback(
+    async (node: FileNode) => {
+      if (openTabs.find((t) => t.path === node.path)) {
+        setActiveTabPath(node.path)
+        return
+      }
+      // PDFs open as a preview-mode tab: no text read, rendered by PdfPreviewPanel.
+      if (node.ext === "pdf") {
+        const pdfTab: OpenFile = {
+          path: node.path,
+          name: node.name,
+          content: "",
+          isDirty: false,
+          mode: "pdf",
+        }
+        setOpenTabs((tabs) => (tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, pdfTab]))
+        setActiveTabPath(node.path)
+        return
+      }
+      // Skip binaries
+      if (BINARY_EXTS.has(node.ext ?? "")) {
+        showToast(t.vault.binaryFile(node.name), "error")
+        return
+      }
       try {
-        const info = await stat(node.path)
-        cachedMtime = info.mtime?.getTime()
-      } catch {
-        // stat optional - some filesystems may not support it
+        const content = await readTextFile(node.path)
+        showConversionWarnings(node.path, content, "opening", t)
+        let cachedMtime: number | undefined
+        try {
+          const info = await stat(node.path)
+          cachedMtime = info.mtime?.getTime()
+        } catch {
+          // stat optional - some filesystems may not support it
+        }
+        const internalContent = toEditorContent(node.path, content)
+        const newTab: OpenFile = {
+          path: node.path,
+          name: node.name,
+          content: internalContent,
+          isDirty: false,
+          mode: editorModeForPath(node.path),
+          cachedMtime,
+        }
+        setOpenTabs((tabs) => (tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, newTab]))
+        setActiveTabPath(node.path)
+      } catch (e) {
+        showToast(
+          t.vault.errorOpening(node.name, e instanceof Error ? e.message : String(e)),
+          "error",
+        )
       }
-      const internalContent = toEditorContent(node.path, content)
-      const newTab: OpenFile = { path: node.path, name: node.name, content: internalContent, isDirty: false, mode: editorModeForPath(node.path), cachedMtime }
-      setOpenTabs((tabs) => tabs.find((tb) => tb.path === node.path) ? tabs : [...tabs, newTab])
-      setActiveTabPath(node.path)
-    } catch (e) {
-      showToast(t.vault.errorOpening(node.name, e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [openTabs, t])
+    },
+    [openTabs, t],
+  )
 
-  const openFilePath = useCallback(async (path: string) => {
-    if (openTabs.find((t) => t.path === path)) {
-      setActiveTabPath(path)
-      return
-    }
+  const openFilePath = useCallback(
+    async (path: string) => {
+      if (openTabs.find((t) => t.path === path)) {
+        setActiveTabPath(path)
+        return
+      }
 
-    const name = displayBasename(path)
-    const ext = name.split(".").pop()?.toLowerCase() ?? ""
-    if (ext === "pdf") {
-      const pdfTab: OpenFile = { path, name, content: "", isDirty: false, mode: "pdf" }
-      setOpenTabs((tabs) => tabs.find((tb) => tb.path === path) ? tabs : [...tabs, pdfTab])
-      setActiveTabPath(path)
-      return
-    }
-    if (BINARY_EXTS.has(ext)) {
-      showToast(t.vault.binaryFile(name), "error")
-      return
-    }
+      const name = displayBasename(path)
+      const ext = name.split(".").pop()?.toLowerCase() ?? ""
+      if (ext === "pdf") {
+        const pdfTab: OpenFile = { path, name, content: "", isDirty: false, mode: "pdf" }
+        setOpenTabs((tabs) => (tabs.find((tb) => tb.path === path) ? tabs : [...tabs, pdfTab]))
+        setActiveTabPath(path)
+        return
+      }
+      if (BINARY_EXTS.has(ext)) {
+        showToast(t.vault.binaryFile(name), "error")
+        return
+      }
 
-    try {
-      const content = await readTextFile(path)
-      showConversionWarnings(path, content, "opening")
-      // Get modification time for conflict detection
-      let cachedMtime: number | undefined
       try {
-        const info = await stat(path)
-        cachedMtime = info.mtime?.getTime()
-      } catch {
-        // stat optional - some filesystems may not support it
+        const content = await readTextFile(path)
+        showConversionWarnings(path, content, "opening", t)
+        // Get modification time for conflict detection
+        let cachedMtime: number | undefined
+        try {
+          const info = await stat(path)
+          cachedMtime = info.mtime?.getTime()
+        } catch {
+          // stat optional - some filesystems may not support it
+        }
+        const internalContent = toEditorContent(path, content)
+        const newTab: OpenFile = {
+          path,
+          name,
+          content: internalContent,
+          isDirty: false,
+          mode: editorModeForPath(path),
+          cachedMtime,
+        }
+        setOpenTabs((tabs) => (tabs.find((tb) => tb.path === path) ? tabs : [...tabs, newTab]))
+        setActiveTabPath(path)
+      } catch (e) {
+        showToast(t.vault.errorOpening(name, e instanceof Error ? e.message : String(e)), "error")
       }
-      const internalContent = toEditorContent(path, content)
-      const newTab: OpenFile = {
-        path,
-        name,
-        content: internalContent,
-        isDirty: false,
-        mode: editorModeForPath(path),
-        cachedMtime,
-      }
-      setOpenTabs((tabs) => tabs.find((tb) => tb.path === path) ? tabs : [...tabs, newTab])
-      setActiveTabPath(path)
-    } catch (e) {
-      showToast(t.vault.errorOpening(name, e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [openTabs, t])
+    },
+    [openTabs, t],
+  )
+
+  // Open-at-position: a jump (go to definition, a link, a cross-file result)
+  // names a file AND a spot in it. The editor for a tab mounts after the tab
+  // becomes active (it is keyed per tab), so the target waits here until that
+  // editor asks for it with `takePendingReveal`.
+  const pendingReveal = useRef<{ path: string; line: number; column: number; at: number } | null>(
+    null,
+  )
+  const openFileAt = useCallback(
+    async (path: string, line: number, column = 1): Promise<"current" | "opened"> => {
+      if (activeTabPathRef.current === path) return "current"
+      pendingReveal.current = { path, line, column, at: Date.now() }
+      await openFilePath(path)
+      return "opened"
+    },
+    [openFilePath],
+  )
+  const takePendingReveal = useCallback((path: string): { line: number; column: number } | null => {
+    const want = pendingReveal.current
+    if (!want || want.path !== path) return null
+    pendingReveal.current = null
+    // A target for a file that failed to open must not fire on a much later open.
+    if (Date.now() - want.at > 10_000) return null
+    return { line: want.line, column: want.column }
+  }, [])
 
   const togglePin = useCallback((path: string) => {
     setPinnedPaths((prev) => {
@@ -920,9 +1248,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
 
   const switchTab = useCallback((path: string) => setActiveTabPath(path), [])
 
-  const reopenTab = useCallback(async (path: string) => {
-    await openFilePath(path)
-  }, [openFilePath])
+  const reopenTab = useCallback(
+    async (path: string) => {
+      await openFilePath(path)
+    },
+    [openFilePath],
+  )
 
   const getClosedTabs = useCallback(() => loadClosedTabs(), [])
 
@@ -936,194 +1267,230 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * to flush before destroying state (e.g. closeTab) rely on this signal so
    * they only clear drafts after a confirmed successful write.
    */
-  const saveFile = useCallback(async (
-    path: string,
-    content: string,
-    saveOpts: { force?: boolean } = {},
-  ): Promise<boolean> => {
-    try {
-      const openTab = openTabsRef.current.find((tab) => tab.path === path)
-      // Read-only modes (currently just PDF) must never write to disk:
-      // doing so would overwrite the binary file with text content.
-      if (openTab?.mode === "pdf") return false
-      // The external-change guard needs a DISK baseline (`cachedMtime`). Every
-      // path that opens or creates an editable tab now sets one, so a missing
-      // baseline means we genuinely cannot tell, and must not prompt.
-      //
-      // Do NOT "fall back" to comparing the file against `openTab.content`:
-      // that field is the LIVE buffer including unsaved edits, so it differs
-      // from disk on the very first keystroke and the conflict dialog fires on
-      // every autosave. A content-based check would need the last known disk
-      // text as its baseline, which is what `cachedMtime` already stands in for.
-      if (!saveOpts.force && openTab?.cachedMtime) {
-        try {
-          const info = await stat(path)
-          const currentMtime = info.mtime?.getTime()
-          if (currentMtime && currentMtime > openTab.cachedMtime) {
-            // Mark the path as conflicted so subsequent autosaves stay blocked
-            // until the user decides: without this, the *next* keystroke would
-            // refresh cachedMtime via a no-op path and silently overwrite the
-            // external changes.
-            conflictPaths.current.add(path)
-            // Cancel any queued autosave for this path; we don't want it to
-            // race with the modal.
-            const queued = saveTimers.current.get(path)
-            if (queued) { clearTimeout(queued); saveTimers.current.delete(path) }
-            // Three-way prompt: Yes = reload from disk (lose edits),
-            // No = keep my version (overwrite disk), Cancel = decide later.
-            // Quantify the divergence so the choice is informed: "3 lines
-            // differ" and "400 lines differ" warrant very different decisions.
-            let diffLine = ""
-            try {
-              const onDisk = toEditorContent(path, await readTextFile(path))
-              const summary = diffLineSummary(onDisk, content)
-              if (!summary.identical) diffLine = `\n${t.vault.conflictDiff(summary.added, summary.removed)}`
-            } catch { /* unreadable: the prompt still works without the summary */ }
-
-            let choice: string
-            try {
-              choice = await message(
-                `${t.vault.fileChangedExternally(openTab.name)}${diffLine}\n\n` +
-                `${t.vault.conflictReloadHint}\n` +
-                `${t.vault.conflictKeepHint}\n` +
-                `${t.vault.conflictCancelHint}`,
-                {
-                  title: "ComdTeX",
-                  kind: "warning",
-                  buttons: {
-                    yes: t.vault.conflictReload,
-                    no: t.vault.conflictKeepMine,
-                    cancel: t.vault.conflictCancel,
-                  },
-                },
-              )
-            } catch {
-              // Tauri dialog unavailable (e.g. during tests): fall back to the
-              // safe choice: don't overwrite, don't lose edits, leave conflict
-              // pending so the user is forced to handle it explicitly.
-              showToast(t.vault.fileChangedExternally(openTab.name), "error")
-              return false
-            }
-            if (choice === "Yes") {
-              // Reload from disk and replace tab content
-              try {
-                const fresh = toEditorContent(path, await readTextFile(path))
-                let freshMtime: number | undefined
-                try { freshMtime = (await stat(path)).mtime?.getTime() } catch {}
-                setOpenTabs((tabs) => tabs.map((tab) =>
-                  tab.path === path
-                    ? { ...tab, content: fresh, isDirty: false, cachedMtime: freshMtime }
-                    : tab
-                ))
-                pendingContent.current.delete(path)
-                clearDraft(path)
-                conflictPaths.current.delete(path)
-                // Reflect the reloaded disk content in the index immediately:
-                // avoids a stale cache entry surviving until the next search.
-                if (freshMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, freshMtime, fresh)
-                else searchIndexRef.current.invalidate(path)
-              } catch (e) {
-                showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
+  const saveFile = useCallback(
+    async (path: string, content: string, saveOpts: { force?: boolean } = {}): Promise<boolean> => {
+      try {
+        const openTab = openTabsRef.current.find((tab) => tab.path === path)
+        // Read-only modes (currently just PDF) must never write to disk:
+        // doing so would overwrite the binary file with text content.
+        if (openTab?.mode === "pdf") return false
+        // The external-change guard needs a DISK baseline (`cachedMtime`). Every
+        // path that opens or creates an editable tab now sets one, so a missing
+        // baseline means we genuinely cannot tell, and must not prompt.
+        //
+        // Do NOT "fall back" to comparing the file against `openTab.content`:
+        // that field is the LIVE buffer including unsaved edits, so it differs
+        // from disk on the very first keystroke and the conflict dialog fires on
+        // every autosave. A content-based check would need the last known disk
+        // text as its baseline, which is what `cachedMtime` already stands in for.
+        if (!saveOpts.force && openTab?.cachedMtime) {
+          try {
+            const info = await stat(path)
+            const currentMtime = info.mtime?.getTime()
+            if (currentMtime && currentMtime > openTab.cachedMtime) {
+              // Mark the path as conflicted so subsequent autosaves stay blocked
+              // until the user decides: without this, the *next* keystroke would
+              // refresh cachedMtime via a no-op path and silently overwrite the
+              // external changes.
+              conflictPaths.current.add(path)
+              // Cancel any queued autosave for this path; we don't want it to
+              // race with the modal.
+              const queued = saveTimers.current.get(path)
+              if (queued) {
+                clearTimeout(queued)
+                saveTimers.current.delete(path)
               }
-              return false
-            }
-            if (choice === "No") {
-              // Force-save, fall through to the write below
-              conflictPaths.current.delete(path)
-            } else {
-              // Cancel: stay in conflict state, autosave remains blocked
-              return false
-            }
-          }
-        } catch {
-          // ignore stat errors (filesystem may not support mtime)
-        }
-      }
-      showConversionWarnings(path, content, "saving")
-      // Convert from CMDX to storage format before saving. Non-CMDX files like .bib stay raw.
-      const storageContent = toDiskContent(path, content)
-      await writeTextFileAtomic(path, storageContent)
-      // Update mtime after successful save
-      let newMtime: number | undefined
-      try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
-      // A keystroke can land WHILE this write is in flight (updateContent runs
-      // synchronously and re-arms the debounce). If pendingContent now holds
-      // bytes NEWER than what we just wrote, the tab is still dirty and that
-      // newer content must survive: clearing isDirty/pendingContent/draft here
-      // would strand it, because closeTab and flushPending both gate the flush
-      // on exactly those signals, so the edit is silently lost on the next tab
-      // close, vault switch, or app quit. Only clear when nothing newer arrived.
-      const superseded = pendingContent.current.has(path) && pendingContent.current.get(path) !== content
-      setOpenTabs((tabs) => tabs.map((tab) =>
-        tab.path === path
-          ? { ...tab, isDirty: superseded ? tab.isDirty : false, cachedMtime: newMtime ?? tab.cachedMtime }
-          : tab
-      ))
-      conflictPaths.current.delete(path)
-      if (!superseded) {
-        // Only drop the draft/pending AFTER the bytes are confirmed on disk; if
-        // the write threw above the catch block returns false and the draft
-        // remains for crash recovery.
-        pendingContent.current.delete(path)
-        clearDraft(path)
-      }
-      // Keep the index in sync with what we just wrote so the next search
-      // doesn't need to re-read this file at all.
-      if (newMtime !== undefined) searchIndexRef.current.setFromEditorContent(path, newMtime, content)
-      else searchIndexRef.current.invalidate(path)
-      onAfterSaveRef.current?.(path, displayBasename(path))
-      return true
-    } catch (e) {
-      showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
-      return false
-    }
-    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
-  }, [t])
+              // Three-way prompt: Yes = reload from disk (lose edits),
+              // No = keep my version (overwrite disk), Cancel = decide later.
+              // Quantify the divergence so the choice is informed: "3 lines
+              // differ" and "400 lines differ" warrant very different decisions.
+              let diffLine = ""
+              try {
+                const onDisk = toEditorContent(path, await readTextFile(path))
+                const summary = diffLineSummary(onDisk, content)
+                if (!summary.identical)
+                  diffLine = `\n${t.vault.conflictDiff(summary.added, summary.removed)}`
+              } catch {
+                /* unreadable: the prompt still works without the summary */
+              }
 
-  const updateContent = useCallback((content: string) => {
-    const path = activeTabPathRef.current
-    if (!path) return
-    // Hard guard: PDF tabs are read-only previews. Without this, a stray
-    // editor onChange (e.g. when an extension fires) would queue an autosave
-    // that overwrites the binary PDF file with empty/text content, destroying
-    // the user's document.
-    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
-    const tab = openTabsRef.current.find((t) => t.path === path)
-    if (tab?.mode === "pdf") return
-    const wasDirty = tab?.isDirty ?? false
-    openTabsRef.current = openTabsRef.current.map((t) => (
-      t.path === path ? { ...t, content, isDirty: true } : t
-    ))
-    if (!wasDirty) {
-      setOpenTabs((tabs) => tabs.map((t) => (
-        t.path === path ? { ...t, content, isDirty: true } : t
-      )))
-    }
-    const existingContentCommit = contentCommitTimers.current.get(path)
-    if (existingContentCommit) clearTimeout(existingContentCommit)
-    contentCommitTimers.current.set(path, setTimeout(() => {
-      contentCommitTimers.current.delete(path)
-      const latest = openTabsRef.current.find((t) => t.path === path)
-      if (!latest) return
-      setOpenTabs((tabs) => tabs.map((t) => (
-        t.path === path
-          ? { ...t, content: latest.content, isDirty: latest.isDirty }
-          : t
-      )))
-    }, 250))
-    pendingContent.current.set(path, content)
-    saveDraft(path, content)
-    // If there is an unresolved external-mod conflict, do NOT schedule an
-    // autosave: the user must explicitly resolve it first. The draft above
-    // still preserves the in-memory edits for crash recovery.
-    if (conflictPaths.current.has(path)) return
-    const existing = saveTimers.current.get(path)
-    if (existing) clearTimeout(existing)
-    saveTimers.current.set(path, setTimeout(() => {
-      saveTimers.current.delete(path)
-      void saveFile(path, content)
-    }, autoSaveMs))
-  }, [saveFile, autoSaveMs])
+              let choice: string
+              try {
+                choice = await message(
+                  `${t.vault.fileChangedExternally(openTab.name)}${diffLine}\n\n` +
+                    `${t.vault.conflictReloadHint}\n` +
+                    `${t.vault.conflictKeepHint}\n` +
+                    `${t.vault.conflictCancelHint}`,
+                  {
+                    title: "ComdTeX",
+                    kind: "warning",
+                    buttons: {
+                      yes: t.vault.conflictReload,
+                      no: t.vault.conflictKeepMine,
+                      cancel: t.vault.conflictCancel,
+                    },
+                  },
+                )
+              } catch {
+                // Tauri dialog unavailable (e.g. during tests): fall back to the
+                // safe choice: don't overwrite, don't lose edits, leave conflict
+                // pending so the user is forced to handle it explicitly.
+                showToast(t.vault.fileChangedExternally(openTab.name), "error")
+                return false
+              }
+              if (choice === "Yes") {
+                // Reload from disk and replace tab content
+                try {
+                  const fresh = toEditorContent(path, await readTextFile(path))
+                  let freshMtime: number | undefined
+                  try {
+                    freshMtime = (await stat(path)).mtime?.getTime()
+                  } catch {}
+                  setOpenTabs((tabs) =>
+                    tabs.map((tab) =>
+                      tab.path === path
+                        ? { ...tab, content: fresh, isDirty: false, cachedMtime: freshMtime }
+                        : tab,
+                    ),
+                  )
+                  pendingContent.current.delete(path)
+                  clearDraft(path)
+                  conflictPaths.current.delete(path)
+                  // Reflect the reloaded disk content in the index immediately:
+                  // avoids a stale cache entry surviving until the next search.
+                  if (freshMtime !== undefined)
+                    searchIndexRef.current.setFromEditorContent(path, freshMtime, fresh)
+                  else searchIndexRef.current.invalidate(path)
+                } catch (e) {
+                  showToast(
+                    t.vault.errorReading(e instanceof Error ? e.message : String(e)),
+                    "error",
+                  )
+                }
+                return false
+              }
+              if (choice === "No") {
+                // Force-save, fall through to the write below
+                conflictPaths.current.delete(path)
+              } else {
+                // Cancel: stay in conflict state, autosave remains blocked
+                return false
+              }
+            }
+          } catch {
+            // ignore stat errors (filesystem may not support mtime)
+          }
+        }
+        showConversionWarnings(path, content, "saving", t)
+        // Convert from CMDX to storage format before saving. Non-CMDX files like .bib stay raw.
+        const storageContent = toDiskContent(path, content)
+        await writeTextFileAtomic(path, storageContent)
+        // Update mtime after successful save
+        let newMtime: number | undefined
+        try {
+          newMtime = (await stat(path)).mtime?.getTime()
+        } catch {}
+        // A keystroke can land WHILE this write is in flight (updateContent runs
+        // synchronously and re-arms the debounce). If pendingContent now holds
+        // bytes NEWER than what we just wrote, the tab is still dirty and that
+        // newer content must survive: clearing isDirty/pendingContent/draft here
+        // would strand it, because closeTab and flushPending both gate the flush
+        // on exactly those signals, so the edit is silently lost on the next tab
+        // close, vault switch, or app quit. Only clear when nothing newer arrived.
+        const superseded =
+          pendingContent.current.has(path) && pendingContent.current.get(path) !== content
+        setOpenTabs((tabs) =>
+          tabs.map((tab) =>
+            tab.path === path
+              ? {
+                  ...tab,
+                  isDirty: superseded ? tab.isDirty : false,
+                  cachedMtime: newMtime ?? tab.cachedMtime,
+                }
+              : tab,
+          ),
+        )
+        conflictPaths.current.delete(path)
+        if (!superseded) {
+          // Only drop the draft/pending AFTER the bytes are confirmed on disk; if
+          // the write threw above the catch block returns false and the draft
+          // remains for crash recovery.
+          pendingContent.current.delete(path)
+          clearDraft(path)
+        }
+        // Keep the index in sync with what we just wrote so the next search
+        // doesn't need to re-read this file at all.
+        if (newMtime !== undefined)
+          searchIndexRef.current.setFromEditorContent(path, newMtime, content)
+        else searchIndexRef.current.invalidate(path)
+        onAfterSaveRef.current?.(path, displayBasename(path))
+        return true
+      } catch (e) {
+        showToast(t.vault.errorSaving(e instanceof Error ? e.message : String(e)), "error")
+        return false
+      }
+      // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+    },
+    [t],
+  )
+
+  useLayoutEffect(() => {
+    saveFileRef.current = saveFile
+  })
+
+  const updateContent = useCallback(
+    (content: string) => {
+      const path = activeTabPathRef.current
+      if (!path) return
+      // Hard guard: PDF tabs are read-only previews. Without this, a stray
+      // editor onChange (e.g. when an extension fires) would queue an autosave
+      // that overwrites the binary PDF file with empty/text content, destroying
+      // the user's document.
+      // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+      const tab = openTabsRef.current.find((t) => t.path === path)
+      if (tab?.mode === "pdf") return
+      const wasDirty = tab?.isDirty ?? false
+      openTabsRef.current = openTabsRef.current.map((t) =>
+        t.path === path ? { ...t, content, isDirty: true } : t,
+      )
+      if (!wasDirty) {
+        setOpenTabs((tabs) =>
+          tabs.map((t) => (t.path === path ? { ...t, content, isDirty: true } : t)),
+        )
+      }
+      const existingContentCommit = contentCommitTimers.current.get(path)
+      if (existingContentCommit) clearTimeout(existingContentCommit)
+      contentCommitTimers.current.set(
+        path,
+        setTimeout(() => {
+          contentCommitTimers.current.delete(path)
+          const latest = openTabsRef.current.find((t) => t.path === path)
+          if (!latest) return
+          setOpenTabs((tabs) =>
+            tabs.map((t) =>
+              t.path === path ? { ...t, content: latest.content, isDirty: latest.isDirty } : t,
+            ),
+          )
+        }, 250),
+      )
+      pendingContent.current.set(path, content)
+      saveDraft(path, content)
+      // If there is an unresolved external-mod conflict, do NOT schedule an
+      // autosave: the user must explicitly resolve it first. The draft above
+      // still preserves the in-memory edits for crash recovery.
+      if (conflictPaths.current.has(path)) return
+      const existing = saveTimers.current.get(path)
+      if (existing) clearTimeout(existing)
+      saveTimers.current.set(
+        path,
+        setTimeout(() => {
+          saveTimers.current.delete(path)
+          void saveFile(path, content)
+        }, autoSaveMs),
+      )
+    },
+    [saveFile, autoSaveMs],
+  )
 
   /**
    * True while `path` has edits typed but not yet written to disk.
@@ -1132,62 +1499,91 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * anything a tree refresh or a re-read produced, and must not be overwritten.
    * Stable across renders (reads refs), so effects can depend on it freely.
    */
+  /** The newest text for `path`: pending keystrokes, else the live tab buffer. */
+  const getLiveContent = useCallback((path: string): string | undefined => {
+    const pending = pendingContent.current.get(path)
+    if (pending !== undefined) return pending
+    return openTabsRef.current.find((tb) => tb.path === path)?.content
+  }, [])
+
   const hasPendingSave = useCallback(
     (path: string) => saveTimers.current.has(path) || pendingContent.current.has(path),
     [],
   )
 
-  const closeTab = useCallback(async (path: string) => {
-    if (pinnedPaths.has(path)) return
-    const closedTab = openTabsRef.current.find((t) => t.path === path)
-    const contentCommitTimer = contentCommitTimers.current.get(path)
-    if (contentCommitTimer) {
-      clearTimeout(contentCommitTimer)
-      contentCommitTimers.current.delete(path)
-    }
-    // Flush any pending autosave SYNCHRONOUSLY before tearing down the tab.
-    // Without this, three failure modes are possible:
-    //   (a) timer fires after closeTab and re-creates a draft for a closed tab,
-    //   (b) timer's saveFile races with the user reopening + editing the file,
-    //   (c) the timer's clearTimeout below loses the last unsaved edit entirely.
-    const timer = saveTimers.current.get(path)
-    if (timer) {
-      clearTimeout(timer)
-      saveTimers.current.delete(path)
-    }
-    const pending = pendingContent.current.get(path)
-    if (pending !== undefined && closedTab?.isDirty && !conflictPaths.current.has(path)) {
-      // Await the save. If it succeeds, saveFile will clearDraft itself; if it
-      // fails, surface the error and KEEP the tab open so the user does not
-      // silently lose unsaved content. The draft remains so a future retry
-      // (or crash recovery) can still rescue the data.
-      try {
-        await saveFile(path, pending)
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        showToast(t.vault.closeTabSaveError(closedTab?.name ?? path, msg), "error")
-        return
+  const closeTab = useCallback(
+    async (path: string) => {
+      if (pinnedPaths.has(path)) return
+      const closedTab = openTabsRef.current.find((t) => t.path === path)
+      const contentCommitTimer = contentCommitTimers.current.get(path)
+      if (contentCommitTimer) {
+        clearTimeout(contentCommitTimer)
+        contentCommitTimers.current.delete(path)
       }
-    }
-    setOpenTabs((prev) => {
-      const idx = prev.findIndex((t) => t.path === path)
-      if (idx === -1) return prev
-      const next = prev.filter((t) => t.path !== path)
-      if (path === activeTabPathRef.current) {
-        setActiveTabPath(next.length > 0 ? next[Math.max(0, idx - 1)].path : null)
+      // Flush any pending autosave SYNCHRONOUSLY before tearing down the tab.
+      // Without this, three failure modes are possible:
+      //   (a) timer fires after closeTab and re-creates a draft for a closed tab,
+      //   (b) timer's saveFile races with the user reopening + editing the file,
+      //   (c) the timer's clearTimeout below loses the last unsaved edit entirely.
+      const timer = saveTimers.current.get(path)
+      if (timer) {
+        clearTimeout(timer)
+        saveTimers.current.delete(path)
       }
-      return next
-    })
-    pendingContent.current.delete(path)
-    if (closedTab && !closedTab.isDirty) {
-      saveClosedTab(path)
-    }
-    // Note: clearDraft is intentionally NOT called here for dirty tabs; if
-    // the flush above failed, we want the draft to survive for crash recovery.
-    // saveFile clears the draft on success.
-    if (!closedTab?.isDirty) clearDraft(path)
-    // openTabs read via openTabsRef so this callback stays stable across keystrokes.
-  }, [pinnedPaths, saveFile, t])
+      const pending = pendingContent.current.get(path)
+      if (closedTab?.isDirty) {
+        // saveFile never throws: it returns false on a write error, a conflict
+        // the user cancelled, or a reload. Any of those (and a path that is
+        // still conflicted) means the edits are NOT on disk, so the tab must stay
+        // open. The draft remains so crash recovery can still rescue the data.
+        const unsaved = pending ?? closedTab.content
+        // Track the content as pending so a failed write is still detectable
+        // below (saveFile clears it only after the bytes are on disk).
+        if (pending === undefined) pendingContent.current.set(path, unsaved)
+        let saved = false
+        if (!conflictPaths.current.has(path)) {
+          try {
+            saved = await saveFile(path, unsaved)
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            showToast(t.vault.closeTabSaveError(closedTab.name, msg), "error")
+            return
+          }
+        }
+        // After a "reload from disk" resolution saveFile returns false but has
+        // already dropped pending/conflict state on purpose: closing is fine.
+        if (!saved && (conflictPaths.current.has(path) || pendingContent.current.has(path))) {
+          // The commit timer was cancelled above, so publish the live buffer to
+          // React state; otherwise the kept-open tab could show text up to
+          // 250ms stale.
+          setOpenTabs((tabs) =>
+            tabs.map((tb) => (tb.path === path ? { ...tb, content: unsaved, isDirty: true } : tb)),
+          )
+          showToast(t.vault.closeTabUnsaved(closedTab.name), "error")
+          return
+        }
+      }
+      setOpenTabs((prev) => {
+        const idx = prev.findIndex((t) => t.path === path)
+        if (idx === -1) return prev
+        const next = prev.filter((t) => t.path !== path)
+        if (path === activeTabPathRef.current) {
+          setActiveTabPath(next.length > 0 ? next[Math.max(0, idx - 1)].path : null)
+        }
+        return next
+      })
+      pendingContent.current.delete(path)
+      if (closedTab && !closedTab.isDirty) {
+        saveClosedTab(path)
+      }
+      // Note: clearDraft is intentionally NOT called here for dirty tabs; if
+      // the flush above failed, we want the draft to survive for crash recovery.
+      // saveFile clears the draft on success.
+      if (!closedTab?.isDirty) clearDraft(path)
+      // openTabs read via openTabsRef so this callback stays stable across keystrokes.
+    },
+    [pinnedPaths, saveFile, t],
+  )
 
   /**
    * The directory a new file/folder should land in: `parentDir` when it is a
@@ -1197,58 +1593,118 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * here from the file tree, and a path outside the vault would both escape the
    * runtime fs grant (`allowVaultDir`) and write where the user cannot see it.
    */
-  const resolveParentDir = useCallback((parentDir?: string): string => {
-    if (!vaultPath) return ""
-    if (!parentDir || parentDir === vaultPath) return vaultPath
-    const normalized = parentDir.replace(/[/\\]+$/, "")
-    const inside = normalized.startsWith(`${vaultPath}/`) || normalized.startsWith(`${vaultPath}\\`)
-    if (!inside || normalized.includes("..")) return vaultPath
-    return normalized
-  }, [vaultPath])
+  const resolveParentDir = useCallback(
+    (parentDir?: string): string => {
+      if (!vaultPath) return ""
+      if (!parentDir || parentDir === vaultPath) return vaultPath
+      const normalized = parentDir.replace(/[/\\]+$/, "")
+      const inside =
+        normalized.startsWith(`${vaultPath}/`) || normalized.startsWith(`${vaultPath}\\`)
+      if (!inside || normalized.includes("..")) return vaultPath
+      return normalized
+    },
+    [vaultPath],
+  )
 
-  const createFile = useCallback(async (name: string, content = "", parentDir?: string) => {
-    if (!vaultPath) return
-    const v = validate(name.replace(/\.[^.]+$/, ""))
-    if (!v.valid) { showToast(v.error!, "error"); return }
-    const fileName = name.endsWith(".md") || name.endsWith(".tex") || name.endsWith(".bib") || name.endsWith(".typ") ? name : `${name}.md`
-    const targetDir = resolveParentDir(parentDir)
-    const filePath = await pathJoin(targetDir, fileName)
-    try {
-      await writeTextFileAtomic(filePath, toDiskContent(filePath, content))
-      await refreshTree(vaultPath)
-      // Brand-new path: make sure no stale cache entry lingers (shouldn't
-      // normally exist, but a rename/delete race could leave one behind).
-      searchIndexRef.current.invalidate(filePath)
-      // Baseline for the external-change guard. Without it a freshly created
-      // file is saved unguarded for the rest of the session.
-      let cachedMtime: number | undefined
-      try { cachedMtime = (await stat(filePath)).mtime?.getTime() } catch { /* no mtime support */ }
-      const newTab: OpenFile = { path: filePath, name: fileName, content: toEditorContent(filePath, content), isDirty: false, mode: editorModeForPath(filePath), cachedMtime }
-      setOpenTabs((tabs) => [...tabs, newTab])
-      setActiveTabPath(filePath)
-    } catch (e) {
-      showToast(t.vault.errorCreating(e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [vaultPath, refreshTree, validate, resolveParentDir, t])
+  /**
+   * Create a file and (by default) open it with the cursor where the author
+   * starts typing. Returns the new path, or null when nothing was created
+   * (invalid name, already exists, write failure; each already toasted).
+   * `open: false` creates it without touching the tabs (quick fixes, generators).
+   */
+  const createFile = useCallback(
+    async (
+      name: string,
+      content = "",
+      parentDir?: string,
+      opts: { open?: boolean } = {},
+    ): Promise<string | null> => {
+      if (!vaultPath) return null
+      const fileName = finalName(name, "file")
+      const problem = validateName(name, "file", [])
+      if (problem && problem !== "exists") {
+        showToast(nameProblemText(t.naming.problems, problem, fileName), "error")
+        return null
+      }
+      const targetDir = resolveParentDir(parentDir)
+      const filePath = await pathJoin(targetDir, fileName)
+      // writeTextFileAtomic renames onto the target, which would silently replace
+      // an existing note with this one.
+      if (await pathExists(filePath)) {
+        showToast(t.vault.alreadyExists(fileName), "error")
+        return null
+      }
+      try {
+        forgetLineEnding(filePath)
+        const body = stripCursorMarker(content)
+        // A link such as [[physics/intro]] names a folder that may not exist yet.
+        if (!(await pathExists(targetDir))) await mkdir(targetDir, { recursive: true })
+        await writeTextFileAtomic(filePath, toDiskContent(filePath, body))
+        await refreshTree(vaultPath)
+        // Brand-new path: make sure no stale cache entry lingers (shouldn't
+        // normally exist, but a rename/delete race could leave one behind).
+        searchIndexRef.current.invalidate(filePath)
+        if (opts.open === false) return filePath
+        // Baseline for the external-change guard. Without it a freshly created
+        // file is saved unguarded for the rest of the session.
+        let cachedMtime: number | undefined
+        try {
+          cachedMtime = (await stat(filePath)).mtime?.getTime()
+        } catch {
+          /* no mtime support */
+        }
+        const newTab: OpenFile = {
+          path: filePath,
+          name: fileName,
+          content: toEditorContent(filePath, body),
+          isDirty: false,
+          mode: editorModeForPath(filePath),
+          cachedMtime,
+        }
+        // The editor mounts after the tab is active; it asks for this spot.
+        const cursor = initialCursorFor(content)
+        pendingReveal.current = {
+          path: filePath,
+          line: cursor.line,
+          column: cursor.column,
+          at: Date.now(),
+        }
+        setOpenTabs((tabs) => [...tabs, newTab])
+        setActiveTabPath(filePath)
+        return filePath
+      } catch (e) {
+        showToast(t.vault.errorCreating(e instanceof Error ? e.message : String(e)), "error")
+        return null
+      }
+    },
+    [vaultPath, refreshTree, resolveParentDir, t],
+  )
 
-  const deleteFile = useCallback(async (path: string) => {
-    try {
-      // Drop pending autosave before deleting: we don't want a queued write
-      // to recreate the file we're about to delete.
-      const timer = saveTimers.current.get(path)
-      if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
-      pendingContent.current.delete(path)
-      conflictPaths.current.delete(path)
-      await remove(path)
-      searchIndexRef.current.invalidate(path)
-      forgetViewState(path)
-      if (vaultPath) await refreshTree(vaultPath)
-      await closeTab(path)
-      clearDraft(path)
-    } catch (e) {
-      showToast(t.vault.errorDeleting(e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [vaultPath, refreshTree, closeTab, t])
+  const deleteFile = useCallback(
+    async (path: string) => {
+      try {
+        // Drop pending autosave before deleting: we don't want a queued write
+        // to recreate the file we're about to delete.
+        const timer = saveTimers.current.get(path)
+        if (timer) {
+          clearTimeout(timer)
+          saveTimers.current.delete(path)
+        }
+        pendingContent.current.delete(path)
+        conflictPaths.current.delete(path)
+        await remove(path)
+        forgetLineEnding(path)
+        searchIndexRef.current.invalidate(path)
+        forgetViewState(path)
+        if (vaultPath) await refreshTree(vaultPath)
+        await closeTab(path)
+        clearDraft(path)
+      } catch (e) {
+        showToast(t.vault.errorDeleting(e instanceof Error ? e.message : String(e)), "error")
+      }
+    },
+    [vaultPath, refreshTree, closeTab, t],
+  )
 
   /**
    * Re-key any pending autosave state (debounce timer, pending content, draft)
@@ -1257,98 +1713,211 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * and the last in-flight edit never lands on newPath. Mirrors deleteFile's
    * cleanup but migrates instead of dropping.
    */
-  const migratePending = useCallback((oldPath: string, newPath: string) => {
-    const timer = saveTimers.current.get(oldPath)
-    if (timer) {
-      // Cancel the timer keyed to the old path; the pending content is re-queued
-      // below so the autosave still happens, just against the new path.
-      clearTimeout(timer)
-      saveTimers.current.delete(oldPath)
-    }
-    const pending = pendingContent.current.get(oldPath)
-    if (pending !== undefined) {
-      pendingContent.current.delete(oldPath)
-      pendingContent.current.set(newPath, pending)
-      // Re-arm the debounced save against the new path. Force it: the rename/move
-      // we just performed bumps newPath's mtime above the tab's cachedMtime, which
-      // would otherwise trip saveFile's external-modification conflict guard for
-      // what is actually OUR own pending edit (no external change to protect).
-      saveTimers.current.set(newPath, setTimeout(() => {
-        saveTimers.current.delete(newPath)
-        void saveFile(newPath, pending, { force: true })
-      }, autoSaveMs))
-    }
-    // peekDraft (not getDrafts) so a draft still sitting in the un-flushed
-    // in-memory queue migrates too, instead of being orphaned under oldPath.
-    const draftContent = peekDraft(oldPath)
-    if (draftContent !== undefined) {
-      clearDraft(oldPath)
-      saveDraft(newPath, draftContent)
-    }
-  }, [autoSaveMs, saveFile])
+  const migratePending = useCallback(
+    (oldPath: string, newPath: string) => {
+      const timer = saveTimers.current.get(oldPath)
+      if (timer) {
+        // Cancel the timer keyed to the old path; the pending content is re-queued
+        // below so the autosave still happens, just against the new path.
+        clearTimeout(timer)
+        saveTimers.current.delete(oldPath)
+      }
+      const pending = pendingContent.current.get(oldPath)
+      if (pending !== undefined) {
+        pendingContent.current.delete(oldPath)
+        pendingContent.current.set(newPath, pending)
+        // A path with an unresolved external-edit conflict keeps its edits
+        // pending and unsaved: forcing a save here would overwrite the other
+        // program's version that the user chose to keep. The conflict flag is
+        // re-keyed by rekeyPaths right after this.
+        if (!conflictPaths.current.has(oldPath)) {
+          // Re-arm the debounced save against the new path. Force it: the rename/move
+          // we just performed bumps newPath's mtime above the tab's cachedMtime, which
+          // would otherwise trip saveFile's external-modification conflict guard for
+          // what is actually OUR own pending edit (no external change to protect).
+          saveTimers.current.set(
+            newPath,
+            setTimeout(() => {
+              saveTimers.current.delete(newPath)
+              void saveFile(newPath, pending, { force: true })
+            }, autoSaveMs),
+          )
+        }
+      }
+      // peekDraft (not getDrafts) so a draft still sitting in the un-flushed
+      // in-memory queue migrates too, instead of being orphaned under oldPath.
+      const draftContent = peekDraft(oldPath)
+      if (draftContent !== undefined) {
+        clearDraft(oldPath)
+        saveDraft(newPath, draftContent)
+      }
+    },
+    [autoSaveMs, saveFile],
+  )
 
-  const renameFile = useCallback(async (oldPath: string, newName: string) => {
-    const v = validate(newName.replace(/\.[^.]+$/, ""))
-    if (!v.valid) { showToast(v.error!, "error"); return }
-    const dir = pathDirname(oldPath)
-    const newPath = await pathJoin(dir, newName)
-    try {
-      await rename(oldPath, newPath)
-      // Re-key pending autosave only AFTER the rename succeeds, so a failed
-      // rename can't leave a re-armed timer that recreates the file at newPath.
-      migratePending(oldPath, newPath)
-      searchIndexRef.current.rename(oldPath, newPath)
-      renameViewState(oldPath, newPath)
-      if (vaultPath) await refreshTree(vaultPath)
-      setOpenTabs((tabs) => tabs.map((tab) => tab.path === oldPath ? { ...tab, path: newPath, name: newName } : tab))
-      if (activeTabPathRef.current === oldPath) setActiveTabPath(newPath)
-      showToast(t.vault.renamed(newName), "success")
-    } catch (e) {
-      showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [vaultPath, refreshTree, validate, migratePending, t])
+  /**
+   * Re-key every piece of per-path state that lives at or under `oldPath` to
+   * the matching path under `newPath`, after a successful rename/move of a file
+   * OR a folder: pending autosaves, drafts, conflict flags, view state, search
+   * cache, pins, the active tab and the open tabs themselves. Without this a
+   * folder rename leaves tabs pointing at paths that no longer exist, and their
+   * next autosave recreates the old folder with stale content.
+   */
+  const rekeyPaths = useCallback(
+    (oldPath: string, newPath: string) => {
+      const remap = (p: string) =>
+        isSameOrUnder(p, oldPath) ? newPath + p.slice(oldPath.length) : p
+      const affected = new Set<string>()
+      for (const tab of openTabsRef.current)
+        if (isSameOrUnder(tab.path, oldPath)) affected.add(tab.path)
+      for (const p of pendingContent.current.keys()) if (isSameOrUnder(p, oldPath)) affected.add(p)
+      for (const p of saveTimers.current.keys()) if (isSameOrUnder(p, oldPath)) affected.add(p)
+      for (const p of conflictPaths.current) if (isSameOrUnder(p, oldPath)) affected.add(p)
+      for (const d of getDrafts()) if (isSameOrUnder(d.path, oldPath)) affected.add(d.path)
+      // Snapshot the live buffers (the React state can lag the keystrokes).
+      const live = new Map(openTabsRef.current.map((tab) => [tab.path, tab]))
+      for (const p of affected) {
+        const np = remap(p)
+        migratePending(p, np)
+        if (conflictPaths.current.delete(p)) conflictPaths.current.add(np)
+        const commit = contentCommitTimers.current.get(p)
+        if (commit) {
+          clearTimeout(commit)
+          contentCommitTimers.current.delete(p)
+        }
+        renameViewState(p, np)
+      }
+      renameLineEnding(oldPath, newPath)
+      // A folder move relocates entries the cache cannot enumerate by prefix.
+      searchIndexRef.current.clear()
+      const retag = (tab: OpenFile): OpenFile => {
+        const src = live.get(tab.path)
+        const base = src ? { ...tab, content: src.content, isDirty: src.isDirty } : tab
+        const np = remap(tab.path)
+        return np === tab.path ? base : { ...base, path: np, name: pathBasename(np) }
+      }
+      openTabsRef.current = openTabsRef.current.map(retag)
+      setOpenTabs((tabs) => tabs.map(retag))
+      setPinnedPaths((prev) => {
+        if (![...prev].some((p) => isSameOrUnder(p, oldPath))) return prev
+        return new Set([...prev].map(remap))
+      })
+      setActiveTabPath((p) => (p ? remap(p) : p))
+      if (activeTabPathRef.current) activeTabPathRef.current = remap(activeTabPathRef.current)
+    },
+    [migratePending],
+  )
 
-  const moveFile = useCallback(async (oldPath: string, targetFolderPath: string) => {
-    const name = pathBasename(oldPath)
-    const newPath = await pathJoin(targetFolderPath, name)
-    if (oldPath === newPath) return
-    try {
-      await rename(oldPath, newPath)
-      // Re-key pending autosave only after a successful rename (see renameFile).
-      migratePending(oldPath, newPath)
-      searchIndexRef.current.rename(oldPath, newPath)
-      renameViewState(oldPath, newPath)
-      if (vaultPath) await refreshTree(vaultPath)
-      setOpenTabs((tabs) => tabs.map((tab) =>
-        tab.path === oldPath ? { ...tab, path: newPath } : tab
-      ))
-      setActiveTabPath((p) => p === oldPath ? newPath : p)
-      showToast(t.vault.moved(name), "success")
-    } catch (e) {
-      showToast(t.vault.moveError, "error")
-      console.error(e)
-    }
-  }, [vaultPath, refreshTree, migratePending, t])
+  const renameFile = useCallback(
+    async (oldPath: string, newName: string): Promise<string | null> => {
+      // Name rules only; "already exists" is checked against the disk below.
+      const problem = validateName(newName, "folder", [])
+      if (problem) {
+        showToast(nameProblemText(t.naming.problems, problem, newName), "error")
+        return null
+      }
+      const dir = pathDirname(oldPath)
+      const newPath = await pathJoin(dir, newName)
+      // rename() overwrites the target. Only a case-only rename of the same entry
+      // (a.md -> A.md on a case-insensitive disk) may "exist" already.
+      if (
+        newPath !== oldPath &&
+        newPath.toLowerCase() !== oldPath.toLowerCase() &&
+        (await pathExists(newPath))
+      ) {
+        showToast(t.vault.alreadyExists(newName), "error")
+        return null
+      }
+      try {
+        await rename(oldPath, newPath)
+        // Re-key pending autosave only AFTER the rename succeeds, so a failed
+        // rename can't leave a re-armed timer that recreates the file at newPath.
+        rekeyPaths(oldPath, newPath)
+        if (vaultPath) await refreshTree(vaultPath)
+        showToast(t.vault.renamed(newName), "success")
+        return newPath
+      } catch (e) {
+        showToast(t.vault.errorRenaming(e instanceof Error ? e.message : String(e)), "error")
+        return null
+      }
+    },
+    [vaultPath, refreshTree, rekeyPaths, t],
+  )
 
-  const createFolder = useCallback(async (name: string, parentDir?: string) => {
-    if (!vaultPath) return
-    const v = validate(name)
-    if (!v.valid) { showToast(v.error!, "error"); return }
-    try {
-      await mkdir(await pathJoin(resolveParentDir(parentDir), name), { recursive: true })
-      await refreshTree(vaultPath)
-    } catch (e) {
-      showToast(t.vault.errorCreatingFolder(e instanceof Error ? e.message : String(e)), "error")
-    }
-  }, [vaultPath, refreshTree, validate, resolveParentDir, t])
+  const moveFile = useCallback(
+    async (oldPath: string, targetFolderPath: string): Promise<string | null> => {
+      const name = pathBasename(oldPath)
+      const newPath = await pathJoin(targetFolderPath, name)
+      if (oldPath === newPath) return null
+      // A folder cannot move into itself.
+      if (isSameOrUnder(targetFolderPath, oldPath)) {
+        showToast(t.vault.moveError, "error")
+        return null
+      }
+      if (await pathExists(newPath)) {
+        showToast(t.vault.alreadyExists(name), "error")
+        return null
+      }
+      try {
+        await rename(oldPath, newPath)
+        // Re-key pending autosave only after a successful rename (see renameFile).
+        rekeyPaths(oldPath, newPath)
+        if (vaultPath) await refreshTree(vaultPath)
+        showToast(t.vault.moved(name), "success")
+        return newPath
+      } catch (e) {
+        showToast(t.vault.moveError, "error")
+        console.error(e)
+        return null
+      }
+    },
+    [vaultPath, refreshTree, rekeyPaths, t],
+  )
+
+  const createFolder = useCallback(
+    async (name: string, parentDir?: string): Promise<string | null> => {
+      if (!vaultPath) return null
+      const problem = validateName(name, "folder", [])
+      if (problem) {
+        showToast(nameProblemText(t.naming.problems, problem, name), "error")
+        return null
+      }
+      try {
+        const folderPath = await pathJoin(resolveParentDir(parentDir), name)
+        // mkdir -p succeeds on an existing folder: say so instead of "creating" nothing.
+        if (await pathExists(folderPath)) {
+          showToast(t.vault.alreadyExists(name), "error")
+          return null
+        }
+        await mkdir(folderPath, { recursive: true })
+        await refreshTree(vaultPath)
+        return folderPath
+      } catch (e) {
+        showToast(t.vault.errorCreatingFolder(e instanceof Error ? e.message : String(e)), "error")
+        return null
+      }
+    },
+    [vaultPath, refreshTree, resolveParentDir, t],
+  )
 
   /**
    * Update the content of any open tab without making it active.
    * Used for wikilink refactoring on file rename.
    */
   const patchTabContent = useCallback((path: string, newContent: string) => {
+    // The bytes were just written, so a queued content commit (which would
+    // copy the older live buffer back into state) must not fire, and the live
+    // ref must agree with the new content.
+    const commit = contentCommitTimers.current.get(path)
+    if (commit) {
+      clearTimeout(commit)
+      contentCommitTimers.current.delete(path)
+    }
+    openTabsRef.current = openTabsRef.current.map((tb) =>
+      tb.path === path ? { ...tb, content: newContent, isDirty: false } : tb,
+    )
     setOpenTabs((tabs) =>
-      tabs.map((t) => t.path === path ? { ...t, content: newContent, isDirty: false } : t)
+      tabs.map((t) => (t.path === path ? { ...t, content: newContent, isDirty: false } : t)),
     )
   }, [])
 
@@ -1368,30 +1937,76 @@ export function useVault(options: UseVaultOptions | number = {}) {
    *
    * Returns true if the bytes reached disk; throws are surfaced to the caller.
    */
-  const writeFileSafe = useCallback(async (path: string, editorContent: string): Promise<void> => {
-    // Cancel + drop any queued autosave for this path so a stale debounced
-    // saveFile() can't fire after our write and clobber it with the pre-edit
-    // buffer.
-    const timer = saveTimers.current.get(path)
-    if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
-    pendingContent.current.delete(path)
-    await writeTextFileAtomic(path, toDiskContent(path, editorContent))
-    // Keep the open tab (if any) consistent with what's on disk and clear dirty.
-    patchTabContent(path, editorContent)
-    clearDraft(path)
-    // Refresh cachedMtime so the next real save's external-conflict guard
-    // doesn't trip on our own write.
-    let newMtime: number | undefined
-    try { newMtime = (await stat(path)).mtime?.getTime() } catch {}
-    if (newMtime !== undefined) {
-      searchIndexRef.current.setFromEditorContent(path, newMtime, editorContent)
-      setOpenTabs((tabs) => tabs.map((tab) =>
-        tab.path === path ? { ...tab, cachedMtime: newMtime } : tab
-      ))
-    } else {
-      searchIndexRef.current.invalidate(path)
-    }
-  }, [patchTabContent])
+  const writeFileSafe = useCallback(
+    async (path: string, editorContent: string): Promise<void> => {
+      // Cancel + drop any queued autosave for this path so a stale debounced
+      // saveFile() can't fire after our write and clobber it with the pre-edit
+      // buffer.
+      const timer = saveTimers.current.get(path)
+      if (timer) {
+        clearTimeout(timer)
+        saveTimers.current.delete(path)
+      }
+      pendingContent.current.delete(path)
+      await writeTextFileAtomic(path, toDiskContent(path, editorContent))
+      // Keep the open tab (if any) consistent with what's on disk and clear dirty.
+      patchTabContent(path, editorContent)
+      clearDraft(path)
+      // Refresh cachedMtime so the next real save's external-conflict guard
+      // doesn't trip on our own write.
+      let newMtime: number | undefined
+      try {
+        newMtime = (await stat(path)).mtime?.getTime()
+      } catch {}
+      if (newMtime !== undefined) {
+        searchIndexRef.current.setFromEditorContent(path, newMtime, editorContent)
+        setOpenTabs((tabs) =>
+          tabs.map((tab) => (tab.path === path ? { ...tab, cachedMtime: newMtime } : tab)),
+        )
+      } else {
+        searchIndexRef.current.invalidate(path)
+      }
+      setContentVersion((v) => v + 1)
+    },
+    [patchTabContent],
+  )
+
+  /**
+   * Editor-format content of every text vault file, from the shared search
+   * index (mtime-gated: unchanged files are not re-read). Disk state only;
+   * callers layer open tabs on top (see `vaultSources.ts`). Identity changes
+   * with the tree, which is what makes the whole-vault panels reload.
+   */
+  const loadVaultSources = useCallback(
+    (isCancelled: () => boolean) =>
+      loadDiskSources(searchIndexRef.current, textCandidates(tree), { isCancelled }),
+    [tree],
+  )
+
+  /**
+   * Flip one task checkbox in any vault file, open or not. The text is
+   * re-validated against the file as it is NOW (open tab buffer, else a fresh
+   * disk read), so a stale panel can never toggle the wrong line. Goes through
+   * writeFileSafe, never a raw write. Returns false when the task is gone.
+   */
+  const toggleTask = useCallback(
+    async (task: TaskItem): Promise<boolean> => {
+      const path = task.filePath
+      const tab = openTabsRef.current.find((tb) => tb.path === path)
+      const current = tab
+        ? (pendingContent.current.get(path) ?? tab.content)
+        : toEditorContent(path, await readTextFile(path))
+      const next = toggleTaskInContent(current, task.line, task.text)
+      if (next === null) {
+        searchIndexRef.current.invalidate(path)
+        setContentVersion((v) => v + 1)
+        return false
+      }
+      await writeFileSafe(path, next)
+      return true
+    },
+    [writeFileSafe],
+  )
 
   /**
    * Flush every in-flight debounced autosave to disk immediately. Used by the
@@ -1408,142 +2023,213 @@ export function useVault(options: UseVaultOptions | number = {}) {
     for (const [path, content] of entries) {
       if (conflictPaths.current.has(path)) continue
       const timer = saveTimers.current.get(path)
-      if (timer) { clearTimeout(timer); saveTimers.current.delete(path) }
-      try { await saveFile(path, content) } catch { /* best-effort flush */ }
+      if (timer) {
+        clearTimeout(timer)
+        saveTimers.current.delete(path)
+      }
+      try {
+        await saveFile(path, content)
+      } catch {
+        /* best-effort flush */
+      }
     }
   }, [saveFile])
+
+  useLayoutEffect(() => {
+    flushPendingRef.current = flushPending
+  })
 
   // Search with result limit and cancellation
   const searchAbortRef = useRef<{ cancelled: boolean }>({ cancelled: false })
 
-  const search = useCallback(async (
-    query: string,
-    opts: { regex?: boolean; caseSensitive?: boolean } = {}
-  ): Promise<SearchResult[]> => {
-    if (!vaultPath || !query.trim()) return []
+  const search = useCallback(
+    async (
+      query: string,
+      opts: { regex?: boolean; caseSensitive?: boolean } = {},
+    ): Promise<SearchResult[]> => {
+      if (!vaultPath || !query.trim()) return []
 
-    const { filters, textQuery } = parseSearchQuery(query)
+      const { filters, textQuery } = parseSearchQuery(query)
 
-    // Validate regex before starting search
-    const searchRe = buildSearchRegex(textQuery, opts)
-    if (!searchRe) return []
+      // Validate regex before starting search
+      const searchRe = buildSearchRegex(textQuery, opts)
+      if (!searchRe) return []
 
-    // Cancel previous search
-    searchAbortRef.current.cancelled = true
-    const token = { cancelled: false }
-    searchAbortRef.current = token
+      // Cancel previous search
+      searchAbortRef.current.cancelled = true
+      const token = { cancelled: false }
+      searchAbortRef.current = token
 
-    // Flatten the tree (cheap, no disk I/O) into candidates in the same
-    // order the old recursive walk visited them, so result ordering and the
-    // 500-result cap behave identically. mtime/content are fetched lazily by
-    // the index only for candidates it actually reaches (see searchIndex.ts).
-    const candidates: SearchCandidate[] = []
-    const collect = (nodes: FileNode[]) => {
-      for (const node of nodes) {
-        if (node.type === "dir" && node.children) collect(node.children)
-        else if (node.type === "file" && isTextVaultFile(node)) {
-          candidates.push({
-            path: node.path,
-            name: node.name,
-            ext: node.ext ?? "",
-            getMtime: async () => {
-              try { return (await stat(node.path)).mtime?.getTime() } catch { return undefined }
-            },
-            readContent: () => readTextFile(node.path),
-          })
-        }
-      }
-    }
-    collect(tree)
+      // Flatten the tree (cheap, no disk I/O) into candidates in the same
+      // order the old recursive walk visited them, so result ordering and the
+      // 500-result cap behave identically. mtime/content are fetched lazily by
+      // the index only for candidates it actually reaches (see searchIndex.ts).
+      const candidates = textCandidates(tree)
 
-    const results = await searchIndexRef.current.search(candidates, filters, textQuery, searchRe, {
-      cap: 500,
-      isCancelled: () => token.cancelled,
-    })
-    return token.cancelled ? [] : results
-  }, [vaultPath, tree])
+      const results = await searchIndexRef.current.search(
+        candidates,
+        filters,
+        textQuery,
+        searchRe,
+        {
+          cap: 500,
+          isCancelled: () => token.cancelled,
+        },
+      )
+      return token.cancelled ? [] : results
+    },
+    [vaultPath, tree],
+  )
 
   /**
    * Replace all occurrences of `query` with `replacement` across every file
    * in the vault. Returns the total replacement count.
    * Open tabs are also updated in state to reflect changes.
    */
-  const replaceInVault = useCallback(async (
-    query: string,
-    replacement: string,
-    opts: { regex?: boolean; caseSensitive?: boolean } = {}
-  ): Promise<number> => {
-    if (!vaultPath || !query) return 0
+  const replaceInVault = useCallback(
+    async (
+      query: string,
+      replacement: string,
+      opts: { regex?: boolean; caseSensitive?: boolean } = {},
+    ): Promise<number> => {
+      if (!vaultPath || !query) return 0
 
-    let re: RegExp
-    try {
-      re = opts.regex
-        ? new RegExp(query, opts.caseSensitive ? "g" : "gi")
-        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), opts.caseSensitive ? "g" : "gi")
-    } catch { return 0 }
+      let re: RegExp
+      try {
+        re = opts.regex
+          ? new RegExp(query, opts.caseSensitive ? "g" : "gi")
+          : new RegExp(
+              query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+              opts.caseSensitive ? "g" : "gi",
+            )
+      } catch {
+        return 0
+      }
 
-    let total = 0
+      let total = 0
 
-    const replaceIn = async (nodes: FileNode[]) => {
-      for (const node of nodes) {
-        if (node.type === "dir" && node.children) {
-          await replaceIn(node.children)
-        } else if (node.type === "file" && isTextVaultFile(node)) {
-          try {
-            // Read via the index cache, mtime-gated, so a file this pass
-            // (or the search that likely preceded it) already synced is
-            // served from memory instead of re-read from disk. If the file
-            // changed on disk since it was last cached, the mtime mismatch
-            // still forces a fresh read here, so this is never stale.
-            let mtimeMs: number | undefined
-            try { mtimeMs = (await stat(node.path)).mtime?.getTime() } catch { /* fall through, syncFile will retry */ }
-            if (mtimeMs === undefined) continue
-            const entry = await searchIndexRef.current.syncFile(node.path, mtimeMs, () => readTextFile(node.path))
-            const editorContent = entry.content
-            re.lastIndex = 0
-            const matches = editorContent.match(re)
-            if (!matches) continue
-            re.lastIndex = 0
-            const updated = editorContent.replace(re, replacement)
-            // If this file has a queued autosave, cancel it and drop the stale
-            // pending content: otherwise the timer could fire after our write
-            // and clobber the replacement with the pre-replace buffer.
-            const timer = saveTimers.current.get(node.path)
-            if (timer) { clearTimeout(timer); saveTimers.current.delete(node.path) }
-            pendingContent.current.delete(node.path)
-            await writeTextFileAtomic(node.path, toDiskContent(node.path, updated))
-            total += matches.length
-            patchTabContent(node.path, updated)
-            // Refresh the open tab's cachedMtime so the next real save doesn't
-            // misfire the external-conflict guard against our own write.
-            let newMtime: number | undefined
-            try { newMtime = (await stat(node.path)).mtime?.getTime() } catch {}
-            if (newMtime !== undefined) {
-              searchIndexRef.current.setFromEditorContent(node.path, newMtime, updated)
-              setOpenTabs((tabs) => tabs.map((tab) =>
-                tab.path === node.path ? { ...tab, cachedMtime: newMtime } : tab
-              ))
-            } else {
-              searchIndexRef.current.invalidate(node.path)
+      const replaceIn = async (nodes: FileNode[]) => {
+        for (const node of nodes) {
+          if (node.type === "dir" && node.children) {
+            await replaceIn(node.children)
+          } else if (node.type === "file" && isTextVaultFile(node)) {
+            try {
+              // Read via the index cache, mtime-gated, so a file this pass
+              // (or the search that likely preceded it) already synced is
+              // served from memory instead of re-read from disk. If the file
+              // changed on disk since it was last cached, the mtime mismatch
+              // still forces a fresh read here, so this is never stale.
+              // A path with an unresolved external-change conflict is left alone:
+              // writing over it would bury the very disagreement the user has yet
+              // to decide.
+              if (conflictPaths.current.has(node.path)) continue
+              // An open tab with unsaved edits is NEWER than disk: replace inside
+              // the live buffer, never inside the disk copy, or the edits vanish.
+              const pendingLive = pendingContent.current.get(node.path)
+              const openTab = openTabsRef.current.find((tb) => tb.path === node.path)
+              const liveContent = pendingLive ?? (openTab?.isDirty ? openTab.content : undefined)
+              let editorContent: string
+              if (liveContent !== undefined) {
+                editorContent = liveContent
+              } else {
+                let mtimeMs: number | undefined
+                try {
+                  mtimeMs = (await stat(node.path)).mtime?.getTime()
+                } catch {
+                  /* fall through, syncFile will retry */
+                }
+                if (mtimeMs === undefined) continue
+                const entry = await searchIndexRef.current.syncFile(node.path, mtimeMs, () =>
+                  readTextFile(node.path),
+                )
+                editorContent = entry.content
+              }
+              re.lastIndex = 0
+              const matches = editorContent.match(re)
+              if (!matches) continue
+              re.lastIndex = 0
+              const updated = replaceWith(editorContent, re, replacement, opts)
+              // If this file has a queued autosave, cancel it and drop the stale
+              // pending content: otherwise the timer could fire after our write
+              // and clobber the replacement with the pre-replace buffer.
+              const timer = saveTimers.current.get(node.path)
+              if (timer) {
+                clearTimeout(timer)
+                saveTimers.current.delete(node.path)
+              }
+              pendingContent.current.delete(node.path)
+              await writeTextFileAtomic(node.path, toDiskContent(node.path, updated))
+              total += matches.length
+              patchTabContent(node.path, updated)
+              clearDraft(node.path)
+              // Refresh the open tab's cachedMtime so the next real save doesn't
+              // misfire the external-conflict guard against our own write.
+              let newMtime: number | undefined
+              try {
+                newMtime = (await stat(node.path)).mtime?.getTime()
+              } catch {}
+              if (newMtime !== undefined) {
+                searchIndexRef.current.setFromEditorContent(node.path, newMtime, updated)
+                setOpenTabs((tabs) =>
+                  tabs.map((tab) =>
+                    tab.path === node.path ? { ...tab, cachedMtime: newMtime } : tab,
+                  ),
+                )
+              } else {
+                searchIndexRef.current.invalidate(node.path)
+              }
+            } catch {
+              /* skip */
             }
-          } catch { /* skip */ }
+          }
         }
       }
-    }
 
-    await replaceIn(tree)
-    return total
-  }, [vaultPath, tree, patchTabContent])
+      await replaceIn(tree)
+      return total
+    },
+    [vaultPath, tree, patchTabContent],
+  )
 
   return {
-    vaultPath, recentVaults, tree, isLoading,
-    openTabs, activeTabPath, openFile,
-    pinnedPaths, togglePin, reorderTabs,
-    selectVault, createVault, loadVault, refreshTree,
-    openFileNode, openFilePath, closeTab, switchTab,
-    reopenTab, getClosedTabs,
-    updateContent, saveFile, patchTabContent, writeFileSafe, flushPending, hasPendingSave,
-    createFile, createFolder, deleteFile, renameFile, moveFile,
-    search, replaceInVault,
+    vaultPath,
+    recentVaults,
+    tree,
+    isLoading,
+    openTabs,
+    activeTabPath,
+    openFile,
+    pinnedPaths,
+    togglePin,
+    reorderTabs,
+    selectVault,
+    createVault,
+    loadVault,
+    refreshTree,
+    openFileNode,
+    openFilePath,
+    openFileAt,
+    takePendingReveal,
+    closeTab,
+    switchTab,
+    reopenTab,
+    getClosedTabs,
+    updateContent,
+    saveFile,
+    patchTabContent,
+    writeFileSafe,
+    flushPending,
+    hasPendingSave,
+    getLiveContent,
+    createFile,
+    createFolder,
+    deleteFile,
+    renameFile,
+    moveFile,
+    search,
+    replaceInVault,
+    loadVaultSources,
+    toggleTask,
+    contentVersion,
   }
 }

@@ -16,7 +16,11 @@ function unwrapLogLines(raw: string): string[] {
   const out: string[] = []
   for (let i = 0; i < src.length; i++) {
     let line = src[i]
-    while ((line.length === 79 || line.length === 80) && i + 1 < src.length && src[i + 1].trim() !== "") {
+    while (
+      (line.length === 79 || line.length === 80) &&
+      i + 1 < src.length &&
+      src[i + 1].trim() !== ""
+    ) {
       i++
       line += src[i]
     }
@@ -98,7 +102,8 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       }
       // Pattern 3: Extra alignment tab
       else if (/Extra alignment tab/.test(rawMsg)) {
-        suggestion = "Too many & separators in a row. Check column count in matrix or align environment."
+        suggestion =
+          "Too many & separators in a row. Check column count in matrix or align environment."
       }
       // Pattern 4: Runaway argument / missing brace
       else if (/Runaway argument|Missing \}/.test(rawMsg)) {
@@ -121,7 +126,8 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       }
       // Pattern 8: Missing \begin{document}
       else if (/Missing \\begin\{document\}/.test(rawMsg)) {
-        suggestion = "The document is missing \\begin{document}. This is added automatically on PDF export: the error may be in a custom header file."
+        suggestion =
+          "The document is missing \\begin{document}. This is added automatically on PDF export: the error may be in a custom header file."
       }
       // Pattern 1: Undefined control sequence
       else if (/Undefined control sequence/.test(rawMsg) && context) {
@@ -156,7 +162,9 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
       result.push(diag)
     } else if (count === 4) {
       // Add a note to the last kept entry
-      const last = [...result].reverse().find((d: LatexDiagnostic) => `${d.severity}:${d.message}` === key)
+      const last = [...result]
+        .reverse()
+        .find((d: LatexDiagnostic) => `${d.severity}:${d.message}` === key)
       if (last) last.message += " (and more similar)"
     }
   }
@@ -177,12 +185,14 @@ export function parseLatexStderr(stderr: string): LatexDiagnostic[] {
 }
 
 export function formatDiagnosticsText(diags: LatexDiagnostic[]): string {
-  return diags.map((d) => {
-    const lineStr = d.line !== undefined ? ` (line ${d.line})` : ""
-    const label = d.severity === "error" ? "Error" : "Warning"
-    let out = `${label}${lineStr}: ${d.message}`
-    if (d.context) out += `\n  Context: ${d.context}`
-    if (d.suggestion) out += `\n  → ${d.suggestion}`
-    return out
-  }).join("\n\n")
+  return diags
+    .map((d) => {
+      const lineStr = d.line !== undefined ? ` (line ${d.line})` : ""
+      const label = d.severity === "error" ? "Error" : "Warning"
+      let out = `${label}${lineStr}: ${d.message}`
+      if (d.context) out += `\n  Context: ${d.context}`
+      if (d.suggestion) out += `\n  → ${d.suggestion}`
+      return out
+    })
+    .join("\n\n")
 }

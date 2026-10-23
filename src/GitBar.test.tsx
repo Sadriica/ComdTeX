@@ -9,7 +9,7 @@ vi.mock("@tauri-apps/plugin-shell", () => ({
     create: vi.fn((_cmd: string, args: string[]) => ({
       execute: vi.fn(async () => {
         executed.push(args)
-        if (args[2] === "stash" && args[3] === "list") {
+        if (args.includes("stash") && args.includes("list")) {
           return { code: 0, stdout: "stash@{0}: WIP on main\nstash@{1}: older change", stderr: "" }
         }
         return { code: 0, stdout: "", stderr: "" }
@@ -37,7 +37,7 @@ describe("StashSection", () => {
     render(<StashSection vaultPath="/vault" />)
 
     await waitFor(() => {
-      expect(executed).toContainEqual(["-C", "/vault", "stash", "list"])
+      expect(executed).toContainEqual(expect.arrayContaining(["-C", "/vault", "stash", "list"]))
     })
 
     fireEvent.click(screen.getByRole("button", { name: /Lista de stashes/i }))
@@ -47,7 +47,9 @@ describe("StashSection", () => {
     fireEvent.click(popButtons[1])
 
     await waitFor(() => {
-      expect(executed).toContainEqual(["-C", "/vault", "stash", "pop", "stash@{1}"])
+      expect(executed).toContainEqual(
+        expect.arrayContaining(["-C", "/vault", "stash", "pop", "stash@{1}"]),
+      )
     })
   })
 })

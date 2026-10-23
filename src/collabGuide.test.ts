@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { collabState, defaultSaveMessage, unmergedFiles, type CollabStatusInput } from "./collabGuide"
+import {
+  collabState,
+  defaultSaveMessage,
+  unmergedFiles,
+  type CollabStatusInput,
+} from "./collabGuide"
 
 const base = (over: Partial<CollabStatusInput> = {}): CollabStatusInput => ({
   branch: "main",
@@ -14,7 +19,9 @@ const base = (over: Partial<CollabStatusInput> = {}): CollabStatusInput => ({
 
 describe("collabState", () => {
   it("asks for a remote before anything else", () => {
-    expect(collabState(base({ untracked: [{ x: "?", y: "?", path: "a.md" }] }), false)).toBe("no-remote")
+    expect(collabState(base({ untracked: [{ x: "?", y: "?", path: "a.md" }] }), false)).toBe(
+      "no-remote",
+    )
   })
 
   it("puts conflicts above everything once a remote exists", () => {
@@ -27,7 +34,9 @@ describe("collabState", () => {
   })
 
   it("reports dirty before ahead/behind", () => {
-    expect(collabState(base({ unstaged: [{ x: " ", y: "M", path: "a.md" }], ahead: 1 }), true)).toBe("dirty")
+    expect(
+      collabState(base({ unstaged: [{ x: " ", y: "M", path: "a.md" }], ahead: 1 }), true),
+    ).toBe("dirty")
   })
 
   it("reports behind, then ahead, then synced", () => {

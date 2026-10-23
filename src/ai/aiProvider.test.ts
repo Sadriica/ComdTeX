@@ -14,7 +14,6 @@ function baseSettings(overrides: Partial<Settings> = {}): Settings {
   return { ...DEFAULTS, aiEnabled: true, ...overrides }
 }
 
-
 describe("PROVIDER_PRESETS", () => {
   it("lists exactly the five supported provider ids", () => {
     expect(PROVIDER_PRESETS.map((p) => p.id).sort()).toEqual(
@@ -66,15 +65,29 @@ describe("isAiReady", () => {
   })
 
   it("is true for an HTTP provider with a model id set", () => {
-    const s = baseSettings({ aiEnabled: true, aiProviderId: "anthropic", aiModel: "claude-3-5-sonnet-latest" })
+    const s = baseSettings({
+      aiEnabled: true,
+      aiProviderId: "anthropic",
+      aiModel: "claude-3-5-sonnet-latest",
+    })
     expect(isAiReady(s)).toBe(true)
   })
 
   it("requires a base URL for the openai-compatible provider", () => {
-    const withoutUrl = baseSettings({ aiEnabled: true, aiProviderId: "openai-compatible", aiModel: "local-model", aiBaseUrl: "" })
+    const withoutUrl = baseSettings({
+      aiEnabled: true,
+      aiProviderId: "openai-compatible",
+      aiModel: "local-model",
+      aiBaseUrl: "",
+    })
     expect(isAiReady(withoutUrl)).toBe(false)
 
-    const withUrl = baseSettings({ aiEnabled: true, aiProviderId: "openai-compatible", aiModel: "local-model", aiBaseUrl: "http://localhost:11434" })
+    const withUrl = baseSettings({
+      aiEnabled: true,
+      aiProviderId: "openai-compatible",
+      aiModel: "local-model",
+      aiBaseUrl: "http://localhost:11434",
+    })
     expect(isAiReady(withUrl)).toBe(true)
   })
 
@@ -82,7 +95,11 @@ describe("isAiReady", () => {
     const withoutCmd = baseSettings({ aiEnabled: true, aiProviderId: "cli", aiCliCommand: "  " })
     expect(isAiReady(withoutCmd)).toBe(false)
 
-    const withCmd = baseSettings({ aiEnabled: true, aiProviderId: "cli", aiCliCommand: "claude -p" })
+    const withCmd = baseSettings({
+      aiEnabled: true,
+      aiProviderId: "cli",
+      aiCliCommand: "claude -p",
+    })
     expect(isAiReady(withCmd)).toBe(true)
   })
 })

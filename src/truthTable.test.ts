@@ -44,7 +44,7 @@ describe("parseBoolExpr + evalExpr", () => {
     // p ∨ q ∧ r  ==  p ∨ (q ∧ r)
     const ast = parseBoolExpr("p ∨ q ∧ r")
     expect(evalExpr(ast, { p: false, q: true, r: false })).toBe(false) // false ∨ (true∧false)=false
-    expect(evalExpr(ast, { p: false, q: true, r: true })).toBe(true)   // false ∨ (true∧true)=true
+    expect(evalExpr(ast, { p: false, q: true, r: true })).toBe(true) // false ∨ (true∧true)=true
   })
 
   it("parentheses override default precedence", () => {
@@ -98,14 +98,14 @@ describe("buildTruthTable", () => {
     expect(table.vars).toEqual(["p", "q"])
     expect(table.rows).toHaveLength(4)
     // canonical order: TT, TF, FT, FF
-    expect(table.rows.map(r => [r[0], r[1]])).toEqual([
+    expect(table.rows.map((r) => [r[0], r[1]])).toEqual([
       [true, true],
       [true, false],
       [false, true],
       [false, false],
     ])
     // last column is p ∧ q
-    expect(table.rows.map(r => r[2])).toEqual([true, false, false, false])
+    expect(table.rows.map((r) => r[2])).toEqual([true, false, false, false])
   })
 
   it("collects variables across multiple expressions without duplicates", () => {
@@ -119,12 +119,12 @@ describe("buildTruthTable", () => {
 
   it("recognizes a tautology: p → p is always true", () => {
     const table = buildTruthTable(["p → p"])
-    expect(table.rows.map(r => r[1])).toEqual([true, true])
+    expect(table.rows.map((r) => r[1])).toEqual([true, true])
   })
 
   it("recognizes a contradiction: p ∧ ¬p is always false", () => {
     const table = buildTruthTable(["p ∧ ¬p"])
-    expect(table.rows.map(r => r[1])).toEqual([false, false])
+    expect(table.rows.map((r) => r[1])).toEqual([false, false])
   })
 
   it("propagates parser errors for malformed expressions", () => {
@@ -137,8 +137,8 @@ describe("buildTruthTable", () => {
 describe("renderTruthTableHTML", () => {
   it("renders header cells for vars and expressions, and one row per assignment", () => {
     const html = renderTruthTableHTML("", "p ∧ q", "1")
-    expect(html).toContain('<th>p</th>')
-    expect(html).toContain('<th>q</th>')
+    expect(html).toContain("<th>p</th>")
+    expect(html).toContain("<th>q</th>")
     expect(html).toContain('class="tt-expr tt-last"')
     expect(html).toContain(">p ∧ q<")
     // 4 rows for 2 vars

@@ -29,6 +29,7 @@ Default verification after changes:
 ```bash
 git diff --check
 npm test
+npm run format:check
 npm run build
 ```
 
@@ -45,7 +46,10 @@ Do not accept TypeScript, ESLint, CSS minifier, or failing test errors as normal
 - Prefer pure modules with tests over adding more logic to `App.tsx`.
 - UI controls that are clickable should generally be `button`, not clickable `div`.
 - UI strings should not be hardcoded if they are part of a visible reusable flow; add to `i18n.ts`.
-- `sanitizeRenderedHtml()` must wrap rendered preview HTML before `dangerouslySetInnerHTML`.
+- `sanitizeRenderedHtml()` must wrap rendered preview HTML before `dangerouslySetInnerHTML`. It removes form controls, global `<style>`, out-of-flow `position`, high `z-index` and `url()` in inline styles.
+- Every git call goes through `runGit` in `src/gitApi.ts` (hooks, `core.fsmonitor` and `ext::` disabled). Never call `Command.create("git", ...)` directly.
+- Storage conversion (`cmdxFormat.ts`) must never rewrite a table that has body rows, and must keep environment labels, callout fold markers and unknown callout types. `cmdxFormat.roundtrip` tests guard this.
+- Pinned on purpose: `monaco-editor` 0.55.1, `@types/markdown-it` `~14.1.2` (monaco 0.57 breaks the vite build, @types/markdown-it 14.2 breaks the plugin typings). `eslint-plugin-react-hooks` is no longer pinned: the 7.1 `refs` and `set-state-in-effect` rules are satisfied, and the few intentional exceptions carry a targeted `eslint-disable` with a reason. `git config blame.ignoreRevsFile .git-blame-ignore-revs` hides the bulk prettier commit from blame.
 - Monaco snippets from toolbar should use `snippetController2.insert()`, not `editor.trigger()`.
 - Tauri v2 shell config should stay simple: `tauri.conf.json` uses `plugins.shell.open = true`; permissions live in `src-tauri/capabilities/default.json`.
 
@@ -100,7 +104,7 @@ The Quality panel is the main pre-export workflow.
 Implemented modules:
 
 - `src/documentDiagnostics.ts`: broken refs, duplicate labels, unused labels, missing citations, missing images, malformed math, table shape warnings, export risks, academic structure warnings.
-- `src/exportCompatibility.ts`: scores Overleaf/LaTeX and Obsidian Markdown compatibility.
+- `src/exportCompatibility.ts`: scores Overleaf/LaTeX and Obsidian Markdown compatibility; `lossyExportWarnings()` also feeds `warnLossyExport()` (`exportActions.ts`), which shows a notice of what the target format will lose right before an export.
 - `src/projectExport.ts`: detects a main document and composes transclusion-aware project markdown.
 - `src/mathBacklinks.ts`: groups structural references by label.
 - `src/DocumentLabPanel.tsx`: UI panel combining diagnostics, compatibility, project plan, academic structure, and math backlinks.
@@ -221,15 +225,19 @@ When adding export behavior:
 
 ## Current Verification Baseline
 
-Latest verification at v1.29.0 (2026-10-15, local run):
+Latest verification at v1.29.1 (2026-10-15, local run):
 
 ```text
-npm test: 83 files, 1326 tests passed
+npm test: 90 files, 1477 tests passed
 npx tsc --noEmit: passed
-npx eslint src/: 0 errors, 5 warnings
+npx eslint src/: 0 errors, 0 warnings
+npm run format:check: clean
+npm run test:coverage: 52.5% statements / 47% branches / 40.8% functions / 53.6% lines
+  (floor in vite.config.ts: 45 / 40 / 34 / 47)
+cargo test --lib (src-tauri): 5 tests passed
 ```
 
-Before tagging, the full gate list lives in `CLAUDE.md` (Release workflow).
+Before tagging, run the full gate list in the README (Development section). `release.yml` runs a `verify` job (lint, types, tests, clippy, rustfmt) that the build jobs depend on; `ci.yml` also runs `format:check`, `cargo test` and the coverage floor.
 
 Expected non-blocking warning:
 

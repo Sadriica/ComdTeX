@@ -1,0 +1,288 @@
+/* ── Graph Panel ── */
+.graph-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background: var(--bg-surface);
+  color: var(--fg);
+}
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  flex-shrink: 0;
+}
+.graph-toolbar-filters {
+  flex-wrap: nowrap;
+  padding-top: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.graph-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.graph-seg-btn {
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-4);
+  line-height: var(--leading-normal);
+}
+.graph-seg-btn + .graph-seg-btn {
+  border-left: 1px solid var(--border);
+}
+.graph-seg-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.graph-seg-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.graph-seg-btn:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+}
+.graph-btn {
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-md);
+  padding: var(--space-1) var(--space-3);
+  line-height: 1;
+  margin-left: auto;
+}
+.graph-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.graph-input {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.graph-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.graph-input::placeholder {
+  color: var(--fg-subtle);
+}
+.graph-seg-btn:focus-visible,
+.graph-btn:focus-visible,
+.graph-neighbour:focus-visible,
+.graph-canvas:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.graph-stage {
+  position: relative;
+  flex: 1;
+  min-height: 160px;
+  overflow: hidden;
+}
+.graph-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.graph-status {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+/* The neighbour list is the keyboard path: invisible until focus enters it. */
+.graph-neighbours {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  max-height: 45%;
+  max-width: calc(100% - 2 * var(--space-3));
+  overflow: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+.graph-neighbours:focus-within {
+  clip-path: none;
+  width: auto;
+  height: auto;
+}
+.graph-neighbour {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-4);
+}
+.graph-neighbour:hover,
+.graph-neighbour:focus-visible {
+  background: var(--bg-hover);
+}
+.graph-neighbours-empty {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-4);
+}
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  min-width: 0;
+}
+.graph-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.graph-legend-dot[data-slot="0"] {
+  background: var(--viz-1);
+}
+.graph-legend-dot[data-slot="1"] {
+  background: var(--viz-2);
+}
+.graph-legend-dot[data-slot="2"] {
+  background: var(--viz-3);
+}
+.graph-legend-dot[data-slot="3"] {
+  background: var(--viz-4);
+}
+.graph-legend-dot[data-slot="4"] {
+  background: var(--viz-5);
+}
+.graph-legend-dot[data-slot="5"] {
+  background: var(--viz-6);
+}
+.graph-legend-dot[data-slot="6"] {
+  background: var(--viz-7);
+}
+.graph-legend-dot[data-slot="7"] {
+  background: var(--viz-8);
+}
+.graph-footer {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  flex-shrink: 0;
+}
+.graph-info {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* ── Split pane ── */
+.split-pane {
+  position: relative;
+}
+.split-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 28px;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.split-pane-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.split-pane-close {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition-ui);
+}
+.split-pane-close:hover {
+  background: var(--bg-hover);
+  color: var(--danger);
+}
+.split-pane-close:active {
+  background: var(--bg-active);
+}
+
+/* ── Math hover widget ── (surface from modals.css) */
+.math-hover-widget {
+  max-width: 420px;
+  padding: var(--space-4) var(--space-5);
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-110%);
+  z-index: var(--z-tooltip);
+}
+.math-hover-widget .katex {
+  font-size: 1.1em;
+}
+.math-hover-widget .katex-display {
+  margin: 0;
+}
+
+/* ── Search & Replace ──
+   .search-replace-toggle styling is consolidated in the "Search & Replace panel"
+   block below (theme-driven, monochrome). */
+
+/* ── CommandPalette recent files ── */
+.palette-kind-recent {
+  background: var(--warn-bg);
+  color: var(--warn);
+}

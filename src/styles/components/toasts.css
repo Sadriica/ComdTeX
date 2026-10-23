@@ -1,0 +1,83 @@
+/* ── Toast notifications ──
+   Bottom-right stack. The kind shows as a left accent and a tinted icon slot
+   (--toast-accent); the surface is the shared raised card. */
+.toast-container {
+  position: fixed;
+  right: var(--space-6);
+  bottom: 36px;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  pointer-events: none;
+}
+
+.toast {
+  --toast-accent: var(--info);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: 360px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-raised);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--toast-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+.toast-success {
+  --toast-accent: var(--ok);
+}
+.toast-error {
+  --toast-accent: var(--danger);
+}
+.toast-info {
+  --toast-accent: var(--info);
+}
+/* Icon slot (added by the icon pass): fixed box, tinted by the kind. */
+.toast-icon,
+.toast > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--toast-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    transition:
+      opacity var(--dur-med) var(--ease-standard),
+      transform var(--dur-med) var(--ease-standard);
+    @starting-style {
+      opacity: 0;
+      transform: translateX(var(--space-6));
+    }
+  }
+}
+
+/* ── Drag-and-drop overlay ── */
+.editor-pane {
+  position: relative;
+}
+
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sticky);
+  background: color-mix(in oklch, var(--accent) var(--drag-mix), transparent);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: var(--text-lg);
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}

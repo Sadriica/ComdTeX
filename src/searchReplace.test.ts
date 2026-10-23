@@ -21,6 +21,35 @@ describe("buildSearchRegExp", () => {
   })
 })
 
+describe("literal replacement text", () => {
+  it("does not interpret dollar patterns outside regex mode", () => {
+    const re = buildSearchRegExp("cost", { regex: false })!
+    const result = replaceMatches("a cost b", re, "$$5 $& $1", { regex: false })
+    expect(result.content).toBe("a $$5 $& $1 b")
+  })
+
+  it("does not interpret dollar patterns for a single targeted match", () => {
+    const re = buildSearchRegExp("cost", { regex: false })!
+    const result = replaceMatchAt(
+      "a cost b",
+      re,
+      "$&$&",
+      { line: 1, matchStart: 2, matchEnd: 6 },
+      { regex: false },
+    )
+    expect(result.content).toBe("a $&$& b")
+  })
+
+  it("keeps group references working in regex mode", () => {
+    const re = buildSearchRegExp("(a)(b)", { regex: true })!
+    expect(replaceMatches("ab", re, "$2$1", { regex: true }).content).toBe("ba")
+    expect(
+      replaceMatchAt("ab", re, "$2$1", { line: 1, matchStart: 0, matchEnd: 2 }, { regex: true })
+        .content,
+    ).toBe("ba")
+  })
+})
+
 describe("replaceMatches", () => {
   it("replaces only exact plain-text matches with escaped input", () => {
     const re = buildSearchRegExp("a+b", { regex: false })

@@ -39,7 +39,9 @@ function diff(a: Record<string, unknown>, b: Record<string, unknown>, path = "")
       continue
     }
     if (aKind === "object") {
-      problems.push(...diff(av as Record<string, unknown>, bv as Record<string, unknown>, childPath))
+      problems.push(
+        ...diff(av as Record<string, unknown>, bv as Record<string, unknown>, childPath),
+      )
     }
   }
 
@@ -48,7 +50,10 @@ function diff(a: Record<string, unknown>, b: Record<string, unknown>, path = "")
 
 describe("i18n parity between es and en", () => {
   it("has identical key sets and matching value kinds at every path", () => {
-    const problems = diff(es as unknown as Record<string, unknown>, en as unknown as Record<string, unknown>)
+    const problems = diff(
+      es as unknown as Record<string, unknown>,
+      en as unknown as Record<string, unknown>,
+    )
     expect(problems).toEqual([])
   })
 })

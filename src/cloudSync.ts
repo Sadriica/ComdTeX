@@ -205,7 +205,11 @@ export function findConflicts(tree: FileNode[], providerHint?: CloudProvider): C
 // ─── Provider detection (IO) ──────────────────────────────────────────────────
 
 async function safeExists(path: string): Promise<boolean> {
-  try { return await exists(path) } catch { return false }
+  try {
+    return await exists(path)
+  } catch {
+    return false
+  }
 }
 
 async function readDropboxInfo(home: string): Promise<CloudSyncInfo[]> {
@@ -221,17 +225,24 @@ async function readDropboxInfo(home: string): Promise<CloudSyncInfo[]> {
       const raw = await readTextFile(path)
       const data = JSON.parse(raw) as Record<string, { path?: string }>
       const out: CloudSyncInfo[] = []
-      if (data.personal?.path) out.push({ provider: "dropbox", rootPath: data.personal.path, account: "personal" })
-      if (data.business?.path) out.push({ provider: "dropbox", rootPath: data.business.path, account: "business" })
+      if (data.personal?.path)
+        out.push({ provider: "dropbox", rootPath: data.personal.path, account: "personal" })
+      if (data.business?.path)
+        out.push({ provider: "dropbox", rootPath: data.business.path, account: "business" })
       if (out.length) return out
-    } catch { /* fall through to fallback */ }
+    } catch {
+      /* fall through to fallback */
+    }
   }
   const fallback = `${home}/Dropbox`
   if (await safeExists(fallback)) return [{ provider: "dropbox", rootPath: fallback }]
   return []
 }
 
-async function findCloudStorageMatches(home: string, prefix: string): Promise<Array<{ name: string; path: string }>> {
+async function findCloudStorageMatches(
+  home: string,
+  prefix: string,
+): Promise<Array<{ name: string; path: string }>> {
   const cloudStorage = `${home}/Library/CloudStorage`
   if (!(await safeExists(cloudStorage))) return []
   try {
@@ -248,7 +259,11 @@ async function findGoogleDrive(home: string): Promise<CloudSyncInfo[]> {
   const out: CloudSyncInfo[] = []
   // macOS modern: ~/Library/CloudStorage/GoogleDrive-<email>
   for (const m of await findCloudStorageMatches(home, "GoogleDrive-")) {
-    out.push({ provider: "googledrive", rootPath: m.path, account: m.name.slice("GoogleDrive-".length) })
+    out.push({
+      provider: "googledrive",
+      rootPath: m.path,
+      account: m.name.slice("GoogleDrive-".length),
+    })
   }
   // Windows / Linux fallbacks. Drive for Desktop typically mounts a drive
   // letter on Windows; the home-folder check is for legacy "Backup & Sync"

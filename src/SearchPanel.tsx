@@ -2,11 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { SearchResult } from "./types"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { ArrowLeftRight, ChevronDown, Icon, RefreshCw, TriangleAlert } from "./icons"
+import PanelHeader from "./PanelHeader"
 
 interface SearchPanelProps {
-  onSearch: (query: string, opts?: { regex?: boolean; caseSensitive?: boolean }) => Promise<SearchResult[]>
+  onSearch: (
+    query: string,
+    opts?: { regex?: boolean; caseSensitive?: boolean },
+  ) => Promise<SearchResult[]>
   onOpenResult: (filePath: string, line?: number) => void
-  onReplaceAll?: (query: string, replacement: string, opts?: { regex?: boolean; caseSensitive?: boolean }) => Promise<number>
+  onReplaceAll?: (
+    query: string,
+    replacement: string,
+    opts?: { regex?: boolean; caseSensitive?: boolean },
+  ) => Promise<number>
 }
 
 /** Extract a ±RADIUS character snippet around the first occurrence of `query`. */
@@ -39,31 +48,56 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const mountedRef = useRef(true)
 
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false }
+    return () => {
+      mountedRef.current = false
+    }
   }, [])
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); setSearching(false); return }
+    if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- an emptied query clears the results owned by this async search
+      setResults([])
+      setSearching(false)
+      return
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
         const found = await onSearch(query, { regex: useRegex, caseSensitive })
-        if (mountedRef.current) { setResults(found); setSearching(false) }
+        if (mountedRef.current) {
+          setResults(found)
+          setSearching(false)
+        }
       } catch {
-        if (mountedRef.current) { setResults([]); setSearching(false) }
+        if (mountedRef.current) {
+          setResults([])
+          setSearching(false)
+        }
       }
     }, 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [query, onSearch, useRegex, caseSensitive])
 
   const toggleExpand = useCallback((filePath: string) => {
     setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(filePath)) next.delete(filePath)
+      else next.add(filePath)
+      return next
+    })
+  }, [])
+
+  const toggleCollapse = useCallback((filePath: string) => {
+    setCollapsed((prev) => {
       const next = new Set(prev)
       if (next.has(filePath)) next.delete(filePath)
       else next.add(filePath)
@@ -84,7 +118,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
       const count = await onReplaceAll(query, replacement, { regex: useRegex, caseSensitive })
       if (mountedRef.current) {
         const found = await onSearch(query, { regex: useRegex, caseSensitive })
-        if (mountedRef.current) { setResults(found); setSearching(false) }
+        if (mountedRef.current) {
+          setResults(found)
+          setSearching(false)
+        }
       }
       void count
     } finally {
@@ -94,6 +131,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
 
   return (
     <div className="search-panel" role="search">
+      <PanelHeader
+        title={t.sidebar.search}
+        count={query.trim() && !searching ? results.length : ""}
+      />
       <div className="search-input-wrap">
         <input
           autoFocus
@@ -103,7 +144,10 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
           onChange={(e) => {
             const val = e.target.value
             setQuery(val)
-            if (!val.trim()) { setResults([]); setSearching(false) }
+            if (!val.trim()) {
+              setResults([])
+              setSearching(false)
+            }
           }}
           aria-label={t.search.ariaLabel}
         />
@@ -112,22 +156,33 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
           onClick={() => setUseRegex((r) => !r)}
           title={t.search.regexTitle}
           aria-pressed={useRegex}
-        >.*</button>
+        >
+          .*
+        </button>
         <button
           className={`search-opt-btn${caseSensitive ? " active" : ""}`}
           onClick={() => setCaseSensitive((c) => !c)}
           title={t.search.caseSensitiveTitle}
           aria-pressed={caseSensitive}
-        >Aa</button>
+        >
+          Aa
+        </button>
         {onReplaceAll && (
           <button
             className={`search-replace-toggle${replaceMode ? " active" : ""}`}
             onClick={() => setReplaceMode((r) => !r)}
             title={t.search.toggleReplace}
+            aria-label={t.search.toggleReplace}
             aria-pressed={replaceMode}
-          >⇄</button>
+          >
+            <Icon icon={ArrowLeftRight} size={14} />
+          </button>
         )}
-        {searching && <span className="search-spinner" aria-live="polite" aria-label={t.search.searching}>⟳</span>}
+        {searching && (
+          <span className="search-spinner" aria-live="polite" aria-label={t.search.searching}>
+            <Icon icon={RefreshCw} size={14} />
+          </span>
+        )}
       </div>
       {replaceMode && (
         <div className="search-replace-wrap">
@@ -144,39 +199,63 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
             disabled={!query.trim() || replacing}
             title={t.search.replaceAll}
           >
-            {replacing ? "⟳" : t.search.replaceAll}
+            {replacing ? <Icon icon={RefreshCw} size={14} /> : t.search.replaceAll}
           </button>
         </div>
       )}
 
       <div className="search-results" role="list">
         {query && results.length === 0 && !searching && (
-          <div className="search-empty" role="status">{t.search.noResults}</div>
+          <div className="search-empty" role="status">
+            {t.search.noResults}
+          </div>
         )}
         {results.length >= 500 && (
           <div className="search-limit-banner" role="status" aria-live="polite">
-            <span className="search-limit-icon" aria-hidden="true">⚠</span>
+            <span className="search-limit-icon" aria-hidden="true">
+              <Icon icon={TriangleAlert} size={14} />
+            </span>
             <span className="search-limit-text">{t.search.limit}</span>
           </div>
         )}
 
         {Object.entries(grouped).map(([filePath, hits]) => {
           const isExpanded = expanded.has(filePath)
-          const displayHits = isExpanded ? hits : hits.slice(0, 5)
+          const isCollapsed = collapsed.has(filePath)
+          const displayHits = isCollapsed ? [] : isExpanded ? hits : hits.slice(0, 5)
 
           return (
             <div key={filePath} className="search-group" role="listitem">
               <div
                 className="search-file"
-                onClick={() => hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath)}
+                onClick={() => (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))}
                 title={filePath}
                 role="button"
                 aria-expanded={hits.length > 5 ? isExpanded : undefined}
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  (hits.length > 5 ? toggleExpand(filePath) : onOpenResult(filePath))
+                }
               >
-                {displayBasename(filePath)}
-                <span className="search-count" aria-label={t.search.count(hits.length)}>{hits.length}</span>
+                <button
+                  type="button"
+                  className={`search-collapse${isCollapsed ? " collapsed" : ""}`}
+                  aria-expanded={!isCollapsed}
+                  aria-label={t.search.toggleGroup}
+                  title={t.search.toggleGroup}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleCollapse(filePath)
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  <Icon icon={ChevronDown} size={14} />
+                </button>
+                <span className="search-file-name">{displayBasename(filePath)}</span>
+                <span className="search-count" aria-label={t.search.count(hits.length)}>
+                  {hits.length}
+                </span>
               </div>
               {displayHits.map((hit, i) => {
                 const { before, match, after } = contextSnippet(hit.content, query)
@@ -199,7 +278,7 @@ export default function SearchPanel({ onSearch, onOpenResult, onReplaceAll }: Se
                   </div>
                 )
               })}
-              {hits.length > 5 && (
+              {hits.length > 5 && !isCollapsed && (
                 <div
                   className="search-more"
                   onClick={() => toggleExpand(filePath)}

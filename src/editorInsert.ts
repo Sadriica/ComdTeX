@@ -2,28 +2,34 @@ import type * as monaco from "monaco-editor"
 
 function splitTrailingNewline(text: string): { body: string; trailing: string } {
   const match = /(\r?\n)$/.exec(text)
-  return match ? { body: text.slice(0, -match[1].length), trailing: match[1] } : { body: text, trailing: "" }
+  return match
+    ? { body: text.slice(0, -match[1].length), trailing: match[1] }
+    : { body: text, trailing: "" }
 }
 
 function listReplacement(snippet: string, selected: string): string | null {
-  const kind =
-    /^- \[ \] \$\{1(?::[^}]*)?\}/.test(snippet) ? "task"
-      : /^- \$\{1(?::[^}]*)?\}/.test(snippet) ? "bullet"
-        : /^1\. \$\{1(?::[^}]*)?\}/.test(snippet) ? "ordered"
-          : null
+  const kind = /^- \[ \] \$\{1(?::[^}]*)?\}/.test(snippet)
+    ? "task"
+    : /^- \$\{1(?::[^}]*)?\}/.test(snippet)
+      ? "bullet"
+      : /^1\. \$\{1(?::[^}]*)?\}/.test(snippet)
+        ? "ordered"
+        : null
   if (!kind) return null
 
   const { body, trailing } = splitTrailingNewline(selected)
   const lines = body.split(/\r?\n/)
   let n = 1
-  const transformed = lines.map((line) => {
-    if (line.trim() === "") return line
-    const indent = line.match(/^\s*/)?.[0] ?? ""
-    const content = line.slice(indent.length)
-    if (kind === "task") return `${indent}- [ ] ${content}`
-    if (kind === "bullet") return `${indent}- ${content}`
-    return `${indent}${n++}. ${content}`
-  }).join("\n")
+  const transformed = lines
+    .map((line) => {
+      if (line.trim() === "") return line
+      const indent = line.match(/^\s*/)?.[0] ?? ""
+      const content = line.slice(indent.length)
+      if (kind === "task") return `${indent}- [ ] ${content}`
+      if (kind === "bullet") return `${indent}- ${content}`
+      return `${indent}${n++}. ${content}`
+    })
+    .join("\n")
   return transformed + trailing
 }
 

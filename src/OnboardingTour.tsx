@@ -1,5 +1,6 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useId, type ReactNode } from "react"
 import { useT } from "./i18n"
+import { Command, Icon, Menu, Pencil, Settings } from "./icons"
 import { useFocusTrap } from "./useFocusTrap"
 
 interface OnboardingTourProps {
@@ -10,16 +11,33 @@ interface OnboardingTourProps {
 export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
   const t = useT()
   const modalRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const [step, setStep] = useState(0)
   useFocusTrap(modalRef, open, onClose)
 
   if (!open) return null
 
-  const steps: Array<{ icon: string; title: string; text: string }> = [
-    { icon: "☰", title: t.onboarding.step1Title, text: t.onboarding.step1Text },
-    { icon: "✎", title: t.onboarding.step2Title, text: t.onboarding.step2Text },
-    { icon: "⌘", title: t.onboarding.step3Title, text: t.onboarding.step3Text },
-    { icon: "⚙", title: t.onboarding.step4Title, text: t.onboarding.step4Text },
+  const steps: Array<{ icon: ReactNode; title: string; text: string }> = [
+    {
+      icon: <Icon icon={Menu} size={16} />,
+      title: t.onboarding.step1Title,
+      text: t.onboarding.step1Text,
+    },
+    {
+      icon: <Icon icon={Pencil} size={16} />,
+      title: t.onboarding.step2Title,
+      text: t.onboarding.step2Text,
+    },
+    {
+      icon: <Icon icon={Command} size={16} />,
+      title: t.onboarding.step3Title,
+      text: t.onboarding.step3Text,
+    },
+    {
+      icon: <Icon icon={Settings} size={16} />,
+      title: t.onboarding.step4Title,
+      text: t.onboarding.step4Text,
+    },
   ]
 
   const total = steps.length
@@ -42,13 +60,24 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
 
   return (
     <div className="modal-overlay" onMouseDown={handleClose}>
-      <div className="onboarding-modal" ref={modalRef} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="onboarding-modal"
+        ref={modalRef}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="onboarding-header">
-          <span className="onboarding-title">{t.onboarding.title}</span>
+          <span id={titleId} className="onboarding-title">
+            {t.onboarding.title}
+          </span>
           <span className="onboarding-step-counter">{t.onboarding.step(step + 1, total)}</span>
         </div>
         <div className="onboarding-body">
-          <div className="onboarding-step-icon" aria-hidden="true">{current.icon}</div>
+          <div className="onboarding-step-icon" aria-hidden="true">
+            {current.icon}
+          </div>
           <div className="onboarding-step-title">{current.title}</div>
           <div className="onboarding-step-text">{current.text}</div>
         </div>
@@ -59,7 +88,7 @@ export default function OnboardingTour({ open, onClose }: OnboardingTourProps) {
         </div>
         <div className="onboarding-actions">
           <button onClick={handleClose}>{t.onboarding.skip}</button>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="onboarding-actions-main">
             {step > 0 && <button onClick={handleBack}>{t.onboarding.back}</button>}
             <button className="primary" onClick={handleNext}>
               {isLast ? t.onboarding.done : t.onboarding.next}

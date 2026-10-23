@@ -1,8 +1,8 @@
-# Plan v1.2.0 — CMDX Formato Interno Bidireccional
+# Plan v1.2.0: CMDX Formato Interno Bidireccional
 
 > **Status: superseded.** This is the original v1.2.0 design plan; the CMDX
 > format has long since shipped. For the current behaviour see
-> [`docs/cmdx-contract.md`](docs/cmdx-contract.md), `CLAUDE.md`, and the README.
+> [`docs/cmdx-contract.md`](docs/cmdx-contract.md) and the README.
 > Kept for historical reference only.
 
 ## Estado: EN DESARROLLO
@@ -372,7 +372,7 @@ function processContent(text: string, format: StorageFormat): string {
 
 | Archivo | Cambio | Tipo |
 |---------|--------|------|
-| `src/cmdxFormat.ts` | **NUEVO** — conversores | Crear |
+| `src/cmdxFormat.ts` | **NUEVO**: conversores | Crear |
 | `src/useVault.ts` | Integrar conversores en openFileNode, openFilePath, saveFile | Modificar |
 | `src/i18n.ts` | Añadir strings para warnings de conversión | Modificar |
 | `src/exporter.ts` | (Opcional) exportar vault a .md | Modificar |

@@ -7,7 +7,9 @@ interface ResizerProps {
 
 export default function Resizer({ onDrag, vertical = true }: ResizerProps) {
   const onDragRef = useRef(onDrag)
-  useLayoutEffect(() => { onDragRef.current = onDrag })
+  useLayoutEffect(() => {
+    onDragRef.current = onDrag
+  })
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()

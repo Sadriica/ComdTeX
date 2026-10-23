@@ -30,14 +30,46 @@ export interface BioFinding {
 // warning. Deliberately small and boring: precision over recall, because a
 // false positive on every capitalized word would train users to ignore us.
 const GENERA = [
-  "Escherichia", "Salmonella", "Staphylococcus", "Streptococcus", "Bacillus",
-  "Pseudomonas", "Mycobacterium", "Clostridium", "Listeria", "Vibrio",
-  "Helicobacter", "Campylobacter", "Klebsiella", "Enterococcus", "Neisseria",
-  "Lactobacillus", "Acinetobacter", "Shigella", "Yersinia", "Borrelia",
-  "Saccharomyces", "Candida", "Aspergillus", "Penicillium", "Cryptococcus",
-  "Plasmodium", "Trypanosoma", "Leishmania", "Toxoplasma", "Giardia",
-  "Arabidopsis", "Drosophila", "Caenorhabditis", "Danio", "Xenopus",
-  "Mus", "Rattus", "Homo", "Pan", "Macaca",
+  "Escherichia",
+  "Salmonella",
+  "Staphylococcus",
+  "Streptococcus",
+  "Bacillus",
+  "Pseudomonas",
+  "Mycobacterium",
+  "Clostridium",
+  "Listeria",
+  "Vibrio",
+  "Helicobacter",
+  "Campylobacter",
+  "Klebsiella",
+  "Enterococcus",
+  "Neisseria",
+  "Lactobacillus",
+  "Acinetobacter",
+  "Shigella",
+  "Yersinia",
+  "Borrelia",
+  "Saccharomyces",
+  "Candida",
+  "Aspergillus",
+  "Penicillium",
+  "Cryptococcus",
+  "Plasmodium",
+  "Trypanosoma",
+  "Leishmania",
+  "Toxoplasma",
+  "Giardia",
+  "Arabidopsis",
+  "Drosophila",
+  "Caenorhabditis",
+  "Danio",
+  "Xenopus",
+  "Mus",
+  "Rattus",
+  "Homo",
+  "Pan",
+  "Macaca",
 ]
 
 const GENUS_RE = new RegExp(
@@ -53,30 +85,85 @@ const GENE_RE = /\b([A-Z]{2,6}\d{0,3})\b/g
 // Acronyms that look like gene symbols but are not, so they are never
 // flagged. Extend rather than loosen the pattern.
 const NOT_GENES = new Set([
-  "DNA", "RNA", "PCR", "ELISA", "SDS", "PAGE", "HPLC", "NMR", "MS", "LC",
-  "CT", "MRI", "PET", "ICU", "WHO", "NIH", "FDA", "CDC", "EMA",
-  "OD", "CFU", "PBS", "TBS", "BSA", "FBS", "DMSO", "EDTA", "TRIS", "HEPES",
-  "ATP", "ADP", "NAD", "NADH", "GTP", "CAMP", "PH", "UV", "IR",
-  "USA", "UK", "EU", "SI", "STD", "SEM", "ANOVA", "PCA", "AI", "ML",
-  "OK", "PDF", "HTML", "CSV", "JSON", "API", "CPU", "GPU", "RAM",
-  "TABLE", "FIGURE", "NOTE", "TODO", "FIXME",
+  "DNA",
+  "RNA",
+  "PCR",
+  "ELISA",
+  "SDS",
+  "PAGE",
+  "HPLC",
+  "NMR",
+  "MS",
+  "LC",
+  "CT",
+  "MRI",
+  "PET",
+  "ICU",
+  "WHO",
+  "NIH",
+  "FDA",
+  "CDC",
+  "EMA",
+  "OD",
+  "CFU",
+  "PBS",
+  "TBS",
+  "BSA",
+  "FBS",
+  "DMSO",
+  "EDTA",
+  "TRIS",
+  "HEPES",
+  "ATP",
+  "ADP",
+  "NAD",
+  "NADH",
+  "GTP",
+  "CAMP",
+  "PH",
+  "UV",
+  "IR",
+  "USA",
+  "UK",
+  "EU",
+  "SI",
+  "STD",
+  "SEM",
+  "ANOVA",
+  "PCA",
+  "AI",
+  "ML",
+  "OK",
+  "PDF",
+  "HTML",
+  "CSV",
+  "JSON",
+  "API",
+  "CPU",
+  "GPU",
+  "RAM",
+  "TABLE",
+  "FIGURE",
+  "NOTE",
+  "TODO",
+  "FIXME",
 ])
 
 /** Regions where prose rules do not apply: code, math, links, existing italics. */
 function maskedRegions(text: string): Array<[number, number]> {
   const out: Array<[number, number]> = []
   const patterns = [
-    /```[\s\S]*?```/g,      // fenced code
-    /`[^`\n]*`/g,           // inline code
-    /\$\$[\s\S]*?\$\$/g,    // display math
-    /\$[^$\n]*\$/g,         // inline math
+    /```[\s\S]*?```/g, // fenced code
+    /`[^`\n]*`/g, // inline code
+    /\$\$[\s\S]*?\$\$/g, // display math
+    /\$[^$\n]*\$/g, // inline math
     /\[[^\]]*\]\([^)]*\)/g, // links
-    /!?\[\[[^\]]*\]\]/g,    // wikilinks
+    /!?\[\[[^\]]*\]\]/g, // wikilinks
     // Frontmatter. The /g flag is REQUIRED: exec() in a loop over a
     // non-global regex always restarts at 0 and never terminates.
     /^---[\s\S]*?^---/gm,
-    /\*[^*\n]+\*/g,         // already italic
-    /_[^_\n]+_/g,           // already italic (underscore form)
+    /\*[^*\n]+\*/g, // already italic
+    /_[^_\n]+_/g, // already italic (underscore form)
   ]
   for (const re of patterns) {
     let m: RegExpExecArray | null
@@ -97,7 +184,7 @@ function inMasked(pos: number, masked: Array<[number, number]>): boolean {
 export function isBiologyDocument(text: string): boolean {
   const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
   if (!fm) return false
-  return /^comdtex\.domain:\s*(biology|microbiology|biomed(icine)?)\s*$/mi.test(fm[1])
+  return /^comdtex\.domain:\s*(biology|microbiology|biomed(icine)?)\s*$/im.test(fm[1])
 }
 
 /**

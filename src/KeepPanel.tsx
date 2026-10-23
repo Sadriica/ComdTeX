@@ -11,8 +11,10 @@ import {
 } from "./keepMarks"
 import { displayBasename } from "./pathUtils"
 import { useT } from "./i18n"
+import { Highlighter, Icon } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
 import { showToast } from "./toastService"
+import PanelHeader from "./PanelHeader"
 
 interface KeepPanelProps {
   files: { path: string; name: string; content: string }[]
@@ -44,9 +46,11 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
     return entries.filter((entry) => {
       if (category !== "all" && (entry.category ?? UNCATEGORIZED) !== category) return false
       if (!needle) return true
-      return entry.text.toLowerCase().includes(needle) ||
+      return (
+        entry.text.toLowerCase().includes(needle) ||
         (entry.category ?? "").toLowerCase().includes(needle) ||
         entry.fileName.toLowerCase().includes(needle)
+      )
     })
   }, [entries, filter, category])
 
@@ -60,22 +64,24 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
       defaultPath: "glosario.md",
     })
     if (!path) return
-    await writeTextFileAtomic(path, formatGlossary(entries, {
-      title: kp.glossaryTitle,
-      uncategorized: kp.uncategorized,
-    }))
+    await writeTextFileAtomic(
+      path,
+      formatGlossary(entries, {
+        title: kp.glossaryTitle,
+        uncategorized: kp.uncategorized,
+      }),
+    )
     showToast(kp.exported, "success")
   }, [entries, kp])
 
   if (entries.length === 0) {
     return (
       <div className="keep-panel">
-        <div className="panel-header">
-          <span className="panel-header-title">{kp.title}</span>
-          <span className="panel-header-actions">0</span>
-        </div>
+        <PanelHeader title={kp.title} count={0} />
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{kp.emptyIcon}</div>
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Highlighter} size={16} />
+          </div>
           <p className="panel-empty-message">{renderEmptyMessage(kp.emptyMessage)}</p>
         </div>
       </div>
@@ -86,10 +92,7 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
 
   return (
     <div className="keep-panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{kp.title}</span>
-        <span className="panel-header-actions">{kp.count(entries.length)}</span>
-      </div>
+      <PanelHeader title={kp.title} count={entries.length} />
       <div className="keep-controls">
         <input
           className="tag-filter"
@@ -104,7 +107,9 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
         >
           <option value="all">{kp.allCategories}</option>
           {categories.map((key) => (
-            <option key={key} value={key}>{categoryLabel(key)}</option>
+            <option key={key} value={key}>
+              {categoryLabel(key)}
+            </option>
           ))}
         </select>
       </div>
@@ -129,7 +134,9 @@ export default function KeepPanel({ files, onOpenFile }: KeepPanelProps) {
                 title={`${displayBasename(entry.filePath)}:${entry.line}`}
               >
                 <span className="keep-item-text">{entry.text}</span>
-                <span className="keep-item-file">{displayBasename(entry.filePath)}:{entry.line}</span>
+                <span className="keep-item-file">
+                  {displayBasename(entry.filePath)}:{entry.line}
+                </span>
               </button>
             ))}
           </div>

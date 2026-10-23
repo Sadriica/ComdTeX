@@ -4,17 +4,11 @@ import { parseDataBlocks, clearDatasetCache } from "./datasets"
 import { parsePlotBlock, renderPlotHTML } from "./functionPlot"
 import { resolveDocumentContent } from "./documentResolve"
 
-const CSV = [
-  "time,S1,S2,sd",
-  "0,0.10,0.12,0.01",
-  "2,0.28,0.31,0.02",
-  "4,0.55,0.60,0.03",
-].join("\n")
+const CSV = ["time,S1,S2,sd", "0,0.10,0.12,0.01", "2,0.28,0.31,0.02", "4,0.55,0.60,0.03"].join("\n")
 
 const CATEGORICAL = ["condition,mean,sem", "control,1.2,0.1", "treated,2.4,0.2"].join("\n")
 
-const resolver = (t: string) =>
-  t === "growth.csv" ? CSV : t === "conds.csv" ? CATEGORICAL : null
+const resolver = (t: string) => (t === "growth.csv" ? CSV : t === "conds.csv" ? CATEGORICAL : null)
 
 const datasetsFrom = (decl: string) => parseDataBlocks(decl).datasets
 
@@ -51,7 +45,11 @@ describe("expandPlotData", () => {
   const datasets = () => datasetsFrom(":::data{#data:g}\ngrowth.csv\n:::")
 
   it("rewrites a dataset reference into literal series", () => {
-    const out = expandPlotData(":::plot[Growth]\n@data:g\nx: time\ny: (S1, S2)\n:::", datasets(), resolver)
+    const out = expandPlotData(
+      ":::plot[Growth]\n@data:g\nx: time\ny: (S1, S2)\n:::",
+      datasets(),
+      resolver,
+    )
     expect(out).toContain("series S1: 0,0.1 2,0.28 4,0.55")
     expect(out).toContain("series S2: 0,0.12 2,0.31 4,0.6")
     expect(out).toContain("xlabel: time")
@@ -78,7 +76,11 @@ describe("expandPlotData", () => {
 
   it("turns a non-numeric x column into categories", () => {
     const ds = datasetsFrom(":::data{#data:c}\nconds.csv\n:::")
-    const out = expandPlotData(":::plot\n@data:c\nx: condition\ny: mean\nkind: bars\n:::", ds, resolver)
+    const out = expandPlotData(
+      ":::plot\n@data:c\nx: condition\ny: mean\nkind: bars\n:::",
+      ds,
+      resolver,
+    )
     expect(out).toContain("categories: control | treated")
     expect(out).toContain("series mean: 1,1.2 2,2.4")
   })
@@ -90,7 +92,11 @@ describe("expandPlotData", () => {
   })
 
   it("says so when the requested columns do not exist", () => {
-    const out = expandPlotData(":::plot\n@data:g\nx: nope\ny: (alsonope)\n:::", datasets(), resolver)
+    const out = expandPlotData(
+      ":::plot\n@data:g\nx: nope\ny: (alsonope)\n:::",
+      datasets(),
+      resolver,
+    )
     expect(out).toContain("do not exist")
   })
 
@@ -132,7 +138,11 @@ describe("the expanded block renders", () => {
 
   it("draws rectangles for bars and no polyline", () => {
     const ds = ":::data{#data:c}\nconds.csv\n:::"
-    const out = expandPlotData(":::plot\n@data:c\nx: condition\ny: mean\nkind: bars\nerror: sem\n:::", datasetsFrom(ds), resolver)
+    const out = expandPlotData(
+      ":::plot\n@data:c\nx: condition\ny: mean\nkind: bars\nerror: sem\n:::",
+      datasetsFrom(ds),
+      resolver,
+    )
     const body = out.replace(/^:::plot(\[[^\]]*\])?\n/, "").replace(/\n:::$/, "")
     const svg = renderPlotHTML("", body)
     expect(svg).toContain("<rect")

@@ -11,7 +11,12 @@ describe("exportToTex", () => {
   })
 
   it("uses frontmatter metadata without exporting raw YAML as document body", () => {
-    const tex = exportToTex("---\ntitle: Front Title\nauthor: Ada\n---\n# Body", "", "Front Title", "Ada")
+    const tex = exportToTex(
+      "---\ntitle: Front Title\nauthor: Ada\n---\n# Body",
+      "",
+      "Front Title",
+      "Ada",
+    )
 
     expect(tex).toContain("\\title{Front Title}")
     expect(tex).toContain("\\author{Ada}")
@@ -21,22 +26,24 @@ describe("exportToTex", () => {
   })
 
   it("exports structural labels and references as Overleaf-compatible LaTeX", () => {
-    const tex = exportToTex([
-      "# Intro {#sec:intro}",
-      "Ver @sec:intro y @eq:energy.",
-      "$$E = mc^2$$ {#eq:energy}",
-      "![Diagrama](diagram.png){#fig:diagram}",
-      "Ver @fig:diagram.",
-      "| A | B |",
-      "|---|---|",
-      "| 1 | 2 |",
-      "{#tbl:data}",
-      "Ver @tbl:data.",
-      ":::theorem[Principal]{#thm:main}",
-      "Contenido",
-      ":::",
-      "Ver @thm:main.",
-    ].join("\n"))
+    const tex = exportToTex(
+      [
+        "# Intro {#sec:intro}",
+        "Ver @sec:intro y @eq:energy.",
+        "$$E = mc^2$$ {#eq:energy}",
+        "![Diagrama](diagram.png){#fig:diagram}",
+        "Ver @fig:diagram.",
+        "| A | B |",
+        "|---|---|",
+        "| 1 | 2 |",
+        "{#tbl:data}",
+        "Ver @tbl:data.",
+        ":::theorem[Principal]{#thm:main}",
+        "Contenido",
+        ":::",
+        "Ver @thm:main.",
+      ].join("\n"),
+    )
 
     expect(tex).toContain("\\label{sec:intro}")
     expect(tex).toContain("\\eqref{eq:energy}")
@@ -162,6 +169,12 @@ describe("citations reach LaTeX", () => {
     expect(tex).toContain("\\cite[p. 321]{rudin1976}")
   })
 
+  it("groups [@a; @b] into a single \\cite", () => {
+    const tex = exportToTex("Both [@a; @b] agree.", "", "T")
+    expect(tex).toContain("\\cite{a,b}")
+    expect(tex).not.toContain("[@")
+  })
+
   it("closes the document with the bibliography when something was cited", () => {
     const tex = exportToTex("Cited [@a].", "", "T")
     expect(tex).toContain("\\bibliography{references}")
@@ -219,7 +232,9 @@ describe("footnotes reach LaTeX", () => {
 describe("callouts reach LaTeX", () => {
   it("turns > [!warning] into a titled tcolorbox, not a generic quote", () => {
     const tex = exportToTex("> [!warning] Ojo\n> Cuidado.", "", "T")
-    expect(tex).toContain("\\begin{tcolorbox}[colback=orange!10,colframe=orange!60!black,title=Ojo]")
+    expect(tex).toContain(
+      "\\begin{tcolorbox}[colback=orange!10,colframe=orange!60!black,title=Ojo]",
+    )
     expect(tex).toContain("Cuidado.")
     expect(tex).toContain("\\end{tcolorbox}")
     // The old behavior: a bare \begin{quote} with the marker printed literally.
@@ -291,7 +306,9 @@ describe("detectFeaturePackages", () => {
   })
 
   it("reports each flag true only when its own macro is present", () => {
-    expect(detectFeaturePackages("\\begin{tcolorbox}[title=x]\nBody\n\\end{tcolorbox}").callouts).toBe(true)
+    expect(
+      detectFeaturePackages("\\begin{tcolorbox}[title=x]\nBody\n\\end{tcolorbox}").callouts,
+    ).toBe(true)
     expect(detectFeaturePackages("\\hl{x}").soulHighlight).toBe(true)
     expect(detectFeaturePackages("\\colorbox{green!30}{x}").colorHighlight).toBe(true)
   })

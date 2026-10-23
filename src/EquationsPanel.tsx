@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react"
 import type * as monaco from "monaco-editor"
 import { useT } from "./i18n"
+import { Icon, Sigma } from "./icons"
 import PanelSearch, { matchesQuery } from "./PanelSearch"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
 
 interface Equation {
   number: number
@@ -38,16 +40,25 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
   // Match on the number, the label and the rendered preview; a long document's
   // equation list is otherwise only navigable by scrolling.
   const visible = useMemo(
-    () => equations.filter((eq) =>
-      matchesQuery(`(${eq.number}) ${eq.label ?? ""} ${eq.preview}`, query)),
+    () =>
+      equations.filter((eq) =>
+        matchesQuery(`(${eq.number}) ${eq.label ?? ""} ${eq.preview}`, query),
+      ),
     [equations, query],
   )
 
   if (equations.length === 0) {
     return (
-      <div className="panel-empty-rich">
-        <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.equationsIcon}</div>
-        <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.equationsMessage)}</p>
+      <div className="eq-list-panel">
+        <PanelHeader title={t.sidebar.equations} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Sigma} size={16} />
+          </div>
+          <p className="panel-empty-message">
+            {renderEmptyMessage(t.emptyStates.equationsMessage)}
+          </p>
+        </div>
       </div>
     )
   }
@@ -62,7 +73,7 @@ export default function EquationsPanel({ content, editorRef }: EquationsPanelPro
 
   return (
     <div className="eq-list-panel">
-      <div className="panel-header">{t.equations.count(equations.length)}</div>
+      <PanelHeader title={t.sidebar.equations} count={equations.length} />
       <PanelSearch
         value={query}
         onChange={setQuery}

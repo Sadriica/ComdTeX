@@ -17,41 +17,60 @@ type SimpleKind = "header" | "terminal" | "io" | "process" | "subroutine"
 
 type ASTNode =
   | { t: "simple"; text: string; kind: SimpleKind }
-  | { t: "for";    cond: string; body: ASTNode[] }
-  | { t: "while";  cond: string; body: ASTNode[] }
+  | { t: "for"; cond: string; body: ASTNode[] }
+  | { t: "while"; cond: string; body: ASTNode[] }
   | { t: "repeat"; body: ASTNode[]; cond: string }
-  | { t: "if";     cond: string; then: ASTNode[]; elseIfs: Array<{ cond: string; body: ASTNode[] }>; else_: ASTNode[] | null }
+  | {
+      t: "if"
+      cond: string
+      then: ASTNode[]
+      elseIfs: Array<{ cond: string; body: ASTNode[] }>
+      else_: ASTNode[] | null
+    }
 
 // ── Classifier ────────────────────────────────────────────────────────────────
 
 type LK =
-  | "header" | "terminal" | "io" | "process"
-  | "for" | "endfor" | "while" | "endwhile"
-  | "repeat" | "until"
-  | "if" | "elseif" | "else" | "endif"
+  | "header"
+  | "terminal"
+  | "io"
+  | "process"
+  | "for"
+  | "endfor"
+  | "while"
+  | "endwhile"
+  | "repeat"
+  | "until"
+  | "if"
+  | "elseif"
+  | "else"
+  | "endif"
 
 function lk(line: string): LK {
   const u = line.toUpperCase().trimStart()
-  if (/^(ALGORITHM|FUNCTION|PROCEDURE)\b/.test(u))  return "header"
-  if (/^(RETURN|END\b|STOP\b)/.test(u))             return "terminal"
+  if (/^(ALGORITHM|FUNCTION|PROCEDURE)\b/.test(u)) return "header"
+  if (/^(RETURN|END\b|STOP\b)/.test(u)) return "terminal"
   if (/^(INPUT|OUTPUT|READ|WRITE|PRINT)\b/.test(u)) return "io"
-  if (/^FOR\b/.test(u))                             return "for"
-  if (/^END\s*FOR\b|^ENDFOR\b/.test(u))             return "endfor"
-  if (/^WHILE\b/.test(u))                           return "while"
-  if (/^END\s*WHILE\b|^ENDWHILE\b/.test(u))         return "endwhile"
-  if (/^REPEAT\b/.test(u))                          return "repeat"
-  if (/^UNTIL\b/.test(u))                           return "until"
-  if (/^ELSE\s*IF\b|^ELSEIF\b/.test(u))             return "elseif"
-  if (/^ELSE\b/.test(u))                            return "else"
-  if (/^END\s*IF\b|^ENDIF\b/.test(u))               return "endif"
-  if (/^IF\b/.test(u))                              return "if"
+  if (/^FOR\b/.test(u)) return "for"
+  if (/^END\s*FOR\b|^ENDFOR\b/.test(u)) return "endfor"
+  if (/^WHILE\b/.test(u)) return "while"
+  if (/^END\s*WHILE\b|^ENDWHILE\b/.test(u)) return "endwhile"
+  if (/^REPEAT\b/.test(u)) return "repeat"
+  if (/^UNTIL\b/.test(u)) return "until"
+  if (/^ELSE\s*IF\b|^ELSEIF\b/.test(u)) return "elseif"
+  if (/^ELSE\b/.test(u)) return "else"
+  if (/^END\s*IF\b|^ENDIF\b/.test(u)) return "endif"
+  if (/^IF\b/.test(u)) return "if"
   return "process"
 }
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
 function parse(code: string): ASTNode[] {
-  const lines = code.split("\n").map(l => l.trim()).filter(Boolean)
+  const lines = code
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
   let pos = 0
 
   function parseBlock(stopAt: LK[]): ASTNode[] {
@@ -67,9 +86,9 @@ function parse(code: string): ASTNode[] {
     const line = lines[pos++]
     const k = lk(line)
 
-    if (k === "header")   return { t: "simple", text: line, kind: "header" }
+    if (k === "header") return { t: "simple", text: line, kind: "header" }
     if (k === "terminal") return { t: "simple", text: line, kind: "terminal" }
-    if (k === "io")       return { t: "simple", text: line, kind: "io" }
+    if (k === "io") return { t: "simple", text: line, kind: "io" }
 
     if (k === "for") {
       const cond = line.replace(/\s+DO\s*$/i, "")
@@ -131,7 +150,7 @@ function generate(ast: ASTNode[]): string {
   function esc(s: string): string {
     return s
       .replace(/"/g, "'")
-      .replace(/[{}[\]]/g, c => ({ "{": "(", "}": ")", "[": "(", "]": ")" }[c] ?? c))
+      .replace(/[{}[\]]/g, (c) => ({ "{": "(", "}": ")", "[": "(", "]": ")" })[c] ?? c)
       .slice(0, 70)
   }
 
@@ -139,11 +158,21 @@ function generate(ast: ASTNode[]): string {
     const id = uid()
     const label = esc(text)
     switch (shape) {
-      case "header":     defs.push(`${id}{{"${label}"}}`); break
-      case "terminal":   defs.push(`${id}(["${label}"])`); break
-      case "io":         defs.push(`${id}[/"${label}"/]`); break
-      case "subroutine": defs.push(`${id}[["${label}"]]`); break
-      default:           defs.push(`${id}["${label}"]`); break
+      case "header":
+        defs.push(`${id}{{"${label}"}}`)
+        break
+      case "terminal":
+        defs.push(`${id}(["${label}"])`)
+        break
+      case "io":
+        defs.push(`${id}[/"${label}"/]`)
+        break
+      case "subroutine":
+        defs.push(`${id}[["${label}"]]`)
+        break
+      default:
+        defs.push(`${id}["${label}"]`)
+        break
     }
     return id
   }
@@ -173,23 +202,23 @@ function generate(ast: ASTNode[]): string {
   function genOne(node: ASTNode, tails: string[], firstLabel?: string): string[] {
     if (node.t === "simple") {
       const id = mkNode(node.kind, node.text)
-      tails.forEach(t => addEdge(t, id, firstLabel))
+      tails.forEach((t) => addEdge(t, id, firstLabel))
       return node.kind === "terminal" ? [] : [id]
     }
 
     if (node.t === "for") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d, firstLabel))
+      tails.forEach((t) => addEdge(t, d, firstLabel))
       const bodyTails = gen(node.body, [d])
-      bodyTails.forEach(t => addEdge(t, d, "↺"))
-      return [d]  // "No / Done" exit
+      bodyTails.forEach((t) => addEdge(t, d, "↺"))
+      return [d] // "No / Done" exit
     }
 
     if (node.t === "while") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d, firstLabel))
+      tails.forEach((t) => addEdge(t, d, firstLabel))
       const bodyTails = gen(node.body, [d])
-      bodyTails.forEach(t => addEdge(t, d, "↺"))
+      bodyTails.forEach((t) => addEdge(t, d, "↺"))
       return [d]
     }
 
@@ -201,16 +230,16 @@ function generate(ast: ASTNode[]): string {
       const hadBody = counter
       const bodyTails = gen(node.body, tails, firstLabel)
       const d = mkDiamond(`UNTIL ${node.cond}`)
-      bodyTails.forEach(t => addEdge(t, d))
+      bodyTails.forEach((t) => addEdge(t, d))
       // Loop back to the body's start on "No" (condition not met yet). Guard the
       // degenerate empty-body case, where no head node exists to return to.
       if (counter > hadBody) addEdge(d, bodyHead, "↺ No")
-      return [d]  // "Yes / Exit" tail
+      return [d] // "Yes / Exit" tail
     }
 
     if (node.t === "if") {
       const d = mkDiamond(node.cond)
-      tails.forEach(t => addEdge(t, d, firstLabel))
+      tails.forEach((t) => addEdge(t, d, firstLabel))
 
       const merges: string[] = []
       // THEN path is the diamond's "Yes" branch.
@@ -233,7 +262,7 @@ function generate(ast: ASTNode[]): string {
         const elseTails = gen(node.else_, [prev], "No")
         merges.push(...elseTails)
       } else {
-        merges.push(prev)  // No-branch falls through (labelled by the next node)
+        merges.push(prev) // No-branch falls through (labelled by the next node)
       }
 
       return merges
@@ -267,7 +296,7 @@ function generate(ast: ASTNode[]): string {
   if (finalTails.length > 0) {
     const endId = uid()
     defs.push(`${endId}(["End"])`)
-    finalTails.forEach(t => addEdge(t, endId))
+    finalTails.forEach((t) => addEdge(t, endId))
   }
 
   return ["flowchart TD", ...defs, ...edges].join("\n")

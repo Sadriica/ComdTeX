@@ -10,6 +10,10 @@
     "allow-get-secret",
     "allow-delete-secret",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }]
+    },
     "http:default",
     {
       "identifier": "http:default",

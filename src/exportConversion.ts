@@ -1,6 +1,7 @@
 import { toStorageMd } from "./cmdxFormat"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { stripKeepMarks } from "./keepMarks"
+import { numberEnvironmentsForExport } from "./envExport"
 
 /**
  * Export conversion starts from CMDX editor content but does not represent a
@@ -14,7 +15,11 @@ export function toExportMarkdownContent(cmdxContent: string): string {
   // structural labels ({#sec:…}, {#eq:…}, etc.) and cross-references (@eq:…).
   // exportToObsidianMarkdown then strips those labels from visible text and
   // rewrites cross-references as backtick code spans: work not done by toStorageMd.
-  return exportToObsidianMarkdown(toStorageMd(cmdxContent))
+  // Number environments and resolve their refs BEFORE toStorageMd, which would
+  // turn them into callouts with no numbers (see envExport.ts).
+  return exportToObsidianMarkdown(
+    toStorageMd(numberEnvironmentsForExport(cmdxContent, "callout"), { envLabels: false }),
+  )
 }
 
 // ComdTeX-only special blocks are preserved verbatim by toStorageMd (a
@@ -40,12 +45,26 @@ export function specialBlocksToPandoc(md: string): string {
   while (i < lines.length) {
     // Openers: ":::type", ":::type[Title]", and the ":::code python" language
     // variant (bare word after the type, code blocks only).
-    const open = /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(lines[i])
-    if (!open) { out.push(lines[i]); i++; continue }
+    const open =
+      /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(
+        lines[i],
+      )
+    if (!open) {
+      out.push(lines[i])
+      i++
+      continue
+    }
     const body: string[] = []
     let j = i + 1
-    while (j < lines.length && !/^:::\s*$/.test(lines[j])) { body.push(lines[j]); j++ }
-    if (j >= lines.length) { out.push(lines[i]); i++; continue } // unclosed: leave as-is
+    while (j < lines.length && !/^:::\s*$/.test(lines[j])) {
+      body.push(lines[j])
+      j++
+    }
+    if (j >= lines.length) {
+      out.push(lines[i])
+      i++
+      continue
+    } // unclosed: leave as-is
     const caption = SPECIAL_BLOCK_CAPTIONS[open[1]] + (open[2] ? `: ${open[2]}` : "")
     out.push(`**${caption}**`, "")
     if (open[1] === "excalidraw") {
@@ -65,5 +84,10 @@ export function toPandocMarkdownInput(cmdxContent: string): string {
   // `^^` reaches a .docx / .typ / Beamer / PDF output. See keepMarks.ts.
   // Special blocks degrade to captioned code fences BEFORE toStorageMd so its
   // verbatim masking never sees them (export-only path; storage is untouched).
-  return toStorageMd(specialBlocksToPandoc(stripKeepMarks(cmdxContent)))
+  // Environments are numbered after the special blocks degrade (so nested ones
+  // are already fences) and before toStorageMd flattens them to callouts.
+  return toStorageMd(
+    numberEnvironmentsForExport(specialBlocksToPandoc(stripKeepMarks(cmdxContent)), "bold"),
+    { envLabels: false },
+  )
 }

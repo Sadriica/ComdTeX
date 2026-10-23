@@ -4,7 +4,7 @@ import { layoutDAG, parseCommDiag, renderCommDiagSVG } from "./commDiag"
 describe("parseCommDiag", () => {
   it("parses a single labeled edge", () => {
     const g = parseCommDiag("A -> B [f]")
-    expect(g.nodes.map(n => n.id)).toEqual(["A", "B"])
+    expect(g.nodes.map((n) => n.id)).toEqual(["A", "B"])
     expect(g.edges).toEqual([{ from: "A", to: "B", label: "f", style: "->" }])
   })
 
@@ -16,9 +16,9 @@ describe("parseCommDiag", () => {
   it("parses a 2x2 commutative square with all four labeled edges", () => {
     const content = "A -> B [f]\nA -> C [g]\nB -> D [h]\nC -> D [k]"
     const g = parseCommDiag(content)
-    expect(g.nodes.map(n => n.id).sort()).toEqual(["A", "B", "C", "D"])
+    expect(g.nodes.map((n) => n.id).sort()).toEqual(["A", "B", "C", "D"])
     expect(g.edges).toHaveLength(4)
-    expect(g.edges.map(e => e.label)).toEqual(["f", "g", "h", "k"])
+    expect(g.edges.map((e) => e.label)).toEqual(["f", "g", "h", "k"])
   })
 
   it("parses every supported arrow style", () => {
@@ -43,7 +43,7 @@ describe("parseCommDiag", () => {
   it("silently skips a malformed row that doesn't match the edge grammar", () => {
     const g = parseCommDiag("A -> B [f]\nthis is not an edge\nB -> C [g]")
     expect(g.edges).toHaveLength(2)
-    expect(g.nodes.map(n => n.id)).toEqual(["A", "B", "C"])
+    expect(g.nodes.map((n) => n.id)).toEqual(["A", "B", "C"])
   })
 
   it("returns empty nodes/edges for empty content", () => {
@@ -54,7 +54,7 @@ describe("parseCommDiag", () => {
 
   it("does not duplicate a node seen in multiple edges", () => {
     const g = parseCommDiag("A -> B\nA -> C")
-    expect(g.nodes.map(n => n.id)).toEqual(["A", "B", "C"])
+    expect(g.nodes.map((n) => n.id)).toEqual(["A", "B", "C"])
   })
 })
 

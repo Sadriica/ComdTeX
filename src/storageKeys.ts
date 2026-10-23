@@ -78,6 +78,14 @@ export const STORAGE_KEYS = {
    *  per-session only, intentionally not kept across app restarts. Owner: useAiSession.ts */
   AI_INPUT_DRAFT: "comdtex_ai_input",
 
+  // ── writingStats.ts ──────────────────────────────────────────────────────
+  /** JSON `{v,days}` of per-day writing aggregates (capped at 365 days). Owner: writingStats.ts */
+  WRITING_STATS: "comdtex_writing_stats",
+
+  // ── palettePrefs.ts ──────────────────────────────────────────────────────
+  /** JSON `{v,recent,pinned}`: the last 8 palette commands run (with use counts) and the pinned ones. Owner: palettePrefs.ts */
+  PALETTE_PREFS: "comdtex_palette",
+
   // ── templates.ts ─────────────────────────────────────────────────────────
   /** JSON array of user-created custom document templates. Owner: templates.ts */
   CUSTOM_TEMPLATES: "comdtex.customTemplates",

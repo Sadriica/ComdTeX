@@ -1,27 +1,35 @@
-import { useRef, useState, useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { FileNode } from "./types"
 import { flatFiles } from "./wikilinks"
-import { displayBasename, pathBasename, pathDirname } from "./pathUtils"
+import { displayBasename } from "./pathUtils"
 import { extractFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
+import { useVaultSources, type LoadDiskSources } from "./vaultSources"
+import { GraphCanvas } from "./graphCanvas"
+import { LayoutRunner } from "./graphLayoutClient"
+import {
+  buildScene,
+  commonDir,
+  localNeighbourhood,
+  topLevelFolder,
+  type SceneNode,
+} from "./graphScene"
 
 interface GraphPanelProps {
   tree: FileNode[]
   openTabs: { path: string; content: string }[]
+  /** Reads every vault text file (shared search index); open tabs override it. */
+  loadDiskSources: LoadDiskSources
   activePath: string | null
   onOpenFile: (path: string) => void
 }
 
 interface GraphNode {
-  id: string       // file path
-  label: string    // display name
-  x: number
-  y: number
-  vx: number
-  vy: number
-  folder: string   // for coloring
-  degree: number   // total connections (in + out)
-  tags: string[]   // frontmatter tags
+  id: string // file path
+  label: string // display name
+  folder: string // top-level folder under the vault root, "" for root files
+  degree: number // total connections (in + out)
+  tags: string[] // frontmatter tags
 }
 
 interface GraphEdge {
@@ -29,53 +37,54 @@ interface GraphEdge {
   target: string
 }
 
-const FOLDER_COLORS = [
-  "#569cd6", "#4ec9b0", "#ce9178", "#dcdcaa",
-  "#c586c0", "#9cdcfe", "#d7ba7d", "#6a9955",
-]
+const WIKI_RE = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
 
-function buildGraph(
+// Per-file parse cache keyed on the content string. `sources` is rebuilt on
+// every keystroke, but only the edited tab has new text; every other note is a
+// Map lookup instead of a regex scan plus a frontmatter parse.
+const parseCache = new Map<string, { content: string; links: string[]; tags: string[] }>()
+
+function parseDoc(path: string, content: string): { links: string[]; tags: string[] } {
+  const hit = parseCache.get(path)
+  if (hit && hit.content === content) return hit
+  const links: string[] = []
+  const wikiRe = new RegExp(WIKI_RE.source, "g")
+  let m: RegExpExecArray | null
+  while ((m = wikiRe.exec(content)) !== null) links.push(m[1].trim().toLowerCase())
+  let tags: string[] = []
+  const parsed = extractFrontmatter(content)
+  if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
+    tags = parsed.data.tags.map((t) => String(t).toLowerCase())
+  }
+  const entry = { content, links, tags }
+  parseCache.set(path, entry)
+  return entry
+}
+
+/** Nodes are every vault file; edges come from the wikilinks in `sources`. */
+export function buildGraph(
   tree: FileNode[],
-  openTabs: { path: string; content: string }[],
+  sources: { path: string; content: string }[],
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const files = flatFiles(tree)
   const pathToNode = new Map<string, GraphNode>()
-  const folderSet = new Set<string>()
-  const tabContent = new Map(openTabs.map((tab) => [tab.path, tab.content]))
+  const tabContent = new Map(sources.map((src) => [src.path, src.content]))
+  const root = commonDir(files.map((f) => f.path))
 
-  // Collect unique folder names for coloring
-  for (const f of files) {
-    const folder = pathBasename(pathDirname(f.path))
-    folderSet.add(folder)
-  }
-
-  // Create nodes with random initial positions
-  const W = 400, H = 400
   const nodes: GraphNode[] = files.map((f) => {
-    const folder = pathBasename(pathDirname(f.path))
     const content = tabContent.get(f.path) ?? ""
-    let tags: string[] = []
-    if (content) {
-      const parsed = extractFrontmatter(content)
-      if (parsed?.data.tags && Array.isArray(parsed.data.tags)) {
-        tags = parsed.data.tags.map((t) => String(t).toLowerCase())
-      }
-    }
+    const tags = content ? parseDoc(f.path, content).tags : []
     return {
       id: f.path,
-      label: displayBasename(f.path),
-      x: W / 2 + (Math.random() - 0.5) * W * 0.8,
-      y: H / 2 + (Math.random() - 0.5) * H * 0.8,
-      vx: 0,
-      vy: 0,
-      folder,
+      label: displayBasename(f.path).replace(/\.[A-Za-z0-9]{1,5}$/, ""),
+      folder: topLevelFolder(f.path, root),
       degree: 0,
       tags,
     }
   })
   nodes.forEach((n) => pathToNode.set(n.id, n))
 
-  // Build edges from [[wikilinks]] in open tabs
+  // Build edges from the [[wikilinks]] of every source (disk + open tabs)
   const nameToPath = new Map<string, string>()
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, "").toLowerCase()
@@ -84,17 +93,15 @@ function buildGraph(
 
   const edgeSet = new Set<string>()
   const edges: GraphEdge[] = []
-  for (const tab of openTabs) {
-    const wikiRe = /\[\[([^\]|#\n]+?)(?:#[^\]|]+?)?(?:\|[^\]\n]+?)?\]\]/g
-    let m: RegExpExecArray | null
-    while ((m = wikiRe.exec(tab.content)) !== null) {
-      const target = m[1].trim().toLowerCase()
+  for (const src of sources) {
+    if (!pathToNode.has(src.path)) continue
+    for (const target of parseDoc(src.path, src.content).links) {
       const targetPath = nameToPath.get(target)
-      if (targetPath && targetPath !== tab.path) {
-        const key = [tab.path, targetPath].sort().join("→")
+      if (targetPath && targetPath !== src.path) {
+        const key = [src.path, targetPath].sort().join("→")
         if (!edgeSet.has(key)) {
           edgeSet.add(key)
-          edges.push({ source: tab.path, target: targetPath })
+          edges.push({ source: src.path, target: targetPath })
         }
       }
     }
@@ -111,218 +118,283 @@ function buildGraph(
   return { nodes, edges }
 }
 
-// ── Force simulation ──────────────────────────────────────────────────────────
+// ── Layout memory ────────────────────────────────────────────────────────────
 
-function simulate(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
-  steps = 80,
-): GraphNode[] {
-  const ns = nodes.map((n) => ({ ...n }))
-  const byId = new Map(ns.map((n) => [n.id, n]))
+// Positions survive panel switches (the sidebar unmounts this panel) and seed
+// the next layout, so a new note appears beside its neighbours instead of the
+// whole graph reshuffling. The local graph keeps only its latest layout: the
+// nodes of an old neighbourhood say nothing about the new one.
+type PosMemory = Map<string, [number, number]>
+const memory: { global: PosMemory; local: PosMemory } = { global: new Map(), local: new Map() }
 
-  const W = 400, H = 400
-  const CENTER_X = W / 2, CENTER_Y = H / 2
-
-  for (let step = 0; step < steps; step++) {
-    const alpha = 1 - step / steps
-
-    // Repulsion
-    for (let i = 0; i < ns.length; i++) {
-      for (let j = i + 1; j < ns.length; j++) {
-        const a = ns[i], b = ns[j]
-        const dx = b.x - a.x, dy = b.y - a.y
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1
-        const force = (800 / (dist * dist)) * alpha
-        const fx = (dx / dist) * force
-        const fy = (dy / dist) * force
-        a.vx -= fx; a.vy -= fy
-        b.vx += fx; b.vy += fy
-      }
-    }
-
-    // Attraction along edges
-    for (const edge of edges) {
-      const a = byId.get(edge.source), b = byId.get(edge.target)
-      if (!a || !b) continue
-      const dx = b.x - a.x, dy = b.y - a.y
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1
-      const target = 80
-      const force = ((dist - target) / dist) * 0.3 * alpha
-      a.vx += dx * force; a.vy += dy * force
-      b.vx -= dx * force; b.vy -= dy * force
-    }
-
-    // Gravity toward center
-    for (const n of ns) {
-      n.vx += (CENTER_X - n.x) * 0.02 * alpha
-      n.vy += (CENTER_Y - n.y) * 0.02 * alpha
-    }
-
-    // Apply velocity with damping and boundary clamp
-    for (const n of ns) {
-      n.vx *= 0.6; n.vy *= 0.6
-      n.x = Math.max(20, Math.min(W - 20, n.x + n.vx))
-      n.y = Math.max(20, Math.min(H - 20, n.y + n.vy))
-    }
-  }
-
-  return ns
+let runner: LayoutRunner | null = null
+function getRunner(): LayoutRunner {
+  if (!runner) runner = new LayoutRunner()
+  return runner
 }
 
-const FOLDER_COLORS_LIST = FOLDER_COLORS
+type Mode = "local" | "global"
 
-/**
- * What makes two graphs the same picture: the same nodes (with the same tags,
- * which colour and filter them) joined by the same edges. Prose edits change
- * neither.
- */
-function graphShapeKey(nodes: GraphNode[], edges: GraphEdge[]): string {
-  return (
-    nodes.map((n) => `${n.id}\x1f${n.tags.join(",")}`).join("\x1e") +
-    "\x1d" +
-    edges.map((e) => `${e.source}\x1f${e.target}`).join("\x1e")
-  )
+interface LayoutDone {
+  key: string
+  ids: string[]
+  pos: Float32Array
 }
 
-// The layout is 80 steps of O(nodes^2) repulsion, and `openTabs` is a new
-// array on every keystroke. Laying the same graph out again while someone
-// types a word that changes no link is the difference between a smooth
-// editor and a stuttering one, so the last layout is kept and reused.
-let lastShapeKey: string | null = null
-let lastLayout: GraphNode[] = []
+const NEIGHBOUR_LIST_MAX = 60
 
-function layoutFor(key: string, nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
-  if (key === lastShapeKey) return lastLayout
-  lastLayout = simulate(nodes, edges)
-  lastShapeKey = key
-  return lastLayout
-}
-
-export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: GraphPanelProps) {
+export default function GraphPanel({
+  tree,
+  openTabs,
+  loadDiskSources,
+  activePath,
+  onOpenFile,
+}: GraphPanelProps) {
   const t = useT()
-  // `openTabs` is a new array on every keystroke, and the layout is a
-  // force simulation: 80 steps of O(nodes^2) repulsion. Rebuilding the raw
-  // graph is linear and fine; laying it out again while someone types a word
-  // that changes no link is not. So the simulation keys on the SHAPE of the
-  // graph (its nodes and edges), and typing prose leaves the layout alone.
-  const baseGraph = useMemo(() => {
-    const { nodes: rawNodes, edges: rawEdges } = buildGraph(tree, openTabs)
-    const simulated = layoutFor(graphShapeKey(rawNodes, rawEdges), rawNodes, rawEdges)
-    const folders = [...new Set(simulated.map((n) => n.folder))]
-    const fc = new Map(folders.map((f, i) => [f, FOLDER_COLORS_LIST[i % FOLDER_COLORS_LIST.length]]))
-    return { nodes: simulated, edges: rawEdges, folderColors: fc }
-  }, [tree, openTabs])
+  const { sources } = useVaultSources(loadDiskSources, openTabs)
+  // `openTabs` is a new array on every keystroke. The raw graph is rebuilt
+  // (linear), but the layout is keyed on the SHAPE of what is shown (its nodes
+  // and edges), so typing prose leaves it alone.
+  const graph = useMemo(() => buildGraph(tree, sources), [tree, sources])
 
-  // draggableNodes: user-dragged positions override the simulated layout.
-  const [draggableNodes, setDraggableNodes] = useState<GraphNode[]>([])
-  const nodes = draggableNodes.length > 0 ? draggableNodes : baseGraph.nodes
-  const { edges, folderColors } = baseGraph
-  const [hovered, setHovered] = useState<string | null>(null)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState("")
-  const svgRef = useRef<SVGSVGElement>(null)
-  const dragging = useRef<{ nodeId: string; ox: number; oy: number; moved: boolean } | null>(null)
-  const panning = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
-
-  // ── Build neighbor adjacency for hover highlighting ─────────────────────
-  const neighborMap = useMemo(() => {
+  const adjacency = useMemo(() => {
     const map = new Map<string, Set<string>>()
-    for (const e of edges) {
+    for (const e of graph.edges) {
       if (!map.has(e.source)) map.set(e.source, new Set())
       if (!map.has(e.target)) map.set(e.target, new Set())
       map.get(e.source)!.add(e.target)
       map.get(e.target)!.add(e.source)
     }
     return map
-  }, [edges])
+  }, [graph])
 
-  // ── Filter / search predicate. A node is "matched" when it passes both
-  // filters. Non-matched nodes are dimmed instead of removed so the layout
-  // remains stable while typing.
+  // ── Mode: local (active note + depth) by default when a note is open ──────
+  const [userMode, setUserMode] = useState<Mode | null>(null)
+  const [depth, setDepth] = useState<1 | 2>(1)
+  const activeInGraph = activePath !== null && graph.nodes.some((n) => n.id === activePath)
+  const wantedMode: Mode = userMode ?? (activeInGraph ? "local" : "global")
+  const mode: Mode = wantedMode === "local" && activeInGraph ? "local" : "global"
+
+  const visible = useMemo(() => {
+    let nodes = graph.nodes
+    let edges = graph.edges
+    if (mode === "local" && activePath) {
+      const keep = localNeighbourhood(adjacency, activePath, depth)
+      nodes = nodes.filter((n) => keep.has(n.id))
+      edges = edges.filter((e) => keep.has(e.source) && keep.has(e.target))
+    }
+    const key =
+      mode +
+      "\x1c" +
+      nodes.map((n) => n.id).join("\x1e") +
+      "\x1d" +
+      edges.map((e) => `${e.source}\x1f${e.target}`).join("\x1e")
+    return { nodes, edges, key }
+  }, [graph, adjacency, mode, depth, activePath])
+
+  // ── Layout (worker) ───────────────────────────────────────────────────────
+  const [layout, setLayout] = useState<LayoutDone | null>(null)
+  const lastKey = useRef<string | null>(null)
+  useEffect(() => {
+    if (visible.key === lastKey.current) return
+    lastKey.current = visible.key
+    const key = visible.key
+    const ids = visible.nodes.map((n) => n.id)
+    const index = new Map(ids.map((id, i) => [id, i]))
+    const flat: number[] = []
+    for (const e of visible.edges) {
+      const a = index.get(e.source)
+      const b = index.get(e.target)
+      if (a !== undefined && b !== undefined) flat.push(a, b)
+    }
+    const mem = mode === "local" ? memory.local : memory.global
+    const prev = new Float32Array(2 * ids.length).fill(NaN)
+    ids.forEach((id, i) => {
+      const p = mem.get(id)
+      if (p) {
+        prev[2 * i] = p[0]
+        prev[2 * i + 1] = p[1]
+      }
+    })
+    void getRunner()
+      .run({ ids, edges: Uint32Array.from(flat), prev })
+      .then((res) => {
+        if (!res) return
+        const next: PosMemory = mode === "local" ? new Map() : memory.global
+        ids.forEach((id, i) => next.set(id, [res.pos[2 * i], res.pos[2 * i + 1]]))
+        if (mode === "local") memory.local = next
+        setLayout({ key, ids, pos: res.pos })
+      })
+  }, [visible, mode])
+
+  const layoutDone = visible.nodes.length === 0 || layout?.key === visible.key
+
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState("")
   const tagFilter = useMemo(() => {
     const m = /^tag:(.+)$/i.exec(filter.trim())
     return m ? m[1].trim().toLowerCase() : null
   }, [filter])
 
-  const matchedIds = useMemo(() => {
+  // Folder -> palette slot, biggest folders first so the main ones differ.
+  const folders = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const n of graph.nodes) counts.set(n.folder, (counts.get(n.folder) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  }, [graph.nodes])
+  const folderSlot = useMemo(() => new Map(folders.map(([f], i) => [f, i])), [folders])
+
+  const sceneNodes = useMemo<SceneNode[]>(() => {
     const s = search.trim().toLowerCase()
-    const set = new Set<string>()
-    for (const n of nodes) {
+    return visible.nodes.map((n) => {
       const labelMatch = !s || n.label.toLowerCase().includes(s)
       const tagMatch = !tagFilter || n.tags.includes(tagFilter)
-      if (labelMatch && tagMatch) set.add(n.id)
-    }
-    return set
-  }, [nodes, search, tagFilter])
+      return {
+        id: n.id,
+        label: n.label,
+        group: folderSlot.get(n.folder) ?? 0,
+        degree: n.degree,
+        dim: !(labelMatch && tagMatch),
+      }
+    })
+  }, [visible.nodes, search, tagFilter, folderSlot])
 
-  const filterActive = search.trim() !== "" || tagFilter !== null
-
-  // Top-N nodes by degree always show their labels (so the graph reads even
-  // when nothing is hovered).
-  const topLabelIds = useMemo(() => {
-    const sorted = [...nodes].sort((a, b) => b.degree - a.degree).slice(0, 8)
-    return new Set(sorted.map((n) => n.id))
-  }, [nodes])
-
-  const getNodeAt = useCallback((path: string) => nodes.find((n) => n.id === path), [nodes])
-
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation()
-    const node = getNodeAt(nodeId)
-    if (!node) return
-    dragging.current = { nodeId, ox: e.clientX - node.x * zoom, oy: e.clientY - node.y * zoom, moved: false }
-  }, [getNodeAt, zoom])
-
-  const handleNodeClick = useCallback((nodeId: string) => {
-    // Treat as a click only if the user did not drag.
-    if (dragging.current?.moved) return
-    onOpenFile(nodeId)
+  // ── Canvas controller ─────────────────────────────────────────────────────
+  const stageRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const ctlRef = useRef<GraphCanvas | null>(null)
+  const onOpenRef = useRef(onOpenFile)
+  useEffect(() => {
+    onOpenRef.current = onOpenFile
   }, [onOpenFile])
+  const hasFiles = graph.nodes.length > 0
+  const [sceneEpoch, setSceneEpoch] = useState(0)
 
-  const handleSvgMouseDown = useCallback((e: React.MouseEvent) => {
-    if (dragging.current) return
-    panning.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }
-  }, [pan])
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragging.current) {
-      const { nodeId, ox, oy } = dragging.current
-      dragging.current.moved = true
-      setDraggableNodes((prev) => {
-        const base = prev.length > 0 ? prev : nodes
-        return base.map((n) =>
-          n.id === nodeId
-            ? { ...n, x: (e.clientX - ox) / zoom, y: (e.clientY - oy) / zoom }
-            : n
-        )
-      })
-    } else if (panning.current) {
-      const { sx, sy, px, py } = panning.current
-      setPan({ x: px + (e.clientX - sx), y: py + (e.clientY - sy) })
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const stage = stageRef.current
+    if (!canvas || !stage) return
+    const ctl = new GraphCanvas(canvas, stage, { onOpen: (id) => onOpenRef.current(id) })
+    ctlRef.current = ctl
+    // Theme: tokens are re-read when data-theme (or class) changes on `.app`.
+    const appEl = stage.closest(".app") ?? document.documentElement
+    const mo = new MutationObserver(() => ctl.refreshPalette())
+    mo.observe(appEl, { attributes: true, attributeFilter: ["data-theme", "class"] })
+    return () => {
+      mo.disconnect()
+      ctl.destroy()
+      ctlRef.current = null
+      // A remount builds a fresh controller; it needs the scene again.
+      setSceneEpoch((e) => e + 1)
     }
-  }, [zoom, nodes])
+  }, [hasFiles])
 
-  const handleMouseUp = useCallback(() => {
-    dragging.current = null
-    panning.current = null
-  }, [])
+  // Fit the view when the picture changes character, not on every edit.
+  const needFit = useRef(true)
+  const centerKey = mode === "local" ? activePath : null
+  useEffect(() => {
+    needFit.current = true
+  }, [mode, depth, centerKey])
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-    setZoom((z) => Math.max(0.3, Math.min(3, z * (e.deltaY < 0 ? 1.1 : 0.9))))
-  }, [])
+  useEffect(() => {
+    const ctl = ctlRef.current
+    if (!ctl || !layout || layout.key !== visible.key) return
+    const pos = new Map<string, [number, number]>()
+    layout.ids.forEach((id, i) => pos.set(id, [layout.pos[2 * i], layout.pos[2 * i + 1]]))
+    const scene = buildScene(
+      sceneNodes,
+      visible.edges.map((e) => [e.source, e.target]),
+      (id) => pos.get(id),
+    )
+    ctl.setScene(scene, { fit: needFit.current })
+    needFit.current = false
+  }, [layout, visible, sceneNodes, sceneEpoch])
 
-  if (flatFiles(tree).length === 0) {
+  useEffect(() => {
+    ctlRef.current?.setActive(activePath)
+  }, [activePath, layout, sceneEpoch])
+
+  // ── Keyboard path: neighbours of the focus node ───────────────────────────
+  const focusId = useMemo(() => {
+    if (activeInGraph) return activePath
+    let best: GraphNode | null = null
+    for (const n of graph.nodes) if (!best || n.degree > best.degree) best = n
+    return best?.id ?? null
+  }, [activeInGraph, activePath, graph.nodes])
+  const focusLabel = graph.nodes.find((n) => n.id === focusId)?.label ?? ""
+  const neighbourList = useMemo(() => {
+    if (!focusId) return []
+    const labels = new Map(graph.nodes.map((n) => [n.id, n]))
+    return [...(adjacency.get(focusId) ?? [])]
+      .map((id) => labels.get(id))
+      .filter((n): n is GraphNode => !!n)
+      .sort((a, b) => b.degree - a.degree || a.label.localeCompare(b.label))
+      .slice(0, NEIGHBOUR_LIST_MAX)
+  }, [focusId, adjacency, graph.nodes])
+
+  const resetView = useCallback(() => ctlRef.current?.requestFit(), [])
+
+  if (!hasFiles) {
     return <div className="tree-empty">{t.graphPanel.noFiles}</div>
   }
 
+  const modeName = mode === "local" ? t.graphPanel.modeLocal : t.graphPanel.modeGlobal
+  const shownFolders = folders.slice(0, 6)
+
   return (
-    <div className="graph-panel">
+    <div className="graph-panel" data-layout={layoutDone ? "done" : "pending"} data-mode={mode}>
       <div className="graph-toolbar">
-        <button className="graph-btn" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setDraggableNodes([]) }} title={t.graphPanel.resetView}>⊕</button>
+        <div
+          className="graph-seg"
+          role="group"
+          aria-label={t.graphPanel.modeLocal + " / " + t.graphPanel.modeGlobal}
+        >
+          <button
+            type="button"
+            className="graph-seg-btn"
+            aria-pressed={mode === "local"}
+            disabled={!activeInGraph}
+            onClick={() => setUserMode("local")}
+          >
+            {t.graphPanel.modeLocal}
+          </button>
+          <button
+            type="button"
+            className="graph-seg-btn"
+            aria-pressed={mode === "global"}
+            onClick={() => setUserMode("global")}
+          >
+            {t.graphPanel.modeGlobal}
+          </button>
+        </div>
+        {mode === "local" && (
+          <div className="graph-seg" role="group" aria-label={t.graphPanel.depthLabel}>
+            {([1, 2] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                className="graph-seg-btn"
+                aria-pressed={depth === d}
+                aria-label={`${t.graphPanel.depthLabel} ${d}`}
+                onClick={() => setDepth(d)}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          className="graph-btn"
+          onClick={resetView}
+          title={t.graphPanel.resetView}
+          aria-label={t.graphPanel.resetView}
+        >
+          ⊕
+        </button>
+      </div>
+      <div className="graph-toolbar graph-toolbar-filters">
         <input
           className="graph-input"
           type="text"
@@ -339,127 +411,68 @@ export default function GraphPanel({ tree, openTabs, activePath, onOpenFile }: G
           placeholder={t.graphPanel.filterPlaceholder}
           aria-label={t.graphPanel.filterPlaceholder}
         />
-        <span className="graph-zoom-label">{Math.round(zoom * 100)}%</span>
-        <span className="graph-info">{t.graphPanel.graphInfo(nodes.length, edges.length)}</span>
       </div>
-      <svg
-        ref={svgRef}
-        className="graph-svg"
+      <div
+        ref={stageRef}
+        className="graph-stage"
         // Zooms itself; keep the app-level Ctrl+wheel font zoom out (see
         // data-gesture-optout in useTouchpadGestures.ts).
         data-gesture-optout=""
-        onMouseDown={handleSvgMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        style={{ cursor: "grab" }}
       >
-        <defs>
-          <marker
-            id="graph-arrow"
-            viewBox="0 0 10 10"
-            refX="10"
-            refY="5"
-            markerWidth="4"
-            markerHeight="4"
-            orient="auto-start-reverse"
-            markerUnits="strokeWidth"
-          >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
-          </marker>
-          <marker
-            id="graph-arrow-active"
-            viewBox="0 0 10 10"
-            refX="10"
-            refY="5"
-            markerWidth="4"
-            markerHeight="4"
-            orient="auto-start-reverse"
-            markerUnits="strokeWidth"
-          >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#569cd6" />
-          </marker>
-        </defs>
-        <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-          {/* Edges */}
-          {edges.map((e, i) => {
-            const a = nodes.find((n) => n.id === e.source)
-            const b = nodes.find((n) => n.id === e.target)
-            if (!a || !b) return null
-            const isHighlighted = hovered === e.source || hovered === e.target
-            // Dim edges whose endpoints aren't both in the matched set.
-            const isMatched = !filterActive || (matchedIds.has(e.source) && matchedIds.has(e.target))
-            const opacity = isHighlighted ? 0.95 : isMatched ? 0.5 : 0.1
-            return (
-              <line
-                key={i}
-                x1={a.x} y1={a.y}
-                x2={b.x} y2={b.y}
-                stroke={isHighlighted ? "#569cd6" : "#3a3a3a"}
-                strokeWidth={isHighlighted ? 1.5 : 0.8}
-                strokeOpacity={opacity}
-                markerEnd={isHighlighted ? "url(#graph-arrow-active)" : "url(#graph-arrow)"}
-              />
-            )
-          })}
-
-          {/* Nodes */}
-          {nodes.map((node) => {
-            const isActive = node.id === activePath
-            const isHovered = node.id === hovered
-            const isNeighbor = hovered != null && neighborMap.get(hovered)?.has(node.id)
-            const isMatched = matchedIds.has(node.id)
-            const color = folderColors.get(node.folder) ?? "#888"
-            // Size by degree (clamped). Active/hovered get a small bump.
-            const baseR = 4 + Math.min(8, node.degree)
-            const r = isActive ? baseR + 2 : isHovered ? baseR + 1 : baseR
-            const dimmed = (filterActive && !isMatched) || (hovered != null && !isHovered && !isNeighbor)
-            const opacity = dimmed ? 0.18 : 1
-            const showLabel = isHovered || isActive || topLabelIds.has(node.id)
-
-            return (
-              <g
-                key={node.id}
-                transform={`translate(${node.x},${node.y})`}
-                onMouseEnter={() => setHovered(node.id)}
-                onMouseLeave={() => setHovered(null)}
-                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                onClick={() => handleNodeClick(node.id)}
-                onDoubleClick={() => onOpenFile(node.id)}
-                style={{ cursor: "pointer", opacity }}
-              >
-                <circle
-                  r={r}
-                  fill={isActive ? "#fff" : color}
-                  stroke={isActive ? "#569cd6" : isHovered ? "#fff" : color}
-                  strokeWidth={isActive ? 2 : 1}
-                  fillOpacity={0.85}
-                />
-                {showLabel && (
-                  <text
-                    x={0}
-                    y={r + 9}
-                    textAnchor="middle"
-                    fontSize="8"
-                    fill={isActive ? "#fff" : "#ccc"}
-                    style={{ pointerEvents: "none", userSelect: "none" }}
+        <canvas
+          ref={canvasRef}
+          className="graph-canvas"
+          tabIndex={0}
+          aria-label={t.graphPanel.canvasLabel(
+            visible.nodes.length,
+            visible.edges.length,
+            modeName,
+          )}
+        />
+        {!layoutDone && (
+          <span className="graph-status" role="status">
+            {t.graphPanel.layoutPending}
+          </span>
+        )}
+        {focusId && (
+          <ul className="graph-neighbours" aria-label={t.graphPanel.neighboursLabel(focusLabel)}>
+            {neighbourList.length === 0 ? (
+              <li className="graph-neighbours-empty">{t.graphPanel.noNeighbours}</li>
+            ) : (
+              neighbourList.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    className="graph-neighbour"
+                    onClick={() => onOpenFile(n.id)}
+                    onFocus={() => ctlRef.current?.setHighlight(n.id)}
+                    onBlur={() => ctlRef.current?.setHighlight(null)}
                   >
-                    {node.label.length > 18 ? node.label.slice(0, 16) + "…" : node.label}
-                  </text>
-                )}
-              </g>
-            )
-          })}
-        </g>
-      </svg>
+                    {n.label}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
       <div className="graph-legend">
-        {[...folderColors.entries()].slice(0, 6).map(([folder, color]) => (
+        {shownFolders.map(([folder], i) => (
           <span key={folder} className="graph-legend-item">
-            <span className="graph-legend-dot" style={{ background: color }} />
+            <span className="graph-legend-dot" data-slot={i % 8} />
             {folder || t.graphPanel.root}
           </span>
         ))}
+        {folders.length > shownFolders.length && (
+          <span className="graph-legend-item">
+            {t.graphPanel.moreFolders(folders.length - shownFolders.length)}
+          </span>
+        )}
+      </div>
+      <div className="graph-footer">
+        <span className="graph-info">
+          {t.graphPanel.graphInfo(visible.nodes.length, visible.edges.length)}
+        </span>
       </div>
     </div>
   )

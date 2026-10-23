@@ -15,8 +15,10 @@
 // edits as Monaco diffs so they remain undo-safe) and OS-keychain key storage.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import * as monaco from "monaco-editor"
+import type * as monaco from "monaco-editor"
+import { monaco as monacoRt } from "./monacoRuntime"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
 import type { Settings } from "./useSettings"
 import { sendInlineEdit, AiError } from "./ai/aiProvider"
 
@@ -41,9 +43,12 @@ interface CmdKEditProps {
 function aiErrorMessage(e: unknown, t: ReturnType<typeof useT>): string {
   if (e instanceof AiError) {
     switch (e.message) {
-      case "missing-api-key":     return t.ai.errMissingApiKey
-      case "missing-base-url":    return t.ai.errMissingBaseUrl
-      case "missing-cli-command": return t.ai.errMissingCli
+      case "missing-api-key":
+        return t.ai.errMissingApiKey
+      case "missing-base-url":
+        return t.ai.errMissingBaseUrl
+      case "missing-cli-command":
+        return t.ai.errMissingCli
     }
     return t.ai.errGeneric(e.message)
   }
@@ -84,9 +89,12 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
       column: r.endColumn,
     })
     const node = editor.getDomNode()
-    if (!visible || !node) { setPos(null); return }
+    if (!visible || !node) {
+      setPos(null)
+      return
+    }
     const rect = node.getBoundingClientRect()
-    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
+    const lineHeight = editor.getOption(monacoRt.editor.EditorOption.lineHeight)
     // Viewport-absolute coordinates (the widget uses position:fixed) so we don't
     // depend on the offset of whichever ancestor it renders into. `visible` is
     // relative to the editor DOM node, so add the node's page rect.
@@ -97,6 +105,7 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
   }, [editor, anchor])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- measures the editor DOM (an external system) to place the floating widget
     computePosition()
     const subs = [
       editor.onDidScrollChange(computePosition),
@@ -106,10 +115,17 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
   }, [editor, computePosition])
 
   // Focus the input on open.
-  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   // Abort any in-flight request if the widget unmounts.
-  useEffect(() => () => { abortRef.current?.abort() }, [])
+  useEffect(
+    () => () => {
+      abortRef.current?.abort()
+    },
+    [],
+  )
 
   const close = useCallback(() => {
     abortRef.current?.abort()
@@ -134,8 +150,10 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
       const from = Math.max(1, anchor.range.startLineNumber - 30)
       const to = Math.min(total, anchor.range.endLineNumber + 30)
       documentContext = model.getValueInRange({
-        startLineNumber: from, startColumn: 1,
-        endLineNumber: to, endColumn: model.getLineMaxColumn(to),
+        startLineNumber: from,
+        startColumn: 1,
+        endLineNumber: to,
+        endColumn: model.getLineMaxColumn(to),
       })
     }
 
@@ -156,8 +174,12 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
       setResult(text)
     } catch (e) {
       const msg = aiErrorMessage(e, t)
-      if (msg) { setError(msg); setResult(null) }
-      else { setResult(null) } // silent abort
+      if (msg) {
+        setError(msg)
+        setResult(null)
+      } else {
+        setResult(null)
+      } // silent abort
     } finally {
       setStreaming(false)
       abortRef.current = null
@@ -168,24 +190,40 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
   const accept = useCallback(() => {
     if (result == null) return
     editor.focus()
-    editor.executeEdits("cmdk-edit", [{ range: anchor.range, text: result, forceMoveMarkers: true }])
+    editor.executeEdits("cmdk-edit", [
+      { range: anchor.range, text: result, forceMoveMarkers: true },
+    ])
     onClose()
   }, [editor, anchor, result, onClose])
 
-  const onInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Escape") { e.preventDefault(); close(); return }
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      void run()
-    }
-  }, [run, close])
+  const onInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        close()
+        return
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        void run()
+      }
+    },
+    [run, close],
+  )
 
-  const onContainerKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape") { e.preventDefault(); close() }
-  }, [close])
+  const onContainerKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        close()
+      }
+    },
+    [close],
+  )
 
   const diff = useMemo(
-    () => (result && !streaming && anchor.hasSelection ? tinyDiff(anchor.selectionText, result) : null),
+    () =>
+      result && !streaming && anchor.hasSelection ? tinyDiff(anchor.selectionText, result) : null,
     [result, streaming, anchor],
   )
 
@@ -198,7 +236,7 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
       className="cmdk-edit"
       style={{ top: pos.top, left: pos.left }}
       role="dialog"
-      aria-label="Ctrl+K"
+      aria-label={t.ai.cmdk.dialogLabel}
       onKeyDown={onContainerKeyDown}
     >
       <div className="cmdk-edit-row">
@@ -213,11 +251,24 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
           disabled={streaming}
         />
         {!streaming && result == null && (
-          <button className="cmdk-edit-btn cmdk-edit-btn-primary" onMouseDown={(e) => e.preventDefault()} onClick={() => void run()} disabled={!instruction.trim()}>
+          <button
+            className="cmdk-edit-btn cmdk-edit-btn-primary"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => void run()}
+            disabled={!instruction.trim()}
+          >
             {t.ai.cmdk.submit}
           </button>
         )}
-        <button className="cmdk-edit-btn" onMouseDown={(e) => e.preventDefault()} onClick={close} title={t.ai.cmdk.cancel}>✕</button>
+        <button
+          className="cmdk-edit-btn"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={close}
+          title={t.ai.cmdk.cancel}
+          aria-label={t.ai.cmdk.cancel}
+        >
+          <Icon icon={X} size={14} />
+        </button>
       </div>
 
       {streaming && (
@@ -232,18 +283,35 @@ export default function CmdKEdit({ settings, editor, anchor, onClose }: CmdKEdit
         <div className="cmdk-edit-proposal">
           {diff ? (
             <div className="cmdk-edit-diff">
-              <div className="cmdk-edit-diff-old"><span className="cmdk-edit-diff-label">{t.ai.cmdk.original}</span><del>{diff.removed}</del></div>
-              <div className="cmdk-edit-diff-new"><span className="cmdk-edit-diff-label">{t.ai.cmdk.proposed}</span><ins>{diff.added}</ins></div>
+              <div className="cmdk-edit-diff-old">
+                <span className="cmdk-edit-diff-label">{t.ai.cmdk.original}</span>
+                <del>{diff.removed}</del>
+              </div>
+              <div className="cmdk-edit-diff-new">
+                <span className="cmdk-edit-diff-label">{t.ai.cmdk.proposed}</span>
+                <ins>{diff.added}</ins>
+              </div>
             </div>
           ) : (
-            <pre className="cmdk-edit-preview">{result || (streaming ? "" : t.ai.cmdk.emptyResult)}</pre>
+            <pre className="cmdk-edit-preview">
+              {result || (streaming ? "" : t.ai.cmdk.emptyResult)}
+            </pre>
           )}
           {!streaming && (
             <div className="cmdk-edit-actions">
-              <button className="cmdk-edit-btn cmdk-edit-btn-primary" onMouseDown={(e) => e.preventDefault()} onClick={accept} disabled={!result}>
+              <button
+                className="cmdk-edit-btn cmdk-edit-btn-primary"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={accept}
+                disabled={!result}
+              >
                 {t.ai.cmdk.accept}
               </button>
-              <button className="cmdk-edit-btn" onMouseDown={(e) => e.preventDefault()} onClick={close}>
+              <button
+                className="cmdk-edit-btn"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={close}
+              >
                 {t.ai.cmdk.reject}
               </button>
             </div>

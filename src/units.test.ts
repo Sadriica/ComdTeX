@@ -80,7 +80,9 @@ describe("numberForPreview", () => {
 describe("shorthands through the preprocessor", () => {
   it("si() renders for the preview and exports as siunitx", () => {
     expect(preprocess("$si(9.81, m/s^2)$")).toContain("9.81\\,\\mathrm{m\\,s^{-2}}")
-    expect(preprocess("$si(9.81, m/s^2)$", "tex")).toContain("\\qty{9.81}{\\meter\\per\\second\\squared}")
+    expect(preprocess("$si(9.81, m/s^2)$", "tex")).toContain(
+      "\\qty{9.81}{\\meter\\per\\second\\squared}",
+    )
   })
 
   it("ce() is identical on both targets (KaTeX ships mhchem)", () => {

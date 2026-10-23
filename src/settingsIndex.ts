@@ -1,6 +1,6 @@
 // Finding a setting without knowing which tab it lives in.
 //
-// Settings holds 34 options across seven tabs, and the tabs are grouped by
+// Settings holds 35 options across seven tabs, and the tabs are grouped by
 // what the option belongs to, not by the word someone has in their head. A
 // person looking for "autosave" should not have to open Editor, Preview and
 // General to discover it. This is the list the search box reads: one entry
@@ -12,7 +12,7 @@
 import type { T } from "./i18n"
 
 export type SettingsSectionId =
-  | "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "sync" | "ai"
+  "general" | "editor" | "preview" | "dailyNotes" | "pdf" | "sync" | "ai"
 
 export interface SettingsEntry {
   /** The settings key the row edits; also its `data-setting` anchor. */
@@ -43,6 +43,7 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "syncScroll", section: "preview", label: (t) => t.settings.syncScroll },
   { id: "mathPreview", section: "preview", label: (t) => t.settings.mathPreview },
   { id: "previewTheme", section: "preview", label: (t) => t.settings.previewTheme },
+  { id: "documentStyle", section: "preview", label: (t) => t.settings.documentStyle },
 
   { id: "dailyNotesEnabled", section: "dailyNotes", label: (t) => t.settings.dailyNotesEnabled },
   { id: "dailyNotesFolder", section: "dailyNotes", label: (t) => t.settings.dailyNotesFolder },
@@ -51,9 +52,18 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "useWasmTex", section: "pdf", label: (t) => t.settings.useWasmTex },
   { id: "texliveUrl", section: "pdf", label: (t) => t.settings.texliveUrl },
   { id: "autoRebuildPdf", section: "pdf", label: (t) => t.settings.autoRebuildPdf },
+  { id: "pdfDarkMode", section: "pdf", label: (t) => t.settings.pdfDarkMode },
 
-  { id: "cloudSyncBannerEnabled", section: "sync", label: (t) => t.cloudSync.settings.bannerEnabled },
-  { id: "cloudSyncDetectEnabled", section: "sync", label: (t) => t.cloudSync.settings.detectEnabled },
+  {
+    id: "cloudSyncBannerEnabled",
+    section: "sync",
+    label: (t) => t.cloudSync.settings.bannerEnabled,
+  },
+  {
+    id: "cloudSyncDetectEnabled",
+    section: "sync",
+    label: (t) => t.cloudSync.settings.detectEnabled,
+  },
 
   { id: "aiEnabled", section: "ai", label: (t) => t.aiSettings.enabled },
   { id: "aiProviderId", section: "ai", label: (t) => t.aiSettings.provider },

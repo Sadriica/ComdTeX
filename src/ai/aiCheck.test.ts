@@ -9,7 +9,7 @@ describe("classifyAiFailure", () => {
     for (const msg of [
       "Anthropic error 401: invalid x-api-key",
       "OpenAI 403 Forbidden",
-      "{\"error\":{\"message\":\"Incorrect API key provided\",\"code\":\"invalid_api_key\"}}",
+      '{"error":{"message":"Incorrect API key provided","code":"invalid_api_key"}}',
       "authentication_error: your credential is expired",
     ]) {
       expect(classifyAiFailure(msg)).toBe("unauthorized")

@@ -71,7 +71,7 @@ describe("parseLatexStderr", () => {
     expect(diags[0].severity).toBe("error")
     expect(diags[0].message).toBe("I can't find file `myimage.png'.")
     expect(diags[0].suggestion).toBe(
-      "Missing package file 'myimage.png'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command."
+      "Missing package file 'myimage.png'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
     )
   })
 
@@ -88,7 +88,8 @@ describe("parseLatexStderr", () => {
     expect(diags[0]).toEqual({
       severity: "error",
       message: "File `foo.sty' not found.",
-      suggestion: "Missing package file 'foo.sty'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
+      suggestion:
+        "Missing package file 'foo.sty'. With the built-in WASM engine this usually means the TeX package server is unreachable (offline or server down): check your connection, set a mirror in Settings → PDF, or install tectonic for offline compiles. With a local toolchain, install the package or remove the \\usepackage command.",
     })
   })
 
@@ -98,7 +99,7 @@ describe("parseLatexStderr", () => {
     expect(diags).toHaveLength(1)
     expect(diags[0].message).toBe("Environment tabular2 undefined.")
     expect(diags[0].suggestion).toBe(
-      "Unknown environment 'tabular2'. Check spelling or add the required package."
+      "Unknown environment 'tabular2'. Check spelling or add the required package.",
     )
   })
 
@@ -191,12 +192,15 @@ describe("parseLatexStderr", () => {
     const stderr = [first, "adable: Metric (TFM) file or installed font not found.", ""].join("\n")
     const diags = parseLatexStderr(stderr)
     expect(diags).toHaveLength(1)
-    expect(diags[0].message).toContain("not loadable: Metric (TFM) file or installed font not found")
+    expect(diags[0].message).toContain(
+      "not loadable: Metric (TFM) file or installed font not found",
+    )
     expect(diags[0].message).not.toMatch(/not lo$/)
   })
 
   it("suggests installing the TeX fonts package on font-not-loadable errors", () => {
-    const stderr = "! Font TU/lmr/m/n/10 not loadable: Metric (TFM) file or installed font not found."
+    const stderr =
+      "! Font TU/lmr/m/n/10 not loadable: Metric (TFM) file or installed font not found."
     const diags = parseLatexStderr(stderr)
     expect(diags[0].severity).toBe("error")
     expect(diags[0].suggestion).toContain("texlive-fontsrecommended")
@@ -226,7 +230,7 @@ describe("formatDiagnosticsText", () => {
       "Error (line 10): Undefined control sequence\n" +
         "  Context: \\foo\n" +
         "  → Unknown command \\foo: check spelling or define it in macros.md\n\n" +
-        "Warning: Line too wide (12.3pt overflow)"
+        "Warning: Line too wide (12.3pt overflow)",
     )
   })
 

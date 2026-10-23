@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { syncPosture, needsAttention, nextStep } from "./syncPosture"
 
-const facts = (isRepo: boolean, hasRemote: boolean, inCloud: boolean) => ({ isRepo, hasRemote, inCloud })
+const facts = (isRepo: boolean, hasRemote: boolean, inCloud: boolean) => ({
+  isRepo,
+  hasRemote,
+  inCloud,
+})
 
 describe("syncPosture", () => {
   it("reports the strong case when the vault is versioned and shared", () => {

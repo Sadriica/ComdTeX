@@ -16,10 +16,13 @@ import markPlugin from "markdown-it-mark"
 type Token = any
 import { preprocess } from "./preprocessor"
 import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
+import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
+import { parseCitationGroup } from "./bibtex"
+import { resolveDocLanguage } from "./docLang"
 
 interface LatexMacro {
   command: string
@@ -58,13 +61,25 @@ function hlColorFor(cls: string): string {
 
 /** `> [!type] Title` callout kind → tcolorbox accent color. */
 const CALLOUT_COLORS: Record<string, string> = {
-  note: "blue", info: "blue",
-  tip: "teal", hint: "teal",
-  warning: "orange", caution: "orange", attention: "orange", important: "orange",
-  danger: "red", failure: "red", error: "red",
-  success: "green", check: "green", done: "green",
-  question: "purple", help: "purple", faq: "purple",
-  quote: "gray", cite: "gray",
+  note: "blue",
+  info: "blue",
+  tip: "teal",
+  hint: "teal",
+  warning: "orange",
+  caution: "orange",
+  attention: "orange",
+  important: "orange",
+  danger: "red",
+  failure: "red",
+  error: "red",
+  success: "green",
+  check: "green",
+  done: "green",
+  question: "purple",
+  help: "purple",
+  faq: "purple",
+  quote: "gray",
+  cite: "gray",
 }
 function calloutColorFor(type: string): string {
   return CALLOUT_COLORS[type] ?? "gray"
@@ -72,18 +87,121 @@ function calloutColorFor(type: string): string {
 
 // ── LaTeX escaping ────────────────────────────────────────────────────────────
 
+const TEX_ESCAPES: Record<string, string> = {
+  "\\": "\\textbackslash{}",
+  "&": "\\&",
+  "%": "\\%",
+  $: "\\$",
+  "#": "\\#",
+  _: "\\_",
+  "{": "\\{",
+  "}": "\\}",
+  "~": "\\textasciitilde{}",
+  "^": "\\textasciicircum{}",
+}
+
+/** Single pass over a char map: a sequential replace chain would re-escape the
+ *  braces of the `\textbackslash{}` it had just produced. */
 export function escTex(text: string): string {
-  return text
-    .replace(/\\/g, "\\textbackslash{}")
-    .replace(/&/g, "\\&")
-    .replace(/%/g, "\\%")
-    .replace(/\$/g, "\\$")
-    .replace(/#/g, "\\#")
-    .replace(/_/g, "\\_")
-    .replace(/\{/g, "\\{")
-    .replace(/\}/g, "\\}")
-    .replace(/~/g, "\\textasciitilde{}")
-    .replace(/\^/g, "\\textasciicircum{}")
+  return text.replace(/[\\&%$#_{}~^]/g, (ch) => TEX_ESCAPES[ch])
+}
+
+/** Escape a URL for hyperref's `\href` first argument. Backslash and braces
+ *  are percent-encoded (they would unbalance or inject); the rest are escaped. */
+export function escHref(url: string): string {
+  return url
+    .replace(
+      /[\\{}]/g,
+      (ch) => "\\%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"),
+    )
+    .replace(/(?<!\\)[%#&~_^$]/g, (ch) => "\\" + ch)
+}
+
+// Languages the `listings` package ships definitions for, keyed by the
+// lowercase aliases people write after the fence. Anything not listed gets no
+// `language=` option: an unknown one is a hard package error, which aborts a
+// -halt-on-error PDF export.
+const LISTINGS_LANGS: Record<string, string> = {
+  c: "C",
+  "c++": "C++",
+  cpp: "C++",
+  cxx: "C++",
+  java: "Java",
+  python: "Python",
+  py: "Python",
+  python3: "Python",
+  bash: "bash",
+  sh: "sh",
+  shell: "sh",
+  zsh: "sh",
+  ksh: "ksh",
+  csh: "csh",
+  html: "HTML",
+  xml: "XML",
+  xslt: "XSLT",
+  sql: "SQL",
+  r: "R",
+  ruby: "Ruby",
+  rb: "Ruby",
+  perl: "Perl",
+  pl: "Perl",
+  php: "PHP",
+  haskell: "Haskell",
+  hs: "Haskell",
+  lua: "Lua",
+  matlab: "Matlab",
+  octave: "Octave",
+  tex: "TeX",
+  latex: "TeX",
+  make: "make",
+  makefile: "make",
+  fortran: "Fortran",
+  pascal: "Pascal",
+  prolog: "Prolog",
+  lisp: "Lisp",
+  tcl: "tcl",
+  awk: "Awk",
+  ml: "ML",
+  ocaml: "Caml",
+  caml: "Caml",
+  ada: "Ada",
+  cobol: "Cobol",
+  erlang: "erlang",
+  gnuplot: "Gnuplot",
+  mathematica: "Mathematica",
+  basic: "Basic",
+  vhdl: "VHDL",
+  verilog: "Verilog",
+  postscript: "PostScript",
+  scilab: "Scilab",
+  sas: "SAS",
+  delphi: "Delphi",
+}
+
+/** Map a fence info string to a listings language name, or null. */
+export function listingsLanguage(info: string): string | null {
+  const first = info.trim().split(/[\s{]/)[0]?.toLowerCase() ?? ""
+  return Object.prototype.hasOwnProperty.call(LISTINGS_LANGS, first) ? LISTINGS_LANGS[first] : null
+}
+
+/** A fenced code block as LaTeX. A body containing the environment's own end
+ *  delimiter would break out of it into live LaTeX (`\input` and friends), so
+ *  pick an environment whose delimiter is absent, and as a last resort defuse
+ *  the delimiter. */
+export function codeBlockToTex(body: string, info = ""): string {
+  const text = body.endsWith("\n") ? body : body + "\n"
+  const END_LST = "\\end{lstlisting}"
+  const END_VERB = "\\end{verbatim}"
+  if (!text.includes(END_LST)) {
+    const lang = listingsLanguage(info)
+    const opt = lang ? `[language=${lang}]` : ""
+    return `\\begin{lstlisting}${opt}\n${text}\\end{lstlisting}\n`
+  }
+  if (!text.includes(END_VERB)) {
+    return `\\begin{verbatim}\n${text}\\end{verbatim}\n`
+  }
+  const defused = text.split(END_LST).join("\\end {lstlisting}")
+  return `\\begin{lstlisting}\n${defused}\\end{lstlisting}\n`
 }
 
 function refToTex(prefix: string, id: string): string {
@@ -157,21 +275,35 @@ function textRefsToTex(text: string): string {
   // Cross-file @refs come before local ones, otherwise the local pattern
   // matches the INNER `@def:x` of `@doc@def:x` and emits a dangling
   // `\ref{def:x}` while leaving `@doc` as escaped prose.
-  const re = /\[@([\w:.-]+)(?:,\s*([^\]]*))?\]|@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
+  const re =
+    /\[(@[^\]\n]*)\]|@(?:\[([^\]\n]+)\]|([A-Za-z0-9_./-]+))@([a-zA-Z]+):([\w.-]+)|@([a-zA-Z]+):([\w-]+(?:\.[\w-]+)*)/g
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
+    const items = m[1] !== undefined ? parseCitationGroup(m[1]) : null
+    if (m[1] !== undefined && !items) {
+      // Not a citation: leave the bracket to the plain-text escape and keep
+      // scanning inside it, so a `@ref` within it is still found.
+      re.lastIndex = m.index + 1
+      continue
+    }
     out.push(escTex(text.slice(last, m.index)))
-    if (m[1] !== undefined) {
+    if (items) {
       // `[@key, p. 321]` becomes \cite[p. 321]{key}: LaTeX's own way of
       // carrying a locator, so every citation style renders it correctly.
-      const note = m[2]?.trim()
-      out.push(note ? `\\cite[${escTex(note)}]{${m[1]}}` : `\\cite{${m[1]}}`)
+      // `[@a; @b]` becomes one \cite{a,b}; LaTeX takes a single locator for
+      // the whole group, so several notes are joined.
+      const note = items
+        .map((i) => i.note)
+        .filter(Boolean)
+        .join("; ")
+      const keys = items.map((i) => i.key).join(",")
+      out.push(note ? `\\cite[${escTex(note)}]{${keys}}` : `\\cite{${keys}}`)
       citedInLastPass = true
-    } else if (m[5] !== undefined) {
-      out.push(crossRefToTex((m[3] ?? m[4] ?? "").trim(), m[5], m[6]))
+    } else if (m[4] !== undefined) {
+      out.push(crossRefToTex((m[2] ?? m[3] ?? "").trim(), m[4], m[5]))
     } else {
-      out.push(refToTex(m[7], m[8]))
+      out.push(refToTex(m[6], m[7]))
     }
     last = m.index + m[0].length
   }
@@ -189,9 +321,11 @@ function textToTex(text: string): string {
   while ((m = re.exec(text)) !== null) {
     parts.push(textRefsToTex(text.slice(last, m.index)))
     if (m[1] !== undefined) {
-      parts.push(m[2]
-        ? `\\begin{equation}\n${m[1].trim()}\n\\label{${m[2]}}\n\\end{equation}`
-        : `\\[\n${m[1].trim()}\n\\]`)
+      parts.push(
+        m[2]
+          ? `\\begin{equation}\n${m[1].trim()}\n\\label{${m[2]}}\n\\end{equation}`
+          : `\\[\n${m[1].trim()}\n\\]`,
+      )
     } else {
       parts.push(`$${m[3]}$`)
     }
@@ -217,21 +351,49 @@ function inlineToTex(tokens: Token[], footnotes: Map<number, string> = new Map()
   let out = ""
   for (const tok of tokens) {
     switch (tok.type) {
-      case "text":         out += textToTex(tok.content); break
-      case "softbreak":    out += "\n"; break
-      case "hardbreak":    out += "\\\\\n"; break
-      case "code_inline":  out += `\\texttt{${escTex(tok.content)}}`; break
-      case "strong_open":  out += "\\textbf{"; break
-      case "strong_close": out += "}"; break
-      case "em_open":       out += "\\textit{"; break
-      case "em_close":      out += "}"; break
-      case "s_open":        out += "\\sout{"; break
-      case "s_close":       out += "}"; break
+      case "text":
+        out += textToTex(tok.content)
+        break
+      case "softbreak":
+        out += "\n"
+        break
+      case "hardbreak":
+        out += "\\\\\n"
+        break
+      case "code_inline":
+        out += `\\texttt{${escTex(tok.content)}}`
+        break
+      case "strong_open":
+        out += "\\textbf{"
+        break
+      case "strong_close":
+        out += "}"
+        break
+      case "em_open":
+        out += "\\textit{"
+        break
+      case "em_close":
+        out += "}"
+        break
+      case "s_open":
+        out += "\\sout{"
+        break
+      case "s_close":
+        out += "}"
+        break
       // markdown-it-mark: `==text==` → \hl{} (soul package).
-      case "mark_open":     out += "\\hl{"; break
-      case "mark_close":    out += "}"; break
-      case "link_open":    out += `\\href{${tok.attrGet("href") ?? ""}}{`; break
-      case "link_close":   out += "}"; break
+      case "mark_open":
+        out += "\\hl{"
+        break
+      case "mark_close":
+        out += "}"
+        break
+      case "link_open":
+        out += `\\href{${escHref(tok.attrGet("href") ?? "")}}{`
+        break
+      case "link_close":
+        out += "}"
+        break
       case "image":
         {
           const src = tok.attrGet("src") ?? ""
@@ -245,7 +407,9 @@ function inlineToTex(tokens: Token[], footnotes: Map<number, string> = new Map()
             alt ? `\\caption{${escTex(alt)}}` : "",
             label ? `\\label{${label}}` : "",
             "\\end{figure}",
-          ].filter(Boolean).join("\n")
+          ]
+            .filter(Boolean)
+            .join("\n")
         }
         break
       // `[^id]` markers become real footnotes; the definition body was
@@ -271,7 +435,11 @@ function inlineToTex(tokens: Token[], footnotes: Map<number, string> = new Map()
 
 // ── Block tokens → LaTeX ──────────────────────────────────────────────────────
 
-function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: Map<number, string> = new Map()): string {
+function tokensToTex(
+  tokens: Token[],
+  envSlots: Map<string, string>,
+  footnotes: Map<number, string> = new Map(),
+): string {
   const out: string[] = []
   let i = 0
 
@@ -295,17 +463,26 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: 
         const label = /\s*\{#(sec:[\w:.-]+)\}\s*$/.exec(rawText)?.[1]
         const cleanChildren = label
           ? (inline.children ?? []).map((child: Token) =>
-              child.type === "text" ? { ...child, content: child.content.replace(/\s*\{#sec:[\w:.-]+\}\s*$/, "") } : child)
+              child.type === "text"
+                ? { ...child, content: child.content.replace(/\s*\{#sec:[\w:.-]+\}\s*$/, "") }
+                : child,
+            )
           : (inline.children ?? [])
-        out.push(`\\${cmd}{${inlineToTex(cleanChildren, footnotes)}}${label ? `\n\\label{${label}}` : ""}\n`)
+        out.push(
+          `\\${cmd}{${inlineToTex(cleanChildren, footnotes)}}${label ? `\n\\label{${label}}` : ""}\n`,
+        )
         i += 2
         break
       }
-      case "heading_close": break
+      case "heading_close":
+        break
 
       // ── Paragraphs ────────────────────────────────────────────────────────
-      case "paragraph_open": break
-      case "paragraph_close": out.push(""); break
+      case "paragraph_open":
+        break
+      case "paragraph_close":
+        out.push("")
+        break
 
       case "inline": {
         const content = restoreEnv(inlineToTex(tok.children ?? [], footnotes))
@@ -314,30 +491,39 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: 
       }
 
       // ── Lists ─────────────────────────────────────────────────────────────
-      case "bullet_list_open":   out.push("\\begin{itemize}"); break
-      case "bullet_list_close":  out.push("\\end{itemize}\n"); break
-      case "ordered_list_open":  out.push("\\begin{enumerate}"); break
-      case "ordered_list_close": out.push("\\end{enumerate}\n"); break
-      case "list_item_open":     out.push("\\item "); break
-      case "list_item_close":    break
+      case "bullet_list_open":
+        out.push("\\begin{itemize}")
+        break
+      case "bullet_list_close":
+        out.push("\\end{itemize}\n")
+        break
+      case "ordered_list_open":
+        out.push("\\begin{enumerate}")
+        break
+      case "ordered_list_close":
+        out.push("\\end{enumerate}\n")
+        break
+      case "list_item_open":
+        out.push("\\item ")
+        break
+      case "list_item_close":
+        break
 
       // ── Blockquote ────────────────────────────────────────────────────────
-      case "blockquote_open":  out.push("\\begin{quote}"); break
-      case "blockquote_close": out.push("\\end{quote}\n"); break
+      case "blockquote_open":
+        out.push("\\begin{quote}")
+        break
+      case "blockquote_close":
+        out.push("\\end{quote}\n")
+        break
 
       // ── Code ──────────────────────────────────────────────────────────────
       case "code_block":
-        out.push(`\\begin{verbatim}\n${tok.content}\\end{verbatim}\n`)
+        out.push(codeBlockToTex(tok.content))
         break
-      case "fence": {
-        const lang = tok.info.trim()
-        if (lang) {
-          out.push(`\\begin{lstlisting}[language=${lang}]\n${tok.content}\\end{lstlisting}\n`)
-        } else {
-          out.push(`\\begin{lstlisting}\n${tok.content}\\end{lstlisting}\n`)
-        }
+      case "fence":
+        out.push(codeBlockToTex(tok.content, tok.info))
         break
-      }
 
       // ── HR ────────────────────────────────────────────────────────────────
       case "hr":
@@ -369,9 +555,10 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: 
 
         if (rows.length > 0) {
           const labelToken = tokens[j + 2]
-          const label = labelToken?.type === "inline"
-            ? /^\{#(tbl:[\w:.-]+)\}$/.exec(labelToken.content.trim())?.[1]
-            : undefined
+          const label =
+            labelToken?.type === "inline"
+              ? /^\{#(tbl:[\w:.-]+)\}$/.exec(labelToken.content.trim())?.[1]
+              : undefined
           const cols = Math.max(...rows.map((r) => r.length))
           const colSpec = Array(cols).fill("l").join(" | ")
           if (label) out.push("\\begin{table}[htbp]\n\\centering")
@@ -397,9 +584,11 @@ function tokensToTex(tokens: Token[], envSlots: Map<string, string>, footnotes: 
         i = j
         break
       }
-      case "table_close": break
+      case "table_close":
+        break
 
-      default: break
+      default:
+        break
     }
 
     i++
@@ -484,7 +673,7 @@ function extractCallouts(text: string): { text: string; slots: Map<string, strin
 
     const type = opener[1].toLowerCase()
     const titleRest = opener[2].trim()
-    const title = titleRest || (type.charAt(0).toUpperCase() + type.slice(1))
+    const title = titleRest || type.charAt(0).toUpperCase() + type.slice(1)
 
     const bodyLines: string[] = []
     i++
@@ -495,11 +684,14 @@ function extractCallouts(text: string): { text: string; slots: Map<string, strin
 
     const innerTex = mdToTex(bodyLines.join("\n").trim())
     const key = `CALLOUT${n++}`
-    slots.set(key, [
-      `\\begin{tcolorbox}[colback=${calloutColorFor(type)}!10,colframe=${calloutColorFor(type)}!60!black,title=${escTex(title)}]`,
-      innerTex,
-      "\\end{tcolorbox}",
-    ].join("\n"))
+    slots.set(
+      key,
+      [
+        `\\begin{tcolorbox}[colback=${calloutColorFor(type)}!10,colframe=${calloutColorFor(type)}!60!black,title=${escTex(title)}]`,
+        innerTex,
+        "\\end{tcolorbox}",
+      ].join("\n"),
+    )
     out.push(`\x02${key}\x03`)
   }
 
@@ -524,7 +716,7 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
       const key = `ENV${n++}`
       slots.set(key, latexBlock)
       return `\x02${key}\x03`
-    }
+    },
   )
 
   return { text: result, slots }
@@ -571,8 +763,8 @@ export function detectSciPackages(texBody: string): SciPackages {
 
 /** Which text-feature packages the generated body actually needs. */
 export interface FeaturePackages {
-  callouts: boolean       // tcolorbox, for `> [!note]` and friends
-  soulHighlight: boolean  // soul, for `==highlight==` → \hl{}
+  callouts: boolean // tcolorbox, for `> [!note]` and friends
+  soulHighlight: boolean // soul, for `==highlight==` → \hl{}
   colorHighlight: boolean // xcolor, for `<mark class="hl-…">` → \colorbox{}
 }
 
@@ -679,9 +871,7 @@ function buildJournalPreamble(
     // deliberately not loaded here (the classic article export keeps it).
     "\\usepackage[T1]{fontenc}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
-    cls.theoremPolicy === "full"
-      ? buildTheoremPreamble()
-      : THEOREM_SUPPLEMENT,
+    cls.theoremPolicy === "full" ? buildTheoremPreamble() : THEOREM_SUPPLEMENT,
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
   ]
@@ -719,7 +909,14 @@ function buildJournalPreamble(
 
 // ── Document template ─────────────────────────────────────────────────────────
 
-function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean, sci: SciPackages, natbib: string | null, features: FeaturePackages): string {
+function buildPreamble(
+  macros: LatexMacro[],
+  hasCode: boolean,
+  hasLinks: boolean,
+  sci: SciPackages,
+  natbib: string | null,
+  features: FeaturePackages,
+): string {
   const lines = [
     "\\documentclass[12pt,a4paper]{article}",
     "\\usepackage[utf8]{inputenc}",
@@ -732,7 +929,7 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
     "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
     buildTheoremPreamble(),
-    "\\usepackage{ulem}",   // \sout
+    "\\usepackage{ulem}", // \sout
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
   ]
@@ -757,14 +954,16 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
 
   if (hasCode) {
     lines.push("\\usepackage{listings}")
-    lines.push([
-      "\\lstset{",
-      "  basicstyle=\\ttfamily\\small,",
-      "  breaklines=true,",
-      "  frame=single,",
-      "  backgroundcolor=\\color{gray!10}",
-      "}",
-    ].join("\n"))
+    lines.push(
+      [
+        "\\lstset{",
+        "  basicstyle=\\ttfamily\\small,",
+        "  breaklines=true,",
+        "  frame=single,",
+        "  backgroundcolor=\\color{gray!10}",
+        "}",
+      ].join("\n"),
+    )
   }
 
   if (hasLinks) {
@@ -772,11 +971,10 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
   }
 
   // User macros
-  const macroLines = macros.map(
-    ({ command, arity, definition }) =>
-      arity > 0
-        ? `\\newcommand{${command}}[${arity}]{${definition}}`
-        : `\\newcommand{${command}}{${definition}}`
+  const macroLines = macros.map(({ command, arity, definition }) =>
+    arity > 0
+      ? `\\newcommand{${command}}[${arity}]{${definition}}`
+      : `\\newcommand{${command}}{${definition}}`,
   )
   if (macroLines.length > 0) {
     lines.push("", "% Macros de usuario", ...macroLines)
@@ -787,8 +985,18 @@ function buildPreamble(macros: LatexMacro[], hasCode: boolean, hasLinks: boolean
 
 /** Allowed Reveal.js themes (per Reveal distribution). */
 export const REVEAL_THEMES = [
-  "black", "white", "league", "beige", "night", "serif",
-  "simple", "solarized", "moon", "dracula", "sky", "blood",
+  "black",
+  "white",
+  "league",
+  "beige",
+  "night",
+  "serif",
+  "simple",
+  "solarized",
+  "moon",
+  "dracula",
+  "sky",
+  "blood",
 ] as const
 
 export type RevealTheme = (typeof REVEAL_THEMES)[number]
@@ -801,6 +1009,29 @@ function pickRevealTheme(raw: unknown): RevealTheme {
     : "black"
 }
 
+/** Split on a `---` line, but never inside a fenced code block. */
+export function splitSlides(body: string): string[] {
+  const slides: string[] = []
+  let cur: string[] = []
+  let fence: { ch: string; len: number } | null = null
+  for (const line of body.split("\n")) {
+    const f = /^ {0,3}(`{3,}|~{3,})/.exec(line)
+    if (f) {
+      if (!fence) fence = { ch: f[1][0], len: f[1].length }
+      else if (f[1][0] === fence.ch && f[1].length >= fence.len && /^ {0,3}[`~]+\s*$/.test(line))
+        fence = null
+    }
+    if (!fence && line === "---") {
+      slides.push(cur.join("\n"))
+      cur = []
+    } else {
+      cur.push(line)
+    }
+  }
+  slides.push(cur.join("\n"))
+  return slides
+}
+
 export function exportReveal(rawMarkdown: string, title: string): string {
   // Keep marks are editor-only: collapse them to plain text so no `^^`
   // ever reaches a slide. See keepMarks.ts.
@@ -808,19 +1039,25 @@ export function exportReveal(rawMarkdown: string, title: string): string {
   // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
   const parsed = extractFrontmatter(markdown)
   const body = parsed?.content ?? markdown
-  const fmTheme = parsed?.data
-    ? (parsed.data["reveal_theme"] ?? parsed.data["theme"])
-    : undefined
+  const fmTheme = parsed?.data ? (parsed.data["reveal_theme"] ?? parsed.data["theme"]) : undefined
   const theme = pickRevealTheme(fmTheme)
 
-  const slides = body.split(/\n---\n/)
+  // Reveal's markdown plugin has no `:::` syntax: number the environments and
+  // resolve their refs into plain blockquotes, as the other text exports do.
+  const docLang = resolveDocLanguage(parsed?.data)
+  const slides = splitSlides(
+    numberEnvironmentsForExport(body, "bold", undefined, undefined, docLang),
+  )
 
   // Guard against breaking out of the <textarea data-template> wrapper: a literal
   // </textarea> in slide content would end the template early. Reveal's markdown
   // plugin still parses the escaped form correctly.
-  const slideHtml = slides.map(slide =>
-    `  <section data-markdown>\n    <textarea data-template>\n${slide.trim().replace(/<\/textarea>/gi, "&lt;/textarea>")}\n    </textarea>\n  </section>`
-  ).join('\n')
+  const slideHtml = slides
+    .map(
+      (slide) =>
+        `  <section data-markdown>\n    <textarea data-template>\n${slide.trim().replace(/<\/textarea>/gi, "&lt;/textarea>")}\n    </textarea>\n  </section>`,
+    )
+    .join("\n")
 
   // `title` is the filename; escape so a crafted name can't inject markup.
   const safeTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -830,8 +1067,8 @@ export function exportReveal(rawMarkdown: string, title: string): string {
 <head>
   <meta charset="utf-8">
   <title>${safeTitle}</title>
-  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
-  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/${theme}.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.1.0/dist/theme/${theme}.css">
 </head>
 <body>
   <div class="reveal">
@@ -839,10 +1076,10 @@ export function exportReveal(rawMarkdown: string, title: string): string {
 ${slideHtml}
     </div>
   </div>
-  <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/markdown/markdown.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/highlight/highlight.js"></script>
-  <script src="https://unpkg.com/reveal.js/plugin/math/math.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.1.0/plugin/math/math.js"></script>
   <script>
     Reveal.initialize({
       hash: true,
@@ -853,7 +1090,20 @@ ${slideHtml}
 </html>`
 }
 
-export function exportToTex(rawInput: string, macrosText = "", title = "", author = "", frontmatter?: { headerLeft?: string; headerCenter?: string; headerRight?: string; footerLeft?: string; footerCenter?: string; footerRight?: string }): string {
+export function exportToTex(
+  rawInput: string,
+  macrosText = "",
+  title = "",
+  author = "",
+  frontmatter?: {
+    headerLeft?: string
+    headerCenter?: string
+    headerRight?: string
+    footerLeft?: string
+    footerCenter?: string
+    footerRight?: string
+  },
+): string {
   // Keep marks are editor-only: collapse them to plain text before the LaTeX
   // conversion. `stripKeepMarks` is math-aware, so a doubled caret inside a
   // superscript (`$x^{2^^3}$`) is left alone.
@@ -904,14 +1154,22 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
       : ""
 
   // Custom headers/footers using fancyhdr
-  const hasCustomHF = frontmatter && (frontmatter.headerLeft || frontmatter.headerCenter || frontmatter.headerRight || frontmatter.footerLeft || frontmatter.footerCenter || frontmatter.footerRight)
-  const hfPreamble = hasCustomHF ? `\n\\usepackage{fancyhdr}\n\\pagestyle{fancy}\n` +
-    (frontmatter!.headerLeft ? `\\fancyhead[L]{${escTex(frontmatter.headerLeft)}}\n` : "") +
-    (frontmatter!.headerCenter ? `\\fancyhead[C]{${escTex(frontmatter.headerCenter)}}\n` : "") +
-    (frontmatter!.headerRight ? `\\fancyhead[R]{${escTex(frontmatter.headerRight)}}\n` : "") +
-    (frontmatter!.footerLeft ? `\\fancyfoot[L]{${escTex(frontmatter.footerLeft)}}\n` : "") +
-    (frontmatter!.footerCenter ? `\\fancyfoot[C]{${escTex(frontmatter.footerCenter)}}\n` : "") +
-    (frontmatter!.footerRight ? `\\fancyfoot[R]{${escTex(frontmatter.footerRight)}}\n` : "")
+  const hasCustomHF =
+    frontmatter &&
+    (frontmatter.headerLeft ||
+      frontmatter.headerCenter ||
+      frontmatter.headerRight ||
+      frontmatter.footerLeft ||
+      frontmatter.footerCenter ||
+      frontmatter.footerRight)
+  const hfPreamble = hasCustomHF
+    ? `\n\\usepackage{fancyhdr}\n\\pagestyle{fancy}\n` +
+      (frontmatter!.headerLeft ? `\\fancyhead[L]{${escTex(frontmatter.headerLeft)}}\n` : "") +
+      (frontmatter!.headerCenter ? `\\fancyhead[C]{${escTex(frontmatter.headerCenter)}}\n` : "") +
+      (frontmatter!.headerRight ? `\\fancyhead[R]{${escTex(frontmatter.headerRight)}}\n` : "") +
+      (frontmatter!.footerLeft ? `\\fancyfoot[L]{${escTex(frontmatter.footerLeft)}}\n` : "") +
+      (frontmatter!.footerCenter ? `\\fancyfoot[C]{${escTex(frontmatter.footerCenter)}}\n` : "") +
+      (frontmatter!.footerRight ? `\\fancyfoot[R]{${escTex(frontmatter.footerRight)}}\n` : "")
     : ""
 
   return [
@@ -925,7 +1183,11 @@ export function exportToTex(rawInput: string, macrosText = "", title = "", autho
     // The vault's references.bib is the bibliography database; BibTeX reads
     // it from the same directory as the .tex, which is where every export
     // path writes both.
-    citedInLastPass ? `\n\\bibliographystyle{${bibStyleFor(citeStyle)}}\n\\bibliography{references}` : "",
+    citedInLastPass
+      ? `\n\\bibliographystyle{${bibStyleFor(citeStyle)}}\n\\bibliography{references}`
+      : "",
     "\\end{document}",
-  ].filter((l) => l !== undefined).join("\n")
+  ]
+    .filter((l) => l !== undefined)
+    .join("\n")
 }

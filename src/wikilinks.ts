@@ -1,11 +1,26 @@
 import type { FileNode } from "./types"
 
-/** Return a set of all file base-names (without extension) in the vault tree. */
+/**
+ * Return a set of all file base-names (without extension) in the vault tree.
+ * Trailing path forms (`notes/intro`, `physics/notes/intro`) are in the set
+ * too: the editor writes `[[physics/intro]]` when two notes share a name, and
+ * that link must not render as broken.
+ */
 export function getFileNameSet(tree: FileNode[]): Set<string> {
   const names = new Set<string>()
   const collect = (nodes: FileNode[]) => {
     for (const n of nodes) {
-      if (n.type === "file") names.add(n.name.replace(/\.[^.]+$/, "").toLowerCase())
+      if (n.type === "file") {
+        const stem = n.path
+          .replace(/\\/g, "/")
+          .replace(/\.[^./]+$/, "")
+          .toLowerCase()
+          .split("/")
+        for (let depth = 1; depth <= Math.min(stem.length, 4); depth++) {
+          names.add(stem.slice(-depth).join("/"))
+        }
+        names.add(n.name.replace(/\.[^.]+$/, "").toLowerCase())
+      }
       if (n.children) collect(n.children)
     }
   }
@@ -28,11 +43,19 @@ export function flatFiles(tree: FileNode[]): FileNode[] {
 
 /** Find a file node by base name (case-insensitive, ignores extension). */
 export function findByName(tree: FileNode[], name: string): FileNode | null {
+  // A path form (`physics/intro`) picks one of several same-named notes.
+  if (name.includes("/")) {
+    const byPath = findByVaultRelPath(tree, name)
+    if (byPath) return byPath
+  }
   const lower = name.toLowerCase()
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
       if (n.type === "file" && n.name.replace(/\.[^.]+$/, "").toLowerCase() === lower) return n
-      if (n.children) { const f = search(n.children); if (f) return f }
+      if (n.children) {
+        const f = search(n.children)
+        if (f) return f
+      }
     }
     return null
   }
@@ -47,9 +70,12 @@ export function findByName(tree: FileNode[], name: string): FileNode | null {
  * bare names ambiguously.
  */
 export function matchesVaultRelPath(filePath: string, relPath: string): boolean {
-  const norm = (s: string) => s.replace(/\\/g, "/").toLowerCase()
+  // NFC: macOS stores file names decomposed, a typed accent is composed.
+  const norm = (s: string) => s.replace(/\\/g, "/").normalize("NFC").toLowerCase()
   const file = norm(filePath).replace(/\.[^./]+$/, "")
-  const rel = norm(relPath.trim()).replace(/\.[^./]+$/, "").replace(/^\.?\//, "")
+  const rel = norm(relPath.trim())
+    .replace(/\.[^./]+$/, "")
+    .replace(/^\.?\//, "")
   if (!rel) return false
   return file === rel || file.endsWith(`/${rel}`)
 }
@@ -59,7 +85,10 @@ export function findByVaultRelPath(tree: FileNode[], relPath: string): FileNode 
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
       if (n.type === "file" && matchesVaultRelPath(n.path, relPath)) return n
-      if (n.children) { const f = search(n.children); if (f) return f }
+      if (n.children) {
+        const f = search(n.children)
+        if (f) return f
+      }
     }
     return null
   }
@@ -69,7 +98,11 @@ export function findByVaultRelPath(tree: FileNode[], relPath: string): FileNode 
 const WIKILINK_RE = /\[\[([^\]|#\n]+?)(?:#([^\]|]+?))?(?:\|([^\]\n]+?))?\]\]/g
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 /**

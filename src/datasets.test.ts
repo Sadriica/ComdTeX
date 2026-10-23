@@ -61,7 +61,10 @@ describe("loadDataset", () => {
     const { datasets } = parseDataBlocks(":::data{#data:g}\ngrowth.csv (A:B) (1:2)\n:::")
     const loaded = loadDataset(datasets.get("data:g")!, resolver)
     expect(loaded?.header).toEqual(["time", "S1"])
-    expect(loaded?.rows).toEqual([["0", "0.10"], ["2", "0.28"]])
+    expect(loaded?.rows).toEqual([
+      ["0", "0.10"],
+      ["2", "0.28"],
+    ])
   })
 
   it("returns null for a missing file instead of throwing", () => {
@@ -120,7 +123,10 @@ describe("resolveBlockSource", () => {
     )
     expect(error).toBeNull()
     expect(data?.header).toEqual(["time", "S2"])
-    expect(data?.rows).toEqual([["0", "0.12"], ["2", "0.31"]])
+    expect(data?.rows).toEqual([
+      ["0", "0.12"],
+      ["2", "0.31"],
+    ])
   })
 
   it("returns the whole dataset when the block adds no selection", () => {
@@ -168,7 +174,8 @@ describe("end to end through the document resolver", () => {
   })
 
   it("a generated table can carry a label and stay citable", () => {
-    const doc = ":::data{#data:g}\ngrowth.csv\n:::\n\n:::csv[T]{#tbl:growth}\n@data:g (A:B) (1)\n:::"
+    const doc =
+      ":::data{#data:g}\ngrowth.csv\n:::\n\n:::csv[T]{#tbl:growth}\n@data:g (A:B) (1)\n:::"
     const out = resolveDocumentContent(doc, resolver)
     expect(out).toContain("{#tbl:growth}")
   })

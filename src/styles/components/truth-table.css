@@ -1,0 +1,43 @@
+/* ── Truth table: a booktabs table with its caption above ── */
+.truth-table-block {
+  display: flex;
+  flex-direction: column;
+  margin: 1.6em auto;
+  overflow-x: auto;
+  break-inside: avoid;
+}
+.tt-title {
+  max-width: 92%;
+  margin: 0 auto 0.5em;
+  color: var(--fg);
+  font-size: 0.88em;
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  text-align: center;
+}
+.tt-table {
+  margin: 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+.tt-table th,
+.tt-table td {
+  padding: 0.25em 0.8em;
+  text-align: center;
+}
+.tt-table thead th {
+  font-weight: 600;
+}
+.tt-table th.tt-last {
+  color: var(--fg);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.tt-table td.tt-result {
+  font-weight: 700;
+}
+.tt-table td.tt-true {
+  color: var(--ok);
+}
+.tt-table td.tt-false {
+  color: var(--danger);
+}

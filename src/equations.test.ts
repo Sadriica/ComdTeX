@@ -76,7 +76,10 @@ describe("resolveEqRefs", () => {
   })
 
   it("replaces multiple refs in the same text", () => {
-    const labels = new Map([["eq:a", 1], ["eq:b", 5]])
+    const labels = new Map([
+      ["eq:a", 1],
+      ["eq:b", 5],
+    ])
     const result = resolveEqRefs("@eq:a and @eq:b", labels)
     expect(result).toContain("(1)")
     expect(result).toContain("(5)")

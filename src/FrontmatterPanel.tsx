@@ -2,18 +2,24 @@ import { useState, useCallback } from "react"
 import type { FrontmatterData } from "./frontmatter"
 import { extractFrontmatter, serializeFrontmatter } from "./frontmatter"
 import { useT } from "./i18n"
+import { Icon, X } from "./icons"
+import PanelHeader from "./PanelHeader"
 
 interface FrontmatterPanelProps {
   content: string
   onChange: (newContent: string) => void
 }
 
-const KNOWN_FIELD_KEYS: { key: string; fieldKey: "fieldTitle" | "fieldAuthor" | "fieldDate" | "fieldAbstract" | "fieldTags"; type: "text" | "tags" | "textarea" }[] = [
-  { key: "title",    fieldKey: "fieldTitle",    type: "text" },
-  { key: "author",   fieldKey: "fieldAuthor",   type: "text" },
-  { key: "date",     fieldKey: "fieldDate",     type: "text" },
+const KNOWN_FIELD_KEYS: {
+  key: string
+  fieldKey: "fieldTitle" | "fieldAuthor" | "fieldDate" | "fieldAbstract" | "fieldTags"
+  type: "text" | "tags" | "textarea"
+}[] = [
+  { key: "title", fieldKey: "fieldTitle", type: "text" },
+  { key: "author", fieldKey: "fieldAuthor", type: "text" },
+  { key: "date", fieldKey: "fieldDate", type: "text" },
   { key: "abstract", fieldKey: "fieldAbstract", type: "textarea" },
-  { key: "tags",     fieldKey: "fieldTags",     type: "tags" },
+  { key: "tags", fieldKey: "fieldTags", type: "tags" },
 ]
 
 /** Render a tags value as a comma-separated string for editing. */
@@ -24,7 +30,10 @@ function tagsToString(val: unknown): string {
 
 /** Parse a comma-separated tags string into an array. */
 function stringToTags(s: string): string[] {
-  return s.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
+  return s
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
 }
 
 export default function FrontmatterPanel({ content, onChange }: FrontmatterPanelProps) {
@@ -34,18 +43,21 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
 
   const parsed = extractFrontmatter(content)
 
-  const updateField = useCallback((key: string, value: unknown) => {
-    const current = extractFrontmatter(content)
-    const data: FrontmatterData = current ? { ...current.data } : {}
-    if (value === "" || (Array.isArray(value) && value.length === 0)) {
-      delete data[key]
-    } else {
-      data[key] = value
-    }
-    const yamlBlock = serializeFrontmatter(data)
-    const body = current ? current.content : content
-    onChange(`${yamlBlock}\n\n${body}`)
-  }, [content, onChange])
+  const updateField = useCallback(
+    (key: string, value: unknown) => {
+      const current = extractFrontmatter(content)
+      const data: FrontmatterData = current ? { ...current.data } : {}
+      if (value === "" || (Array.isArray(value) && value.length === 0)) {
+        delete data[key]
+      } else {
+        data[key] = value
+      }
+      const yamlBlock = serializeFrontmatter(data)
+      const body = current ? current.content : content
+      onChange(`${yamlBlock}\n\n${body}`)
+    },
+    [content, onChange],
+  )
 
   const addField = useCallback(() => {
     if (!newKey.trim()) return
@@ -54,19 +66,32 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
     setNewVal("")
   }, [newKey, newVal, updateField])
 
-  const removeField = useCallback((key: string) => {
-    updateField(key, "")
-  }, [updateField])
+  const removeField = useCallback(
+    (key: string) => {
+      updateField(key, "")
+    },
+    [updateField],
+  )
 
   const data: FrontmatterData = parsed?.data ?? {}
 
   // Collect extra fields not in KNOWN_FIELD_KEYS (also exclude layout fields)
-  const LAYOUT_KEYS = new Set(["papersize", "orientation", "headerLeft", "headerCenter", "headerRight", "footerLeft", "footerCenter", "footerRight"])
+  const LAYOUT_KEYS = new Set([
+    "papersize",
+    "orientation",
+    "headerLeft",
+    "headerCenter",
+    "headerRight",
+    "footerLeft",
+    "footerCenter",
+    "footerRight",
+  ])
   const knownKeys = new Set([...KNOWN_FIELD_KEYS.map((f) => f.key), ...LAYOUT_KEYS])
   const extraFields = Object.entries(data).filter(([k]) => !knownKeys.has(k))
 
   return (
     <div className="fm-panel">
+      <PanelHeader title={t.sidebar.properties} />
       <div className="fm-panel-fields">
         {KNOWN_FIELD_KEYS.map(({ key, fieldKey, type }) => {
           const label = t.frontmatterPanel[fieldKey]
@@ -119,7 +144,14 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
               value={String(val ?? "")}
               onChange={(e) => updateField(key, e.target.value)}
             />
-            <button className="fm-remove" onClick={() => removeField(key)} title={t.frontmatterPanel.removeField}>×</button>
+            <button
+              className="fm-remove"
+              onClick={() => removeField(key)}
+              title={t.frontmatterPanel.removeField}
+              aria-label={t.frontmatterPanel.removeField}
+            >
+              <Icon icon={X} size={14} />
+            </button>
           </div>
         ))}
       </div>
@@ -134,7 +166,9 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
             value={String(data.papersize ?? "")}
             onChange={(e) => updateField("papersize", e.target.value)}
           >
-            <option value="">A4 {t.frontmatterPanel.paperA4.includes("A4") ? "(default)" : ""}</option>
+            <option value="">
+              A4 {t.frontmatterPanel.paperA4.includes("A4") ? "(default)" : ""}
+            </option>
             <option value="a4">{t.frontmatterPanel.paperA4}</option>
             <option value="letter">{t.frontmatterPanel.paperLetter}</option>
             <option value="a5">{t.frontmatterPanel.paperA5}</option>
@@ -220,7 +254,15 @@ export default function FrontmatterPanel({ content, onChange }: FrontmatterPanel
           onChange={(e) => setNewVal(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addField()}
         />
-        <button className="fm-add-btn" onClick={addField} disabled={!newKey.trim()} title={t.frontmatterPanel.addField} aria-label={t.frontmatterPanel.addField}>+</button>
+        <button
+          className="fm-add-btn"
+          onClick={addField}
+          disabled={!newKey.trim()}
+          title={t.frontmatterPanel.addField}
+          aria-label={t.frontmatterPanel.addField}
+        >
+          +
+        </button>
       </div>
     </div>
   )

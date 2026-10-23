@@ -6,7 +6,9 @@ import { WasmTexEngine, _resetSharedEngine } from "./wasmTex"
 // produce. We do NOT exercise actual WASM here: we only verify the message
 // protocol contract between WasmTexEngine and its worker.
 
-interface Listener<T = unknown> { (ev: { data: T }): void }
+interface Listener<T = unknown> {
+  (ev: { data: T }): void
+}
 
 class FakeWorker {
   private msgListeners: Listener[] = []
@@ -22,7 +24,9 @@ class FakeWorker {
     else if (type === "error") this.errListeners.push(fn as (e: Event) => void)
   }
 
-  removeEventListener(_type: string, _fn: unknown) { /* not exercised */ }
+  removeEventListener(_type: string, _fn: unknown) {
+    /* not exercised */
+  }
 
   postMessage(msg: unknown) {
     this.received.push(msg)
@@ -35,7 +39,9 @@ class FakeWorker {
     if (this.onPosted) this.onPosted(msg, post)
   }
 
-  terminate() { this.terminated = true }
+  terminate() {
+    this.terminated = true
+  }
 }
 
 afterEach(() => {
@@ -153,11 +159,7 @@ describe("WasmTexEngine, compile protocol", () => {
     }
     const eng = new WasmTexEngine(() => fake as unknown as Worker)
     await eng.init()
-    await Promise.all([
-      eng.compile("a"),
-      eng.compile("b"),
-      eng.compile("c"),
-    ])
+    await Promise.all([eng.compile("a"), eng.compile("b"), eng.compile("c")])
     expect(new Set(seenIds).size).toBe(3)
   })
 })

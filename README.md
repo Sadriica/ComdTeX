@@ -16,6 +16,7 @@ A [Witara](https://witara.site) product: local-first, your files stay yours, AI 
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Installation](#installation)
 - [Auto-Update](#auto-update)
+- [Security](#security)
 - [Known Limitations](#known-limitations)
 - [Development](#development)
 - [Release](#release)
@@ -283,7 +284,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Live auto table of contents: drop a `[[toc]]` line and it expands into a navigable, always-current heading list
 - Mermaid diagrams
 - Footnotes
-- HTML embed with sanitizer (YouTube iframes allowed; `<script>` and `<form>` blocked)
+- HTML embed with sanitizer (YouTube iframes allowed; `<script>`, form controls, global `<style>`, fixed/absolute/sticky positioning, high `z-index` and `url()` in inline styles are removed; see [Security](#security))
 
 ### Editor
 - Monaco Editor with syntax highlighting
@@ -296,7 +297,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Per-line comments: annotate any line; comments are persisted out-of-band in `.comdtex-comments.json` so source files stay clean
 - Auto-pair `$` and `$$`
 - Clickable checkboxes in preview
-- Visual table editor (Ctrl+P → "Table editor")
+- Visual table editor (Ctrl+Shift+P → "Table editor")
 - Typewriter mode and focus mode (F11)
 - Autosave (debounced) with crash recovery via drafts
 - Session restore (tabs, active file, pinned tabs)
@@ -309,8 +310,8 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-render correctness: macros are loaded before the initial render (no flash of unrendered math)
 
 ### Navigation & Panels
-- Command palette (Ctrl+P): a categorized, selection-aware universal launcher: eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
-- Quick switcher (Ctrl+;): fast file switching
+- Command palette (Ctrl+Shift+P): a categorized, selection-aware universal launcher: eight categories (Edit / Insert / Math / View / Export / AI / Vault / Navigation), each command shown with an icon and a keyboard-shortcut chip. Commands with variants (highlight colours, headings, lists, symbols, math operations, environments) drill into sub-menus; with text selected, format commands wrap the selection
+- Go to file (Ctrl+P or Ctrl+;): fuzzy file search with the folder shown, recents first, `note#heading` jumps, and a Create note row when nothing matches. The same box has prefixes: `>` commands, `@` headings and labels of this document, `#` labels across the vault (Alt+Enter inserts a reference), `[` citations from references.bib (Enter inserts `[@key]`), `:` go to line, `?` lists the modes
 - Daily notes (Ctrl+Shift+D): create or jump to today's dated note
 - Outline panel (document headings): drag headings to reorder sections in the source
 - Backlinks panel (incoming `[[wikilinks]]`)
@@ -323,9 +324,9 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Equations panel (all numbered equations in current file)
 - Frontmatter panel (GUI editor for YAML fields)
 - Citation manager (browse and edit BibTeX entries)
-- Todo panel (collects `- [ ]` task items across open files)
+- Todo panel (collects `- [ ]` task items across the whole vault; open tabs override disk, and toggling works on closed files)
 - Vault stats panel (file count, word count, link health, equations, citations)
-- Git panel (branch, staged/unstaged changes, commit, push)
+- Git panel (branch, staged/unstaged changes, commit, push). Git runs with hooks, `core.fsmonitor` and the `ext::` transport disabled, so your own git hooks do not run for commits made from the app
 - Guided collaboration in plain language: share a vault with a coauthor, bring/send changes, and resolve "keep mine / use theirs" conflicts without knowing Git; see [docs/collaboration.md](docs/collaboration.md)
 - Navigation history (Alt+Left / Alt+Right)
 - Breadcrumb bar
@@ -362,7 +363,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-launch onboarding tour with polished empty states throughout the UI
 - English and Spanish UI with full parity: switch at runtime via Settings → **Language** (no restart needed)
 - Auto-updater with in-app banner and one-click install
-- Dependency warnings when pandoc, zip, git, or typst are missing, dismissible per-dep, persisted in localStorage
+- Startup probe for `pandoc`, `zip` and `typst`; the banner names `pandoc` and `zip` when missing, dismissible per-dep, persisted in localStorage. `git` is not probed: the Git panel reports its own absence
 
 ### AI assistant
 - Optional and **off by default**: bring your own provider and API key; ComdTeX ships none and makes no requests until you enable it
@@ -385,13 +386,13 @@ All cited entries are collected into a bibliography at the bottom of the preview
 | `Ctrl+S` | Save current file |
 | `Ctrl+Shift+S` | Save as |
 | `Ctrl+O` | Open vault |
-| `Ctrl+P` | Command palette |
-| `Ctrl+;` | Quick switcher |
+| `Ctrl+P` / `Ctrl+;` | Go to file |
+| `Ctrl+Shift+P` | Command palette |
 | `Ctrl+Shift+D` | Open or create today's daily note |
 | `Ctrl+F` | Find in file |
 | `Ctrl+Shift+F` | Search across vault |
 | `Ctrl+D` | Select next occurrence |
-| `Ctrl+Shift+P` | Toggle preview |
+| `Ctrl+Alt+P` | Toggle preview |
 | `Ctrl++` / `Ctrl+-` | Zoom in / out |
 | `Ctrl+0` | Reset zoom |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
@@ -489,13 +490,22 @@ Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM La
 | `git` | In-app Git panel | distro package manager |
 | `tectonic` / `xelatex` / `pdflatex` | Optional local LaTeX fallback if the WASM engine fails | distro package manager |
 
-If any tool is missing, ComdTeX shows an amber warning banner on startup. The banner is dismissible per-tool and the choice persists across sessions.
+If `pandoc` or `zip` is missing, ComdTeX shows an amber warning banner on startup. The banner is dismissible per-tool and the choice persists across sessions. `typst` is probed too but only hides the Typst to PDF menu entry, and `git` is not checked at startup: the Git panel says so itself when it cannot run git.
 
 ---
 
 ## Auto-Update
 
 ComdTeX checks for updates automatically on startup. If a newer version is available, an in-app banner appears. No need to visit GitHub. Clicking **Install** downloads the update and relaunches the app. All artifacts are signed with [minisign](https://jedisct1.github.io/minisign/); the updater verifies the signature before applying any update.
+
+---
+
+## Security
+
+- **Preview sanitizer.** Rendered HTML goes through DOMPurify with an allowlist. Besides `<script>`, it removes form controls (`<form>`, `<input>`, `<button>` and friends), global `<style>` blocks (only the rules a Mermaid diagram scopes to its own SVG survive), `position: fixed/absolute/sticky`, large `z-index` values and `url()` in inline styles, so a note cannot cover or restyle the interface or pose as a login prompt.
+- **Links.** Links in the preview open in the system browser (`openUrl`), and a Rust navigation guard (`navigation-guard` plugin in `src-tauri/src/lib.rs`) refuses any top-level navigation away from the app's own origins. The `opener:allow-open-path` capability lets the app reveal exported files and backups.
+- **Vault scope.** The webview only reaches the vault folder you open. The Rust command `allow_vault_dir` validates the path itself (it refuses the filesystem root, your home folder, system folders and paths containing `..`) before granting access; the interface check is not the only one.
+- **Git.** Every git command runs with `core.fsmonitor`, hooks and the `ext::` transport disabled, so a cloned repository opened as a vault cannot execute code. The cost is that your own git hooks do not run from the app.
 
 ---
 
@@ -509,7 +519,9 @@ ComdTeX checks for updates automatically on startup. If a newer version is avail
 | No mobile support | Desktop only (Linux, Windows). |
 | Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`); see [docs/folder-rules.md](docs/folder-rules.md). |
 | Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel; see [docs/cloud-sync.md](docs/cloud-sync.md). |
-| Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js assets from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
+| Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js 5.1.0 (pinned) from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
+| Git hooks do not run from the app | Every git command the app issues disables hooks, `core.fsmonitor` and the `ext::` transport so that opening a cloned repository cannot run its code. Commit from a terminal if you rely on hooks. |
+| Exports can lose features | Before an export, a notice lists the features the target format cannot keep (for example callouts or wikilinks in LaTeX). The export still goes ahead. |
 | SyncTeX needs a local engine | Click-to-source and "Show current line in PDF" use real SyncTeX when the PDF was compiled by tectonic/xelatex/pdflatex. The bundled WASM engine ships without synctex output, so WASM-compiled PDFs fall back to heading-based matching. |
 
 ---
@@ -573,7 +585,17 @@ npm run tauri build
 npm run tauri dev     # development mode with hot-reload
 npm test              # run the test suite (vitest)
 npm run build         # frontend only (eslint + tsc + vite)
+npm run format:check  # prettier check (CI runs it)
+npm run lint:css      # stylelint: tokens only, no colour literals, no !important (CI runs it)
+npm run test:coverage # coverage with the regression floor
+(cd src-tauri && cargo test --lib)   # Rust tests
 ```
+
+Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statements, 40% branches, 34% functions, 47% lines (the real figures are about 52.5 / 47 / 40.8 / 53.6). CI (`ci.yml`) runs lint, `lint:css`, type check, `format:check`, tests with coverage, clippy, `cargo fmt --check` and `cargo test`.
+
+The bulk prettier commit is listed in `.git-blame-ignore-revs`; to make `git blame` skip it run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
+Two dependencies are pinned on purpose to the versions that still build cleanly with the 1.29.1 dependency set: `monaco-editor` 0.55.1 (an `overrides` entry, so only one copy is installed; 0.57 breaks `vite build` on the `monaco-editor/esm/vs/editor/editor.api.js` import) and `@types/markdown-it` `~14.1.2` (14.2 breaks the footnote and mark plugin typings). Do not widen them without running the full gate. `eslint-plugin-react-hooks` follows 7.x; its `refs` and `set-state-in-effect` rules are satisfied in `src/`, and the few intentional exceptions carry a targeted `eslint-disable` with a reason.
 
 ### Build output
 
@@ -621,6 +643,7 @@ This triggers the GitHub Actions release workflow:
 |---|---|---|
 | `build` (matrix) | `ubuntu-22.04` | `.AppImage` (patched for Mesa 24+) and `.deb` |
 | `build` (matrix) | `windows-latest` | `.exe` (NSIS installer) |
+| `verify` | `ubuntu-22.04` | Lint, type check, unit tests, clippy and rustfmt; the `build` matrix only starts if it passes |
 | `publish` | `ubuntu-22.04` | Removes draft status after the build matrix succeeds |
 
 > The repository must have `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` set in **Settings → Secrets and variables → Actions**.
@@ -738,9 +761,11 @@ Requires updating **all five** of the following; omitting any causes inconsisten
 | `wikilinks.ts` | `[[note-name]]` link helpers and backlink resolution |
 | `transclusion.ts` | Resolves `![[note]]` and `![[note#heading]]` embeds |
 | `pathUtils.ts` | Cross-platform path helpers |
-| `sanitizeRenderedHtml.ts` | DOMParser-based HTML sanitizer |
+| `sanitizeRenderedHtml.ts` | DOMPurify-based HTML sanitizer for the preview |
+| `gitApi.ts` | `runGit` (every git call, with hardened config) and the porcelain v1 `-z` status parser |
+| `globalErrorHandlers.ts` | Reports uncaught errors and unhandled rejections once, as a toast |
 | `contentLinter.ts` | Real-time Monaco markers: broken links, citations, equations, shorthand errors |
-| `checkDeps.ts` | Checks optional shell tools (`pandoc`, `zip`, `git`, `typst`) on startup |
+| `checkDeps.ts` | Checks optional shell tools (`pandoc`, `zip`, `typst`) on startup |
 | `i18n.ts` | EN/ES translation system: `T` interface, `LANGS`, `LanguageContext`, `useT()` |
 | `toastService.ts` | Singleton toast module |
 | `types.ts` | Shared TypeScript types (`FileNode`, `OpenFile`, `SearchResult`) |

@@ -1,14 +1,25 @@
 import { useCallback, useRef, useState } from "react"
 import { displayBasename } from "./pathUtils"
-import { buildSearchRegExp, type SearchReplaceOptions, type SearchReplaceTarget } from "./searchReplace"
+import {
+  buildSearchRegExp,
+  type SearchReplaceOptions,
+  type SearchReplaceTarget,
+} from "./searchReplace"
 import { useT } from "./i18n"
 import { type SearchReplaceState, type SearchReplaceResult } from "./useSearchReplaceState"
 import { VaultSearchIndex } from "./searchIndex"
+import PanelHeader from "./PanelHeader"
 
 interface SearchReplacePanelProps {
   vaultPath: string
   onOpenFile: (path: string, line?: number) => void
-  onReplaceInFile: (path: string, search: string, replace: string, opts: SearchReplaceOptions, target?: SearchReplaceTarget) => Promise<number>
+  onReplaceInFile: (
+    path: string,
+    search: string,
+    replace: string,
+    opts: SearchReplaceOptions,
+    target?: SearchReplaceTarget,
+  ) => Promise<number>
   /** Persistent input/results state, lifted to AppContent so it survives the
    *  panel unmounting when the user switches sidebar panels. */
   state: SearchReplaceState
@@ -34,7 +45,11 @@ function getPanelIndex(vaultPath: string): VaultSearchIndex {
   return idx
 }
 
-function highlightMatch(content: string, matchStart: number, matchEnd: number): { before: string; match: string; after: string } {
+function highlightMatch(
+  content: string,
+  matchStart: number,
+  matchEnd: number,
+): { before: string; match: string; after: string } {
   const RADIUS = 40
   const start = Math.max(0, matchStart - RADIUS)
   const end = Math.min(content.length, matchEnd + RADIUS)
@@ -45,11 +60,29 @@ function highlightMatch(content: string, matchStart: number, matchEnd: number): 
   }
 }
 
-export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, onReplaceInFile, state }: SearchReplacePanelProps) {
+export default function SearchReplacePanel({
+  vaultPath: _vaultPath,
+  onOpenFile,
+  onReplaceInFile,
+  state,
+}: SearchReplacePanelProps) {
   const t = useT()
   // Inputs / options / results live in AppContent (survive panel unmount); only
   // the transient action flags below stay local to this panel.
-  const { query, setQuery, replacement, setReplacement, caseSensitive, setCaseSensitive, wholeWord, setWholeWord, regexMode, setRegexMode, results, setResults } = state
+  const {
+    query,
+    setQuery,
+    replacement,
+    setReplacement,
+    caseSensitive,
+    setCaseSensitive,
+    wholeWord,
+    setWholeWord,
+    regexMode,
+    setRegexMode,
+    results,
+    setResults,
+  } = state
   const [searching, setSearching] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,7 +93,10 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
   const doSearch = useCallback(async () => {
     if (!query.trim()) return
     const pattern = buildSearchRegExp(query, { caseSensitive, wholeWord, regex: regexMode })
-    if (!pattern) { setError(t.search.errorPattern); return }
+    if (!pattern) {
+      setError(t.search.errorPattern)
+      return
+    }
     const validPattern = pattern
     setError(null)
     setSearching(true)
@@ -79,7 +115,8 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
           return
         }
         for (const entry of entries) {
-          if (!entry.name || entry.name.startsWith(".") || IGNORED_SEARCH_DIRS.has(entry.name)) continue
+          if (!entry.name || entry.name.startsWith(".") || IGNORED_SEARCH_DIRS.has(entry.name))
+            continue
           const fullPath = `${dirPath}/${entry.name}`
           if (entry.isDirectory) {
             await scanDir(fullPath)
@@ -89,7 +126,9 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
               // useVault.search) → served from memory, no readTextFile call.
               const mtimeMs = (await stat(fullPath)).mtime?.getTime()
               if (mtimeMs === undefined) continue
-              const entryData = await index.syncFile(fullPath, mtimeMs, () => readTextFile(fullPath))
+              const entryData = await index.syncFile(fullPath, mtimeMs, () =>
+                readTextFile(fullPath),
+              )
               const text = entryData.content
               const lines = text.split("\n")
               lines.forEach((lineContent, lineIdx) => {
@@ -139,32 +178,50 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
     await doSearch()
   }, [doSearch])
 
-  const handleReplaceOne = useCallback(async (result: SearchReplaceResult) => {
-    if (replacing) return
-    setReplacing(true)
-    try {
-      await onReplaceInFile(result.filePath, query, replacement, {
-        caseSensitive,
-        wholeWord,
-        regex: regexMode,
-      }, {
-        line: result.line,
-        matchStart: result.matchStart,
-        matchEnd: result.matchEnd,
-      })
-      // Re-run search to refresh results
-      await handleSearchNow()
-    } finally {
-      if (mountedRef.current) setReplacing(false)
-    }
-  }, [replacing, caseSensitive, wholeWord, regexMode, query, replacement, onReplaceInFile, handleSearchNow])
+  const handleReplaceOne = useCallback(
+    async (result: SearchReplaceResult) => {
+      if (replacing) return
+      setReplacing(true)
+      try {
+        await onReplaceInFile(
+          result.filePath,
+          query,
+          replacement,
+          {
+            caseSensitive,
+            wholeWord,
+            regex: regexMode,
+          },
+          {
+            line: result.line,
+            matchStart: result.matchStart,
+            matchEnd: result.matchEnd,
+          },
+        )
+        // Re-run search to refresh results
+        await handleSearchNow()
+      } finally {
+        if (mountedRef.current) setReplacing(false)
+      }
+    },
+    [
+      replacing,
+      caseSensitive,
+      wholeWord,
+      regexMode,
+      query,
+      replacement,
+      onReplaceInFile,
+      handleSearchNow,
+    ],
+  )
 
   const handleReplaceAll = useCallback(async () => {
     if (replacing || results.length === 0) return
     setReplacing(true)
     try {
       // Group by file path to replace once per file
-      const files = [...new Set(results.map(r => r.filePath))]
+      const files = [...new Set(results.map((r) => r.filePath))]
       for (const filePath of files) {
         await onReplaceInFile(filePath, query, replacement, {
           caseSensitive,
@@ -176,27 +233,38 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
     } finally {
       if (mountedRef.current) setReplacing(false)
     }
-  }, [replacing, results, caseSensitive, wholeWord, regexMode, query, replacement, onReplaceInFile, handleSearchNow])
+  }, [
+    replacing,
+    results,
+    caseSensitive,
+    wholeWord,
+    regexMode,
+    query,
+    replacement,
+    onReplaceInFile,
+    handleSearchNow,
+  ])
 
   return (
-    <div className="panel">
-      <div className="panel-header">
-        <span className="panel-header-title">{t.search.toggleReplace}</span>
-      </div>
+    <div className="panel search-replace-panel">
+      <PanelHeader
+        title={t.sidebar.searchReplace}
+        count={results.length > 0 ? results.length : ""}
+      />
 
       <div className="search-replace-inputs">
         <input
           placeholder={t.search.searchPlaceholder}
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleSearch()}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           aria-label={t.searchReplace.searchAriaLabel}
         />
         <input
           placeholder={t.search.replaceWithPlaceholder}
           value={replacement}
-          onChange={e => setReplacement(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleSearch()}
+          onChange={(e) => setReplacement(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           aria-label={t.searchReplace.replaceAriaLabel}
         />
       </div>
@@ -207,22 +275,28 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
           className={`search-replace-toggle${caseSensitive ? " active" : ""}`}
           aria-pressed={caseSensitive}
           title={t.search.caseSensitiveTitle}
-          onClick={() => setCaseSensitive(v => !v)}
-        >Aa</button>
+          onClick={() => setCaseSensitive((v) => !v)}
+        >
+          Aa
+        </button>
         <button
           type="button"
           className={`search-replace-toggle${wholeWord ? " active" : ""}`}
           aria-pressed={wholeWord}
           title="\b"
-          onClick={() => setWholeWord(v => !v)}
-        >&#x2502;ab&#x2502;</button>
+          onClick={() => setWholeWord((v) => !v)}
+        >
+          &#x2502;ab&#x2502;
+        </button>
         <button
           type="button"
           className={`search-replace-toggle${regexMode ? " active" : ""}`}
           aria-pressed={regexMode}
           title={t.search.regexTitle}
-          onClick={() => setRegexMode(v => !v)}
-        >.&#x2217;</button>
+          onClick={() => setRegexMode((v) => !v)}
+        >
+          .&#x2217;
+        </button>
       </div>
 
       <div className="search-replace-btns">
@@ -240,13 +314,15 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
         <div className="panel-empty">{t.search.noResults}</div>
       )}
 
-      {results.length >= 500 && (
-        <div className="panel-empty">{t.search.limit}</div>
-      )}
+      {results.length >= 500 && <div className="panel-empty">{t.search.limit}</div>}
 
-      <div style={{ overflowY: "auto", flex: 1 }}>
+      <div className="search-replace-results">
         {results.map((result, idx) => {
-          const { before, match, after } = highlightMatch(result.content, result.matchStart, result.matchEnd)
+          const { before, match, after } = highlightMatch(
+            result.content,
+            result.matchStart,
+            result.matchEnd,
+          )
           return (
             <div key={idx} className="search-replace-result">
               <span
@@ -256,7 +332,6 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
                 onKeyDown={(e) => e.key === "Enter" && onOpenFile(result.filePath, result.line)}
                 role="button"
                 tabIndex={0}
-                style={{ cursor: "pointer" }}
               >
                 {displayBasename(result.filePath)}
               </span>
@@ -267,7 +342,6 @@ export default function SearchReplacePanel({ vaultPath: _vaultPath, onOpenFile, 
                 onKeyDown={(e) => e.key === "Enter" && onOpenFile(result.filePath, result.line)}
                 role="button"
                 tabIndex={0}
-                style={{ cursor: "pointer" }}
               >
                 {before}
                 {match && <mark>{match}</mark>}

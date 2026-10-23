@@ -3,10 +3,12 @@ import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversi
 
 describe("exportConversion", () => {
   it("makes user-facing markdown export Obsidian-clean", () => {
-    const output = toExportMarkdownContent("# Intro {#sec:intro}\n\n:::theorem[Main] {#thm:main}\nBody\n:::\n\nVer @sec:intro")
+    const output = toExportMarkdownContent(
+      "# Intro {#sec:intro}\n\n:::theorem[Main] {#thm:main}\nBody\n:::\n\nVer @sec:intro",
+    )
 
     expect(output).toContain("# Intro")
-    expect(output).toContain("> [!abstract] Theorem: Main")
+    expect(output).toContain("> [!abstract] Teorema 1 (Main)")
     expect(output).toContain("`sec:intro`")
     expect(output).not.toContain("{#sec:intro}")
     expect(output).not.toContain("{#thm:main}")
@@ -16,7 +18,7 @@ describe("exportConversion", () => {
     const output = toPandocMarkdownInput("# Intro {#sec:intro}\n\n:::note\nBody\n:::")
 
     expect(output).toContain("# Intro {#sec:intro}")
-    expect(output).toContain("> [!note]")
+    expect(output).toContain("> **Nota.**")
   })
 })
 

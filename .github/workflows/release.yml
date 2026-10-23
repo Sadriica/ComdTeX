@@ -10,7 +10,64 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Verify (lint, types, tests, Rust checks)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Lint CSS
+        run: npm run lint:css
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Cargo clippy (warnings as errors)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Cargo fmt check
+        working-directory: src-tauri
+        run: cargo fmt -- --check
+
   build:
+    needs: [verify]
     permissions:
       contents: write
 
@@ -112,7 +169,7 @@ jobs:
             echo ""
             echo "| Platform | File |"
             echo "|---|---|"
-            echo "| Linux (all distros, including Arch) | \`.AppImage\` — portable, no installation required |"
+            echo "| Linux (all distros, including Arch) | \`.AppImage\`: portable, no installation required |"
             echo "| Linux Debian/Ubuntu | \`.deb\` |"
             echo "| Windows | \`.exe\` (NSIS installer) |"
             echo ""
@@ -122,8 +179,8 @@ jobs:
             echo "ComdTeX checks for updates automatically on startup and installs them with one click."
             echo ""
             echo "### Optional dependencies"
-            echo "- \`pandoc\` — required for PDF, DOCX and Beamer export"
-            echo "- \`zip\` — required for vault backup"
+            echo "- \`pandoc\`: required for PDF, DOCX and Beamer export"
+            echo "- \`zip\`: required for vault backup"
             echo ""
             echo "## Changes"
             echo ""
@@ -166,7 +223,7 @@ jobs:
           echo "squashfs offset: $OFFSET"
           unsquashfs -o "$OFFSET" -d squashfs-root "$APPIMAGE"
 
-          # Remove bundled libwayland-egl — incompatible with Mesa 24+.
+          # Remove bundled libwayland-egl: incompatible with Mesa 24+.
           rm -f squashfs-root/usr/lib/libwayland-egl.so.1
 
           # Remove forced GDK_BACKEND=x11 and add WEBKIT_DISABLE_DMABUF_RENDERER.

@@ -89,7 +89,7 @@ working tree at the time of writing; keep this list in sync as they are fixed.
 | 7 | `useExportActions.ts` | `handleExportHtml` is the only production caller left on `annotate: true`; it ships `data-source-line` attrs in exported HTML and pays the parse. Then consider flipping the default. | FIXED: passes `{ annotate: false }`. Default-flip still pending (see finding 9) |
 | 8 | `App.tsx`/`previewMorph.ts` | The sanitize→annotate→morph sequence is copy-pasted in two effects; the "raw `previewHtml` never reaches the DOM" invariant is comment-enforced. Fix: single `commitPreview(el, rawHtml, sourceText, onCost?)` in `previewMorph.ts`; drop `morphPreviewContent`'s now-unused string branch so the type system blocks unsanitized injection. | FIXED: `commitPreview()` exported from `previewMorph.ts` (both effects use it); `morphPreviewContent` accepts `DocumentFragment` only |
 | 9 | `renderer.ts` | `opts` as 8th positional param forces `undefined,` padding at call sites (5 copies now). Prefer an options object / renderer-owned preview entry point; with zero production callers wanting `annotate: true`, consider flipping the default. | OPEN (deliberate: low-risk cleanup, batch with the next renderer touch) |
-| 10 | `CLAUDE.md` | Developer note "sanitizeRenderedHtml() must wrap every renderMarkdown() call" no longer describes the fragment path. | FIXED (note updated 2026-07-15; names `commitPreview` as the sanctioned preview path) |
+| 10 | Developer notes | The note "sanitizeRenderedHtml() must wrap every renderMarkdown() call" no longer describes the fragment path. | FIXED (note updated 2026-07-15; names `commitPreview` as the sanctioned preview path) |
 
 Refuted during verification (do not re-report): "annotating after sanitize
 loses annotations for DOMPurify-altered blocks" is structurally impossible:
@@ -224,3 +224,91 @@ headings, labelled equations, theorem environments, tables, citations):
 
 The render debounce is 150-700 ms by document size, and the linter has its own
 600 ms timer, so neither blocks a keystroke at these sizes.
+
+## 7. Changes in v1.29.1
+
+- **Spellcheck dictionaries load on demand.** The Hunspell dictionaries
+  (`dictionary-en`, `dictionary-es`) are imported dynamically by `spellcheck.ts`
+  and fetched only when spellcheck is switched on, so they no longer sit in the
+  main bundle. The main chunk went from 2.2 MB to about 0.8 MB. The same pass
+  replaced value imports of `monaco-editor` with type-only imports.
+- **Render crashes stay local.** `ErrorBoundary` takes a `region` prop; the
+  preview, the editor and each panel and dialog sit in their own boundary (the
+  lazy ones through `LazyRegion`), so one crash shows a Retry button for that
+  region instead of blanking the app. `src/globalErrorHandlers.ts` reports
+  uncaught errors and unhandled rejections once, as a toast.
+- **Preview sanitizer.** It now also strips global `<style>` (styles scoped to a Mermaid SVG are kept),
+  form controls, out-of-flow `position`, large `z-index` and `url()` in inline
+  styles. This adds a pass over the parsed fragment; it runs inside the same
+  single parse described in section 1.
+
+## 8. Keyed preview morph (Unreleased)
+
+`morphPreviewContent` used to compare top-level blocks by position with
+`isEqualNode`, so one block inserted or deleted near the top shifted every
+block below it and all of them were re-created (KaTeX spans, SVG diagrams,
+images laid out again). It is now a keyed diff:
+
+1. **Fast path.** The common prefix and suffix are trimmed with the native
+   `isEqualNode`, tolerating a changed `data-source-line` on the block itself
+   (updated in place). Typing inside one block and most top insertions or
+   deletions finish here at the same native cost as before.
+2. **Keyed middle.** Whatever is left is keyed by a structural hash (two 32-bit
+   lanes plus node count, a read-only tree walk, no serialization) that ignores
+   every `data-source-line` attribute. Identical blocks are paired by key plus
+   occurrence order. The longest increasing subsequence of the paired live
+   indices stays put; other paired blocks are moved (same node), unpaired new
+   blocks are inserted, unpaired live blocks are removed. Kept blocks only get
+   their `data-source-line` attributes synced, nested ones included (skipped
+   when a second hash of the line attributes says nothing shifted).
+
+Live signatures are recomputed on every commit and never cached, because other
+effects mutate committed blocks (Mermaid replaces its placeholder in place);
+a mutated block must stop matching and be replaced, as before.
+
+Measured (jsdom, 400 KaTeX-like blocks, one block inserted at the top, ms are
+jsdom-only and exclude browser layout):
+
+| Case | Before | After |
+|---|---|---|
+| Blocks re-created after a top insertion | 401 | **1** |
+| Top insertion, blocks with only a top-level line attribute | ~125 ms | ~37 ms |
+| Top insertion, blocks with nested line attributes (hash path) | ~125 ms | ~250 ms (jsdom walk is slow; in a browser this replaces 401 re-layouts) |
+| Edit inside one block | ~30 ms | ~33 ms (unchanged) |
+
+`previewMorph.test.ts` asserts node identity for a top insertion, a middle
+deletion, a move, duplicates and nested line sync, plus a 400-block case that
+requires exactly one new element.
+## 9. Startup payload (2026-10-20)
+
+Measured on the production build served by `vite preview`, Chrome, fake vault harness (decoded bytes, no compression):
+
+| | Before | After |
+|---|---|---|
+| Entry chunk | 840 kB (281 kB gz) | 621 kB (211 kB gz) |
+| Welcome screen: JS files / total transferred | 12 / 5299 kB | 13 / 1483 kB |
+| Welcome screen: Monaco fetched | yes (3.6 MB) | no |
+| Open vault with a note: total transferred | 6533 kB | 6476 kB (Monaco is needed here) |
+| `dist/` | 19.9 MB, 281 files | 19.1 MB, 251 files |
+| KaTeX font files in `dist/` | 59 (ttf+woff+woff2) | 19 (woff2) |
+
+What changed and why:
+- **Monaco in the modulepreload list.** Rolldown placed Vite's `preload-helper` (imported by every lazy boundary) in the `monaco-editor` code-splitting group, so the entry imported that chunk and preloaded all of it. `vite.config.ts` now gives the helper its own higher-priority group. Check after any chunking change: `dist/index.html` must not list `monaco-editor-*.js`.
+- **Monaco prefetch for returning users.** `App.tsx` starts the Monaco import at module load when a vault path is remembered, so it does not wait for React to reach the lazy boundary. First-run users see the welcome screen without it.
+- **KaTeX fonts.** A small Vite plugin (`katexWoff2Only`) strips the `woff`/`ttf` sources from katex.css. Every Tauri webview supports woff2.
+- **Lazy export pipeline.** `useExportActions.ts` and the copy-LaTeX handler load `exporter`, `exportActions`, `diagramExport`, `exportConversion` and `obsidianExport` on first use. `SymbolPickerPanel` and `GitBar` are `lazy`.
+- `plugin-shell` and `api/dpi` are static imports everywhere now (the dynamic ones never split anything).
+
+Still eager and worth a look later: both i18n dictionaries (~160 kB of source), `monacoSetup.ts` (needed by the palette data), `useVault`, DOMPurify and markdown-it (needed for the first preview).
+
+## 10. Stylesheet consolidation (2026-10-20)
+
+`dist/assets/index-*.css`. KaTeX is now inlined into this file as `@layer vendor` (about 27.7 kB), so compare app rules only:
+
+| | Before | After |
+|---|---|---|
+| App CSS in the index chunk | 192.0 kB | 186.4 kB |
+| KaTeX CSS | 27.7 kB (separate chunk) | 27.7 kB (inlined, woff2 only) |
+| `src/styles` | 10,515 lines, 56 files | 10,140 lines, 37 files |
+
+The 140 kB target was not reached: about 1,400 rules remain and none is unused by class, so a further cut needs shared control recipes in the components, not stylesheet surgery. The saving comes from merged duplicate rules, the `--transition-ui` token and the deleted theme overrides. The woff2-only KaTeX plugin in `vite.config.ts` now rewrites the `@import` in `src/styles/index.css`; after any change to it, check that `dist/assets` still holds 19 KaTeX font files.

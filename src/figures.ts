@@ -10,6 +10,7 @@
  *   @fig:1      →  "Figura 1" (direct numeric)
  */
 import { blankInlineCode, stripCodeFences } from "./equations"
+import { activeDocTerms } from "./docLang"
 
 let figCounter = 0
 const figLabels = new Map<string, number>()
@@ -52,20 +53,18 @@ export function prescanFigures(text: string): Map<string, number> {
  * Replace `@fig:label` references in HTML text.
  * `@fig:1` style numeric refs are always resolved to "Figura N".
  */
-export function resolveFigRefs(
-  text: string,
-  labels: Map<string, number>,
-): string {
+export function resolveFigRefs(text: string, labels: Map<string, number>): string {
+  const word = activeDocTerms().figure
   return text.replace(/@fig:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     // Direct numeric reference
     if (/^\d+$/.test(ref)) {
-      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">Figura ${ref}</a>`
+      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">${word} ${ref}</a>`
     }
     const n = labels.get(`fig:${ref}`)
     if (n !== undefined) {
-      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">Figura ${n}</a>`
+      return `<a class="fig-ref" href="#${figureAnchorId(ref)}">${word} ${n}</a>`
     }
-    return `<span class="fig-ref-broken">Figura (?)</span>`
+    return `<span class="fig-ref-broken">${word} (?)</span>`
   })
 }
 
@@ -81,6 +80,7 @@ function figureAnchorId(labelOrNumber: string): string {
 const FIG_LABEL_TITLE_RE = /\s*title="fig-label:(fig:[\w:.-]+)"/
 
 export function wrapFigures(html: string, labels: Map<string, number>): string {
+  const word = activeDocTerms().figure
   // Reset a local counter for this pass
   let n = 0
 
@@ -103,7 +103,7 @@ export function wrapFigures(html: string, labels: Map<string, number>): string {
 
       return `<figure class="fig-block" id="${id}">
   <img${before}alt="${alt}"${after}>
-  ${escapedAlt ? `<figcaption><span class="fig-number">Figura ${figNum}.</span> ${escapedAlt}</figcaption>` : `<figcaption><span class="fig-number">Figura ${figNum}</span></figcaption>`}
+  ${escapedAlt ? `<figcaption><span class="fig-number">${word} ${figNum}.</span> ${escapedAlt}</figcaption>` : `<figcaption><span class="fig-number">${word} ${figNum}</span></figcaption>`}
 </figure>`
     },
   )

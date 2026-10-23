@@ -1,0 +1,227 @@
+/* ── Menus: the classic menu bar (header row) and the sectioned toolbar (second
+   row) share ONE button recipe and ONE popup recipe. ── */
+
+/* Button recipe: 24px tall, --radius-sm, --text-sm. */
+.menu-btn,
+.menubar-section-btn,
+.menubar-direct-btn,
+.menubar-focus-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--chrome-fg);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  font-variant-emoji: text;
+  transition: var(--transition-ui);
+}
+.menu-btn:hover,
+.menubar-section-btn:hover,
+.menubar-direct-btn:hover,
+.menubar-focus-clock:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.menu-btn.open,
+.menubar-section-btn.open,
+.menu-btn:active,
+.menubar-section-btn:active,
+.menubar-direct-btn:active {
+  background: var(--bg-active);
+  color: var(--fg);
+}
+.menubar-section-btn.section-active,
+.menubar-direct-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.menu-btn:disabled,
+.menubar-section-btn:disabled,
+.menubar-direct-btn:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+  background: transparent;
+}
+
+/* ── Classic menu bar (inside the header row) ── */
+.menu-bar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: var(--space-1);
+  height: 100%;
+  padding: 0 var(--space-3);
+}
+.menu-item {
+  position: relative;
+}
+
+/* ── Popups: classic dropdown, sectioned dropdown and submenu flyout ── */
+.menu-panel,
+.menu-list {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-2);
+}
+.menu-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+}
+
+.menu-entry,
+.menu-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: 26px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.menu-entry:hover:not(:disabled),
+.menu-list-item:hover,
+.menu-sub-trigger.open {
+  background: var(--bg-hover);
+}
+.menu-entry:active:not(:disabled),
+.menu-list-item:active {
+  background: var(--bg-active);
+}
+.menu-entry:focus-visible,
+.menu-list-item:focus-visible {
+  outline-offset: -2px;
+}
+.menu-entry:disabled {
+  color: var(--fg-subtle);
+  cursor: default;
+}
+.menu-list-panel.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.menu-entry-label {
+  flex: 1;
+  white-space: nowrap;
+}
+.menu-shortcut {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.menu-sep,
+.menu-list-sep {
+  height: 1px;
+  margin: var(--space-2) var(--space-1);
+  background: var(--border);
+}
+
+/* ── Sectioned toolbar: the second row ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: var(--chrome-row);
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
+}
+.menubar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2) var(--space-4);
+}
+.menubar-section-icon {
+  display: inline-block;
+  min-width: 14px;
+  text-align: center;
+  font-variant-emoji: text;
+}
+.menubar-section-label {
+  font-weight: 500;
+}
+.menubar-section-arrow {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+
+/* Live focus-session clock, pinned right. */
+.menubar-focus-clock {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.menubar-focus-dot {
+  font-size: var(--text-xs);
+  line-height: 1;
+}
+.menubar-focus-clock.running .menubar-focus-dot {
+  color: var(--ok);
+}
+.menubar-focus-clock.paused .menubar-focus-dot {
+  color: var(--fg-muted);
+}
+
+/* Section and submenu popups are position:fixed so they escape overflow clipping. */
+.menubar-popup {
+  position: fixed;
+  z-index: var(--z-dropdown);
+}
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+.menu-sub {
+  position: relative;
+}
+.menu-sub-arrow {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+.menu-sub-panel {
+  position: fixed; /* coordinates set inline from the trigger, flyout to the right */
+  z-index: var(--z-popover);
+}
+.menu-sub-panel .menu-list {
+  min-width: 180px;
+}
+
+/* Symbol grid embedded in the Math submenu */
+.symbol-panel-inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-1);
+}

@@ -102,15 +102,9 @@ describe("pseudocodeToFlowchart", () => {
   })
 
   it("chains ELSE IF branches off the previous diamond's No path", () => {
-    const code = [
-      "IF a",
-      "OUTPUT 1",
-      "ELSE IF b",
-      "OUTPUT 2",
-      "ELSE",
-      "OUTPUT 3",
-      "ENDIF",
-    ].join("\n")
+    const code = ["IF a", "OUTPUT 1", "ELSE IF b", "OUTPUT 2", "ELSE", "OUTPUT 3", "ENDIF"].join(
+      "\n",
+    )
     const out = pseudocodeToFlowchart(code)
     expect(out).toContain('{"a"}')
     expect(out).toContain('{"b"}')
@@ -128,14 +122,16 @@ describe("pseudocodeToFlowchart", () => {
   })
 
   it("labels an IF diamond's THEN branch 'Yes' and its ELSE branch 'No'", () => {
-    const out = pseudocodeToFlowchart([
-      "ALGORITHM Sign",
-      "IF n > 0",
-      "  OUTPUT positive",
-      "ELSE",
-      "  OUTPUT negative",
-      "ENDIF",
-    ].join("\n"))
+    const out = pseudocodeToFlowchart(
+      [
+        "ALGORITHM Sign",
+        "IF n > 0",
+        "  OUTPUT positive",
+        "ELSE",
+        "  OUTPUT negative",
+        "ENDIF",
+      ].join("\n"),
+    )
     expect(out).toMatch(/-->\|"Yes"\|/)
     expect(out).toMatch(/-->\|"No"\|/)
     // Both branch edges leave the same condition diamond.
@@ -147,12 +143,9 @@ describe("pseudocodeToFlowchart", () => {
   })
 
   it("loops a REPEAT/UNTIL back to the body start, not to the condition itself", () => {
-    const out = pseudocodeToFlowchart([
-      "ALGORITHM Countdown",
-      "REPEAT",
-      "  OUTPUT n",
-      "UNTIL n = 0",
-    ].join("\n"))
+    const out = pseudocodeToFlowchart(
+      ["ALGORITHM Countdown", "REPEAT", "  OUTPUT n", "UNTIL n = 0"].join("\n"),
+    )
     // The UNTIL condition diamond exists...
     const untilMatch = out.match(/(n\d+)\{"UNTIL[^}]*"\}/)
     expect(untilMatch).not.toBeNull()

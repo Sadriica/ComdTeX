@@ -51,14 +51,18 @@ describe("truthBlockToMarkdown", () => {
 
 describe("svgForPrint", () => {
   it("resolves CSS variables to the print palette or the fallback", () => {
-    const out = svgForPrint('<svg viewBox="0 0 100 50" width="100%"><rect fill="var(--surface2, #1a1a1a)"/><text fill="var(--unknown, #eee)"/></svg>')
+    const out = svgForPrint(
+      '<svg viewBox="0 0 100 50" width="100%"><rect fill="var(--surface2, #1a1a1a)"/><text fill="var(--unknown, #eee)"/></svg>',
+    )
     expect(out).toContain('fill="#f5f5f2"')
     expect(out).toContain('fill="#eee"')
     expect(out).not.toContain("var(")
   })
 
   it("gives the svg explicit pixel dimensions", () => {
-    const out = svgForPrint('<svg viewBox="0 0 320 200" width="100%" xmlns="http://www.w3.org/2000/svg"></svg>')
+    const out = svgForPrint(
+      '<svg viewBox="0 0 320 200" width="100%" xmlns="http://www.w3.org/2000/svg"></svg>',
+    )
     expect(out).toContain('width="320"')
     expect(out).toContain('height="200"')
   })
@@ -66,32 +70,42 @@ describe("svgForPrint", () => {
 
 describe("diagramToSvg (pure renderers)", () => {
   it("renders a graph block to svg", async () => {
-    const svg = await diagramToSvg({ type: "graph", name: "G", info: "", body: "a -> b", start: 0, end: 3 })
+    const svg = await diagramToSvg({
+      type: "graph",
+      name: "G",
+      info: "",
+      body: "a -> b",
+      start: 0,
+      end: 3,
+    })
     expect(svg).toContain("<svg")
     expect(svg).toContain("</svg>")
   })
 
   it("renders a commutative diagram to svg", async () => {
-    const svg = await diagramToSvg({ type: "commdiag", name: "", info: "", body: "A -> B\nB -> C", start: 0, end: 4 })
+    const svg = await diagramToSvg({
+      type: "commdiag",
+      name: "",
+      info: "",
+      body: "A -> B\nB -> C",
+      start: 0,
+      end: 4,
+    })
     expect(svg).toContain("<svg")
   })
 
   it("returns null for non-visual types", async () => {
-    expect(await diagramToSvg({ type: "pseudocode", name: "", info: "", body: "x", start: 0, end: 3 })).toBeNull()
+    expect(
+      await diagramToSvg({ type: "pseudocode", name: "", info: "", body: "x", start: 0, end: 3 }),
+    ).toBeNull()
   })
 })
 
 describe("replaceDiagramsForExport", () => {
   it("replaces truth blocks with tables and leaves unrasterizable blocks for the degrader", async () => {
-    const md = [
-      "intro",
-      ":::truth[Tabla]",
-      "p or q",
-      ":::",
-      ":::pseudocode",
-      "x <- 1",
-      ":::",
-    ].join("\n")
+    const md = ["intro", ":::truth[Tabla]", "p or q", ":::", ":::pseudocode", "x <- 1", ":::"].join(
+      "\n",
+    )
     // jsdom has no canvas.toBlob, so raster types would no-op here; truth
     // tables are pure and must land regardless.
     const { content } = await replaceDiagramsForExport(md, async () => "unused.png")

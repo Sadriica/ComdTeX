@@ -33,7 +33,9 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
       "Body",
       ":::",
       "",
-      "table(A, B)",
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
     ].join("\n"),
     expectedStorage: [
       "---",
@@ -44,6 +46,7 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
       "",
       "| A | B |",
       "| --- | --- |",
+      "| 1 | 2 |",
     ].join("\n"),
   },
   {
@@ -58,13 +61,7 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
       "",
       "\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}",
     ].join("\n"),
-    cmdx: [
-      ":::theorem[Main] {#thm:main}",
-      "frac(a, b)",
-      ":::",
-      "",
-      "mat(1, 2, 3, 4)",
-    ].join("\n"),
+    cmdx: [":::theorem[Main] {#thm:main}", "frac(a, b)", ":::", "", "mat(1, 2, 3, 4)"].join("\n"),
     expectedStorage: [
       "\\begin{theorem}[Main]",
       "\\label{thm:main}",
@@ -83,4 +80,3 @@ export const CMDX_ROUND_TRIP_FIXTURES: CmdxRoundTripFixture[] = [
     expectedStorage: "@book{cmdx, title={table(A, B)}}",
   },
 ]
-

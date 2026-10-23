@@ -1,0 +1,111 @@
+/* LaTeX error dialog: the shared modal recipe (modals.css) plus a card per
+   diagnostic. Severity shows as a left accent and a tinted background. */
+.latex-diag {
+  --diag-accent: var(--danger);
+  padding: var(--space-4) var(--space-5);
+  background: var(--danger-bg);
+  border-left: 3px solid var(--diag-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+.latex-diag.warning {
+  --diag-accent: var(--warn);
+  background: var(--warn-bg);
+}
+.latex-diag-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  color: var(--diag-accent);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.latex-diag-context {
+  display: inline-block;
+  margin: var(--space-2) 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.latex-diag-context-label {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.latex-err-empty {
+  margin: 0;
+  color: var(--fg-muted);
+}
+.latex-diag-suggestion {
+  margin-top: var(--space-2);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.latex-diag-suggestion::before {
+  content: "→ ";
+}
+.symbol-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+/* ── Error boundary fallbacks ── */
+.error-region {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--danger-bg);
+  color: var(--fg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+}
+.error-region-title {
+  font-weight: 600;
+}
+.error-region-message {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Last resort: the whole app failed. It can render outside .app, so it only
+   needs the root tokens. */
+.error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  height: 100vh;
+  padding: var(--space-8);
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+}
+.error-screen-title {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-xl);
+}
+.error-screen-message {
+  max-width: 600px;
+  padding: var(--space-6);
+  overflow-x: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  white-space: pre-wrap;
+}

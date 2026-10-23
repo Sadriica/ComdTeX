@@ -1,9 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useT } from "./i18n"
+import { Icon, Minus, Settings, Square, X } from "./icons"
 
 function currentWindow() {
-  try { return getCurrentWindow() }
-  catch { return null }
+  try {
+    return getCurrentWindow()
+  } catch {
+    return null
+  }
 }
 
 interface TitleBarProps {
@@ -15,13 +19,13 @@ interface TitleBarProps {
 
 export default function TitleBar({ filename, isDirty, onClose, onSettingsClick }: TitleBarProps) {
   const t = useT()
-  const title = filename
-    ? `${isDirty ? "● " : ""}${filename} (ComdTeX)`
-    : "ComdTeX"
+  const title = filename ? `${isDirty ? "● " : ""}${filename} (ComdTeX)` : "ComdTeX"
 
   return (
     <div className="titlebar" data-tauri-drag-region>
-      <span className="titlebar-title" data-tauri-drag-region>{title}</span>
+      <span className="titlebar-title" data-tauri-drag-region>
+        {title}
+      </span>
       <div className="titlebar-controls">
         {onSettingsClick && (
           <button
@@ -31,34 +35,40 @@ export default function TitleBar({ filename, isDirty, onClose, onSettingsClick }
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => onSettingsClick()}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+            <Icon icon={Settings} size={14} />
           </button>
         )}
         <button
           className="titlebar-btn titlebar-minimize"
           title={t.titleBar.minimize}
+          aria-label={t.titleBar.minimize}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => currentWindow()?.minimize()}
-        >─</button>
+        >
+          <Icon icon={Minus} size={14} />
+        </button>
         <button
           className="titlebar-btn titlebar-maximize"
           title={t.titleBar.maximize}
+          aria-label={t.titleBar.maximize}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => currentWindow()?.toggleMaximize()}
-        >□</button>
+        >
+          <Icon icon={Square} size={14} />
+        </button>
         <button
           className="titlebar-btn titlebar-close"
           title={t.titleBar.close}
+          aria-label={t.titleBar.close}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => {
             const win = currentWindow()
             if (onClose) onClose()
             else win?.destroy()
           }}
-        >✕</button>
+        >
+          <Icon icon={X} size={14} />
+        </button>
       </div>
     </div>
   )

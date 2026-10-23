@@ -98,7 +98,9 @@ describe("preview cross-reference anchors", () => {
     // duplicate-key line list as a body `# Notas` heading, consuming index 0
     // and shifting every body annotation for that text to the wrong line.
     const doc = `---\ntitle: Notas\n---\n# Notas\n\nPrimer bloque.\n\n# Notas\n\nSegundo bloque.`
-    const html = renderMarkdown(doc, {}, undefined, undefined, undefined, undefined, undefined, { annotate: false })
+    const html = renderMarkdown(doc, {}, undefined, undefined, undefined, undefined, undefined, {
+      annotate: false,
+    })
     // Build the fragment the same way the preview pipeline does before calling
     // `annotateSourceLinesIn` (a DOMParser parse, no sanitizer needed for this
     // assertion; we only care about the in-place annotation pass itself).

@@ -2,7 +2,11 @@ import { useState, useEffect } from "react"
 import type { FileNode, SearchResult } from "./types"
 import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
+import { Icon, Link2 } from "./icons"
 import { renderEmptyMessage } from "./emptyStateMessage"
+import PanelHeader from "./PanelHeader"
+
+const NO_BACKLINKS: SearchResult[] = []
 
 interface BacklinksPanelProps {
   currentFile: { name: string; path: string } | null
@@ -12,10 +16,18 @@ interface BacklinksPanelProps {
   onSearch: (query: string) => Promise<SearchResult[]>
 }
 
-export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch }: BacklinksPanelProps) {
+export default function BacklinksPanel({
+  currentFile,
+  onOpenFile,
+  tree,
+  onSearch,
+}: BacklinksPanelProps) {
   const t = useT()
-  const [backlinks, setBacklinks] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [foundBacklinks, setBacklinks] = useState<SearchResult[]>([])
+  const [foundLoading, setLoading] = useState(false)
+  // With no file open there is nothing to show, whatever the last scan found.
+  const backlinks = currentFile ? foundBacklinks : NO_BACKLINKS
+  const loading = currentFile ? foundLoading : false
 
   // Who links here is a search for `[[name]]`, so it goes through the vault's
   // index: every file this panel needs was already read for search, and an
@@ -23,9 +35,10 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch
   // every file switch (what this did before) duplicated that work and scaled
   // with the vault, not with the answer.
   useEffect(() => {
-    if (!currentFile) { setBacklinks([]); return }
+    if (!currentFile) return
     const baseName = currentFile.name.replace(/\.[^.]+$/, "")
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the scan as started; the results arrive after the async search
     setLoading(true)
     onSearch(`[[${baseName}]]`)
       .then((results) => {
@@ -38,36 +51,49 @@ export default function BacklinksPanel({ currentFile, onOpenFile, tree, onSearch
         console.error("Backlinks scan failed", err)
         setLoading(false)
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [currentFile, onSearch])
 
   if (!currentFile) {
-    return <div className="tree-empty">{t.backlinks.noFile}</div>
+    return (
+      <div className="backlinks-panel">
+        <PanelHeader title={t.sidebar.backlinks} />
+        <div className="panel-empty">{t.backlinks.noFile}</div>
+      </div>
+    )
   }
 
   return (
     <div className="backlinks-panel">
-      <div className="backlinks-header">
-        {loading ? t.backlinks.searching : t.backlinks.links(backlinks.length)}
-      </div>
+      <PanelHeader title={t.sidebar.backlinks} count={loading ? undefined : backlinks.length} />
+      {loading && <div className="panel-loading">{t.backlinks.searching}</div>}
       {backlinks.length === 0 && !loading && (
         <div className="panel-empty-rich">
-          <div className="panel-empty-icon" aria-hidden="true">{t.emptyStates.backlinksIcon}</div>
-          <p className="panel-empty-message">{renderEmptyMessage(t.emptyStates.backlinksMessage)}</p>
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Link2} size={16} />
+          </div>
+          <p className="panel-empty-message">
+            {renderEmptyMessage(t.emptyStates.backlinksMessage)}
+          </p>
         </div>
       )}
       {Object.entries(
-        backlinks.reduce((acc, b) => {
-          ;(acc[b.filePath] ??= []).push(b)
-          return acc
-        }, {} as Record<string, SearchResult[]>)
+        backlinks.reduce(
+          (acc, b) => {
+            ;(acc[b.filePath] ??= []).push(b)
+            return acc
+          },
+          {} as Record<string, SearchResult[]>,
+        ),
       ).map(([filePath, hits]) => {
         const node = flatFiles(tree).find((f) => f.path === filePath)
         if (!node) return null
         return (
           <div key={filePath} className="search-group">
             <div className="search-file" onClick={() => onOpenFile(node, hits[0]?.line)}>
-              <span>{hits[0].fileName}</span>
+              <span className="search-file-name">{hits[0].fileName}</span>
               <span className="search-count">{hits.length}</span>
             </div>
             {hits.map((h, i) => (

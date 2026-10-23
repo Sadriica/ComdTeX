@@ -2,8 +2,10 @@ import { useMemo, useState } from "react"
 import type { OpenFile, FileNode } from "./types"
 import { flatFiles } from "./wikilinks"
 import { useT } from "./i18n"
+import { Icon, TriangleAlert } from "./icons"
 import ContextMenu from "./ContextMenu"
 import { showToast } from "./toastService"
+import PanelHeader from "./PanelHeader"
 
 interface BrokenLink {
   file: string
@@ -26,7 +28,11 @@ interface Stats {
 
 function computeStats(tree: FileNode[], openTabs: OpenFile[], wikiNames: Set<string>): Stats {
   const allFiles = flatFiles(tree)
-  let words = 0, wikilinks = 0, equations = 0, figures = 0, citations = 0
+  let words = 0,
+    wikilinks = 0,
+    equations = 0,
+    figures = 0,
+    citations = 0
   const tags = new Set<string>()
   const brokenLinks: BrokenLink[] = []
 
@@ -90,7 +96,15 @@ function computeStats(tree: FileNode[], openTabs: OpenFile[], wikiNames: Set<str
   }
 }
 
-const Row = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
+const Row = ({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string | number
+  accent?: boolean
+}) => (
   <div className={`stats-row${accent ? " stats-accent" : ""}`}>
     <span className="stats-label">{label}</span>
     <span className="stats-value">{value}</span>
@@ -102,7 +116,8 @@ interface VaultStatsPanelProps {
   openTabs: OpenFile[]
   wikiNames: Set<string>
   onOpenFile?: (path: string, line?: number) => void
-  onCreateNote?: (name: string) => Promise<void>
+  /** Resolves to false when nothing was created (the host already said why). */
+  onCreateNote?: (name: string, fromPath: string) => Promise<boolean | void>
   onRemoveLink?: (path: string, line: number, link: string) => Promise<void>
 }
 
@@ -115,10 +130,7 @@ export default function VaultStatsPanel({
   onRemoveLink,
 }: VaultStatsPanelProps) {
   const t = useT()
-  const stats = useMemo(
-    () => computeStats(tree, openTabs, wikiNames),
-    [tree, openTabs, wikiNames]
-  )
+  const stats = useMemo(() => computeStats(tree, openTabs, wikiNames), [tree, openTabs, wikiNames])
 
   const [menuFor, setMenuFor] = useState<BrokenLink | null>(null)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -135,8 +147,8 @@ export default function VaultStatsPanel({
   const handleCreateNote = async (b: BrokenLink) => {
     if (!onCreateNote) return
     try {
-      await onCreateNote(b.link)
-      showToast(t.brokenLinks.noteCreated(b.link), "success")
+      const created = await onCreateNote(b.link, b.path)
+      if (created !== false) showToast(t.brokenLinks.noteCreated(b.link), "success")
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), "error")
     }
@@ -154,24 +166,25 @@ export default function VaultStatsPanel({
 
   return (
     <div className="stats-panel">
+      <PanelHeader title={t.sidebar.stats} />
       <div className="stats-section">
         <div className="stats-section-title">{t.stats.vault}</div>
-        <Row label={t.stats.files}    value={stats.fileCount} />
-        <Row label={t.stats.open}     value={stats.openCount} />
-        <Row label={t.stats.words}    value={stats.wordCount.toLocaleString()} />
-        <Row label={t.stats.tags}     value={stats.tagCount} />
+        <Row label={t.stats.files} value={stats.fileCount} />
+        <Row label={t.stats.open} value={stats.openCount} />
+        <Row label={t.stats.words} value={stats.wordCount.toLocaleString()} />
+        <Row label={t.stats.tags} value={stats.tagCount} />
       </div>
       <div className="stats-section">
         <div className="stats-section-title">{t.stats.content}</div>
-        <Row label={t.stats.equations}  value={stats.equationCount} />
-        <Row label={t.stats.figures}    value={stats.figureCount} />
-        <Row label={t.stats.citations}  value={stats.citationCount} />
-        <Row label={t.stats.wikilinks}  value={stats.wikilinkCount} />
+        <Row label={t.stats.equations} value={stats.equationCount} />
+        <Row label={t.stats.figures} value={stats.figureCount} />
+        <Row label={t.stats.citations} value={stats.citationCount} />
+        <Row label={t.stats.wikilinks} value={stats.wikilinkCount} />
       </div>
       {stats.brokenLinks.length > 0 && (
         <div className="stats-section stats-broken">
           <div className="stats-section-title stats-broken-title">
-            ⚠ {t.stats.broken(stats.brokenLinks.length)}
+            <Icon icon={TriangleAlert} size={14} /> {t.stats.broken(stats.brokenLinks.length)}
           </div>
           {stats.brokenLinks.map((b, i) => (
             <div
@@ -216,7 +229,9 @@ export default function VaultStatsPanel({
             },
             {
               label: t.brokenLinks.ignore,
-              action: () => { /* close only */ },
+              action: () => {
+                /* close only */
+              },
             },
           ]}
         />

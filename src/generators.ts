@@ -58,6 +58,22 @@ export function parseTasks(files: SourceFile[]): TaskItem[] {
   return items
 }
 
+/**
+ * Flip the checkbox on 1-based `line` of `content`, but only if that line is
+ * still the task whose text is `text`. Returns null when the file changed
+ * underneath (line moved, edited or gone), so a stale toggle never touches the
+ * wrong line.
+ */
+export function toggleTaskInContent(content: string, line: number, text: string): string | null {
+  const lines = content.split("\n")
+  const ln = lines[line - 1]
+  if (ln === undefined) return null
+  const m = TASK_RE.exec(ln)
+  if (!m || m[2].trim() !== text) return null
+  lines[line - 1] = ln.replace(/\[[ xX]\]/, m[1] === " " ? "[x]" : "[ ]")
+  return lines.join("\n")
+}
+
 /** Note name for a wikilink: basename without extension. */
 function noteName(path: string): string {
   return pathBasename(path).replace(/\.[^.]+$/, "")
@@ -111,7 +127,10 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 
   const pending = items.filter((i) => !i.done)
   const done = items.filter((i) => i.done)
-  lines.push(`**${pending.length} pendiente${pending.length === 1 ? "" : "s"}** · ${done.length} completada${done.length === 1 ? "" : "s"}`, "")
+  lines.push(
+    `**${pending.length} pendiente${pending.length === 1 ? "" : "s"}** · ${done.length} completada${done.length === 1 ? "" : "s"}`,
+    "",
+  )
 
   const byFile = new Map<string, TaskItem[]>()
   for (const item of items) {
@@ -135,7 +154,9 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 export function generateCalendar(files: SourceFile[], title = "Calendario"): string {
   const lines = header(title)
   const dated = files.map((f) => ({ file: f, date: documentDate(f) }))
-  const withDate = dated.filter((d) => d.date !== null).sort((a, b) => b.date!.localeCompare(a.date!))
+  const withDate = dated
+    .filter((d) => d.date !== null)
+    .sort((a, b) => b.date!.localeCompare(a.date!))
   const withoutDate = dated.filter((d) => d.date === null)
 
   if (withDate.length === 0 && withoutDate.length === 0) {
@@ -182,8 +203,11 @@ export function generateIndex(files: SourceFile[], title = "Índice"): string {
 /** Dispatch to the generator named by a `.comdtex-folder.json` rule. */
 export function runGenerator(type: GeneratorType, files: SourceFile[], title?: string): string {
   switch (type) {
-    case "tasks":    return generateTasks(files, title)
-    case "calendar": return generateCalendar(files, title)
-    case "index":    return generateIndex(files, title)
+    case "tasks":
+      return generateTasks(files, title)
+    case "calendar":
+      return generateCalendar(files, title)
+    case "index":
+      return generateIndex(files, title)
   }
 }

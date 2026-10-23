@@ -26,7 +26,13 @@ describe("docsUrl", () => {
 // web repo at test time, so this list is a hardcoded mirror of
 // web/src/content/docs/en/*.md (and es/*.md, which the site's [...slug].astro route
 // requires to have the same set of filenames). Update both lists together.
-const SETTINGS_DOC_PAGES: DocsPage[] = ["settings", "daily-notes", "compile-pdf", "collaboration", "ai"]
+const SETTINGS_DOC_PAGES: DocsPage[] = [
+  "settings",
+  "daily-notes",
+  "compile-pdf",
+  "collaboration",
+  "ai",
+]
 
 describe("pages referenced from the app exist on the site (mirrored list)", () => {
   it("every settings doc page is a known docs page", () => {

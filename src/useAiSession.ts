@@ -1,4 +1,12 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState } from "react"
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { STORAGE_KEYS } from "./storageKeys"
 
 /** A single chat turn shown in the AI panel. */
@@ -34,7 +42,10 @@ export interface AiSession {
   messages: DisplayMessage[]
   setMessages: (action: DisplayMessage[] | ((prev: DisplayMessage[]) => DisplayMessage[])) => void
   /** Like setMessages but targets a specific conversation id (for streaming). */
-  setMessagesFor: (convId: string, action: DisplayMessage[] | ((prev: DisplayMessage[]) => DisplayMessage[])) => void
+  setMessagesFor: (
+    convId: string,
+    action: DisplayMessage[] | ((prev: DisplayMessage[]) => DisplayMessage[]),
+  ) => void
   input: string
   setInput: React.Dispatch<React.SetStateAction<string>>
   includeFile: boolean
@@ -65,8 +76,11 @@ interface Store {
 
 function newId(): string {
   try {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()
-  } catch { /* fall through */ }
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+      return crypto.randomUUID()
+  } catch {
+    /* fall through */
+  }
   return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
@@ -84,11 +98,15 @@ function deriveTitle(messages: DisplayMessage[]): string {
 function isConversation(c: unknown): c is Conversation {
   if (!c || typeof c !== "object") return false
   const o = c as Record<string, unknown>
-  return typeof o.id === "string"
-    && typeof o.title === "string"
-    && typeof o.updatedAt === "number"
-    && Array.isArray(o.messages)
-    && o.messages.every((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+  return (
+    typeof o.id === "string" &&
+    typeof o.title === "string" &&
+    typeof o.updatedAt === "number" &&
+    Array.isArray(o.messages) &&
+    o.messages.every(
+      (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
+    )
+  )
 }
 
 function loadStore(): Store {
@@ -99,17 +117,25 @@ function loadStore(): Store {
       const conversations = parsed.filter(isConversation)
       if (conversations.length > 0) {
         const storedActive = localStorage.getItem(ACTIVE_KEY)
-        const activeId = conversations.some((c) => c.id === storedActive) ? storedActive! : conversations[0].id
+        const activeId = conversations.some((c) => c.id === storedActive)
+          ? storedActive!
+          : conversations[0].id
         return { conversations, activeId }
       }
     }
-  } catch { /* corrupt storage: start fresh */ }
+  } catch {
+    /* corrupt storage: start fresh */
+  }
   const c = freshConversation()
   return { conversations: [c], activeId: c.id }
 }
 
 function loadInput(): string {
-  try { return sessionStorage.getItem(INPUT_KEY) ?? "" } catch { return "" }
+  try {
+    return sessionStorage.getItem(INPUT_KEY) ?? ""
+  } catch {
+    return ""
+  }
 }
 
 export function useAiSession(): AiSession {
@@ -124,13 +150,17 @@ export function useAiSession(): AiSession {
   // changes collapse into a single write ~600ms after they settle.
   // Latest store for the synchronous flush-on-close path below.
   const storeRef = useRef(store)
-  useEffect(() => { storeRef.current = store }, [store])
+  useEffect(() => {
+    storeRef.current = store
+  }, [store])
 
   const flushStore = useCallback(() => {
     try {
       localStorage.setItem(CONVS_KEY, JSON.stringify(storeRef.current.conversations))
       localStorage.setItem(ACTIVE_KEY, storeRef.current.activeId)
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }, [])
 
   useEffect(() => {
@@ -141,7 +171,9 @@ export function useAiSession(): AiSession {
   // Flush synchronously when the window is hidden/unloaded so a close (or reload)
   // within the 600ms debounce window doesn't drop the last chat.
   useEffect(() => {
-    const onHide = () => { if (document.visibilityState === "hidden") flushStore() }
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushStore()
+    }
     window.addEventListener("beforeunload", flushStore)
     document.addEventListener("visibilitychange", onHide)
     return () => {
@@ -154,7 +186,9 @@ export function useAiSession(): AiSession {
     try {
       if (input === "") sessionStorage.removeItem(INPUT_KEY)
       else sessionStorage.setItem(INPUT_KEY, input)
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }, [input])
 
   // Target a SPECIFIC conversation by id. The streaming loop captures its

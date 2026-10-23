@@ -24,7 +24,9 @@ export function useFocusTrap(
   // restores focus to the pre-open element, yanking focus out of the field
   // being typed in. Re-arm the trap only when `isOpen` changes.
   const onCloseRef = useRef(onClose)
-  useEffect(() => { onCloseRef.current = onClose })
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!isOpen) return
@@ -43,7 +45,12 @@ export function useFocusTrap(
         "[tabindex]:not([tabindex='-1'])",
       ].join(",")
       const list = Array.from(container.querySelectorAll<HTMLElement>(selector))
-      return list.filter((el) => !el.hasAttribute("aria-hidden") && el.offsetParent !== null)
+      // tabIndex < 0 (the palette's pin buttons, roving-tabindex items) is
+      // focusable by script but never a Tab stop, so it must not count as the
+      // first/last element the trap wraps around.
+      return list.filter(
+        (el) => el.tabIndex >= 0 && !el.hasAttribute("aria-hidden") && el.offsetParent !== null,
+      )
     }
 
     // Move focus into the modal (prefer an element that does NOT autofocus
@@ -91,8 +98,23 @@ export function useFocusTrap(
 
     return () => {
       container.removeEventListener("keydown", onKeyDown)
-      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
-        try { previouslyFocused.focus() } catch { /* element gone */ }
+      // Give focus back only when nothing else took it: it is still inside the
+      // closing dialog, or it fell to <body>. A palette action or menu entry
+      // that focused the editor must keep that focus.
+      const now = document.activeElement
+      const focusLost =
+        !now || now === document.body || now === document.documentElement || container.contains(now)
+      if (
+        focusLost &&
+        previouslyFocused &&
+        previouslyFocused.isConnected &&
+        typeof previouslyFocused.focus === "function"
+      ) {
+        try {
+          previouslyFocused.focus()
+        } catch {
+          /* element gone */
+        }
       }
     }
   }, [ref, isOpen])

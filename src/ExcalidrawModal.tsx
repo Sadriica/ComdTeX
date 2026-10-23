@@ -42,13 +42,23 @@ function decodeScene(sceneB64: string): Scene {
 }
 
 /** Serialize the live scene to compact single-line base64 JSON. */
-function encodeScene(elements: readonly unknown[], appState: Record<string, unknown>, files: Record<string, unknown>): string {
+function encodeScene(
+  elements: readonly unknown[],
+  appState: Record<string, unknown>,
+  files: Record<string, unknown>,
+): string {
   // Keep only the appState fields worth persisting; drop the noisy/transient rest.
   const slim: Record<string, unknown> = {
     viewBackgroundColor: appState.viewBackgroundColor,
     gridSize: appState.gridSize,
   }
-  const payload = JSON.stringify({ type: "excalidraw", version: 2, elements, appState: slim, files })
+  const payload = JSON.stringify({
+    type: "excalidraw",
+    version: 2,
+    elements,
+    appState: slim,
+    files,
+  })
   return btoa(unescape(encodeURIComponent(payload)))
 }
 
@@ -72,7 +82,13 @@ function sceneSignature(elements: readonly unknown[]): string {
     .join("|")
 }
 
-export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose }: ExcalidrawModalProps) {
+export default function ExcalidrawModal({
+  open,
+  sceneB64,
+  theme,
+  onSave,
+  onClose,
+}: ExcalidrawModalProps) {
   const t = useT()
   const ref = useRef<HTMLDivElement>(null)
   const [api, setApi] = useState<ExcalidrawAPI | null>(null)
@@ -90,7 +106,10 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
   // remounts on each open: `api` always starts fresh, no manual reset needed.
 
   const handleSave = useCallback(() => {
-    if (!api) { onClose(); return }
+    if (!api) {
+      onClose()
+      return
+    }
     const b64 = encodeScene(api.getSceneElements(), api.getAppState(), api.getFiles())
     onSave(b64)
   }, [api, onSave, onClose])
@@ -115,17 +134,35 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
   return (
     // data-gesture-optout: the canvas zooms/pans itself; app-level touchpad
     // gestures (Ctrl+wheel/pinch → app font zoom) must not double-fire here.
-    <div className="excalidraw-modal-overlay" data-gesture-optout="" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}>
-      <div className="excalidraw-modal" ref={ref} role="dialog" aria-modal="true" aria-label={t.excalidraw.modalTitle}>
+    <div
+      className="excalidraw-modal-overlay"
+      data-gesture-optout=""
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) requestClose()
+      }}
+    >
+      <div
+        className="excalidraw-modal"
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.excalidraw.modalTitle}
+      >
         <div className="excalidraw-modal-header">
           <span className="excalidraw-modal-title">{t.excalidraw.modalTitle}</span>
           <div className="excalidraw-modal-actions">
-            <button className="excalidraw-modal-cancel" onClick={requestClose}>{t.excalidraw.cancel}</button>
-            <button className="excalidraw-modal-save" onClick={handleSave}>{t.excalidraw.save}</button>
+            <button className="excalidraw-modal-cancel" onClick={requestClose}>
+              {t.excalidraw.cancel}
+            </button>
+            <button className="excalidraw-modal-save" onClick={handleSave}>
+              {t.excalidraw.save}
+            </button>
           </div>
         </div>
         <div className="excalidraw-modal-canvas">
-          <Suspense fallback={<div className="excalidraw-modal-loading">{t.excalidraw.loading}</div>}>
+          <Suspense
+            fallback={<div className="excalidraw-modal-loading">{t.excalidraw.loading}</div>}
+          >
             <Excalidraw
               theme={theme}
               // Loose-typed scene; Excalidraw's strict initialData type rejects our
@@ -140,12 +177,22 @@ export default function ExcalidrawModal({ open, sceneB64, theme, onSave, onClose
         </div>
         {confirmOpen && (
           <div className="excalidraw-confirm-overlay">
-            <div className="excalidraw-confirm" role="alertdialog" aria-label={t.excalidraw.unsavedPrompt}>
+            <div
+              className="excalidraw-confirm"
+              role="alertdialog"
+              aria-label={t.excalidraw.unsavedPrompt}
+            >
               <p className="excalidraw-confirm-text">{t.excalidraw.unsavedPrompt}</p>
               <div className="excalidraw-confirm-actions">
-                <button className="excalidraw-modal-save" onClick={handleSave}>{t.excalidraw.save}</button>
-                <button className="excalidraw-confirm-discard" onClick={onClose}>{t.excalidraw.discard}</button>
-                <button className="excalidraw-modal-cancel" onClick={() => setConfirmOpen(false)}>{t.excalidraw.keepEditing}</button>
+                <button className="excalidraw-modal-save" onClick={handleSave}>
+                  {t.excalidraw.save}
+                </button>
+                <button className="excalidraw-confirm-discard" onClick={onClose}>
+                  {t.excalidraw.discard}
+                </button>
+                <button className="excalidraw-modal-cancel" onClick={() => setConfirmOpen(false)}>
+                  {t.excalidraw.keepEditing}
+                </button>
               </div>
             </div>
           </div>

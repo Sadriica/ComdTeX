@@ -7,14 +7,35 @@ import katex from "katex"
 import "katex/contrib/mhchem"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { preprocess } from "./preprocessor"
-import { extractEnvironments, prescanEnvironmentLabels, resetEnvCounters, resolveEnvironmentRefs, type EnvironmentDocResolver } from "./environments"
+import {
+  extractEnvironments,
+  prescanEnvironmentLabels,
+  resetEnvCounters,
+  resolveEnvironmentRefs,
+  type EnvironmentDocResolver,
+} from "./environments"
 import { processWikilinks } from "./wikilinks"
 import type { KatexMacros } from "./macros"
-import { resetEqCounters, prescanEquations, resolveEqRefs, wrapNumbered, wrapInlineNumbered, NUMBERED_MATH_RE } from "./equations"
+import {
+  resetEqCounters,
+  prescanEquations,
+  resolveEqRefs,
+  wrapNumbered,
+  wrapInlineNumbered,
+  NUMBERED_MATH_RE,
+} from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
+import { resolveImagePath } from "./imagePaths"
+import { resolveDocLanguage, withDocLanguage, type DocLang } from "./docLang"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
-import { resetFigCounters, prescanFigures, resolveFigRefs, wrapFigures, preprocessFigureLabels } from "./figures"
+import {
+  resetFigCounters,
+  prescanFigures,
+  resolveFigRefs,
+  wrapFigures,
+  preprocessFigureLabels,
+} from "./figures"
 import { numberHeadings, resolveSectionRefs, SECTION_ID_MARKER_RE } from "./references"
 import { slugifyHeading } from "./toc"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
@@ -22,23 +43,58 @@ import { processBlockIds, attachBlockIds, type TransclusionResolver } from "./tr
 import { resolveDocumentContent } from "./documentResolve"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
+import { highlightCode } from "./syntaxHighlight"
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+// `breaks`: a single newline inside a paragraph is a line break, as the preview
+// has always shown it (it used to be `white-space: pre-wrap` in CSS, which also
+// kept runs of spaces and broke normal typesetting). `highlight` returns the
+// inner HTML of a known language or "", which keeps markdown-it's plain
+// escaped output.
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: true,
+  highlight: (code, lang) => highlightCode(code, lang) ?? "",
+})
   .use(footnotePlugin)
   .use(markPlugin)
   .enable("table")
   .enable("strikethrough")
 
+// Callout type → icon key. The key is emitted as `data-icon` on an empty span;
+// styles/components/callout-icons.css draws the matching Lucide icon with a
+// CSS mask (currentColor), so no glyph or emoji is baked into the HTML.
 const CALLOUT_ICONS: Record<string, string> = {
-  note: "ℹ", info: "ℹ", tip: "💡", hint: "💡",
-  warning: "⚠", caution: "⚠", attention: "⚠",
-  important: "❗", danger: "🔴", failure: "✗", error: "✗",
-  success: "✓", check: "✓", done: "✓",
-  question: "?", help: "?", faq: "?",
-  quote: "❝", cite: "❝",
-  theorem: "∎", lemma: "∎", corollary: "∎", proposition: "∎",
-  definition: "≝", example: "▶", exercise: "✏", proof: "□",
-  remark: "◆", abstract: "◈",
+  note: "info",
+  info: "info",
+  tip: "tip",
+  hint: "tip",
+  warning: "warning",
+  caution: "warning",
+  attention: "warning",
+  important: "important",
+  danger: "danger",
+  failure: "error",
+  error: "error",
+  success: "success",
+  check: "success",
+  done: "success",
+  question: "question",
+  help: "question",
+  faq: "question",
+  quote: "quote",
+  cite: "quote",
+  theorem: "theorem",
+  lemma: "theorem",
+  corollary: "theorem",
+  proposition: "theorem",
+  definition: "definition",
+  example: "example",
+  exercise: "exercise",
+  proof: "proof",
+  remark: "remark",
+  abstract: "abstract",
 }
 
 function preprocessCallouts(text: string): string {
@@ -48,11 +104,11 @@ function preprocessCallouts(text: string): string {
 
   while (i < lines.length) {
     const line = lines[i]
-    const opener = /^>\s*\[!([\w]+)\](.*)$/.exec(line)
+    const opener = /^>\s*\[!([\w-]+)\][+-]?(.*)$/.exec(line)
     if (opener) {
       const type = opener[1].toLowerCase()
       const titleRest = opener[2].trim()
-      const icon = CALLOUT_ICONS[type] ?? "◈"
+      const icon = CALLOUT_ICONS[type] ?? "abstract"
       const defaultTitle = type.charAt(0).toUpperCase() + type.slice(1)
       const title = titleRest || defaultTitle
 
@@ -66,8 +122,8 @@ function preprocessCallouts(text: string): string {
 
       out.push(
         `<div class="callout callout-${type}">` +
-        `<div class="callout-title"><span class="callout-icon">${icon}</span> ${escHtml(title)}</div>` +
-        `<div class="callout-body">\n\n${body}\n\n</div></div>`,
+          `<div class="callout-title"><span class="callout-icon" data-icon="${icon}" aria-hidden="true"></span> ${escHtml(title)}</div>` +
+          `<div class="callout-body">\n\n${body}\n\n</div></div>`,
       )
     } else {
       out.push(line)
@@ -166,9 +222,8 @@ function preRenderDisplayMath(
   // `@eq:` reference resolves to, and math renders inside what should be a
   // literal code listing. Mirror equations.ts stripCodeFences' fence pattern.
   const codeSpans: Array<{ start: number; end: number; text: string }> = []
-  const fenceBlanked = text.replace(
-    /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm,
-    (m) => " ".repeat(m.length),
+  const fenceBlanked = text.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm, (m) =>
+    " ".repeat(m.length),
   )
   const masked = fenceBlanked.replace(/(`+)([^`\n]*?)\1/g, (m, _t, _c, offset: number) => {
     codeSpans.push({ start: offset, end: offset + m.length, text: m })
@@ -188,9 +243,7 @@ function preRenderDisplayMath(
     const isDisplay = m[1] !== undefined
     const expr = isDisplay ? m[1] : m[3]
     const rendered = renderKatex(expr, isDisplay, macros)
-    const html = isDisplay
-      ? wrapNumbered(rendered, n)
-      : wrapInlineNumbered(rendered, n)
+    const html = isDisplay ? wrapNumbered(rendered, n) : wrapInlineNumbered(rendered, n)
     slots.push(html)
     out.push(`\x02DMATH${slots.length - 1}\x03`)
     cursor = m.index + m[0].length
@@ -234,11 +287,38 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
   text = preserveParagraphIndentationSource(text)
   let html = md.render(text)
   html = preserveParagraphIndentation(html)
+  html = unwrapBlockSlots(html)
 
   html = html.replace(/\x02MATH(\d+)\x03/g, (_, i) => mathSlots[parseInt(i)] ?? "")
-  html = html.replace(/\x02ENV(\d+)\x03/g,  (_, i) => envSlots[parseInt(i)] ?? "")
+  html = html.replace(/\x02ENV(\d+)\x03/g, (_, i) => envSlots[parseInt(i)] ?? "")
 
   return html
+}
+
+// Environments and display equations are block-level, but they travel through
+// markdown-it as placeholders inside ordinary paragraphs. Left there, the HTML
+// parser would close the paragraph around each one and leave empty paragraphs,
+// bare text nodes and (with the `breaks` option) stray <br> elements. So a
+// paragraph that holds a block placeholder is split at it: the text on either
+// side becomes a paragraph of its own and the placeholder stands alone.
+const BLOCK_SLOT = "\\x02(?:ENV|DMATH)\\d+\\x03"
+const HAS_BLOCK_SLOT_RE = new RegExp(BLOCK_SLOT)
+const SPLIT_AT_BLOCK_SLOT_RE = new RegExp(`(${BLOCK_SLOT})`)
+const EDGE_BREAKS_RE = /^(?:\s|<br>)+|(?:\s|<br>)+$/g
+
+function unwrapBlockSlots(html: string): string {
+  if (html.indexOf("\x02") < 0) return html
+  return html.replace(/<p>([\s\S]*?)<\/p>/g, (match, body: string) => {
+    if (!HAS_BLOCK_SLOT_RE.test(body)) return match
+    return body
+      .split(SPLIT_AT_BLOCK_SLOT_RE)
+      .map((part, i) => {
+        if (i % 2 === 1) return part
+        const text = part.replace(EDGE_BREAKS_RE, "")
+        return text ? `<p>${text}</p>` : ""
+      })
+      .join("\n")
+  })
 }
 
 function preserveParagraphIndentation(html: string): string {
@@ -254,34 +334,54 @@ function preserveParagraphIndentation(html: string): string {
 function preserveParagraphIndentationSource(text: string): string {
   const lines = text.split("\n")
   let inFence = false
+  // A list item and everything indented under it up to the next blank line is
+  // structure (nesting, continuation), not paragraph indentation to preserve.
+  let inList = false
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim()
     if (/^(```|~~~)/.test(trimmed)) {
       inFence = !inFence
       continue
     }
-    if (inFence || i === 0 || lines[i - 1].trim() === "") continue
+    if (!inFence) {
+      if (trimmed === "") inList = false
+      else if (/^([-*+]|\d{1,9}[.)])\s/.test(trimmed)) inList = true
+    }
+    if (inFence || inList || i === 0 || lines[i - 1].trim() === "") continue
     const match = /^([ \t]{2,})(?=\S)/.exec(lines[i])
     if (!match) continue
     const spaces = match[1].replace(/\t/g, "    ").length
-    lines[i] = `<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>` + lines[i].slice(match[1].length)
+    lines[i] =
+      `<span class="md-soft-indent" aria-hidden="true">${"&nbsp;".repeat(spaces)}</span>` +
+      lines[i].slice(match[1].length)
   }
   return lines.join("\n")
 }
 
-function resolveImages(html: string, vaultPath: string): string {
-  return html.replace(
-    /<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g,
-    (match, before, src, after) => {
-      if (/^https?:\/\/|^data:|^blob:/.test(src)) return match
-      const figLabelMatch = /title="fig-label:(fig:[\w:.-]+)"/.exec(before + " " + after)
-      const dataAttr = figLabelMatch ? ` data-fig-label="${figLabelMatch[1]}"` : ""
-      const cleanBefore = before.replace(/\s*title="fig-label:[^"]*"/, "")
-      const cleanAfter = after.replace(/\s*title="fig-label:[^"]*"/, "")
-      const abs = src.startsWith("/") ? src : `${vaultPath}/${src}`
-      return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
-    }
-  )
+function safeDecode(src: string): string {
+  try {
+    return decodeURI(src)
+  } catch {
+    return src
+  }
+}
+
+function resolveImages(
+  html: string,
+  vaultPath: string,
+  docPath?: string,
+  fileExists?: (absPath: string) => boolean,
+): string {
+  return html.replace(/<img([^>]*?)\ssrc="([^"]+)"([^>]*?)>/g, (match, before, src, after) => {
+    if (/^https?:\/\/|^data:|^blob:/.test(src)) return match
+    const figLabelMatch = /title="fig-label:(fig:[\w:.-]+)"/.exec(before + " " + after)
+    const dataAttr = figLabelMatch ? ` data-fig-label="${figLabelMatch[1]}"` : ""
+    const cleanBefore = before.replace(/\s*title="fig-label:[^"]*"/, "")
+    const cleanAfter = after.replace(/\s*title="fig-label:[^"]*"/, "")
+    // The document's own folder first, then the vault root (imagePaths.ts).
+    const abs = resolveImagePath(safeDecode(src), docPath, vaultPath, fileExists) ?? src
+    return `<img${cleanBefore} src="${convertFileSrc(abs)}"${cleanAfter}${dataAttr}>`
+  })
 }
 
 // ── Source-line annotation (preview ↔ editor sync) ──────────────────────────
@@ -290,44 +390,25 @@ const SOURCE_KEY_LEN = 40
 
 /** Strip markdown noise so a line's first 40 chars match its rendered text. */
 function normalizeSourceKey(s: string): string {
-  return s
-    // List bullets and task-list markers
-    .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
-    // Blockquote markers (also "> [!callout]")
-    .replace(/^\s*>+\s*(?:\[![\w]+\]\s*)?/, "")
-    // Heading markers
-    .replace(/^\s*#{1,6}\s+/, "")
-    // Table row leading pipe + cell separators
-    .replace(/^\s*\|\s*/, "")
-    // Common markdown emphasis / wikilink delimiters
-    .replace(/[*_`~|]+/g, "")
-    .replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, SOURCE_KEY_LEN)
-}
-
-/** Pick the rendered-text key for a DOM element (first 40 chars, normalized). */
-function elementTextKey(el: Element): string {
-  // Code blocks are many source lines joined, so their full textContent can
-  // never match a single source line in the map. Key them by their FIRST
-  // non-empty content line instead: that is the line the block starts on.
-  // The line is run through `normalizeSourceKey` so it is shaped exactly like
-  // the map keys (which are built from trimmed source lines).
-  if (el.tagName.toLowerCase() === "pre") {
-    const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
-    return first ? normalizeSourceKey(first) : ""
-  }
-  let text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
-  // Strip auto-numbering prefixes from headings: numberHeadings turns
-  // `# Intro` → `<h1>1 Intro</h1>` and `## Sub` → `<h2>1.1 Sub</h2>`. The
-  // source line is just `Intro`, so peel the leading `N(.N)*` group.
-  if (/^h[1-6]$/i.test(el.tagName)) {
-    text = text.replace(/^\d+(?:\.\d+)*\s+/, "")
-  }
-  return text.slice(0, SOURCE_KEY_LEN)
+  return (
+    s
+      // List bullets and task-list markers
+      .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
+      // Blockquote markers (also "> [!callout]")
+      .replace(/^\s*>+\s*(?:\[![\w]+\]\s*)?/, "")
+      // Heading markers
+      .replace(/^\s*#{1,6}\s+/, "")
+      // Table row leading pipe + cell separators
+      .replace(/^\s*\|\s*/, "")
+      // Common markdown emphasis / wikilink delimiters
+      .replace(/[*_`~|]+/g, "")
+      .replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, SOURCE_KEY_LEN)
+  )
 }
 
 /**
@@ -374,7 +455,10 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
     }
     if (inFence) continue
     // Toggle YAML frontmatter (only at very top)
-    if (i === 0 && trimmed === "---") { inFrontmatter = true; continue }
+    if (i === 0 && trimmed === "---") {
+      inFrontmatter = true
+      continue
+    }
     if (inFrontmatter) {
       if (trimmed === "---") inFrontmatter = false
       continue
@@ -399,7 +483,8 @@ export function buildParagraphLineMap(raw: string): Map<string, number[]> {
 }
 
 const ANNOTATABLE_SELECTOR =
-  "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figure.tbl-block, div.callout, div.env-wrap"
+  "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figure.tbl-block, div.callout, div.env-wrap, " +
+  "div.eq-block, figure.fig-block"
 
 /**
  * Walk the rendered HTML and add `data-source-line="N"` to block elements
@@ -424,34 +509,196 @@ export function annotateSourceLines(html: string, raw: string): string {
  * document HTML is parsed exactly once per render instead of three times.
  */
 export function annotateSourceLinesIn(root: ParentNode, raw: string): void {
-  const map = buildParagraphLineMap(raw)
-  // Track consumed indices per key so duplicate keys map to distinct lines.
-  const consumed = new Map<string, number>()
-
+  const entries = buildSignatureEntries(raw)
+  if (entries.length === 0) return
+  // Rendered blocks come out in source order, so matching walks the source
+  // lines with a pointer that only moves forward: a repeated sentence maps to
+  // its own occurrence, and one unmatched block (a transclusion, a generated
+  // caption) never drags the rest of the document onto wrong lines.
+  let next = 0
   const targets = [...root.querySelectorAll(ANNOTATABLE_SELECTOR)] as HTMLElement[]
   for (const el of targets) {
-    if (el.hasAttribute("data-source-line")) continue
-    // `renderMarkdown` returns `frontmatterHtml + html + bibHtml`, but the
-    // line map built above (`buildParagraphLineMap`) only reflects `raw`,
-    // i.e. the BODY source, the same scope the old string-based annotation
-    // pass used. Elements from the frontmatter header (`renderFrontmatterHeader`
-    // in frontmatter.ts, e.g. `<h1 class="fm-title">`) or the bibliography
-    // (`renderBibliography` in bibtex.ts, wrapped in `.bibliography`) can match
-    // ANNOTATABLE_SELECTOR and share text with a body line (e.g. a frontmatter
-    // `title: Notas` next to a body `# Notas` heading). Without this guard such
-    // an element would silently consume an index from the duplicate-key line
-    // list, shifting every subsequent body annotation to the wrong line. Skip
-    // anything outside the body to restore the old body-only scope.
-    if (el.closest(".frontmatter-header, .bibliography")) continue
-    const key = elementTextKey(el)
-    if (!key) continue
-    const lines = map.get(key)
-    if (!lines || lines.length === 0) continue
-    const idx = consumed.get(key) ?? 0
-    const line = lines[Math.min(idx, lines.length - 1)]
-    consumed.set(key, idx + 1)
-    el.setAttribute("data-source-line", String(line))
+    // Not body text: the frontmatter header, the bibliography, footnotes.
+    if (el.closest(".frontmatter-header, .bibliography, .footnotes")) continue
+    const own = el.getAttribute("data-source-line")
+    if (own !== null) {
+      // Pre-annotated by the renderer (environments): resync the pointer.
+      const line = Number(own)
+      while (next < entries.length && entries[next].line <= line) next++
+      continue
+    }
+    const sig = elementSignature(el)
+    if (!sig) continue
+    // A paragraph inside an already annotated list item or quote shares its
+    // first line: reuse the parent's line instead of consuming another one.
+    if (el.tagName === "P") {
+      const parent = el.parentElement
+      const parentLine = parent?.matches("li, blockquote")
+        ? parent.getAttribute("data-source-line")
+        : null
+      if (parentLine !== null && parentLine !== undefined && parent?.firstElementChild === el) {
+        el.setAttribute("data-source-line", parentLine)
+        continue
+      }
+    }
+    const end = Math.min(entries.length, next + MATCH_WINDOW)
+    for (let i = next; i < end; i++) {
+      if (signaturesMatch(entries[i].sig, sig)) {
+        el.setAttribute("data-source-line", String(entries[i].line))
+        next = i + 1
+        break
+      }
+    }
   }
+}
+
+/** How far ahead (in indexed source lines) a block may match. */
+const MATCH_WINDOW = 400
+const SIGNATURE_LEN = 32
+const MIN_PREFIX = 4
+// Blocks whose text never matches their source (a rendered equation, a table,
+// a callout whose title is generated) are keyed by kind instead. The control
+// character keeps a marker from ever prefix-matching real text.
+const MATH_MARK = "\u0001math"
+const TABLE_MARK = "\u0001table"
+const CALLOUT_MARK = "\u0001callout"
+
+interface SignatureEntry {
+  line: number
+  sig: string
+}
+
+/**
+ * A line's or block's comparable text: letters and digits only, lowercased,
+ * with everything the preview renders differently from the source removed
+ * (math, citations, cross-references, labels, footnote marks, markup).
+ */
+function signature(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .slice(0, SIGNATURE_LEN)
+}
+
+function sourceSignature(line: string): string {
+  const prose = line
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?/, "")
+    .replace(/^\s*>+\s*(?:\[![\w-]+\][+-]?\s*)?/, "")
+    .replace(/^\s*#{1,6}\s+/, "")
+    .replace(/\{#[^}\s]+\}/g, "")
+    .replace(/\$\$[\s\S]*?\$\$|\$[^$\n]+\$/g, "")
+    .replace(/\$\$/g, "")
+    .replace(/\[(?:[^\]]*?)@[\w:.-]+[^\]]*\]/g, "")
+    .replace(/@\[[^\]]+\]@[\w]+:[\w.-]+|@[\w./-]+@[\w]+:[\w.-]+|@[a-z]+:[\w.-]*\w/gi, "")
+    .replace(/\[\^[^\]]+\]/g, "")
+    .replace(/!?\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_m, t, l) => l ?? t)
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, "")
+  return signature(prose)
+}
+
+/** Ordered source lines that can start a rendered block, with signatures. */
+function buildSignatureEntries(raw: string): SignatureEntry[] {
+  if (raw === lastEntriesRaw) return lastEntries
+  const out: SignatureEntry[] = []
+  const lines = raw.split("\n")
+  let inFence = false
+  let fenceFirstPending = false
+  let inFrontmatter = false
+  let inMath = false
+  let inTable = false
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (inMath) {
+      if ((trimmed.match(/\$\$/g)?.length ?? 0) % 2 === 1) inMath = false
+      continue
+    }
+    if (/^(```|~~~)/.test(trimmed)) {
+      inFence = !inFence
+      fenceFirstPending = inFence
+      continue
+    }
+    if (inFence) {
+      // A code block is keyed by its first content line, like the <pre>.
+      if (fenceFirstPending && trimmed) {
+        const sig = signature(trimmed)
+        if (sig) out.push({ line: i + 1, sig })
+        fenceFirstPending = false
+      }
+      continue
+    }
+    if (i === 0 && trimmed === "---") {
+      inFrontmatter = true
+      continue
+    }
+    if (inFrontmatter) {
+      if (trimmed === "---") inFrontmatter = false
+      continue
+    }
+    if (!trimmed || /^:::/.test(trimmed)) {
+      inTable = false
+      continue
+    }
+    if (TABLE_SEPARATOR_RE.test(trimmed)) continue
+    if (trimmed.startsWith("|")) {
+      // A table is one block: its header row, when the next line separates.
+      if (!inTable && TABLE_SEPARATOR_RE.test(lines[i + 1]?.trim() ?? "")) {
+        out.push({ line: i + 1, sig: TABLE_MARK })
+        inTable = true
+      }
+      continue
+    }
+    inTable = false
+    if (/^>\s*\[![\w-]+\]/.test(trimmed)) {
+      out.push({ line: i + 1, sig: CALLOUT_MARK })
+      continue
+    }
+    const sig = sourceSignature(trimmed)
+    if (sig) out.push({ line: i + 1, sig })
+    // Each display equation opening on this line, after the line's own text.
+    const opens = trimmed.match(/\$\$/g)?.length ?? 0
+    for (let k = 0; k < Math.ceil(opens / 2); k++) out.push({ line: i + 1, sig: MATH_MARK })
+    if (opens % 2 === 1) inMath = true
+  }
+  lastEntriesRaw = raw
+  lastEntries = out
+  return out
+}
+let lastEntriesRaw: string | null = null
+let lastEntries: SignatureEntry[] = []
+
+/** Rendered parts that do not exist as such in the source line. */
+const NOT_SOURCE_TEXT =
+  ".katex, .katex-display, .eq-ref, .eq-ref-broken, .env-ref, .env-ref-broken, .fig-ref, " +
+  ".fig-ref-broken, .xref, .xref-broken, .cite-ref, .cite-broken, sup, .footnote-ref, " +
+  ".sec-num, .callout-icon, .math-env-qed, .callout-title, .fig-number"
+
+const TABLE_SEPARATOR_RE = /^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?$/
+
+function elementSignature(el: Element): string {
+  if (el.matches("div.eq-block")) return MATH_MARK
+  if (el.matches("figure.tbl-block")) return TABLE_MARK
+  if (el.matches("div.callout")) return CALLOUT_MARK
+  if (el.tagName.toLowerCase() === "pre") {
+    const first = (el.textContent ?? "").split("\n").find((l) => l.trim() !== "")
+    return first ? signature(first) : ""
+  }
+  const clone = el.cloneNode(true) as Element
+  for (const n of clone.querySelectorAll(NOT_SOURCE_TEXT)) n.remove()
+  return signature(clone.textContent ?? "")
+}
+
+/**
+ * Same block? A source line is often only the first line of a paragraph, so
+ * one signature may be a prefix of the other (both truncated to the same
+ * length), as long as the shorter one says enough to be specific.
+ */
+function signaturesMatch(source: string, rendered: string): boolean {
+  if (source === rendered) return true
+  const shorter = source.length <= rendered.length ? source : rendered
+  const longer = shorter === source ? rendered : source
+  return shorter.length >= MIN_PREFIX && longer.startsWith(shorter)
 }
 
 // A standalone `[[toc]]` or `[toc]` line (case-insensitive) → auto TOC.
@@ -483,6 +730,20 @@ interface HeadingItem {
  * `numberHeadings` onto their rendered `<h*>` element. Runs for every document,
  * so `@sec:` links work with or without a `[[toc]]`.
  */
+/**
+ * The auto-number prefix `numberHeadings` writes ("1.2 Title") gets its own
+ * span so the preview can align and style it. The text is unchanged: the
+ * space after the span stays, and every reader of `textContent` (source-line
+ * keys, heading ids, the outline) sees "1.2 Title" as before.
+ */
+function wrapSectionNumbers(html: string): string {
+  return html.replace(
+    /<h([1-3])(\b[^>]*)>(\d+(?:\.\d+)*) /g,
+    (_m, lvl: string, attrs: string, num: string) =>
+      `<h${lvl}${attrs}><span class="sec-num">${num}</span> `,
+  )
+}
+
 function attachSectionIds(html: string): string {
   // No marker, nothing to attach: skip two full-document regex scans.
   if (html.indexOf("\x02SECID:") < 0) return html
@@ -507,28 +768,34 @@ function assignHeadingIds(html: string): { html: string; items: HeadingItem[] } 
   const used = new Set<string>()
   const items: HeadingItem[] = []
 
-  const withIds = html.replace(/<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g, (full, lvl, attrs, inner) => {
-    // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
-    const text = inner.replace(/<[^>]+>/g, "").replace(/^\s*\d+(?:\.\d+)*\s+/, "").trim()
-    if (!text) return full
+  const withIds = html.replace(
+    /<h([1-3])(\b[^>]*?)>([\s\S]*?)<\/h\1>/g,
+    (full, lvl, attrs, inner) => {
+      // Visible text only: drop nested markup and the auto-number prefix ("1.2 ").
+      const text = inner
+        .replace(/<[^>]+>/g, "")
+        .replace(/^\s*\d+(?:\.\d+)*\s+/, "")
+        .trim()
+      if (!text) return full
 
-    const existing = /\sid="([^"]+)"/.exec(attrs)
-    if (existing) {
-      used.add(existing[1])
-      items.push({ level: Number(lvl), text, slug: existing[1] })
-      return full
-    }
+      const existing = /\sid="([^"]+)"/.exec(attrs)
+      if (existing) {
+        used.add(existing[1])
+        items.push({ level: Number(lvl), text, slug: existing[1] })
+        return full
+      }
 
-    let slug = slugifyHeading(text) || "section"
-    if (used.has(slug)) {
-      let k = 2
-      while (used.has(`${slug}-${k}`)) k++
-      slug = `${slug}-${k}`
-    }
-    used.add(slug)
-    items.push({ level: Number(lvl), text, slug })
-    return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
-  })
+      let slug = slugifyHeading(text) || "section"
+      if (used.has(slug)) {
+        let k = 2
+        while (used.has(`${slug}-${k}`)) k++
+        slug = `${slug}-${k}`
+      }
+      used.add(slug)
+      items.push({ level: Number(lvl), text, slug })
+      return `<h${lvl}${attrs} id="${slug}">${inner}</h${lvl}>`
+    },
+  )
 
   return { html: withIds, items }
 }
@@ -575,7 +842,7 @@ function maskCodeRegions(text: string): { masked: string; restore: (s: string) =
   return { masked, restore }
 }
 
-export function renderMarkdown(
+function renderMarkdownImpl(
   raw: string,
   macros: KatexMacros = {},
   vaultPath?: string,
@@ -593,6 +860,19 @@ export function renderMarkdown(
      * copy-as-HTML) also pass `false` to skip the cost outright.
      */
     annotate?: boolean
+    /**
+     * Vault path of the document being rendered. Relative image paths are read
+     * from its folder first, then from the vault root.
+     */
+    docPath?: string
+    /** Sync existence check (forward-slash absolute paths) used to pick between those two. */
+    fileExists?: (absPath: string) => boolean
+    /**
+     * Language of the words the document prints ("Theorem 2", "Figure 1",
+     * "References"). The document's own `lang`/`language` frontmatter wins;
+     * without either, the interface language (docLang.ts).
+     */
+    lang?: DocLang
   },
 ): string {
   resetEnvCounters()
@@ -604,6 +884,11 @@ export function renderMarkdown(
   // shape (Vancouver for biomedicine, author-year for astronomy, ...).
   const citeStyle = pickCiteStyle(parsed?.data?.["comdtex.citestyle"])
   let content = parsed ? parsed.content : raw
+  // Lines the frontmatter occupied in the editor: checkbox `data-line`s are
+  // counted on the stripped text and must point back at editor lines.
+  const frontmatterLines = parsed
+    ? (raw.slice(0, raw.length - parsed.content.length).match(/\n/g)?.length ?? 0)
+    : 0
   const frontmatterHtml = parsed ? renderFrontmatterHeader(parsed.data) : ""
 
   // Transclusions and `:::csv` selections, resolved exactly as every export
@@ -655,13 +940,23 @@ export function renderMarkdown(
 
   // Guarded like `maskCodeRegions`: most documents have no task list, and
   // this is a full split/scan/join of the whole document per render.
-  if (withRefs.includes("- [")) withRefs = withRefs.split('\n').map((line, i) => {
-    if (/^(\s*)-\s\[ \]/.test(line))
-      return line.replace(/^(\s*)-\s\[ \]/, `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}">`)
-    if (/^(\s*)-\s\[x\]/i.test(line))
-      return line.replace(/^(\s*)-\s\[x\]/i, `$1- <input type="checkbox" class="preview-checkbox" data-line="${i}" checked>`)
-    return line
-  }).join('\n')
+  if (withRefs.includes("- ["))
+    withRefs = withRefs
+      .split("\n")
+      .map((line, i) => {
+        if (/^(\s*)-\s\[ \]/.test(line))
+          return line.replace(
+            /^(\s*)-\s\[ \]/,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i + frontmatterLines}">`,
+          )
+        if (/^(\s*)-\s\[x\]/i.test(line))
+          return line.replace(
+            /^(\s*)-\s\[x\]/i,
+            `$1- <input type="checkbox" class="preview-checkbox" data-line="${i + frontmatterLines}" checked>`,
+          )
+        return line
+      })
+      .join("\n")
 
   withRefs = preprocessCallouts(withRefs)
 
@@ -673,7 +968,7 @@ export function renderMarkdown(
   // Restore display-math placeholders left intact through markdown-it and
   // recursive environment extraction.
   html = html.replace(/\x02DMATH(\d+)\x03/g, (_, i) => dmath.slots[parseInt(i)] ?? "")
-  if (vaultPath) html = resolveImages(html, vaultPath)
+  if (vaultPath) html = resolveImages(html, vaultPath, opts?.docPath, opts?.fileExists)
   // Footnotes are fully handled by the markdown-it-footnote plugin during
   // md.render (it emits `.footnote-ref` / `.footnotes` markup the preview CSS
   // already styles). No post-pass is needed.
@@ -687,11 +982,13 @@ export function renderMarkdown(
     html = resolved.text
     citedKeys = resolved.citedKeys
   }
-  const bibHtml = bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap, citeStyle) : ""
+  const bibHtml =
+    bibMap && citedKeys.length > 0 ? renderBibliography(citedKeys, bibMap, citeStyle) : ""
 
   // Assign heading ids for navigation (always; `@sec:` anchors must resolve in
   // documents with no TOC), then expand the `[[toc]]` placeholder against them.
   html = attachSectionIds(html)
+  html = wrapSectionNumbers(html)
   const headings = assignHeadingIds(html)
   html = injectToc(headings.html, headings.items)
 
@@ -704,6 +1001,12 @@ export function renderMarkdown(
   if (opts?.annotate !== false) html = annotateSourceLines(html, raw)
 
   return frontmatterHtml + html + bibHtml
+}
+
+export function renderMarkdown(...args: Parameters<typeof renderMarkdownImpl>): string {
+  const [raw, , , , , , , opts] = args
+  const data = raw.startsWith("---") ? extractFrontmatter(raw)?.data : undefined
+  return withDocLanguage(resolveDocLanguage(data, opts?.lang), () => renderMarkdownImpl(...args))
 }
 
 // Process file includes synchronously - for export use

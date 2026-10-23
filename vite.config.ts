@@ -1,16 +1,56 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { defineConfig, type Plugin } from "vite"
+import react from "@vitejs/plugin-react"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 /// <reference types="vitest" />
 
 // @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
-const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"));
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"),
+)
+
+// KaTeX's stylesheet lists woff2, woff and ttf for every face, and the bundler
+// emits all three. Every webview Tauri targets (WebKitGTK, WKWebView, WebView2)
+// supports woff2, so keep only that source and skip ~40 redundant font files.
+// src/styles/index.css pulls KaTeX in with `@import "katex/dist/katex.min.css"
+// layer(vendor)`. The CSS inliner reads that file before any plugin sees it, so
+// the plugin writes a stripped copy (fonts rebased to where they really live)
+// to node_modules/.cache and points the import at it.
+const KATEX_CSS = fileURLToPath(new URL("./node_modules/katex/dist/katex.min.css", import.meta.url))
+const KATEX_CACHE_DIR = fileURLToPath(new URL("./node_modules/.cache/comdtex/", import.meta.url))
+const KATEX_IMPORT = '@import "katex/dist/katex.min.css" layer(vendor);'
+const stripLegacyFonts = (css: string) =>
+  css.replace(/,url\([^)]*\.(?:woff|ttf)\) format\("(?:woff|truetype)"\)/g, "")
+
+function katexWoff2Only(): Plugin {
+  const cached = `${KATEX_CACHE_DIR}katex-woff2.css`
+  return {
+    name: "comdtex:katex-woff2-only",
+    enforce: "pre",
+    buildStart() {
+      mkdirSync(KATEX_CACHE_DIR, { recursive: true })
+      writeFileSync(
+        cached,
+        stripLegacyFonts(readFileSync(KATEX_CSS, "utf-8")).replaceAll(
+          "url(fonts/",
+          "url(../../katex/dist/fonts/",
+        ),
+      )
+    },
+    transform(code, id) {
+      const file = id.split("?")[0]
+      if (/katex[\\/]dist[\\/]katex(\.min)?\.css/.test(file)) return stripLegacyFonts(code)
+      if (/styles[\\/]index\.css$/.test(file) && code.includes(KATEX_IMPORT))
+        return code.replace(KATEX_IMPORT, `@import "${cached}" layer(vendor);`)
+      return null
+    },
+  }
+}
 
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [react(), katexWoff2Only()],
 
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
@@ -21,9 +61,7 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     host: host || false,
-    hmr: host
-      ? { protocol: "ws", host, port: 1421 }
-      : undefined,
+    hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],
     },
@@ -31,6 +69,15 @@ export default defineConfig(async () => ({
 
   test: {
     environment: "node",
+    // Which kind of run this is decides the timing budgets (src/perfBudget.ts):
+    // `test:perf` passes --no-file-parallelism, coverage passes --coverage.
+    env: {
+      COMDTEX_TEST_RUN: process.argv.includes("--coverage")
+        ? "coverage"
+        : process.argv.includes("--no-file-parallelism")
+          ? "perf"
+          : "parallel",
+    },
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     coverage: {
       provider: "v8",
@@ -43,7 +90,7 @@ export default defineConfig(async () => ({
         "src/**/*.d.ts",
         "src/**/generated/**",
         "src/**/vendor/**",
-        // Pure translation-data files — huge string maps with no logic; the
+        // Pure translation-data files: huge string maps with no logic; the
         // parity test guards their structure, and counting them drags the
         // global ratio down without measuring any real code path.
         "src/i18n/es.ts",
@@ -51,17 +98,17 @@ export default defineConfig(async () => ({
         "src/i18n/types.ts",
         "src/templates.ts",
       ],
-      // Regression floor, not a target — set a few points below the measured
+      // Regression floor, not a target: set a few points below the measured
       // baseline (`npm run test:coverage`) so CI catches drops without blocking
       // on today's level. Raise these as coverage improves (App.tsx and the AI
       // layer are the big untested surfaces). Baseline measured 2026-07 after
       // the pure-module test wave: ~36% lines / 29% branches / 25% functions
       // with i18n data excluded.
       thresholds: {
-        lines: 30,
-        statements: 28,
-        functions: 19,
-        branches: 24,
+        lines: 47,
+        statements: 45,
+        functions: 34,
+        branches: 40,
       },
     },
   },
@@ -69,7 +116,7 @@ export default defineConfig(async () => ({
   build: {
     // Vite 8 defaults the CSS minifier to lightningcss, which rejects the
     // paged-media `@page { @header ... }` / `running()` rules used for the
-    // print/PDF export headers in App.css. Keep esbuild (the Vite 7 default).
+    // print/PDF export headers in src/styles/print.css. Keep esbuild (the Vite 7 default).
     cssMinify: "esbuild",
     rollupOptions: {
       output: {
@@ -78,7 +125,11 @@ export default defineConfig(async () => ({
         // `[\\/]` keeps the separator Windows-safe.
         codeSplitting: {
           groups: [
-            // Monaco is huge — split it so the initial chunk loads faster
+            // Vite's dynamic-import preload helper is imported by every
+            // lazy boundary. Without its own group, rolldown parks it in the
+            // monaco chunk and the entry then preloads ~3.7 MB of Monaco.
+            { name: "preload-helper", test: /vite[\\/]preload-helper/, priority: 100 },
+            // Monaco is huge, split it so the initial chunk loads faster
             { name: "monaco-editor", test: /[\\/]node_modules[\\/]monaco-editor/ },
             // Keep react in its own chunk
             { name: "react-vendor", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },
@@ -89,4 +140,4 @@ export default defineConfig(async () => ({
       },
     },
   },
-}));
+}))

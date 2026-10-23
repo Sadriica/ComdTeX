@@ -10,9 +10,11 @@ export interface Settings {
   typewriterMode: boolean
   previewVisible: boolean
   language: Lang
-  wordGoal: number  // 0 = no goal
+  wordGoal: number // 0 = no goal
   touchpadGestures: boolean
   previewTheme: "dark" | "light" | "same"
+  /** Typeface of the rendered document: a serif paper (default) or the UI sans. */
+  documentStyle: "paper" | "sans"
   mathPreview: boolean
   wordWrap: boolean
   minimapEnabled: boolean
@@ -22,6 +24,8 @@ export interface Settings {
   dailyNotesFolder: string
   dailyNotesTemplate: string
   autoRebuildPdf: boolean
+  /** Invert PDF pages in the dark themes. Off: pages stay light (cheaper to paint). */
+  pdfDarkMode: boolean
   /**
    * If true, PDF compilation tries the bundled WASM LaTeX engine before
    * falling back to a locally-installed `tectonic` / `xelatex` / `pdflatex`.
@@ -48,7 +52,7 @@ export interface Settings {
   aiProviderId: string
   /** Base URL for the openai-compatible preset (DeepSeek, Ollama, LM Studio…). */
   aiBaseUrl: string
-  /** Model id (e.g. "claude-3-5-sonnet-latest", "gpt-4o-mini", "gemini-1.5-flash"). */
+  /** Model id (e.g. "claude-opus-5-5", "gpt-5.6", "gemini-3.6-flash"). */
   aiModel: string
   /**
    * API key. Kept in memory here for backwards-compatible consumer access,
@@ -93,6 +97,7 @@ export const DEFAULTS: Settings = {
   wordGoal: 0,
   touchpadGestures: true,
   previewTheme: "same",
+  documentStyle: "paper",
   mathPreview: true,
   wordWrap: true,
   minimapEnabled: false,
@@ -102,6 +107,7 @@ export const DEFAULTS: Settings = {
   dailyNotesFolder: "daily",
   dailyNotesTemplate: "# {{date:YYYY-MM-DD}}\n\n## Tasks\n\n- [ ] \n\n## Notes\n\n",
   autoRebuildPdf: false,
+  pdfDarkMode: false,
   useWasmTex: true,
   texliveUrl: "https://texlive2.swiftlatex.com/",
   pomodoroWorkMin: 25,
@@ -125,10 +131,26 @@ export const DEFAULTS: Settings = {
 const KEY = STORAGE_KEYS.SETTINGS
 const AI_API_KEY_SECRET = "aiApiKey"
 
+/**
+ * Model ids that older builds offered as the default and the providers have
+ * since retired: a saved one would fail on every request. Only these exact
+ * defaults are moved forward; a model the user typed is left alone.
+ */
+export const RETIRED_DEFAULT_MODELS: Record<string, string> = {
+  "claude-3-5-sonnet-latest": "claude-opus-5-5",
+  "gemini-1.5-flash": "gemini-3.6-flash",
+}
+
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
+    if (!raw) return DEFAULTS
+    const merged: Settings = { ...DEFAULTS, ...JSON.parse(raw) }
+    if (merged.documentStyle !== "paper" && merged.documentStyle !== "sans")
+      merged.documentStyle = DEFAULTS.documentStyle
+    const replacement = RETIRED_DEFAULT_MODELS[merged.aiModel]
+    if (replacement) merged.aiModel = replacement
+    return merged
   } catch {
     localStorage.removeItem(KEY)
     return DEFAULTS

@@ -1,0 +1,48 @@
+/* Entry point for the app styles. One cascade order, declared once: the reset,
+   then vendor CSS (KaTeX; after the reset so the reset's `* { margin: 0 }`
+   cannot undo the library's own spacing), then the app layers, so a component
+   never needs a specificity trick to beat a library or a base rule. Layer
+   contract and file layout: docs/design-tokens.md. */
+@layer reset, vendor, tokens, base, components, utilities, overrides, print;
+
+@import "./reset.css" layer(reset);
+@import "katex/dist/katex.min.css" layer(vendor);
+@import "./tokens.css" layer(tokens);
+@import "./themes.css" layer(tokens);
+@import "./fonts.css" layer(base);
+@import "./base.css" layer(base);
+/* Within `components` order is source order, and equal-specificity ties exist:
+   math-env.css precedes preview.css so the preview's `.env-wrap > *` margin
+   reset wins over `.math-env`; truth-table.css follows it so its table rules
+   win over the generic preview table rules. */
+@import "./components/titlebar.css" layer(components);
+@import "./components/menubar.css" layer(components);
+@import "./components/shell.css" layer(components);
+@import "./components/math-env.css" layer(components);
+@import "./components/preview.css" layer(components);
+@import "./components/truth-table.css" layer(components);
+@import "./components/tabs.css" layer(components);
+@import "./components/palette.css" layer(components);
+@import "./components/modals.css" layer(components);
+@import "./components/settings.css" layer(components);
+@import "./components/help.css" layer(components);
+@import "./components/citation-manager.css" layer(components);
+@import "./components/welcome.css" layer(components);
+@import "./components/toasts.css" layer(components);
+@import "./components/git.css" layer(components);
+@import "./components/callouts.css" layer(components);
+@import "./components/document-lab.css" layer(components);
+@import "./components/graph.css" layer(components);
+@import "./components/symbol-picker.css" layer(components);
+@import "./components/focus.css" layer(components);
+@import "./components/latex-error.css" layer(components);
+@import "./components/pdf.css" layer(components);
+@import "./components/keep.css" layer(components);
+@import "./components/cloud-sync.css" layer(components);
+@import "./components/ai.css" layer(components);
+@import "./components/excalidraw.css" layer(components);
+@import "./components/callout-icons.css" layer(components);
+@import "./components/panels.css" layer(components);
+@import "./components/icons.css" layer(utilities);
+@import "./overrides.css" layer(overrides);
+@import "./print.css" layer(print);

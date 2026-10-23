@@ -35,7 +35,8 @@ describe("extractAnkiCards", () => {
   })
 
   it("converts cloze braces inside :::definition to Anki cloze syntax", () => {
-    const md = ":::definition[Limit]\nA function is {{continuous}} when {{limit equals value}}.\n:::"
+    const md =
+      ":::definition[Limit]\nA function is {{continuous}} when {{limit equals value}}.\n:::"
     const cards = extractAnkiCards(md)
     expect(cards).toHaveLength(1)
     expect(cards[0].type).toBe("Cloze")
