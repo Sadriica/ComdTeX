@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.30.0] - 2026-10-21
+## [1.30.0] - 2026-10-23
 
 A new look and a much smarter editor. Highlights:
 
