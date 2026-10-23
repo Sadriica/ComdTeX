@@ -175,12 +175,12 @@ jobs:
             echo ""
             echo "> The \`.AppImage\` is patched to work on Arch / Mesa 24+ (no \`EGL_BAD_PARAMETER\` crash)."
             echo ""
-            echo "### Auto-update"
-            echo "ComdTeX checks for updates automatically on startup and installs them with one click."
+            echo "### Updates"
+            echo "ComdTeX checks for a new version on startup and installs it from inside the app: the AppImage and the Windows installer update in place, the \`.deb\` asks for your password to install. Every update is signature-checked."
             echo ""
             echo "### Optional dependencies"
-            echo "- \`pandoc\`: required for PDF, DOCX and Beamer export"
-            echo "- \`zip\`: required for vault backup"
+            echo "- \`pandoc\`: DOCX, Beamer and Typst export, and document import"
+            echo "- \`zip\`: vault backup"
             echo ""
             echo "## Changes"
             echo ""
@@ -205,7 +205,12 @@ jobs:
           releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          # The publish job writes latest.json once every signature is uploaded;
+          # two matrix jobs editing it at the same time could drop a platform.
+          includeUpdaterJson: false
+          # Signed updater artifacts only in release builds, so a local build
+          # never needs the private key.
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.release.conf.json
 
       - name: Patch AppImage for EGL compatibility
         if: matrix.os == 'ubuntu-22.04'
@@ -241,18 +246,11 @@ jobs:
             --private-key "$TAURI_SIGNING_PRIVATE_KEY" \
             --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
-          # Update latest.json with the new AppImage signature so auto-updates work
-          gh release download "${{ github.ref_name }}" -p "latest.json" \
-            --repo "${{ github.repository }}" 2>/dev/null || true
-          if [ -f latest.json ]; then
-            SIG=$(cat "${APPIMAGE}.sig")
-            python3 -c "import json,sys; d=json.load(open('latest.json')); d.get('platforms',{}).get('linux-x86_64',{}).update({'signature':sys.argv[1]}); json.dump(d,open('latest.json','w'),indent=2)" "$SIG"
-            gh release upload "${{ github.ref_name }}" latest.json \
-              --clobber --repo "${{ github.repository }}"
-          fi
+          # The bundler signed the .deb (tauri.release.conf.json); it updates in place too.
+          DEB=$(find src-tauri/target -name "*.deb" | head -1)
 
-          # Replace AppImage and sig in the draft release
-          gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" \
+          # Replace the AppImage and upload both signatures to the draft release
+          gh release upload "${{ github.ref_name }}" "$APPIMAGE" "${APPIMAGE}.sig" "${DEB}.sig" \
             --clobber \
             --repo "${{ github.repository }}"
 
@@ -287,6 +285,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path checksums | Out-Null
           Set-Location checksums
           $files = Get-ChildItem -Path ../src-tauri/target/*/release/bundle/ -Recurse -Include *.exe, *.msi
+          # The installer's updater signature, written by the bundler.
+          $sigs = Get-ChildItem -Path ../src-tauri/target/*/release/bundle/ -Recurse -Include *.exe.sig
+          if ($sigs.Count -eq 0) { Write-Host "::error::No updater signature for the Windows installer"; exit 1 }
+          gh release upload "${{ github.ref_name }}" $sigs.FullName `
+            --clobber --repo "${{ github.repository }}"
           foreach ($f in $files) {
             $hash = (Get-FileHash -Algorithm SHA256 -Path $f.FullName).Hash.ToLower()
             $line = "$hash  $($f.Name)"
@@ -310,6 +313,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Write the updater manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir sigs
+          gh release download "${{ github.ref_name }}" -p "*.sig" -D sigs \
+            --repo "${{ github.repository }}"
+          node scripts/updater-manifest.mjs "${{ github.ref_name }}" "${{ github.repository }}" sigs
+          gh release upload "${{ github.ref_name }}" latest.json \
+            --clobber --repo "${{ github.repository }}"
+
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

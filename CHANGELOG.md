@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
+
 ## [1.30.0] - 2026-10-23
 
 A new look and a much smarter editor. Highlights:

@@ -496,7 +496,9 @@ If `pandoc` or `zip` is missing, ComdTeX shows an amber warning banner on startu
 
 ## Auto-Update
 
-ComdTeX checks for updates automatically on startup. If a newer version is available, an in-app banner appears. No need to visit GitHub. Clicking **Install** downloads the update and relaunches the app. All artifacts are signed with [minisign](https://jedisct1.github.io/minisign/); the updater verifies the signature before applying any update.
+ComdTeX checks for a new version on startup. If there is one, a banner appears inside the app, and **Install** downloads it and relaunches ComdTeX: the AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password to install. Every update is signed with [minisign](https://jedisct1.github.io/minisign/), and the app checks the signature before installing anything.
+
+In-app updates start with the first version after 1.30.0; up to 1.30.0, download each new version from the [releases page](https://github.com/Sadriica/ComdTeX/releases/latest).
 
 ---
 
@@ -687,6 +689,8 @@ sudo apt install libwebkit2gtk-4.1-0
 **Cause:** `TAURI_SIGNING_PRIVATE_KEY` is missing from GitHub Secrets, or the public key in `tauri.conf.json` does not match.
 
 **Fix:** Ensure both `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` are set in GitHub Secrets, and that `tauri.conf.json → plugins.updater.pubkey` matches the private key used at build time.
+
+How a release feeds the updater: release builds merge `src-tauri/tauri.release.conf.json` (`createUpdaterArtifacts`), so the bundler signs the Windows installer; the Linux job signs the patched AppImage and the `.deb` itself; the publish job then writes `latest.json` from every `.sig` on the release (`scripts/updater-manifest.mjs`) and fails if one is missing. The app reads `releases/latest/download/latest.json`.
 
 ---
 
