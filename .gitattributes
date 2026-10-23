@@ -1,0 +1,3 @@
+# Keep LF in every checkout, Windows included: generated files and test
+# fixtures are compared byte for byte.
+* text=auto eol=lf

@@ -65,7 +65,9 @@ describe("preview to editor line mapping across every fixture note", () => {
     ["figure.fig-block", /!\[/],
   ]
 
-  for (const [path, raw] of Object.entries(notes)) {
+  // The editor always sees LF (cmdxFormat restores CRLF on save), and so does the renderer.
+  for (const [path, file] of Object.entries(notes)) {
+    const raw = file.replace(/\r\n/g, "\n")
     it(`annotates every block of ${path.split("/vault/")[1]} on a line of its kind`, () => {
       const lines = raw.split("\n")
       const root = document.createElement("div")
