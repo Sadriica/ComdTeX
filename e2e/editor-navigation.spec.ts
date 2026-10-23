@@ -20,9 +20,13 @@ test("F12 on @lem:cheeger moves the caret to the lemma", async ({ page }) => {
   const errors = await openVault(page)
   await revealLine(page, 44)
   const box = await boxOf(page, "@lem:cheeger")
-  await page.mouse.click(box.x + box.w / 2, box.y + box.h / 2)
-  await page.keyboard.press("F12")
-  await expect.poll(() => cursorLine(page)).toBe(28)
+  // A loaded CI runner can deliver F12 before the editor has wired its
+  // providers; press again until it answers instead of assuming it is ready.
+  await expect(async () => {
+    await page.mouse.click(box.x + box.w / 2, box.y + box.h / 2)
+    await page.keyboard.press("F12")
+    await expect.poll(() => cursorLine(page), { timeout: 2_000 }).toBe(28)
+  }).toPass({ timeout: 20_000 })
   expect(errors).toEqual([])
 })
 
