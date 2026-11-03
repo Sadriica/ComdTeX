@@ -1460,6 +1460,16 @@ export const es: T = {
     fmAuthor: "Nombre del autor",
     fmDate: "Fecha del documento",
     fmTags: "Lista: [t1, t2] o - bullet",
+    biology: "Biología",
+    bioDesc:
+      "Actívalo con comdtex.domain: biology en el front matter. Tu archivo nunca se reescribe.",
+    bioItalicRow:
+      "Los binomios y símbolos de genes que no están en cursiva reciben una advertencia",
+    bioAccessionRow: "Números de acceso",
+    bioAccessionDesc:
+      "En la vista previa y en la exportación a LaTeX enlazan a su base de datos (GenBank, RefSeq, SRA, GEO, Ensembl, ArrayExpress; PDB y UniProt cuando se escriben como PDB 1ABC o UniProt P04637)",
+    bioDataAvailDesc:
+      "Aparece una nota cuando citas accesos o datos de secuenciación y no tienes una sección de Disponibilidad de datos",
     wikilinkRow: "Enlace: clic en preview para navegar",
     wikilinkDesc:
       "La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.",
@@ -2130,6 +2140,10 @@ export const es: T = {
       dataUndeclared: (id) => `Dataset no declarado: @${id}`,
       spellUnknown: (word) => `Posible error ortográfico: ${word}`,
       bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
+      bioDataAvailability: (accession) =>
+        accession
+          ? `Citas ${accession}, pero el documento no tiene una sección "Disponibilidad de datos". Las revistas la esperan.`
+          : `Este documento de biología no tiene una sección "Disponibilidad de datos". Las revistas la esperan.`,
       bibUnclosed: (type, close) => `Entrada @${type} sin cerrar (falta '${close}')`,
       bibUnknownType: (type) => `Tipo de entrada desconocido: @${type}`,
       bibNoKey: (type) => `Entrada @${type} sin clave de citación`,

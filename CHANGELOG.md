@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Accession numbers link to their database.** With `comdtex.domain: biology`, ids such as `MN908947.3`, `NM_000546.6`, `SRR1234567`, `PRJNA123456`, `GSE12345`, `E-MTAB-1234` and `ENSG00000141510` become links in the preview and `\href` in the LaTeX export (also `PDB 1ABC` and `UniProt P04637`, only when the database name is written). Code, math, existing links and headings are left alone, and your file is never changed. The editor also notes when you cite accessions or sequencing data but have no Data availability section.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

@@ -23,6 +23,8 @@ import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
 import { resolveDocLanguage } from "./docLang"
+import { accessionsPlugin } from "./accessions"
+import { isBiologyDocument } from "./bioConventions"
 
 interface LatexMacro {
   command: string
@@ -41,6 +43,7 @@ interface LatexMacro {
 const md = new MarkdownIt({ html: true, linkify: false, typographer: false })
   .use(footnotePlugin)
   .use(markPlugin)
+  .use(accessionsPlugin)
   .enable("table")
   .enable("strikethrough")
 
@@ -724,6 +727,10 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
 
 // ── Main conversion ───────────────────────────────────────────────────────────
 
+// Set by exportToTex for documents that opted in with `comdtex.domain: biology`:
+// accession numbers in prose become \href links to their database.
+let linkAccessionsInTex = false
+
 function mdToTex(raw: string): string {
   const { text: afterEnv, slots: envSlots } = extractEnvBlocks(raw)
   // Callouts run after :::env extraction (so a callout nested inside an env
@@ -738,9 +745,9 @@ function mdToTex(raw: string): string {
   const preprocessed = preprocess(preprocessFigureLabels(tableSafeText), "tex")
   let tokens
   try {
-    tokens = md.parse(preprocessed, {})
+    tokens = md.parse(preprocessed, { accessions: linkAccessionsInTex })
   } catch {
-    tokens = md.parse(raw, {})
+    tokens = md.parse(raw, { accessions: linkAccessionsInTex })
   }
   const { tokens: bodyTokens, footnotes } = extractFootnotes(tokens)
   return tokensToTex(bodyTokens, slots, footnotes)
@@ -1110,7 +1117,13 @@ export function exportToTex(
   const raw = stripKeepMarks(rawInput)
   const parsed = extractFrontmatter(raw)
   citedInLastPass = false
-  const body = mdToTex(parsed?.content ?? raw)
+  linkAccessionsInTex = isBiologyDocument(raw)
+  let body: string
+  try {
+    body = mdToTex(parsed?.content ?? raw)
+  } finally {
+    linkAccessionsInTex = false
+  }
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)

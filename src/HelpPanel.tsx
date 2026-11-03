@@ -466,6 +466,16 @@ export default function HelpPanel() {
           <Row code="tags" desc={hp.fmTags} />
         </Section>
 
+        {/* ── Biology ── */}
+        <Section title={hp.biology}>
+          <p className="hp-intro">{hp.bioDesc}</p>
+          <div className="hp-codeblock">{`---\ncomdtex.domain: biology\n---`}</div>
+          <Row code="E. coli, TP53" desc={hp.bioItalicRow} />
+          <Row code="MN908947.3, SRR1234567, GSE12345" desc={hp.bioAccessionRow} />
+          <p className="hp-intro">{hp.bioAccessionDesc}</p>
+          <Row code="## Data availability" desc={hp.bioDataAvailDesc} />
+        </Section>
+
         {/* ── Wikilinks & backlinks ── */}
         <Section title={hp.wikilinks}>
           <Row code="[[nombre-nota]]" desc={hp.wikilinkRow} render="<u>nombre-nota</u>" />

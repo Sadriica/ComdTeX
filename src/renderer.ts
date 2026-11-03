@@ -15,6 +15,8 @@ import {
   type EnvironmentDocResolver,
 } from "./environments"
 import { processWikilinks } from "./wikilinks"
+import { accessionsPlugin } from "./accessions"
+import { isBiologyDocument } from "./bioConventions"
 import type { KatexMacros } from "./macros"
 import {
   resetEqCounters,
@@ -59,6 +61,7 @@ const md = new MarkdownIt({
 })
   .use(footnotePlugin)
   .use(markPlugin)
+  .use(accessionsPlugin)
   .enable("table")
   .enable("strikethrough")
 
@@ -255,6 +258,10 @@ function preRenderDisplayMath(
   return { text: out.join(""), slots }
 }
 
+// Set per render (synchronous, like the counters): documents that opt in with
+// `comdtex.domain: biology` get their accession numbers linked in the preview.
+let linkAccessions = false
+
 function renderInner(raw: string, macros: KatexMacros, rootSource?: string): string {
   let text = preprocess(raw)
 
@@ -285,7 +292,7 @@ function renderInner(raw: string, macros: KatexMacros, rootSource?: string): str
   })
 
   text = preserveParagraphIndentationSource(text)
-  let html = md.render(text)
+  let html = md.render(text, { accessions: linkAccessions })
   html = preserveParagraphIndentation(html)
   html = unwrapBlockSlots(html)
 
@@ -875,6 +882,7 @@ function renderMarkdownImpl(
     lang?: DocLang
   },
 ): string {
+  linkAccessions = raw.startsWith("---") && isBiologyDocument(raw)
   resetEnvCounters()
   resetEqCounters()
   resetFigCounters()
