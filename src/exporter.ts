@@ -800,7 +800,8 @@ function bibStyleFor(style: { id: string }): string {
 // hand edits. Without the key, the export is byte-identical to the classic
 // article preamble below.
 
-export type TexClassId = "ieeetran" | "acmart" | "elsarticle" | "apa7"
+export type TexClassId =
+  "ieeetran" | "acmart" | "elsarticle" | "apa7" | "plos" | "bioinformatics" | "biorxiv" | "bmc"
 
 interface TexClass {
   documentclass: string
@@ -809,6 +810,12 @@ interface TexClass {
   theoremPolicy: "full" | "supplement-only"
   titleBlock: (title: string, author: string) => string
   maketitle: boolean
+  // Packages and settings the class needs on top of the shared preamble, for
+  // journals that ship no class of their own (PLOS, Bioinformatics, bioRxiv).
+  extraPreamble?: string[]
+  // Title and authors that live inside the document body, for classes with
+  // no \maketitle (PLOS); elsarticle is handled separately.
+  bodyFrontmatter?: (title: string, author: string) => string
 }
 
 const THEOREM_SUPPLEMENT = [
@@ -847,6 +854,55 @@ export const TEX_CLASSES: Record<TexClassId, TexClass> = {
       `\\title{${escTex(title)}}\n\\authorsnames{${escTex(author) || "Author"}}\n\\authorsaffiliations{{~}}\n`,
     maketitle: true,
   },
+  // Computational-biology journals. PLOS and bioRxiv use stock article and
+  // OUP's `bioinfo` and BMC's `bmcart` are distributed only by the publisher,
+  // so all four map to article plus the preamble that reproduces their layout.
+  plos: {
+    documentclass: "\\documentclass[10pt,letterpaper]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}",
+      "\\usepackage[right]{lineno}",
+      "\\raggedright",
+      "\\linenumbers",
+    ],
+    titleBlock: () => "",
+    maketitle: false,
+    bodyFrontmatter: (title, author) =>
+      `\\begin{flushleft}\n{\\Large\n\\textbf\\newline{${escTex(title)}}\n}\n\\newline\n\\\\\n${escTex(author) || "Author"}\n\\end{flushleft}\n\n`,
+  },
+  bioinformatics: {
+    documentclass: "\\documentclass[10pt,twocolumn]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=0.75in]{geometry}"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
+  },
+  biorxiv: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[margin=1in]{geometry}",
+      "\\usepackage{authblk}",
+      "\\usepackage{lineno}",
+      "\\linenumbers",
+    ],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author[1]{${escTex(author) || "Author"}}\n\\affil[1]{Affiliation}\n\\date{}\n`,
+    maketitle: true,
+  },
+  // BMC's own bmcart class is publisher-distributed (not in TeX Live, not on
+  // the WASM package server), and BMC accepts any LaTeX manuscript at
+  // submission, so the template exports to article with line numbers.
+  bmc: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=1in]{geometry}", "\\usepackage{lineno}", "\\linenumbers"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
+  },
 }
 
 export function pickTexClass(raw: unknown): TexClassId | null {
@@ -870,6 +926,7 @@ function buildJournalPreamble(
     // Journal submissions are overwhelmingly in English; babel-spanish is
     // deliberately not loaded here (the classic article export keeps it).
     "\\usepackage[T1]{fontenc}",
+    ...(cls.extraPreamble ?? []),
     "\\usepackage{amsmath, amssymb, amsfonts}",
     cls.theoremPolicy === "full" ? buildTheoremPreamble() : THEOREM_SUPPLEMENT,
     "\\usepackage{graphicx}",
@@ -1151,7 +1208,9 @@ export function exportToTex(
   const elsFrontmatter =
     classId === "elsarticle" && title
       ? `\\begin{frontmatter}\n\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\end{frontmatter}\n\n`
-      : ""
+      : title && cls?.bodyFrontmatter
+        ? cls.bodyFrontmatter(title, author)
+        : ""
 
   // Custom headers/footers using fancyhdr
   const hasCustomHF =
