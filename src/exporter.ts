@@ -801,7 +801,7 @@ function bibStyleFor(style: { id: string }): string {
 // article preamble below.
 
 export type TexClassId =
-  "ieeetran" | "acmart" | "elsarticle" | "apa7" | "plos" | "bioinformatics" | "biorxiv" | "bmcart"
+  "ieeetran" | "acmart" | "elsarticle" | "apa7" | "plos" | "bioinformatics" | "biorxiv" | "bmc"
 
 interface TexClass {
   documentclass: string
@@ -813,11 +813,8 @@ interface TexClass {
   // Packages and settings the class needs on top of the shared preamble, for
   // journals that ship no class of their own (PLOS, Bioinformatics, bioRxiv).
   extraPreamble?: string[]
-  // Class already loads natbib and hyperref itself (bmcart); loading them
-  // again would be an option clash.
-  providesCitations?: boolean
   // Title and authors that live inside the document body, for classes with
-  // no \maketitle (PLOS, bmcart); elsarticle is handled separately.
+  // no \maketitle (PLOS); elsarticle is handled separately.
   bodyFrontmatter?: (title: string, author: string) => string
 }
 
@@ -858,10 +855,8 @@ export const TEX_CLASSES: Record<TexClassId, TexClass> = {
     maketitle: true,
   },
   // Computational-biology journals. PLOS and bioRxiv use stock article and
-  // OUP's `bioinfo` is distributed only by the publisher, so those three map
-  // to article plus the preamble that reproduces their layout. bmcart is the
-  // real BMC class, but publisher-distributed: a minimal TeX Live (and the
-  // WASM engine's package server) may not carry it.
+  // OUP's `bioinfo` and BMC's `bmcart` are distributed only by the publisher,
+  // so all four map to article plus the preamble that reproduces their layout.
   plos: {
     documentclass: "\\documentclass[10pt,letterpaper]{article}",
     theoremPolicy: "full",
@@ -897,14 +892,16 @@ export const TEX_CLASSES: Record<TexClassId, TexClass> = {
       `\\title{${escTex(title)}}\n\\author[1]{${escTex(author) || "Author"}}\n\\affil[1]{Affiliation}\n\\date{}\n`,
     maketitle: true,
   },
-  bmcart: {
-    documentclass: "\\documentclass[twocolumn]{bmcart}",
-    theoremPolicy: "supplement-only",
-    providesCitations: true,
-    titleBlock: () => "",
-    maketitle: false,
-    bodyFrontmatter: (title, author) =>
-      `\\begin{frontmatter}\n\\begin{fmbox}\n\\dochead{Research}\n\\title{${escTex(title)}}\n\\author[addressref=aff1]{\\snm{${escTex(author) || "Author"}}}\n\\address[id=aff1]{\\orgname{Affiliation}}\n\\end{fmbox}\n\\end{frontmatter}\n\n`,
+  // BMC's own bmcart class is publisher-distributed (not in TeX Live, not on
+  // the WASM package server), and BMC accepts any LaTeX manuscript at
+  // submission, so the template exports to article with line numbers.
+  bmc: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=1in]{geometry}", "\\usepackage{lineno}", "\\linenumbers"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
   },
 }
 
@@ -941,7 +938,7 @@ function buildJournalPreamble(
   // acmart and apa7 manage citations themselves; adding natbib on top of
   // them is a documented conflict, so journal classes only get it when the
   // class does not already provide one.
-  if (natbib && classId !== "acmart" && classId !== "apa7" && !cls.providesCitations) {
+  if (natbib && classId !== "acmart" && classId !== "apa7") {
     lines.push(`\\usepackage[${natbib}]{natbib}`)
   }
   if (features.callouts) lines.push("\\usepackage{tcolorbox}")
@@ -953,7 +950,7 @@ function buildJournalPreamble(
     lines.push("\\usepackage{listings}")
   }
   // acmart and apa7 already load hyperref; loading it twice errors.
-  if (hasLinks && classId !== "acmart" && classId !== "apa7" && !cls.providesCitations) {
+  if (hasLinks && classId !== "acmart" && classId !== "apa7") {
     lines.push("\\usepackage{hyperref}")
   }
   const macroLines = macros.map(({ command, arity, definition }) =>

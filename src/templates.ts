@@ -619,7 +619,7 @@ The authors declare no competing interests.
   {
     id: "journal-bmc",
     name: "Paper BMC",
-    description: "BMC Bioinformatics / Genome Biology (bmcart); exporta con la clase real",
+    description: "BMC Bioinformatics / Genome Biology; artículo con números de línea",
     icon: "newspaper",
     category: "journal",
     content: `---
@@ -628,7 +628,7 @@ author: "{{author}}"
 date: {{date}}
 tags: [paper, bmc]
 comdtex.main: true
-comdtex.texclass: bmcart
+comdtex.texclass: bmc
 comdtex.citestyle: vancouver
 comdtex.domain: biology
 ---

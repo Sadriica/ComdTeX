@@ -1903,7 +1903,7 @@ export const en: T = {
     },
     "journal-bmc": {
       name: "BMC paper",
-      description: "BMC Bioinformatics / Genome Biology (bmcart); exports against the real class",
+      description: "BMC Bioinformatics / Genome Biology; article with line numbers",
     },
   },
 
@@ -2209,7 +2209,7 @@ export const en: T = {
       plos: "PLOS article",
       bioinformatics: "Bioinformatics article",
       biorxiv: "bioRxiv preprint",
-      bmcart: "BMC article",
+      bmc: "BMC article",
     },
     citestyleValues: {
       default: "ComdTeX default",

@@ -172,18 +172,12 @@ describe("journal classes via comdtex.texclass", () => {
     expect(tex).toContain("\\linenumbers")
   })
 
-  it("exports bmcart with a frontmatter block and no duplicate natbib or hyperref", () => {
-    const src = doc("bmcart").replace(
-      "comdtex.texclass",
-      "comdtex.citestyle: vancouver\ncomdtex.texclass",
-    )
-    const tex = exportToTex(src + "\n[link](https://example.org)\n", "", "Paper", "Ada")
-    expect(tex).toContain("\\documentclass[twocolumn]{bmcart}")
-    expect(tex).toContain("\\begin{frontmatter}")
-    expect(tex).toContain("\\snm{Ada}")
-    expect(tex).not.toContain("\\maketitle")
-    expect(tex).not.toContain("{natbib}")
-    expect(tex).not.toContain("\\usepackage{hyperref}")
+  it("exports BMC on the article class with line numbers", () => {
+    const tex = exportToTex(doc("bmc"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[11pt]{article}")
+    expect(tex).not.toContain("bmcart")
+    expect(tex).toContain("\\linenumbers")
+    expect(tex).toContain("\\maketitle")
   })
 
   it("keeps the classic article export byte-compatible when the key is absent", () => {

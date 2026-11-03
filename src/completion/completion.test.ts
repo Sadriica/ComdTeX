@@ -491,7 +491,7 @@ describe("frontmatter", () => {
       "apa7",
       "bioinformatics",
       "biorxiv",
-      "bmcart",
+      "bmc",
       "elsarticle",
       "ieeetran",
       "plos",
