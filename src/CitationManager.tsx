@@ -5,8 +5,10 @@ import {
   fetchBibtexForDoi,
   fetchBibtexFromAds,
   fetchBibtexFromInspire,
+  fetchBibtexFromPubmed,
   isAdsBibcode,
   parseInspireInput,
+  parsePubmedInput,
 } from "./doiFetch"
 import { getSecret } from "./secretStore"
 import { searchZotero, fetchZoteroBibtex, type ZoteroItem } from "./zotero"
@@ -145,7 +147,8 @@ export default function CitationManager({
     try {
       // The identifier decides the source: astronomers paste an ADS
       // bibcode, physicists an INSPIRE recid or arXiv id, everyone else a
-      // DOI. All three publish BibTeX, so one box resolves them all.
+      // DOI, and biologists a PMID or PMCID. Each ends in BibTeX, so one box
+      // resolves them all.
       let bibtex: string
       if (isAdsBibcode(query)) {
         const token = await getSecret("ads_token")
@@ -156,9 +159,12 @@ export default function CitationManager({
         bibtex = await fetchBibtexFromAds(query, token)
       } else {
         const inspire = parseInspireInput(query)
+        const pubmed = parsePubmedInput(query)
         // A bare arXiv id still prefers DOI resolution (CrossRef/DataCite);
         // INSPIRE only owns explicit recids and its own URLs.
-        if (inspire && inspire.kind === "recid") {
+        if (pubmed) {
+          bibtex = await fetchBibtexFromPubmed(pubmed)
+        } else if (inspire && inspire.kind === "recid") {
           bibtex = await fetchBibtexFromInspire(inspire)
         } else {
           bibtex = (await fetchBibtexForDoi(query)).bibtex

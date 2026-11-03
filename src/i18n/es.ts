@@ -1735,7 +1735,7 @@ export const es: T = {
     venueJournal: "Revista (journal)",
     venueBooktitle: "Evento (booktitle)",
     venueSource: "Booktitle / Fuente",
-    doiPlaceholder: "DOI o ID de arXiv (p. ej. 10.1000/… o 2301.00001)",
+    doiPlaceholder: "DOI, ID de arXiv, PMID o PMCID (p. ej. 10.1000/…, 2301.00001, PMID: 12345678)",
     doiAdd: "Buscar y añadir",
     doiFetching: "Buscando…",
     doiSuccess: (key) => `Entrada "${key}" añadida desde DOI`,
