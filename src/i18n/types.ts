@@ -1377,6 +1377,8 @@ export interface T {
     bioAccessionRow: string
     bioAccessionDesc: string
     bioDataAvailDesc: string
+    fmDomainDesc: string
+    fmOrganismDesc: string
     // wikilinks
     wikilinkRow: string
     wikilinkDesc: string
@@ -1948,6 +1950,14 @@ export interface T {
       spellUnknown: (word: string) => string
       bioItalic: (text: string, suggestion: string) => string
       bioDataAvailability: (accession: string | null) => string
+      bioAbbrevFirst: (abbreviated: string, full: string) => string
+      bioGeneCase: (text: string, suggestion: string, organism: string) => string
+      bioProteinItalic: (text: string, suggestion: string, organism: string) => string
+      /** Organism names as the messages above use them, keyed by `comdtex.organism` value. */
+      bioOrganisms: Record<
+        "human" | "mouse" | "rat" | "zebrafish" | "drosophila" | "yeast" | "bacteria",
+        string
+      >
       bibUnclosed: (type: string, close: string) => string
       bibUnknownType: (type: string) => string
       bibNoKey: (type: string) => string
@@ -1972,6 +1982,8 @@ export interface T {
       trimExtraArgs: (name: string, expected: number) => string
       addFootnoteDef: (id: string) => string
       renameLabel: (id: string) => string
+      italicize: (text: string) => string
+      unitalicize: (text: string) => string
       noteCreated: (name: string) => string
       bibStubAdded: (key: string) => string
       bibStubFailed: string
@@ -2002,6 +2014,7 @@ export interface T {
     frontmatterKeys: Record<string, string>
     langValues: Record<string, string>
     domainValues: Record<string, string>
+    organismValues: Record<string, string>
     texclassValues: Record<string, string>
     citestyleValues: Record<string, string>
   }
