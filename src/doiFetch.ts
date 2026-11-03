@@ -169,3 +169,142 @@ export async function fetchBibtexFromInspire(ref: {
   if (!bib.startsWith("@")) throw new Error("INSPIRE returned no BibTeX")
   return bib
 }
+
+// ── PubMed and PubMed Central ────────────────────────────────────────────────
+//
+// Biomedical papers are cited by PMID or PMCID. NCBI E-utilities describe the
+// record as JSON (no BibTeX), so we reuse the DOI path when the record has a
+// DOI (CrossRef BibTeX is richer) and otherwise build an @article ourselves.
+
+const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+// The old www.ncbi.nlm.nih.gov/pmc/utils/idconv URL now answers 301 here,
+// which the CSP would block.
+const IDCONV = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
+
+/**
+ * PubMed / PMC reference: `PMID: 123`, `pmid:123`, `PMC123`, a PubMed or PMC
+ * URL, or bare digits (INSPIRE recids need their `inspire:` prefix, so bare
+ * digits are free for PMIDs).
+ */
+export function parsePubmedInput(raw: string): { kind: "pmid" | "pmcid"; value: string } | null {
+  const s = raw.trim()
+  const pmcUrl = /ncbi\.nlm\.nih\.gov\/(?:pmc\/)?articles\/(PMC\d+)/i.exec(s)
+  if (pmcUrl) return { kind: "pmcid", value: pmcUrl[1].toUpperCase() }
+  const pmidUrl = /(?:pubmed\.ncbi\.nlm\.nih\.gov|ncbi\.nlm\.nih\.gov\/pubmed)\/(\d{1,9})/i.exec(s)
+  if (pmidUrl) return { kind: "pmid", value: pmidUrl[1] }
+  const pmc = /^(?:pmcid:\s*)?(PMC\d+)$/i.exec(s)
+  if (pmc) return { kind: "pmcid", value: pmc[1].toUpperCase() }
+  const pmid = /^(?:pmid:\s*)?(\d{1,9})$/i.exec(s)
+  if (pmid) return { kind: "pmid", value: pmid[1] }
+  return null
+}
+
+/** Insert extra fields before the closing brace of a single BibTeX entry. */
+export function addBibtexFields(bibtex: string, fields: Record<string, string>): string {
+  const end = bibtex.lastIndexOf("}")
+  if (end < 0) return bibtex
+  const extra = Object.entries(fields)
+    .filter(([name, value]) => value && !new RegExp(`\\b${name}\\s*=`, "i").test(bibtex))
+    .map(([name, value]) => `  ${name} = {${value}}`)
+  if (extra.length === 0) return bibtex
+  const head = bibtex.slice(0, end).replace(/[\s,]*$/, "")
+  return `${head},\n${extra.join(",\n")}\n}`
+}
+
+interface PubmedRecord {
+  title?: string
+  authors?: { name?: string }[]
+  fulljournalname?: string
+  source?: string
+  pubdate?: string
+  volume?: string
+  issue?: string
+  pages?: string
+  articleids?: { idtype?: string; value?: string }[]
+}
+
+async function getJson<T>(url: string): Promise<T> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    if (!res.ok) throw new Error(`NCBI returned ${res.status}`)
+    return (await res.json()) as T
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Build an @article entry from an esummary record. */
+function bibtexFromSummary(pmid: string, rec: PubmedRecord, pmcid: string, doi: string): string {
+  // esummary lists authors as "Smith JA"; BibTeX wants "Smith, JA".
+  const authors = (rec.authors ?? [])
+    .map((a) => (a.name ?? "").trim())
+    .filter(Boolean)
+    .map((n) => {
+      const i = n.lastIndexOf(" ")
+      return i > 0 ? `${n.slice(0, i)}, ${n.slice(i + 1)}` : n
+    })
+  const year = /\d{4}/.exec(rec.pubdate ?? "")?.[0] ?? ""
+  const title = (rec.title ?? "").trim().replace(/\.$/, "")
+  const surname = (authors[0] ?? "")
+    .split(",")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+  const key = `${surname || "pmid"}${year}pmid${pmid}`
+  const fields: Record<string, string> = {
+    author: authors.join(" and "),
+    title,
+    journal: rec.fulljournalname || rec.source || "",
+    year,
+    volume: rec.volume ?? "",
+    number: rec.issue ?? "",
+    pages: (rec.pages ?? "").replace(/-/g, "--"),
+    doi,
+    pmid,
+    pmcid,
+  }
+  const body = Object.entries(fields)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `  ${k} = {${v}}`)
+    .join(",\n")
+  return `@article{${key},\n${body}\n}`
+}
+
+/**
+ * Fetch BibTeX for a PubMed / PMC reference. No token needed. Prefers the
+ * DOI route when the record has a DOI, and always records the pmid.
+ */
+export async function fetchBibtexFromPubmed(ref: {
+  kind: "pmid" | "pmcid"
+  value: string
+}): Promise<string> {
+  let pmid = ref.value
+  let pmcid = ref.kind === "pmcid" ? ref.value : ""
+  if (ref.kind === "pmcid") {
+    const conv = await getJson<{ records?: { pmid?: string | number }[] }>(
+      `${IDCONV}?ids=${encodeURIComponent(ref.value)}&format=json&tool=comdtex`,
+    )
+    const found = conv.records?.[0]?.pmid
+    if (!found) throw new Error("PMC id has no PubMed record")
+    // The converter returns the pmid as a number.
+    pmid = String(found)
+  }
+  const data = await getJson<{ result?: Record<string, PubmedRecord | undefined> }>(
+    `${EUTILS}/esummary.fcgi?db=pubmed&id=${encodeURIComponent(pmid)}&retmode=json`,
+  )
+  const rec = data.result?.[pmid]
+  if (!rec || !rec.title) throw new Error("PubMed returned no record")
+  const idOf = (type: string) => rec.articleids?.find((a) => a.idtype === type)?.value ?? ""
+  if (!pmcid) pmcid = idOf("pmc")
+  const doi = idOf("doi")
+  if (doi) {
+    try {
+      const { bibtex } = await fetchBibtexForDoi(doi)
+      return addBibtexFields(bibtex, { pmid, pmcid })
+    } catch {
+      // DOI not resolvable (not in CrossRef/DataCite): fall back to esummary.
+    }
+  }
+  return bibtexFromSummary(pmid, rec, pmcid, doi)
+}

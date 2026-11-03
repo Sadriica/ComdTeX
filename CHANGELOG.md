@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Cite a PubMed paper by its PMID.** In the Citation Manager, paste a PMID (`PMID: 12345678`), a PMCID (`PMC1234567`) or a PubMed or PMC link. When the paper has a DOI you get the full CrossRef entry, otherwise one is built from PubMed, and either way the `pmid` (and `pmcid`) is saved in the entry.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

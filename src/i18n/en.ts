@@ -1721,7 +1721,7 @@ export const en: T = {
     venueJournal: "Journal",
     venueBooktitle: "Event (booktitle)",
     venueSource: "Booktitle / Source",
-    doiPlaceholder: "DOI or arXiv id (e.g. 10.1000/… or 2301.00001)",
+    doiPlaceholder: "DOI, arXiv id, PMID or PMCID (e.g. 10.1000/…, 2301.00001, PMID: 12345678)",
     doiAdd: "Fetch & add",
     doiFetching: "Fetching…",
     doiSuccess: (key) => `Added entry "${key}" from DOI`,
