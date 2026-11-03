@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { parameterizeDocument, processTemplateVariables } from "./templates"
+import { TEMPLATES, parameterizeDocument, processTemplateVariables } from "./templates"
+import { TEX_CLASSES, exportToTex, pickTexClass, type TexClassId } from "./exporter"
 
 describe("parameterizeDocument", () => {
   it("templates the frontmatter title and date", () => {
@@ -52,5 +53,31 @@ describe("parameterizeDocument", () => {
     expect(rendered).toContain("title: nueva")
     expect(rendered).toContain("# nueva")
     expect(rendered).not.toContain("{{title}}")
+  })
+})
+
+describe("computational-biology journal templates", () => {
+  const ids = ["journal-plos", "journal-bioinformatics", "journal-biorxiv", "journal-bmc"]
+
+  it("are journal templates that opt into a known class and the biology checks", () => {
+    for (const id of ids) {
+      const tpl = TEMPLATES.find((t) => t.id === id)!
+      expect(tpl.category).toBe("journal")
+      const cls = /comdtex\.texclass: (\w+)/.exec(tpl.content)![1]
+      expect(pickTexClass(cls)).toBe(cls)
+      expect(tpl.content).toContain("comdtex.domain: biology")
+      expect(tpl.content).toContain("{#fig:")
+      expect(tpl.content).toContain("si(")
+      expect(tpl.content).not.toContain("\u2014")
+    }
+  })
+
+  it("export with the class each template names", () => {
+    for (const id of ids) {
+      const tpl = TEMPLATES.find((t) => t.id === id)!
+      const cls = /comdtex\.texclass: (\w+)/.exec(tpl.content)![1] as TexClassId
+      const tex = exportToTex(processTemplateVariables(tpl.content, "x.md"), "", "Paper", "Ada")
+      expect(tex).toContain(TEX_CLASSES[cls].documentclass)
+    }
   })
 })

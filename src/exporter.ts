@@ -800,7 +800,8 @@ function bibStyleFor(style: { id: string }): string {
 // hand edits. Without the key, the export is byte-identical to the classic
 // article preamble below.
 
-export type TexClassId = "ieeetran" | "acmart" | "elsarticle" | "apa7"
+export type TexClassId =
+  "ieeetran" | "acmart" | "elsarticle" | "apa7" | "plos" | "bioinformatics" | "biorxiv" | "bmcart"
 
 interface TexClass {
   documentclass: string
@@ -809,6 +810,15 @@ interface TexClass {
   theoremPolicy: "full" | "supplement-only"
   titleBlock: (title: string, author: string) => string
   maketitle: boolean
+  // Packages and settings the class needs on top of the shared preamble, for
+  // journals that ship no class of their own (PLOS, Bioinformatics, bioRxiv).
+  extraPreamble?: string[]
+  // Class already loads natbib and hyperref itself (bmcart); loading them
+  // again would be an option clash.
+  providesCitations?: boolean
+  // Title and authors that live inside the document body, for classes with
+  // no \maketitle (PLOS, bmcart); elsarticle is handled separately.
+  bodyFrontmatter?: (title: string, author: string) => string
 }
 
 const THEOREM_SUPPLEMENT = [
@@ -847,6 +857,55 @@ export const TEX_CLASSES: Record<TexClassId, TexClass> = {
       `\\title{${escTex(title)}}\n\\authorsnames{${escTex(author) || "Author"}}\n\\authorsaffiliations{{~}}\n`,
     maketitle: true,
   },
+  // Computational-biology journals. PLOS and bioRxiv use stock article and
+  // OUP's `bioinfo` is distributed only by the publisher, so those three map
+  // to article plus the preamble that reproduces their layout. bmcart is the
+  // real BMC class, but publisher-distributed: a minimal TeX Live (and the
+  // WASM engine's package server) may not carry it.
+  plos: {
+    documentclass: "\\documentclass[10pt,letterpaper]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}",
+      "\\usepackage[right]{lineno}",
+      "\\raggedright",
+      "\\linenumbers",
+    ],
+    titleBlock: () => "",
+    maketitle: false,
+    bodyFrontmatter: (title, author) =>
+      `\\begin{flushleft}\n{\\Large\n\\textbf\\newline{${escTex(title)}}\n}\n\\newline\n\\\\\n${escTex(author) || "Author"}\n\\end{flushleft}\n\n`,
+  },
+  bioinformatics: {
+    documentclass: "\\documentclass[10pt,twocolumn]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=0.75in]{geometry}"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
+  },
+  biorxiv: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[margin=1in]{geometry}",
+      "\\usepackage{authblk}",
+      "\\usepackage{lineno}",
+      "\\linenumbers",
+    ],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author[1]{${escTex(author) || "Author"}}\n\\affil[1]{Affiliation}\n\\date{}\n`,
+    maketitle: true,
+  },
+  bmcart: {
+    documentclass: "\\documentclass[twocolumn]{bmcart}",
+    theoremPolicy: "supplement-only",
+    providesCitations: true,
+    titleBlock: () => "",
+    maketitle: false,
+    bodyFrontmatter: (title, author) =>
+      `\\begin{frontmatter}\n\\begin{fmbox}\n\\dochead{Research}\n\\title{${escTex(title)}}\n\\author[addressref=aff1]{\\snm{${escTex(author) || "Author"}}}\n\\address[id=aff1]{\\orgname{Affiliation}}\n\\end{fmbox}\n\\end{frontmatter}\n\n`,
+  },
 }
 
 export function pickTexClass(raw: unknown): TexClassId | null {
@@ -870,6 +929,7 @@ function buildJournalPreamble(
     // Journal submissions are overwhelmingly in English; babel-spanish is
     // deliberately not loaded here (the classic article export keeps it).
     "\\usepackage[T1]{fontenc}",
+    ...(cls.extraPreamble ?? []),
     "\\usepackage{amsmath, amssymb, amsfonts}",
     cls.theoremPolicy === "full" ? buildTheoremPreamble() : THEOREM_SUPPLEMENT,
     "\\usepackage{graphicx}",
@@ -881,7 +941,7 @@ function buildJournalPreamble(
   // acmart and apa7 manage citations themselves; adding natbib on top of
   // them is a documented conflict, so journal classes only get it when the
   // class does not already provide one.
-  if (natbib && classId !== "acmart" && classId !== "apa7") {
+  if (natbib && classId !== "acmart" && classId !== "apa7" && !cls.providesCitations) {
     lines.push(`\\usepackage[${natbib}]{natbib}`)
   }
   if (features.callouts) lines.push("\\usepackage{tcolorbox}")
@@ -893,7 +953,7 @@ function buildJournalPreamble(
     lines.push("\\usepackage{listings}")
   }
   // acmart and apa7 already load hyperref; loading it twice errors.
-  if (hasLinks && classId !== "acmart" && classId !== "apa7") {
+  if (hasLinks && classId !== "acmart" && classId !== "apa7" && !cls.providesCitations) {
     lines.push("\\usepackage{hyperref}")
   }
   const macroLines = macros.map(({ command, arity, definition }) =>
@@ -1151,7 +1211,9 @@ export function exportToTex(
   const elsFrontmatter =
     classId === "elsarticle" && title
       ? `\\begin{frontmatter}\n\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\end{frontmatter}\n\n`
-      : ""
+      : title && cls?.bodyFrontmatter
+        ? cls.bodyFrontmatter(title, author)
+        : ""
 
   // Custom headers/footers using fancyhdr
   const hasCustomHF =

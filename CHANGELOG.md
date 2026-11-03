@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Journal templates for computational biology.** The Journals section of the template picker now has PLOS (PLOS ONE and PLOS Computational Biology), Bioinformatics (OUP), a bioRxiv preprint and BMC (BMC Bioinformatics, Genome Biology). Each sets `comdtex.texclass`, a citation style and the biology typography checks, and comes with the sections the journal expects plus a table, a figure, units and a species name to start from. **Export as .tex** produces the PLOS layout (wide left margin, line numbers), a two-column Bioinformatics article, a bioRxiv preprint with affiliations and line numbers, or a BMC article on the `bmcart` class. PLOS, Bioinformatics and bioRxiv use the standard `article` class, so they compile anywhere; `bmcart` needs a TeX installation that includes it.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

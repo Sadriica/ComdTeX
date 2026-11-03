@@ -436,6 +436,253 @@ One-paragraph summary (150-250 words).
 `,
   },
   {
+    id: "journal-plos",
+    name: "Paper PLOS",
+    description:
+      "PLOS ONE / PLOS Computational Biology; exporta sobre article con el preámbulo de PLOS",
+    icon: "newspaper",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, plos]
+comdtex.main: true
+comdtex.texclass: plos
+comdtex.citestyle: vancouver
+comdtex.domain: biology
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary of the study (maximum 300 words).
+
+# Author summary {#sec:author-summary}
+
+Plain-language summary for a broad audience (PLOS Computational Biology only; delete for PLOS ONE).
+
+# Introduction {#sec:introduction}
+
+Background, the gap in knowledge and the aim of the study [@key].
+
+# Materials and methods {#sec:methods}
+
+Cultures of *Escherichia coli* were grown for si(16, h) in si(5, mL) of LB medium at si(37, degC), then diluted to a final concentration of si(10, mM) glucose.
+
+# Results {#sec:results}
+
+| Strain | Growth rate (1/h) | n |
+|---|---|---|
+| Wild type | 0.0 | 3 |
+| Knockout | 0.0 | 3 |
+{#tbl:growth}
+
+As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summarized in @fig:workflow.
+
+![Overview of the analysis workflow](figures/workflow.png){#fig:workflow}
+
+# Discussion {#sec:discussion}
+
+# Supporting information {#sec:supporting}
+
+S1 Fig. Caption of the first supporting figure.
+
+# Acknowledgments {#sec:acknowledgments}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-bioinformatics",
+    name: "Paper Bioinformatics",
+    description: "Bioinformatics (OUP); exporta sobre article a dos columnas",
+    icon: "newspaper",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, bioinformatics]
+comdtex.main: true
+comdtex.texclass: bioinformatics
+comdtex.citestyle: author-year
+comdtex.domain: biology
+---
+
+# Abstract {#sec:abstract}
+
+**Motivation:** Why the problem matters.
+
+**Results:** What the method achieves.
+
+**Availability and implementation:** Where to get the software (URL, license).
+
+**Contact:** name@institution.org
+
+**Supplementary information:** Supplementary data are available at *Bioinformatics* online.
+
+# Introduction {#sec:introduction}
+
+Background and related work [@key].
+
+# Methods {#sec:methods}
+
+Cultures of *Escherichia coli* were grown for si(16, h) in si(5, mL) of LB medium at si(37, degC), then diluted to a final concentration of si(10, mM) glucose.
+
+# Results {#sec:results}
+
+| Strain | Growth rate (1/h) | n |
+|---|---|---|
+| Wild type | 0.0 | 3 |
+| Knockout | 0.0 | 3 |
+{#tbl:growth}
+
+As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summarized in @fig:workflow.
+
+![Overview of the analysis workflow](figures/workflow.png){#fig:workflow}
+
+# Discussion {#sec:discussion}
+
+# Funding {#sec:funding}
+
+This work was supported by ...
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-biorxiv",
+    name: "Preprint bioRxiv",
+    description: "Preprint de biología con afiliaciones (authblk) y números de línea",
+    icon: "newspaper",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, biorxiv]
+comdtex.main: true
+comdtex.texclass: biorxiv
+comdtex.citestyle: vancouver
+comdtex.domain: biology
+---
+
+# Abstract {#sec:abstract}
+
+One-paragraph summary of the study.
+
+# Introduction {#sec:introduction}
+
+Background, the gap in knowledge and the aim of the study [@key].
+
+# Methods {#sec:methods}
+
+Cultures of *Escherichia coli* were grown for si(16, h) in si(5, mL) of LB medium at si(37, degC), then diluted to a final concentration of si(10, mM) glucose.
+
+# Results {#sec:results}
+
+| Strain | Growth rate (1/h) | n |
+|---|---|---|
+| Wild type | 0.0 | 3 |
+| Knockout | 0.0 | 3 |
+{#tbl:growth}
+
+As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summarized in @fig:workflow.
+
+![Overview of the analysis workflow](figures/workflow.png){#fig:workflow}
+
+# Discussion {#sec:discussion}
+
+# Data availability {#sec:data-availability}
+
+Where the data are deposited (accession numbers, DOI).
+
+# Code availability {#sec:code-availability}
+
+Repository URL and the version used in the paper.
+
+# Author contributions {#sec:contributions}
+
+# Competing interests {#sec:competing}
+
+The authors declare no competing interests.
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
+    id: "journal-bmc",
+    name: "Paper BMC",
+    description: "BMC Bioinformatics / Genome Biology (bmcart); exporta con la clase real",
+    icon: "newspaper",
+    category: "journal",
+    content: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper, bmc]
+comdtex.main: true
+comdtex.texclass: bmcart
+comdtex.citestyle: vancouver
+comdtex.domain: biology
+---
+
+# Abstract {#sec:abstract}
+
+**Background:** Why the problem matters.
+
+**Results:** What the study found or the software does.
+
+**Conclusions:** What follows from it.
+
+# Background {#sec:background}
+
+Context and aim of the study [@key].
+
+# Methods {#sec:methods}
+
+Cultures of *Escherichia coli* were grown for si(16, h) in si(5, mL) of LB medium at si(37, degC), then diluted to a final concentration of si(10, mM) glucose.
+
+# Results {#sec:results}
+
+| Strain | Growth rate (1/h) | n |
+|---|---|---|
+| Wild type | 0.0 | 3 |
+| Knockout | 0.0 | 3 |
+{#tbl:growth}
+
+As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summarized in @fig:workflow.
+
+![Overview of the analysis workflow](figures/workflow.png){#fig:workflow}
+
+# Discussion {#sec:discussion}
+
+# Conclusions {#sec:conclusions}
+
+# Declarations {#sec:declarations}
+
+## Availability of data and materials {#sec:availability}
+
+## Competing interests {#sec:competing}
+
+The authors declare that they have no competing interests.
+
+## Funding {#sec:funding}
+
+## Authors' contributions {#sec:contributions}
+
+# References {#sec:references}
+
+[@key]
+`,
+  },
+  {
     id: "lecture-notes-book",
     name: "Libro de apuntes",
     description: "Capítulo con definiciones, teoremas, ejercicios y backlinks matemáticos",

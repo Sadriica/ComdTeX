@@ -1905,6 +1905,23 @@ export const es: T = {
       name: "Manuscrito APA",
       description: "Manuscrito estilo APA 7 (apa7); exporta con la clase real",
     },
+    "journal-plos": {
+      name: "Paper PLOS",
+      description:
+        "PLOS ONE / PLOS Computational Biology; exporta sobre article con el preámbulo de PLOS",
+    },
+    "journal-bioinformatics": {
+      name: "Paper Bioinformatics",
+      description: "Bioinformatics (OUP); exporta sobre article a dos columnas",
+    },
+    "journal-biorxiv": {
+      name: "Preprint bioRxiv",
+      description: "Preprint de biología con afiliaciones (authblk) y números de línea",
+    },
+    "journal-bmc": {
+      name: "Paper BMC",
+      description: "BMC Bioinformatics / Genome Biology (bmcart); exporta con la clase real",
+    },
   },
 
   documentLab: {
@@ -2209,6 +2226,10 @@ export const es: T = {
       acmart: "Artículo ACM",
       elsarticle: "Artículo Elsevier",
       apa7: "Manuscrito APA 7",
+      plos: "Artículo PLOS",
+      bioinformatics: "Artículo Bioinformatics",
+      biorxiv: "Preprint bioRxiv",
+      bmcart: "Artículo BMC",
     },
     citestyleValues: {
       default: "Predeterminado de ComdTeX",
