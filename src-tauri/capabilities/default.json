@@ -9,6 +9,7 @@
     "allow-set-secret",
     "allow-get-secret",
     "allow-delete-secret",
+    "allow-list-system-fonts",
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
