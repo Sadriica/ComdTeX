@@ -1279,6 +1279,15 @@ export const es: T = {
   },
 
   helpPanel: {
+    resultValues: "Números desde tus archivos de resultados",
+    resultValuesIntro:
+      "Declara el archivo de resultados una vez con :::data{#data:stats} y cita valores con val(). Se actualizan cuando el pipeline reescribe el archivo; un valor que falta muestra una nota visible.",
+    resultValuesCell:
+      "Por clave de fila (primera columna) o por celda: val(stats, pvalue), val(stats, effect, ci), val(stats, B4)",
+    resultValuesJson: "Archivo JSON, ruta con puntos: val(fit, metrics.auc), val(fit, folds.0.acc)",
+    resultValuesFormat:
+      "Formato: 3sf (cifras significativas), .2f (decimales), .2e (científico), p (valor p)",
+    resultValuesP: "Dentro de otros atajos: si(val(stats, effect, 3sf), mg/L)",
     docsLink: "Documentación completa",
     environments: "Entornos matemáticos",
     shorthands: "Shorthands matemáticos: Tab",
@@ -2128,6 +2137,11 @@ export const es: T = {
       mathError: (detail) => `Error de matemáticas: ${detail}`,
       dataDuplicate: (id) => `Dataset duplicado: ${id}`,
       dataUndeclared: (id) => `Dataset no declarado: @${id}`,
+      valueUndeclared: (id) => `val(): no hay un dataset ${id} declarado en esta nota`,
+      valueSourceMissing: (file) => `val(): no se encontró ${file} en este vault`,
+      valueSourceUnreadable: (file) => `val(): no se pudo leer ${file}`,
+      valueCellMissing: (cell) => `val(): no hay valor en ${cell}`,
+      valueNotNumber: (text) => `val(): "${text}" no es un número, no se puede formatear`,
       spellUnknown: (word) => `Posible error ortográfico: ${word}`,
       bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
       bibUnclosed: (type, close) => `Entrada @${type} sin cerrar (falta '${close}')`,

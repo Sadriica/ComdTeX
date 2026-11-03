@@ -40,6 +40,8 @@ import { preprocess } from "./preprocessor"
 import { imageCandidates } from "./imagePaths"
 import { matchesVaultRelPath } from "./wikilinks"
 import { findVaultFile } from "./vaultResolve"
+import { parseDataBlocks } from "./datasets"
+import { findValueRefs, formatValue, lookupValue } from "./resultValues"
 import { slugifyHeading } from "./toc"
 import { es } from "./i18n/es"
 import type { T } from "./i18n/types"
@@ -75,6 +77,11 @@ export const LINT_CODES = [
   "math-parse-error",
   "data-duplicate",
   "data-undeclared",
+  "value-undeclared",
+  "value-source-missing",
+  "value-source-unreadable",
+  "value-cell-missing",
+  "value-not-number",
   "spell-unknown",
   "bio-binomial",
   "bio-gene",
@@ -134,6 +141,12 @@ export interface LintContext {
   vaultFilePaths?: ReadonlySet<string>
   /** User macros (`macros.md`): without them `\mycmd` would be a KaTeX error. */
   macros?: Record<string, string>
+  /**
+   * Reads a data file by the name a `:::data` block writes (the vault's CSV
+   * and JSON results). Without it `val()` calls are only checked against the
+   * declarations; with it a missing file or cell is reported too.
+   */
+  dataResolver?: (target: string) => string | null
 }
 
 export interface LintSummary {
@@ -1408,6 +1421,54 @@ function lintDataRefs(env: Env, text: string): Marker[] {
   return markers
 }
 
+/**
+ * `val(dataset, cell)` reads a number from a results file. The preview prints
+ * a note when it cannot, but the marker says so while writing. The file and
+ * cell checks need the vault's data (`ctx.dataResolver`); the declaration
+ * check does not.
+ */
+function lintValueRefs(env: Env, text: string): Marker[] {
+  const refs = findValueRefs(text)
+  if (refs.length === 0) return []
+  const { datasets } = parseDataBlocks(text)
+  const resolver = env.ctx.dataResolver
+  const markers: Marker[] = []
+  for (const ref of refs) {
+    let result: ReturnType<typeof lookupValue>
+    if (resolver) {
+      result = lookupValue(ref.args, ref.quoted, datasets, resolver)
+    } else {
+      // No vault data: only the declaration can be judged.
+      const declared = lookupValue(ref.args, ref.quoted, datasets, () => null)
+      if (declared.ok || declared.error.kind !== "dataset-undeclared") continue
+      result = declared
+    }
+    let kind: string | null = null
+    let detail = ""
+    if (!result.ok) {
+      kind = result.error.kind
+      detail = result.error.detail
+    } else if (result.format && formatValue(result.text, result.format, true) === null) {
+      kind = "not-number"
+      detail = result.text
+    }
+    if (!kind) continue
+    const m = env.msg
+    const [code, message] =
+      kind === "dataset-undeclared"
+        ? (["value-undeclared", m.valueUndeclared(detail)] as const)
+        : kind === "source-missing"
+          ? (["value-source-missing", m.valueSourceMissing(detail)] as const)
+          : kind === "source-unreadable"
+            ? (["value-source-unreadable", m.valueSourceUnreadable(detail)] as const)
+            : kind === "cell-missing"
+              ? (["value-cell-missing", m.valueCellMissing(detail)] as const)
+              : (["value-not-number", m.valueNotNumber(detail)] as const)
+    markers.push(emit(env, code, ref.start, ref.end, message, env.Severity.Warning))
+  }
+  return markers
+}
+
 function makeEnv(text: string, context: LintContext, Severity: Severities): Env {
   return {
     lineIdx: buildLineIndex(text),
@@ -1446,6 +1507,7 @@ export function lintContent(
     // return manuscripts over un-italicized binomials and gene symbols.
     ...lintBioConventions(env, text),
     ...lintDataRefs(env, clean),
+    ...lintValueRefs(env, clean),
   ]
 
   if (context.spellcheck) {

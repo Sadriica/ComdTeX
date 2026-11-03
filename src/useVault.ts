@@ -495,6 +495,8 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
         ext === "bib" ||
         ext === "typ" ||
         ext === "csv" ||
+        // Pipeline results (`val(...)` reads them), listed like a CSV.
+        ext === "json" ||
         ext === "pdf"
       )
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })

@@ -1201,6 +1201,12 @@ export interface T {
 
   helpPanel: {
     docsLink: string
+    resultValues: string
+    resultValuesIntro: string
+    resultValuesCell: string
+    resultValuesJson: string
+    resultValuesFormat: string
+    resultValuesP: string
     environments: string
     shorthands: string
     equations: string
@@ -1937,6 +1943,11 @@ export interface T {
       mathError: (detail: string) => string
       dataDuplicate: (id: string) => string
       dataUndeclared: (id: string) => string
+      valueUndeclared: (id: string) => string
+      valueSourceMissing: (file: string) => string
+      valueSourceUnreadable: (file: string) => string
+      valueCellMissing: (cell: string) => string
+      valueNotNumber: (text: string) => string
       spellUnknown: (word: string) => string
       bioItalic: (text: string, suggestion: string) => string
       bibUnclosed: (type: string, close: string) => string

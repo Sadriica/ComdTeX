@@ -148,6 +148,11 @@ export const COMPLETIONS: Completion[] = [
   { label: "unit", detail: "unit(mol/L) → standalone unit", snippet: "unit(${1:mol/L})" },
   { label: "ce", detail: "ce(H2O) → chemical formula (mhchem)", snippet: "ce(${1:H2O})" },
   {
+    label: "val",
+    detail: "val(dataset, cell, format) → a number from your results file",
+    snippet: "val(${1:stats}, ${2:pvalue})",
+  },
+  {
     label: "csv",
     detail: ":::csv block → table from a CSV selection",
     snippet: ":::csv[${1:Title}]\n${2:data.csv} (${3:A:C}) (${4:1:10})\n:::",

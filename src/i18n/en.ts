@@ -1272,6 +1272,15 @@ export const en: T = {
 
   helpPanel: {
     docsLink: "Full documentation",
+    resultValues: "Numbers from your results files",
+    resultValuesIntro:
+      "Declare the results file once with :::data{#data:stats}, then quote values with val(). They update when the pipeline rewrites the file; a missing value shows a visible note.",
+    resultValuesCell:
+      "By row key (first column) or by cell: val(stats, pvalue), val(stats, effect, ci), val(stats, B4)",
+    resultValuesJson: "JSON file, dotted path: val(fit, metrics.auc), val(fit, folds.0.acc)",
+    resultValuesFormat:
+      "Format: 3sf (significant figures), .2f (decimals), .2e (scientific), p (p-value)",
+    resultValuesP: "Inside other shorthands: si(val(stats, effect, 3sf), mg/L)",
     environments: "Math environments",
     shorthands: "Math shorthands: Tab",
     formatting: "Text formatting (Markdown)",
@@ -2107,6 +2116,11 @@ export const en: T = {
       mathError: (detail) => `Math error: ${detail}`,
       dataDuplicate: (id) => `Duplicate dataset: ${id}`,
       dataUndeclared: (id) => `Undeclared dataset: @${id}`,
+      valueUndeclared: (id) => `val(): no dataset ${id} is declared in this note`,
+      valueSourceMissing: (file) => `val(): ${file} was not found in this vault`,
+      valueSourceUnreadable: (file) => `val(): ${file} could not be read`,
+      valueCellMissing: (cell) => `val(): no value at ${cell}`,
+      valueNotNumber: (text) => `val(): "${text}" is not a number, so it cannot be formatted`,
       spellUnknown: (word) => `Possible spelling mistake: ${word}`,
       bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
       bibUnclosed: (type, close) => `Unclosed @${type} entry (missing '${close}')`,

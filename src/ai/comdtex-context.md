@@ -69,6 +69,9 @@ Each is auto-numbered independently; all take an optional `[name]` title.
   `<->` (iff), `∧` (and), `∨` (or). One propositional formula per line.
 - **`:::graph`**: graphs. Edges: `A -- B : w` (weighted undirected), `A -> B` (directed).
 - **`:::plot`**: function plots. Body lines like `f(x) = x^2`, plus `xmin`/`xmax`.
+- **`val(dataset, cell[, format])`**: a number read from a results file declared with
+  `:::data{#data:stats}` (CSV or JSON): `val(stats, pvalue)`, `val(stats, B4)`,
+  `val(fit, metrics.auc, 3sf)`; formats `3sf`, `.2f`, `.2e`, `p`. Never type results by hand.
 - **`:::flowchart`** / **`:::pseudocode`**: render to a Mermaid flowchart
   (control-flow keywords: if/else/while/for/return …).
 - **`:::commdiag`**: commutative diagrams (tikz-cd style: nodes and labeled arrows).

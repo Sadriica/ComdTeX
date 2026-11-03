@@ -7,12 +7,16 @@
 // button pressed. That bug is easy to introduce one handler at a time, so
 // the resolution lives here and every caller uses it.
 //
+// `val(...)` references (resultValues.ts) are the last step, so a value
+// lands in the finished text before the preprocessor and exporters run.
+//
 // Order matters: transclusion first, because an embedded note may itself
 // contain a `:::csv` block that must then be expanded.
 
 import { expandCsvBlocks } from "./csvRange"
 import { parseDataBlocks } from "./datasets"
 import { expandPlotData } from "./plotData"
+import { expandValueRefs } from "./resultValues"
 import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
 
 /**
@@ -33,7 +37,9 @@ export function resolveDocumentContent(raw: string, resolver?: TransclusionResol
     // An embedded note may declare its own datasets and use them.
     const embedded = parseDataBlocks(content)
     const withPlots = expandPlotData(embedded.content, embedded.datasets, resolver)
-    return expandCsvBlocks(withPlots, resolver, embedded.datasets)
+    const withCsv = expandCsvBlocks(withPlots, resolver, embedded.datasets)
+    // Values of datasets the note does not declare wait for the host pass.
+    return expandValueRefs(withCsv, embedded.datasets, resolver, { leaveUndeclared: true })
   }
   // Datasets are declared before anything reads them, and their blocks
   // vanish: a declaration prints nothing, like a macro definition.
@@ -41,5 +47,7 @@ export function resolveDocumentContent(raw: string, resolver?: TransclusionResol
   // Plots that name a dataset become plots with literal series, so the
   // renderer never needs a vault resolver.
   const withPlots = expandPlotData(content, datasets, resolver)
-  return expandCsvBlocks(withPlots, resolver, datasets)
+  const withCsv = expandCsvBlocks(withPlots, resolver, datasets)
+  // `val(dataset, cell)` becomes the number the results file holds now.
+  return expandValueRefs(withCsv, datasets, resolver)
 }
