@@ -3,6 +3,11 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Choose your typography.** Settings now has three typeface pickers: interface (General), editor (Editor) and preview (Preview). Each offers Default (the current look, so nothing changes until you choose), a short list of suggested stacks (Inter, Fira Code, Cascadia Code, Source Code Pro, Latin Modern, EB Garamond, Georgia and more) and every font installed on your system, each name shown in its own typeface with a live sample underneath. The editor list shows only monospace fonts. The desktop app scans system fonts once per session on a background thread; nothing is downloaded.
+
 ## [1.31.0] - 2026-11-03
 
 ComdTeX for computational biology, and in-app updates that finally arrive. Highlights:
