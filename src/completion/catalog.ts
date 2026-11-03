@@ -149,7 +149,7 @@ export const COMPLETIONS: Completion[] = [
   { label: "ce", detail: "ce(H2O) → chemical formula (mhchem)", snippet: "ce(${1:H2O})" },
   {
     label: "val",
-    detail: "val(dataset, cell, format) → a number from your results file",
+    detail: "val(data, cell, format) → a number read from pipeline output",
     snippet: "val(${1:stats}, ${2:pvalue})",
   },
   {
