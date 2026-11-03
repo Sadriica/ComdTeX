@@ -182,6 +182,53 @@ fn delete_secret(key: String) -> Result<(), String> {
     }
 }
 
+/// One installed font family, as shown in the font pickers.
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
+struct FontFamilyInfo {
+    name: String,
+    /// True when every installed face of the family is monospaced.
+    monospace: bool,
+}
+
+/// Collapse per-face records into one entry per family name: sorted
+/// case-insensitively, deduplicated, with `monospace` true only when all faces
+/// of the family are monospaced. Names that are blank or start with a dot
+/// (hidden system fonts such as ".SF NS") are dropped.
+fn collapse_families<I: IntoIterator<Item = (String, bool)>>(faces: I) -> Vec<FontFamilyInfo> {
+    let mut map: std::collections::BTreeMap<String, (String, bool)> =
+        std::collections::BTreeMap::new();
+    for (name, mono) in faces {
+        let name = name.trim().to_string();
+        if name.is_empty() || name.starts_with('.') {
+            continue;
+        }
+        let entry = map
+            .entry(name.to_lowercase())
+            .or_insert_with(|| (name.clone(), true));
+        entry.1 &= mono;
+    }
+    map.into_values()
+        .map(|(name, monospace)| FontFamilyInfo { name, monospace })
+        .collect()
+}
+
+/// Enumerate the font families installed on the system (Linux, Windows,
+/// macOS). Scanning can take a while with many fonts, so it runs on the
+/// blocking pool rather than the main thread.
+#[tauri::command]
+async fn list_system_fonts() -> Result<Vec<FontFamilyInfo>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut db = fontdb::Database::new();
+        db.load_system_fonts();
+        collapse_families(
+            db.faces()
+                .filter_map(|f| f.families.first().map(|(n, _)| (n.clone(), f.monospaced))),
+        )
+    })
+    .await
+    .map_err(|e| format!("font scan failed: {e}"))
+}
+
 /// Navigation guard (defense in depth). The sanitizer and the preview click
 /// handler already keep links from leaving the app, but if either is bypassed a
 /// top-level navigation would replace the whole UI with remote content that
@@ -228,7 +275,8 @@ pub fn run() {
             allow_vault_dir,
             set_secret,
             get_secret,
-            delete_secret
+            delete_secret,
+            list_system_fonts
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -236,6 +284,23 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn collapse_families_dedupes_sorts_and_flags_monospace() {
+        let out = collapse_families(vec![
+            ("Zed Sans".to_string(), false),
+            ("Fira Code".to_string(), true),
+            ("fira code".to_string(), true),
+            ("Mixed".to_string(), true),
+            ("Mixed".to_string(), false),
+            (".Hidden".to_string(), false),
+            ("  ".to_string(), false),
+        ]);
+        let names: Vec<_> = out.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, vec!["Fira Code", "Mixed", "Zed Sans"]);
+        assert!(out[0].monospace);
+        assert!(!out[1].monospace);
+    }
     use super::*;
     use std::path::Path;
 

@@ -326,6 +326,24 @@ export const en: T = {
     },
   },
 
+  typography: {
+    interfaceFont: "Interface typeface",
+    editorFont: "Editor typeface",
+    previewFont: "Preview typeface",
+    hintInterface: "The typeface of menus, panels and dialogs. Default keeps the system look.",
+    hintEditor:
+      "The monospace typeface used while you write. Only monospace fonts installed on your system are listed.",
+    hintPreview:
+      "The typeface of the rendered document. Default follows the Document style setting.",
+    defaultOption: "Default",
+    groupSuggested: "Suggested",
+    groupInstalled: "Installed on this system",
+    groupInstalledMono: "Installed on this system (monospace)",
+    scanning: "Looking for installed fonts...",
+    noInstalled: "Installed fonts are only listed in the desktop app.",
+    sample: "The quick brown fox jumps over the lazy dog. 0123456789 \u2211 \u222B",
+    sampleCode: "const x = 42; // 0O 1lI {}[]",
+  },
   help: {
     title: "Keyboard shortcuts",
     file: "File",

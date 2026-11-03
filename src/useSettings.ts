@@ -1,9 +1,14 @@
 import type { Lang } from "./i18n"
 import { STORAGE_KEYS } from "./storageKeys"
+import { DEFAULT_FONT, sanitizeFontValue } from "./fontChoices"
 
 export interface Settings {
   fontSize: number
   previewFontSize: number
+  /** Typefaces: "default", "preset:<id>" or "system:<Family>" (see fontChoices.ts). */
+  uiFontFamily: string
+  editorFontFamily: string
+  previewFontFamily: string
   autoSaveMs: number
   theme: "vs-dark" | "vs" | "hc-black"
   vimMode: boolean
@@ -88,6 +93,9 @@ export interface Settings {
 export const DEFAULTS: Settings = {
   fontSize: 15,
   previewFontSize: 15,
+  uiFontFamily: DEFAULT_FONT,
+  editorFontFamily: DEFAULT_FONT,
+  previewFontFamily: DEFAULT_FONT,
   autoSaveMs: 800,
   theme: "vs-dark",
   vimMode: false,
@@ -141,11 +149,21 @@ export const RETIRED_DEFAULT_MODELS: Record<string, string> = {
   "gemini-1.5-flash": "gemini-3.6-flash",
 }
 
+/** Normalise the three typeface settings of a merged settings object. */
+export function sanitizeFonts(s: Settings): Settings {
+  return {
+    ...s,
+    uiFontFamily: sanitizeFontValue("ui", s.uiFontFamily),
+    editorFontFamily: sanitizeFontValue("editor", s.editorFontFamily),
+    previewFontFamily: sanitizeFontValue("preview", s.previewFontFamily),
+  }
+}
+
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return DEFAULTS
-    const merged: Settings = { ...DEFAULTS, ...JSON.parse(raw) }
+    const merged: Settings = sanitizeFonts({ ...DEFAULTS, ...JSON.parse(raw) })
     if (merged.documentStyle !== "paper" && merged.documentStyle !== "sans")
       merged.documentStyle = DEFAULTS.documentStyle
     const replacement = RETIRED_DEFAULT_MODELS[merged.aiModel]

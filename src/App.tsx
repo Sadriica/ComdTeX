@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react"
+import type { CSSProperties } from "react"
 import { isDocExt } from "./docExts"
 import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
@@ -79,6 +80,8 @@ import type { SyncTexBundle } from "./exportActions"
 import { parseSyncTex, forwardSync } from "./synctex"
 import { nearestTexLine } from "./texLineMap"
 import { useSettings } from "./useSettings"
+import { buildStack, DEFAULT_EDITOR_STACK } from "./fontChoices"
+import { useFontOverrides } from "./useFontOverrides"
 import type { Settings } from "./useSettings"
 import { AiSessionProvider } from "./useAiSession"
 import { useFocusTimer } from "./useFocusTimer"
@@ -923,6 +926,16 @@ function AppContent({
   // prop identity changed each render). readOnly keys off the boolean, since
   // `vault.openFile` mints a new object identity on each keystroke.
   const editorReadOnly = !vault.openFile
+  useFontOverrides(settings.uiFontFamily)
+  const previewStack = buildStack("preview", settings.previewFontFamily)
+  const previewPaneStyle = useMemo(
+    () =>
+      ({
+        fontSize: settings.previewFontSize,
+        ...(previewStack ? { "--doc-font": previewStack } : {}),
+      }) as CSSProperties,
+    [settings.previewFontSize, previewStack],
+  )
   const editorOptions = useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
     () => ({
       fontSize: settings.fontSize,
@@ -931,7 +944,7 @@ function AppContent({
       minimap: { enabled: minimapEnabled },
       scrollBeyondLastLine: false,
       renderWhitespace: "none",
-      fontFamily: '"JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+      fontFamily: buildStack("editor", settings.editorFontFamily) ?? DEFAULT_EDITOR_STACK,
       padding: { top: 16, bottom: 16 },
       readOnly: editorReadOnly,
       // Keep prose typing cheap. Math/editor shorthands still expand with Tab
@@ -945,7 +958,7 @@ function AppContent({
       cursorSmoothCaretAnimation: "off",
       cursorBlinking: "solid",
     }),
-    [settings.fontSize, wordWrap, minimapEnabled, editorReadOnly],
+    [settings.fontSize, settings.editorFontFamily, wordWrap, minimapEnabled, editorReadOnly],
   )
   const [navHistory, setNavHistory] = useState<string[]>([])
   const [navFuture, setNavFuture] = useState<string[]>([])
@@ -5902,7 +5915,7 @@ function AppContent({
                 <div
                   className="preview-content"
                   lang={previewLang}
-                  style={{ fontSize: settings.previewFontSize }}
+                  style={previewPaneStyle}
                   onClick={handlePreviewClick}
                   onDoubleClick={handlePreviewDblClick}
                   ref={previewContentRef}
@@ -5935,7 +5948,7 @@ function AppContent({
                   <div
                     className="preview-content"
                     lang={splitLang}
-                    style={{ fontSize: settings.previewFontSize }}
+                    style={previewPaneStyle}
                     ref={splitContentRef}
                   />
                 </div>
