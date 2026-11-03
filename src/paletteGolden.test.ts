@@ -143,3 +143,23 @@ describe("palette golden order: files", () => {
     expect(plain[0]).not.toBeUndefined()
   })
 })
+
+describe("palette commands: verb plus noun, synonyms, any order", () => {
+  it("finds Configuración from 'abrir configuración' and its synonyms", () => {
+    expect(search("es", "Abrir Configuración")[0]).toBe("Configuración")
+    expect(search("es", "abrir ajustes")).toContain("Configuración")
+    expect(search("es", "preferencias")).toContain("Configuración")
+    expect(search("es", "configuracion abrir")).toContain("Configuración")
+  })
+
+  it("finds Settings from 'open settings' and 'preferences'", () => {
+    expect(search("en", "open settings")[0]).toBe("Settings")
+    expect(search("en", "go to preferences")).toContain("Settings")
+    expect(search("en", "settings open")).toContain("Settings")
+  })
+
+  it("still prefers an exact match and does not guess for gibberish", () => {
+    expect(search("es", "Configuración")[0]).toBe("Configuración")
+    expect(search("en", "zzzzqq wwwwxx")).toEqual([])
+  })
+})

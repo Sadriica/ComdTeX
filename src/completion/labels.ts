@@ -28,6 +28,7 @@ import {
   type LabelEntry,
 } from "./state"
 import { showSuggestPreview } from "./katexPreview"
+import { foldText } from "./match"
 import {
   RETRIGGER_COMMAND,
   type CompletionEnv,
@@ -71,7 +72,33 @@ const KIND_ALIASES: Record<string, string> = {
   example: "ex",
   exercise: "exc",
   dataset: "data",
+  // What a Spanish or English writer types before they know the short kind.
+  equation: "eq",
+  ecuacion: "eq",
+  figure: "fig",
+  figura: "fig",
+  table: "tbl",
+  tabla: "tbl",
+  section: "sec",
+  seccion: "sec",
+  teorema: "thm",
+  lema: "lem",
+  corolario: "cor",
+  proposicion: "prop",
+  definicion: "def",
+  ejemplo: "ex",
+  ejercicio: "exc",
+  datos: "data",
 }
+
+/** Every word that names a kind (the short key, the English and the Spanish names), folded. */
+const KIND_WORDS: Map<string, string[]> = (() => {
+  const out = new Map<string, string[]>()
+  for (const [word, kind] of Object.entries(KIND_ALIASES)) {
+    out.set(kind, [...(out.get(kind) ?? [kind]), word])
+  }
+  return out
+})()
 
 const KIND_ENV: Record<string, string> = {
   thm: "theorem",
@@ -84,7 +111,7 @@ const KIND_ENV: Record<string, string> = {
 }
 
 export function canonicalKind(raw: string): string {
-  const lower = raw.toLowerCase()
+  const lower = foldText(raw)
   return KIND_ALIASES[lower] ?? lower
 }
 
@@ -205,8 +232,8 @@ function sameFileEntries(model: CompletionModel, kind: string): LabelEntry[] {
       title,
       number: base?.number,
       preview: base?.preview,
-      nameLc: own.name.toLowerCase(),
-      titleLc: (title ?? "").toLowerCase(),
+      nameLc: foldText(own.name),
+      titleLc: foldText(title ?? ""),
     })
   }
   return out
@@ -281,7 +308,7 @@ function provideLocal(
   env: CompletionEnv,
   ctx: Extract<RefContext, { type: "local" }>,
 ): monacoApi.languages.CompletionList {
-  const partialLc = ctx.partial.toLowerCase()
+  const partialLc = foldText(ctx.partial)
   const startCol = ctx.start + 1
   const range = makeRange(env, startCol, env.position.column + labelTail(env.after, ctx.partial))
   const suggestions: monacoApi.languages.CompletionItem[] = []
@@ -352,7 +379,8 @@ function kindItems(
   const t = completionText()
   const out: monacoApi.languages.CompletionItem[] = []
   for (const kind of kinds) {
-    if (partialLc && !kind.startsWith(partialLc)) continue
+    if (partialLc && !(KIND_WORDS.get(kind) ?? [kind]).some((w) => w.startsWith(partialLc)))
+      continue
     const count = counts?.get(kind)
     const envType = KIND_ENV[kind]
     out.push({
@@ -363,6 +391,7 @@ function kindItems(
       kind: env.monaco.languages.CompletionItemKind.Keyword,
       detail: count ? String(count) : undefined,
       insertText: `${kind}:`,
+      filterText: (KIND_WORDS.get(kind) ?? [kind]).join(" "),
       range,
       sortText:
         (count ? "0" : "1") +
@@ -373,11 +402,60 @@ function kindItems(
   return out
 }
 
+/**
+ * `@gap` with no kind yet: labels of every kind whose name or title contains
+ * what was typed (this file first, then the other notes' environments), so a
+ * label is reachable from a word you remember without knowing its `kind:`.
+ */
+function anyKindLabels(
+  env: CompletionEnv,
+  ctx: Extract<RefContext, { type: "starter" }>,
+  partialLc: string,
+): monacoApi.languages.CompletionItem[] {
+  const range = makeRange(
+    env,
+    ctx.start + 1,
+    env.position.column + labelTail(env.after, ctx.partial),
+  )
+  const out: monacoApi.languages.CompletionItem[] = []
+  const current = getCurrentFile()
+  for (const kind of KIND_ORDER) {
+    for (const entry of sameFileEntries(env.model, kind)) {
+      if (!matches(entry, partialLc)) continue
+      out.push(
+        makeItem(env, entry, {
+          range,
+          insertText: `@${kind}:${entry.name}`,
+          filterText: `@${ctx.partial} @${kind}:${entry.name} ${entry.title ?? ""}`,
+          sortText: "3" + pad(entry.line),
+          sameFile: true,
+        }),
+      )
+    }
+    if (!CROSS_FILE_KINDS.has(kind)) continue
+    for (const entry of getLabelsOfKind(kind)) {
+      if (entry.filePath === current || !matches(entry, partialLc)) continue
+      if (out.length >= MAX_ITEMS) return out
+      const rel = relPathOf(entry.filePath)
+      out.push(
+        makeItem(env, entry, {
+          range,
+          insertText: refText(rel, kind, entry.name),
+          filterText: `@${ctx.partial} @${kind}:${entry.name} ${entry.title ?? ""} ${rel}`,
+          sortText: "4" + rel.toLowerCase() + pad(entry.line),
+          sameFile: false,
+        }),
+      )
+    }
+  }
+  return out
+}
+
 function provideStarter(
   env: CompletionEnv,
   ctx: Extract<RefContext, { type: "starter" }>,
 ): monacoApi.languages.CompletionList {
-  const partialLc = ctx.partial.toLowerCase()
+  const partialLc = foldText(ctx.partial)
   const range = makeRange(env, ctx.start + 2)
   const counts = new Map<string, number>()
   for (const own of ownLabels(env.model)) counts.set(own.kind, (counts.get(own.kind) ?? 0) + 1)
@@ -386,6 +464,7 @@ function provideStarter(
   if (partialLc.length > 0) {
     suggestions.push(...pathItems(env, range, partialLc, false))
   }
+  if (partialLc.length >= 2) suggestions.push(...anyKindLabels(env, ctx, partialLc))
   return { suggestions }
 }
 
@@ -410,7 +489,7 @@ function pathItems(
   const known = new Set(getVaultDocs().map((d) => d.path))
   for (const [path, rel] of referencablePaths()) {
     if (known.size > 0 && !known.has(path)) continue
-    if (partialLc && !rel.toLowerCase().includes(partialLc)) continue
+    if (partialLc && !foldText(rel).includes(partialLc)) continue
     const bracketed = refPathTarget(rel) !== rel
     out.push({
       label: { label: rel, description: "@" },
@@ -436,10 +515,10 @@ function provideCross(
     for (const e of entries) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1)
     const range = makeRange(env, ctx.innerStart + 2)
     return {
-      suggestions: kindItems(env, [...counts.keys()], range, ctx.partial.toLowerCase(), counts),
+      suggestions: kindItems(env, [...counts.keys()], range, foldText(ctx.partial), counts),
     }
   }
-  const partialLc = ctx.partial.toLowerCase()
+  const partialLc = foldText(ctx.partial)
   const range = makeRange(
     env,
     env.position.column - ctx.partial.length,
@@ -469,7 +548,7 @@ export const labelsSource: CompletionSource = (env) => {
       return provideStarter(env, ctx)
     case "bracket-path": {
       const range = makeRange(env, env.position.column - ctx.partial.length)
-      return { suggestions: pathItems(env, range, ctx.partial.toLowerCase(), true) }
+      return { suggestions: pathItems(env, range, foldText(ctx.partial), true) }
     }
     default:
       return provideCross(env, ctx)

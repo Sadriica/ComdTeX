@@ -5,6 +5,7 @@
 // and completion after `;` and `, ` inside `[@a; @b, p. 3]`.
 
 import type * as monacoApi from "monaco-editor"
+import { foldText } from "./match"
 import { getBibEntries, completionText, type BibEntry } from "./state"
 import type { CompletionSource } from "./types"
 import { closerPlan, escapeSnippet, makeRange, MAX_ITEMS } from "./util"
@@ -64,7 +65,7 @@ function card(entry: BibEntry): monacoApi.IMarkdownString {
 export const citationsSource: CompletionSource = (env) => {
   const ctx = citeContext(env.before)
   if (!ctx) return null
-  const partialLc = ctx.partial.toLowerCase()
+  const partialLc = foldText(ctx.partial)
   const closer = closerPlan(env.after, "]")
   const range = makeRange(
     env,
@@ -107,7 +108,7 @@ export const citationsSource: CompletionSource = (env) => {
           : undefined,
         range,
         sortText: sort,
-        filterText: `${entry.key} ${entry.author} ${entry.title} ${entry.year}`,
+        filterText: `${entry.key} ${entry.author} ${entry.title} ${entry.year} ${entry.haystack}`,
       }
     })
   return { suggestions, incomplete: truncated }

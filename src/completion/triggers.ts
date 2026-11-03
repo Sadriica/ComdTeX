@@ -74,6 +74,9 @@ export function suggestReason(
     }
   }
 
+  // The dataset name inside `val(`: no trigger character after the first letter.
+  if (/(?<![\\\w.])val\(\s*@?[\w:.-]*$/.test(before)) return "structure"
+
   // :::csv / :::data bodies: the file name, or a column inside the parentheses.
   if (/^\s*[^\s(@{]+$/.test(before) || /^\s*\S+\s*\([^)]*$/.test(before)) {
     const type = findEnclosingSpecialBlock((n) => model.getLineContent(n), lineNumber, 60)

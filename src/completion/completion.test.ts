@@ -125,7 +125,7 @@ beforeEach(seed)
 
 describe("the cascade", () => {
   it("has one source per concern, snippets last", () => {
-    expect(COMPLETION_SOURCES.length).toBe(10)
+    expect(COMPLETION_SOURCES.length).toBe(11)
   })
 })
 
@@ -829,5 +829,93 @@ describe("re-trigger rules", () => {
     expect(isInMath(m, 5, "b")).toBe(false)
     expect(isInMath(model("$a$ and $b"), 1, "$a$ and $b")).toBe(true)
     expect(isInMath(model("$a$ and b"), 1, "$a$ and b")).toBe(false)
+  })
+})
+
+describe("val( dataset names", () => {
+  const DATA =
+    ":::data{#data:growth}\ngrowth.csv (A:D)\n:::\n\n:::data{#data:rates}\nrates.csv\n:::\n\n"
+
+  it("offers the datasets declared in the document, with their file", async () => {
+    const r = await complete(`${DATA}The rate is val(|`)
+    expect(labels(r)).toEqual(["growth", "rates"])
+    expect((r.suggestions[0].label as { description?: string }).description).toBe(
+      "growth.csv (A:D)",
+    )
+  })
+
+  it("filters while typing and replaces a typed @ or data: prefix", async () => {
+    const r = await complete(`${DATA}n = val(@gro|`)
+    expect(labels(r)).toEqual(["growth"])
+    expect(accept(`${DATA}n = val(@gro|`, r.suggestions[0])).toBe(`${DATA}n = val(growth|`)
+    expect(labels(await complete(`${DATA}val(data:ra|`))).toEqual(["rates"])
+  })
+
+  it("stays quiet after the first argument and in code fences", async () => {
+    expect(labels(await complete(`${DATA}val(growth, |`))).not.toContain("growth")
+    expect(labels(await complete(`${DATA}\`\`\`\nval(|\n\`\`\``))).toEqual([])
+  })
+
+  it("re-opens the widget on the first letters after val(", () => {
+    const m = new FakeModel("val(gr")
+    expect(wantsSuggest(m, 1, "val(gr")).toBe(true)
+    expect(wantsSuggest(m, 1, "eval(gr")).toBe(false)
+  })
+})
+
+describe("Spanish and accent-insensitive completion", () => {
+  it("finds block types and shorthands by their Spanish names", async () => {
+    expect(labels(await complete("teor|"))).toContain("theorem")
+    expect(labels(await complete(":::demost|"))).toContain("proof")
+    expect(labels(await complete("matr|"))).toEqual(expect.arrayContaining(["mat", "matf"]))
+    expect(labels(await complete("raí|"))).toEqual(expect.arrayContaining(["sqrt", "root"]))
+  })
+
+  it("finds notes without typing the accent or the separator", async () => {
+    expect(labels(await complete("[[teoria|]]"))).toEqual(["Teoría"])
+    expect(labels(await complete("[[gap spectral|]]"))).toEqual(["spectral-gap"])
+    expect(labels(await complete("[[times mixing|]]"))).toEqual(["mixing-times"])
+  })
+
+  it("finds citations by an accent-free word", async () => {
+    updateBibSuggestions([
+      { key: "garcia2020", author: "García, Ana", title: "Análisis", year: "2020" },
+    ])
+    expect(labels(await complete("[@garcia|]"))).toEqual(["garcia2020"])
+    expect(labels(await complete("[@analisis|]"))).toEqual(["garcia2020"])
+  })
+
+  it("completes kind names after @ and finds a label by a word without its kind", async () => {
+    expect(labels(await complete(doc("see @teor|")))).toContain("thm:")
+    expect(labels(await complete(doc("see @theo|")))).toContain("thm:")
+    const byWord = await complete(doc("see @mixing|"))
+    const item = byWord.suggestions.find((s) => labelOf(s) === "mixing")!
+    expect(item).toBeDefined()
+    expect(accept(doc("see @mixing|"), item)).toBe(doc("see @thm:mixing|"))
+    expect(labels(await complete(doc("by @teorema:|")))).toContain("mixing")
+  })
+})
+
+describe("latex completion beyond the prefix", () => {
+  it("finds a command by a part of its name, after the prefix matches", async () => {
+    const r = await complete("a \\arrow|")
+    expect(labels(r)).toEqual(expect.arrayContaining(["rightarrow", "leftarrow"]))
+    expect(r.incomplete).toBe(true)
+  })
+
+  it("finds Greek letters and symbols by their Spanish names", async () => {
+    expect(labels(await complete("\\alfa|"))).toContain("alpha")
+    expect(labels(await complete("\\raiz|"))).toContain("sqrt")
+    expect(labels(await complete("\\infin|"))).toContain("infty")
+  })
+
+  it("offers Greek letters by name inside math without a backslash", async () => {
+    const r = await complete("$alph|$")
+    const alpha = r.suggestions.find((s) => labelOf(s) === "\\alpha")!
+    expect(alpha).toBeDefined()
+    expect(accept("$alph|$", alpha)).toBe("$\\alpha|$")
+    expect(labels(await complete("$alfa|$"))).toContain("\\alpha")
+    // Outside math the word stays prose.
+    expect(labels(await complete("alph|"))).not.toContain("\\alpha")
   })
 })
