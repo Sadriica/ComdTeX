@@ -1527,6 +1527,9 @@ export const en: T = {
     figureLabelDesc: "Numbered image: generates 'Figure N: Caption'",
     figureRef: "@fig:diagram",
     figureRefDesc: "Reference → (N)",
+    supplementMarker: "<!-- supplement -->",
+    supplementMarkerDesc:
+      "Own line: from here on, figures and tables restart at 1 as Figure S1, Table S1 (LaTeX export restarts the counters too)",
     userSnippets: "User snippets (snippets.md)",
     userSnippetsDesc:
       "Create custom snippets in snippets.md at the vault root. They appear in the editor's autocomplete.",

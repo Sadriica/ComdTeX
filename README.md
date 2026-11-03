@@ -272,6 +272,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
 - Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
+- Supplementary material: a `<!-- supplement -->` line restarts figures and tables as Figure S1, Table S1 (preview, LaTeX and text exports)
 - Structural labels for headings, equations, figures, tables, and theorem-like environments, plus `@...` cross-references
 - BibTeX citations via `references.bib` and `[@key]` syntax
 - Custom LaTeX macros via `\newcommand` in `macros.md` (applied vault-wide)

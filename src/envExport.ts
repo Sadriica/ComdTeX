@@ -14,7 +14,10 @@
  * callouts (which would lose the numbers).
  */
 
-import { resolveDocLanguage, type DocLang } from "./docLang"
+import { docTermsFor, resolveDocLanguage, type DocLang } from "./docLang"
+import { prescanFigures } from "./figures"
+import { prescanTables } from "./tables"
+import { hasSupplementMarker } from "./supplement"
 import { extractFrontmatter } from "./frontmatter"
 import {
   ALL_ENVS,
@@ -74,6 +77,22 @@ function maskInlineCode(text: string): { masked: string; restore: (s: string) =>
     masked,
     restore: (s) => s.replace(/\x02ICODE(\d+)\x03/g, (_, n: string) => slots[Number(n)] ?? ""),
   }
+}
+
+/**
+ * `@fig:x` / `@tbl:x` that point into the supplement become "Figure S1" /
+ * "Table S1" text. The text exports leave main-text figure and table refs as
+ * they always were; only the S numbers are spelled out, because a reader of the
+ * exported file has no preview to tell them apart.
+ */
+function resolveSupplementRefs(text: string, source: string, lang: DocLang): string {
+  const terms = docTermsFor(lang)
+  const figs = prescanFigures(source)
+  const tbls = prescanTables(source)
+  return text.replace(/@(fig|tbl):([\w:-]+(?:\.\w+)*)/g, (full, kind: string, name: string) => {
+    const n = (kind === "fig" ? figs : tbls).get(`${kind}:${name}`)
+    return typeof n === "string" ? `${kind === "fig" ? terms.figure : terms.table} ${n}` : full
+  })
 }
 
 interface Walk {
@@ -141,6 +160,7 @@ export function numberEnvironmentsForExport(
 ): string {
   // Cheap exit: nothing to number and no reference to resolve.
   if (!/^:::/m.test(markdown) && !/@[A-Za-z]+:/.test(markdown)) return markdown
+  const hasSupplement = hasSupplementMarker(markdown)
 
   const frontmatter = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(markdown)?.[0] ?? ""
   const body = markdown.slice(frontmatter.length)
@@ -158,5 +178,7 @@ export function numberEnvironmentsForExport(
   const inline = maskInlineCode(converted)
   const resolved = resolveEnvironmentRefs(inline.masked, walk.labels, resolver, "text", docLang)
 
-  return frontmatter + fences.restore(specials.restore(inline.restore(resolved)))
+  const withSupplement = hasSupplement ? resolveSupplementRefs(resolved, body, docLang) : resolved
+
+  return frontmatter + fences.restore(specials.restore(inline.restore(withSupplement)))
 }

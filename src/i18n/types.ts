@@ -1456,6 +1456,8 @@ export interface T {
     figureLabelDesc: string
     figureRef: string
     figureRefDesc: string
+    supplementMarker: string
+    supplementMarkerDesc: string
     // user snippets section
     userSnippets: string
     userSnippetsDesc: string

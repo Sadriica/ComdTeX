@@ -555,6 +555,7 @@ export default function HelpPanel() {
           <p className="hp-intro">{hp.figuresDesc}</p>
           <Row code={hp.figureLabel} desc={hp.figureLabelDesc} render="Figura 1: Leyenda" />
           <Row code={hp.figureRef} desc={hp.figureRefDesc} render="Figura 1" />
+          <Row code={hp.supplementMarker} desc={hp.supplementMarkerDesc} render="Figura S1" />
         </Section>
 
         {/* ── User snippets ── */}
