@@ -229,6 +229,32 @@ async fn list_system_fonts() -> Result<Vec<FontFamilyInfo>, String> {
     .map_err(|e| format!("font scan failed: {e}"))
 }
 
+/// How this copy of the app can be updated: "self" when the updater can
+/// replace it (a mounted AppImage, a .deb/.rpm, Windows, macOS), "manual" when
+/// it runs from an unpacked AppImage or a source build. The updater replaces
+/// the running executable in that case, which turns an extracted install (the
+/// Arch path of scripts/install.sh) back into a raw AppImage and drops its
+/// libwayland patch, so those installs update by re-running the installer.
+#[tauri::command]
+fn update_install_kind() -> &'static str {
+    install_kind(
+        cfg!(target_os = "linux"),
+        std::env::var_os("APPIMAGE").is_some(),
+        matches!(
+            tauri::utils::platform::bundle_type(),
+            Some(tauri::utils::config::BundleType::Deb | tauri::utils::config::BundleType::Rpm)
+        ),
+    )
+}
+
+fn install_kind(linux: bool, in_appimage: bool, packaged: bool) -> &'static str {
+    if !linux || in_appimage || packaged {
+        "self"
+    } else {
+        "manual"
+    }
+}
+
 /// Navigation guard (defense in depth). The sanitizer and the preview click
 /// handler already keep links from leaving the app, but if either is bypassed a
 /// top-level navigation would replace the whole UI with remote content that
@@ -276,7 +302,8 @@ pub fn run() {
             set_secret,
             get_secret,
             delete_secret,
-            list_system_fonts
+            list_system_fonts,
+            update_install_kind
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -303,6 +330,14 @@ mod tests {
     }
     use super::*;
     use std::path::Path;
+
+    #[test]
+    fn only_unpacked_linux_installs_update_by_hand() {
+        assert_eq!(install_kind(false, false, false), "self");
+        assert_eq!(install_kind(true, true, false), "self");
+        assert_eq!(install_kind(true, false, true), "self");
+        assert_eq!(install_kind(true, false, false), "manual");
+    }
 
     #[test]
     fn rejects_root_and_system_dirs() {

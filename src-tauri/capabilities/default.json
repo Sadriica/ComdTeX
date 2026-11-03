@@ -10,6 +10,7 @@
     "allow-get-secret",
     "allow-delete-secret",
     "allow-list-system-fonts",
+    "allow-update-install-kind",
     "opener:default",
     {
       "identifier": "opener:allow-open-path",

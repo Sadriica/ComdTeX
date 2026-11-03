@@ -2064,6 +2064,10 @@ export const en: T = {
     installRestart: "Install and restart",
     later: "Later",
     releaseNotes: "Release notes",
+    manualHint:
+      "This copy runs unpacked (the Arch installer or a source build), so it cannot replace itself. Run the installer again in a terminal to update.",
+    copyCommand: "Copy update command",
+    commandCopied: "Command copied",
   },
 
   comments: {

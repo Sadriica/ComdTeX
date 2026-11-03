@@ -329,23 +329,22 @@ export const es: T = {
   },
 
   typography: {
-    interfaceFont: "Tipograf\u00eda de la interfaz",
-    editorFont: "Tipograf\u00eda del editor",
-    previewFont: "Tipograf\u00eda de la vista previa",
+    interfaceFont: "Tipografía de la interfaz",
+    editorFont: "Tipografía del editor",
+    previewFont: "Tipografía de la vista previa",
     hintInterface:
-      "La tipograf\u00eda de men\u00fas, paneles y di\u00e1logos. Predeterminada mantiene el aspecto del sistema.",
+      "La tipografía de menús, paneles y diálogos. Predeterminada mantiene el aspecto del sistema.",
     hintEditor:
-      "La tipograf\u00eda monoespaciada con la que escribes. Solo se listan las fuentes monoespaciadas instaladas en tu sistema.",
+      "La tipografía monoespaciada con la que escribes. Solo se listan las fuentes monoespaciadas instaladas en tu sistema.",
     hintPreview:
-      "La tipograf\u00eda del documento renderizado. Predeterminada sigue el ajuste Estilo del documento.",
+      "La tipografía del documento renderizado. Predeterminada sigue el ajuste Estilo del documento.",
     defaultOption: "Predeterminada",
     groupSuggested: "Sugeridas",
     groupInstalled: "Instaladas en este sistema",
     groupInstalledMono: "Instaladas en este sistema (monoespaciadas)",
     scanning: "Buscando fuentes instaladas...",
-    noInstalled: "Las fuentes instaladas solo se listan en la aplicaci\u00f3n de escritorio.",
-    sample:
-      "El veloz murci\u00e9lago hind\u00fa com\u00eda feliz cardillo y kiwi. 0123456789 \u2211 \u222B",
+    noInstalled: "Las fuentes instaladas solo se listan en la aplicación de escritorio.",
+    sample: "El veloz murciélago hindú comía feliz cardillo y kiwi. 0123456789 \u2211 \u222B",
     sampleCode: "const x = 42; // 0O 1lI {}[]",
   },
   help: {
@@ -2085,6 +2084,10 @@ export const es: T = {
     installRestart: "Instalar y reiniciar",
     later: "Más tarde",
     releaseNotes: "Notas de la versión",
+    manualHint:
+      "Esta copia corre descomprimida (instalador de Arch o compilada desde el código), así que no puede reemplazarse sola. Vuelve a correr el instalador en una terminal para actualizar.",
+    copyCommand: "Copiar comando de actualización",
+    commandCopied: "Comando copiado",
   },
 
   comments: {

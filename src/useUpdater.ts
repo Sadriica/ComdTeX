@@ -5,6 +5,21 @@ export interface UpdateInfo {
   available: boolean
   version?: string
   body?: string
+  /** The updater cannot replace this copy (unpacked AppImage, source build). */
+  manual?: boolean
+}
+
+/** Shell command that installs or updates ComdTeX on Linux (scripts/install.sh). */
+export const LINUX_INSTALL_COMMAND =
+  "curl -fsSL https://raw.githubusercontent.com/Sadriica/ComdTeX/main/scripts/install.sh | bash"
+
+async function updatesByHand(): Promise<boolean> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core")
+    return (await invoke<string>("update_install_kind")) === "manual"
+  } catch {
+    return false
+  }
 }
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
@@ -13,7 +28,12 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     const { check } = await import("@tauri-apps/plugin-updater")
     const update = await check()
     if (update) {
-      return { available: true, version: update.version, body: update.body }
+      return {
+        available: true,
+        version: update.version,
+        body: update.body,
+        manual: await updatesByHand(),
+      }
     }
     return { available: false }
   } catch (e) {

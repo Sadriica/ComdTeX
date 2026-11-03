@@ -140,6 +140,13 @@ else
   mv "${TMP_DIR}/${ASSET}" "$APP_PATH"
   ln -sf "$APP_PATH" "$LINK_PATH"
   msg "Installed ${APP_PATH}"
+  # A mounted AppImage needs FUSE 2 (libfuse.so.2), which newer distros no
+  # longer install by default (Ubuntu 24.04 ships only FUSE 3).
+  if ! ldconfig -p 2>/dev/null | grep -q 'libfuse\.so\.2'; then
+    msg "Note: libfuse.so.2 was not found, and the AppImage needs it to start."
+    msg "  Install FUSE 2 (Ubuntu/Debian: sudo apt install libfuse2t64, or libfuse2 on older releases;"
+    msg "  Fedora: sudo dnf install fuse-libs; Arch: sudo pacman -S fuse2)."
+  fi
 fi
 
 case ":$PATH:" in

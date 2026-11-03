@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.32.0] - 2026-11-03
 
 ### Added
 - **Ctrl+P finds more than file names.** Past the first letter, a plain search also lists matching commands, headings of the open document, labels from the vault, citations (Enter inserts it) and settings by name (Enter opens the right tab), each as its own short group under the files. Prefixes (`>`, `@`, `#`, `[`, `:`, `?`) work exactly as before. Files now show an icon for spreadsheets, bibliographies and code or data files.
@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - **Highlight colours show their swatch.** The Textos > Resaltar submenu and the palette entries rendered an empty square instead of the colour; each entry now shows the highlight colour it inserts, in every theme.
+- **In-app updates no longer break installs made by the Arch installer.** On Arch-based distros the one-line installer runs ComdTeX unpacked, with its bundled libwayland removed. The updater replaced that copy with a raw AppImage, which needs FUSE 2 to start and lost the patch, so after an update ComdTeX could stop opening from the launcher and the terminal. Unpacked copies (and source builds) now show the update with a "Copy update command" button that copies the installer command instead of installing; AppImage, `.deb` and Windows installs still update in place. If an earlier update already left you with a copy that does not start, run the installer again.
+- **The installer warns when FUSE 2 is missing.** Outside Arch, the one-line installer now checks for `libfuse.so.2`, which the AppImage needs and newer distros (Ubuntu 24.04, among others) no longer install by default, and names the package to install.
 - **The update banner no longer overflows.** When the release notes are only a link, the banner shows a "Release notes" link instead of the raw URL, and longer notes wrap inside the card.
 
 ## [1.31.0] - 2026-11-03

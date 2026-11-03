@@ -367,6 +367,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - First-launch onboarding tour with polished empty states throughout the UI
 - English and Spanish UI with full parity: switch at runtime via Settings → **Language** (no restart needed)
 - Auto-updater with in-app banner and one-click install
+- Typeface pickers for the interface, the editor and the preview, with the fonts installed on the system
 - Startup probe for `pandoc`, `zip` and `typst`; the banner names `pandoc` and `zip` when missing, dismissible per-dep, persisted in localStorage. `git` is not probed: the Git panel reports its own absence
 
 ### AI assistant
@@ -501,6 +502,8 @@ If `pandoc` or `zip` is missing, ComdTeX shows an amber warning banner on startu
 ## Auto-Update
 
 ComdTeX checks for a new version on startup. If there is one, a banner appears inside the app, and **Install** downloads it and relaunches ComdTeX: the AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password to install. Every update is signed with [minisign](https://jedisct1.github.io/minisign/), and the app checks the signature before installing anything.
+
+An unpacked copy (the Arch path of the one-line installer, or a source build) cannot replace itself, so its banner copies the installer command instead; run it in a terminal to update. A mounted AppImage needs FUSE 2 (`libfuse.so.2`; `libfuse2t64` on Ubuntu 24.04, `fuse2` on Arch).
 
 In-app updates start with the first version after 1.30.0; up to 1.30.0, download each new version from the [releases page](https://github.com/Sadriica/ComdTeX/releases/latest).
 

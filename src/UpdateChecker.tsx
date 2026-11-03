@@ -1,5 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
-import type { UpdateInfo } from "./useUpdater"
+import { LINUX_INSTALL_COMMAND, type UpdateInfo } from "./useUpdater"
+import { useState } from "react"
 import { useT } from "./i18n"
 import { ExternalLink, Icon } from "./icons"
 
@@ -17,6 +18,7 @@ export default function UpdateChecker({
   installing,
 }: UpdateCheckerProps) {
   const t = useT()
+  const [copied, setCopied] = useState(false)
   if (!updateInfo?.available) return null
 
   const body = updateInfo.body?.trim() ?? ""
@@ -38,10 +40,25 @@ export default function UpdateChecker({
           {t.updateBanner.releaseNotes} <Icon icon={ExternalLink} size={14} />
         </button>
       )}
+      {updateInfo.manual && <p>{t.updateBanner.manualHint}</p>}
       <div className="update-banner-actions">
-        <button className="update-btn-install" onClick={onInstall} disabled={installing}>
-          {installing ? t.updateBanner.installing : t.updateBanner.installRestart}
-        </button>
+        {updateInfo.manual ? (
+          <button
+            className="update-btn-install"
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(LINUX_INSTALL_COMMAND)
+                .then(() => setCopied(true))
+                .catch(() => {})
+            }}
+          >
+            {copied ? t.updateBanner.commandCopied : t.updateBanner.copyCommand}
+          </button>
+        ) : (
+          <button className="update-btn-install" onClick={onInstall} disabled={installing}>
+            {installing ? t.updateBanner.installing : t.updateBanner.installRestart}
+          </button>
+        )}
         <button className="update-btn-later" onClick={onDismiss} disabled={installing}>
           {t.updateBanner.later}
         </button>

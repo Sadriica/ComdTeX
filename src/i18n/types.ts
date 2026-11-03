@@ -1852,6 +1852,9 @@ export interface T {
     installRestart: string
     later: string
     releaseNotes: string
+    manualHint: string
+    copyCommand: string
+    commandCopied: string
   }
 
   comments: {
