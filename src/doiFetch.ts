@@ -177,7 +177,9 @@ export async function fetchBibtexFromInspire(ref: {
 // DOI (CrossRef BibTeX is richer) and otherwise build an @article ourselves.
 
 const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-const IDCONV = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+// The old www.ncbi.nlm.nih.gov/pmc/utils/idconv URL now answers 301 here,
+// which the CSP would block.
+const IDCONV = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
 
 /**
  * PubMed / PMC reference: `PMID: 123`, `pmid:123`, `PMC123`, a PubMed or PMC
@@ -280,12 +282,13 @@ export async function fetchBibtexFromPubmed(ref: {
   let pmid = ref.value
   let pmcid = ref.kind === "pmcid" ? ref.value : ""
   if (ref.kind === "pmcid") {
-    const conv = await getJson<{ records?: { pmid?: string }[] }>(
-      `${IDCONV}?ids=${encodeURIComponent(ref.value)}&format=json`,
+    const conv = await getJson<{ records?: { pmid?: string | number }[] }>(
+      `${IDCONV}?ids=${encodeURIComponent(ref.value)}&format=json&tool=comdtex`,
     )
     const found = conv.records?.[0]?.pmid
     if (!found) throw new Error("PMC id has no PubMed record")
-    pmid = found
+    // The converter returns the pmid as a number.
+    pmid = String(found)
   }
   const data = await getJson<{ result?: Record<string, PubmedRecord | undefined> }>(
     `${EUTILS}/esummary.fcgi?db=pubmed&id=${encodeURIComponent(pmid)}&retmode=json`,

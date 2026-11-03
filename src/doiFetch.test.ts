@@ -118,7 +118,7 @@ describe("fetchBibtexFromPubmed", () => {
     const { fetchBibtexFromPubmed } = await import("./doiFetch")
     const fetchMock = vi.fn(async (url: string) =>
       url.includes("idconv")
-        ? { ok: true, json: async () => ({ records: [{ pmid: "123" }] }) }
+        ? { ok: true, json: async () => ({ records: [{ pmid: 123 }] }) }
         : { ok: true, json: async () => summary },
     )
     vi.stubGlobal("fetch", fetchMock)
