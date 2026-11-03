@@ -1,3 +1,5 @@
+import { SUPPLEMENT_LINE_RE } from "./supplement"
+
 // `data` is deliberately in this list but is NOT a numbered element: a
 // dataset is declared to be used (like a macro), never cited as "Data 3".
 // It rides here so the Labels panel reports duplicate declarations, broken
@@ -146,6 +148,7 @@ export function scanFileLabels(file: {
   const envCounters: Record<string, number> = {}
   let eqCount = 0
   let figCount = 0
+  let inSupplement = false
   let display: { body: string[] } | null = null
 
   lines.forEach((line, index) => {
@@ -202,13 +205,19 @@ export function scanFileLabels(file: {
           headings.push(text)
           meta = { title: text }
         } else {
-          if (line.includes("![")) {
+          if (line.includes("<!--") && SUPPLEMENT_LINE_RE.test(line)) {
+            // Supplement marker: figures restart at S1 from here on.
+            if (!inSupplement) {
+              inSupplement = true
+              figCount = 0
+            }
+          } else if (line.includes("![")) {
             let alt: string | undefined
             for (const img of line.matchAll(/!\[([^\]]*)\]\(/g)) {
               figCount++
               alt = img[1].trim() || undefined
             }
-            meta = { number: String(figCount), title: alt }
+            meta = { number: `${inSupplement ? "S" : ""}${figCount}`, title: alt }
           }
           const inline = /\$([^$\n]+?)\$\s*\{#[\w:.-]+\}/.exec(line)
           if (inline) {

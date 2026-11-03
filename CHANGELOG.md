@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Supplementary material numbering.** Put `<!-- supplement -->` on its own line and every figure and table after it restarts at 1 with an S prefix: the preview captions read "Figure S1" and "Table S1", `@fig:` and `@tbl:` references follow, and the Labels panel shows the same numbers. The LaTeX export restarts the figure and table counters at that point (`S1`, `S2`, ...), and the text exports (Markdown, Obsidian, DOCX, PDF) spell out the S references. The marker is an HTML comment, so it is invisible in Obsidian. Equations keep one numbering.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

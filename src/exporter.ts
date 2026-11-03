@@ -19,6 +19,7 @@ import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
 import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
+import { SUPPLEMENT_LINE_RE, hasSupplementMarker } from "./supplement"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
@@ -724,13 +725,50 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
 
 // ── Main conversion ───────────────────────────────────────────────────────────
 
+/**
+ * The supplement marker (`<!-- supplement -->`, see supplement.ts) becomes the
+ * standard LaTeX restart: flush floats, zero the figure and table counters and
+ * print them with an "S" prefix. `\ref` then yields "S1" with no other change.
+ * Fence-aware so a marker shown in a code sample stays text; only the first
+ * marker counts, matching the preview.
+ */
+const SUPPLEMENT_TEX = [
+  "\\clearpage",
+  "\\setcounter{figure}{0}",
+  "\\setcounter{table}{0}",
+  "\\renewcommand{\\thefigure}{S\\arabic{figure}}",
+  "\\renewcommand{\\thetable}{S\\arabic{table}}",
+].join("\n")
+
+function extractSupplementMarker(text: string): { text: string; slots: Map<string, string> } {
+  const slots = new Map<string, string>()
+  if (!hasSupplementMarker(text)) return { text, slots }
+  let fence: string | null = null
+  let done = false
+  const out = text.split("\n").map((line) => {
+    const f = /^(`{3,}|~{3,})/.exec(line)
+    if (f) {
+      if (fence === null) fence = f[1][0]
+      else if (f[1][0] === fence) fence = null
+      return line
+    }
+    if (fence !== null || !SUPPLEMENT_LINE_RE.test(line)) return line
+    if (done) return ""
+    done = true
+    slots.set("SUPPLEMENT0", SUPPLEMENT_TEX)
+    return "\x02SUPPLEMENT0\x03"
+  })
+  return { text: out.join("\n"), slots }
+}
+
 function mdToTex(raw: string): string {
-  const { text: afterEnv, slots: envSlots } = extractEnvBlocks(raw)
+  const { text: markedRaw, slots: supplementSlots } = extractSupplementMarker(raw)
+  const { text: afterEnv, slots: envSlots } = extractEnvBlocks(markedRaw)
   // Callouts run after :::env extraction (so a callout nested inside an env
   // block is handled by that env's own recursive mdToTex call, not here) but
   // before markdown-it ever parses the blockquote lines.
   const { text, slots: calloutSlots } = extractCallouts(afterEnv)
-  const slots = new Map([...envSlots, ...calloutSlots])
+  const slots = new Map([...envSlots, ...calloutSlots, ...supplementSlots])
   const tableSafeText = text.replace(
     /((?:^\s*\|.*\|\s*\n)+)\s*\{#(tbl:[\w:.-]+)\}/gm,
     (_match, tableRows, label) => `${tableRows}\n{#${label}}\n`,

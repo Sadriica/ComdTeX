@@ -1539,6 +1539,9 @@ export const es: T = {
     figureLabelDesc: "Imagen numerada: genera 'Figura N: Leyenda'",
     figureRef: "@fig:diagrama",
     figureRefDesc: "Referencia → (N)",
+    supplementMarker: "<!-- supplement -->",
+    supplementMarkerDesc:
+      "En su propia línea: desde ahí las figuras y tablas reinician en 1 como Figura S1, Tabla S1 (la exportación a LaTeX también reinicia los contadores)",
     userSnippets: "Snippets de usuario (snippets.md)",
     userSnippetsDesc:
       "Crea snippets personalizados en snippets.md en la raíz del vault. Se expanden en el autocompletado del editor.",

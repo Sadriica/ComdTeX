@@ -23,6 +23,10 @@
  */
 import { stripCodeFences } from "./equations"
 import { activeDocTerms } from "./docLang"
+import { SUPPLEMENT_HTML_SRC, SUPPLEMENT_LINE_RE, supplementNumber } from "./supplement"
+
+/** A table's printed number: `2` in the main text, `"S2"` after the supplement marker. */
+export type TblNumber = number | string
 
 const TABLE_ROW_RE = /^\s*\|.+\|\s*$/
 const TABLE_DELIM_RE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/
@@ -41,12 +45,20 @@ function tableAnchorId(labelOrNumber: string): string {
  * not counted; `wrapTables` only ever sees rendered `<table>` elements, so the
  * two passes must agree or `@tbl:` refs resolve to the wrong number.
  */
-export function prescanTables(text: string): Map<string, number> {
-  const labels = new Map<string, number>()
+export function prescanTables(text: string): Map<string, TblNumber> {
+  const labels = new Map<string, TblNumber>()
   const lines = stripCodeFences(text).split("\n")
   let count = 0
+  let inSupplement = false
 
   for (let i = 0; i < lines.length; i++) {
+    if (SUPPLEMENT_LINE_RE.test(lines[i])) {
+      if (!inSupplement) {
+        inSupplement = true
+        count = 0
+      }
+      continue
+    }
     if (!TABLE_ROW_RE.test(lines[i])) continue
     if (!TABLE_DELIM_RE.test(lines[i + 1] ?? "")) continue
     count++
@@ -58,13 +70,13 @@ export function prescanTables(text: string): Map<string, number> {
     if (!labelMatch && (lines[i + 1] ?? "").trim() === "") {
       labelMatch = LABEL_LINE_RE.exec(lines[i + 2] ?? "")
     }
-    if (labelMatch) labels.set(`tbl:${labelMatch[1]}`, count)
+    if (labelMatch) labels.set(`tbl:${labelMatch[1]}`, supplementNumber(count, inSupplement))
   }
 
   return labels
 }
 
-export function resolveTableRefs(text: string, labels: Map<string, number>): string {
+export function resolveTableRefs(text: string, labels: Map<string, TblNumber>): string {
   const word = activeDocTerms().table
   return text.replace(/@tbl:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     if (/^\d+$/.test(ref)) {
@@ -82,12 +94,25 @@ export function resolveTableRefs(text: string, labels: Map<string, number>): str
 const LAZY_LABEL_ROW_RE =
   /\s*<tr>\s*<td[^>]*>\s*\{#tbl:([\w:.-]+)\}\s*<\/td>(?:\s*<td[^>]*>\s*<\/td>)*\s*<\/tr>(?=\s*(?:<\/tbody>)?\s*$)/
 
-export function wrapTables(html: string, labels: Map<string, number>): string {
+const TABLE_OR_MARKER_RE = new RegExp(
+  String.raw`(${SUPPLEMENT_HTML_SRC})|<table>([\s\S]*?)<\/table>(?:\s*<p>\{#tbl:([\w:.-]+)\}<\/p>)?`,
+  "gi",
+)
+
+export function wrapTables(html: string, labels: Map<string, TblNumber>): string {
   const word = activeDocTerms().table
   let n = 0
+  let inSupplement = false
   return html.replace(
-    /<table>([\s\S]*?)<\/table>(?:\s*<p>\{#tbl:([\w:.-]+)\}<\/p>)?/g,
-    (_match, tableInner: string, paraLabel: string | undefined) => {
+    TABLE_OR_MARKER_RE,
+    (match, marker: string | undefined, tableInner: string, paraLabel: string | undefined) => {
+      if (marker !== undefined) {
+        if (!inSupplement) {
+          inSupplement = true
+          n = 0
+        }
+        return match
+      }
       n++
 
       // The no-blank-line form: pull the label out of the trailing row and drop
@@ -99,7 +124,8 @@ export function wrapTables(html: string, labels: Map<string, number>): string {
         label ??= lazy[1]
       }
 
-      const tableNumber = label ? (labels.get(`tbl:${label}`) ?? n) : n
+      const printed = supplementNumber(n, inSupplement)
+      const tableNumber = label ? (labels.get(`tbl:${label}`) ?? printed) : printed
       const id = tableAnchorId(label ?? String(tableNumber))
       return `<figure class="tbl-block" id="${id}">
 <table>${tableInner}</table>
