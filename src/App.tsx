@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { isDocExt } from "./docExts"
 import type { BeforeMount, OnMount } from "@monaco-editor/react"
 import type * as monaco from "monaco-editor"
 import type { VimAdapterInstance } from "monaco-vim"
@@ -1047,7 +1048,7 @@ function AppContent({
     // eslint-disable-next-line react-hooks/refs -- the memo is keyed on the tab shape plus a debounced version; typing must not recompute it, so the live tabs are read through the ref
     const openContent = new Map(openTabsRef.current.map((tab) => [tab.path, tab.content]))
     return vaultFileNodes
-      .filter((file) => file.ext === "md" || file.ext === "tex")
+      .filter((file) => isDocExt(file.ext))
       .map((file) => ({
         path: file.path,
         name: file.name,
@@ -1329,7 +1330,7 @@ function AppContent({
   const vaultFilePathsKey = useMemo(
     () =>
       vaultFileNodes
-        .filter((f) => f.ext === "md" || f.ext === "tex")
+        .filter((f) => isDocExt(f.ext))
         .map((f) => f.path)
         .sort()
         .join("\x00"),

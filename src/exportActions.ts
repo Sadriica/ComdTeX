@@ -307,7 +307,7 @@ export async function saveCurrentFileAs(
   if (content === null) return
   const path = await save({
     title: ctx.dialogs.saveAs,
-    filters: [{ name: "Documentos", extensions: ["md", "tex"] }],
+    filters: [{ name: "Documentos", extensions: ["md", "qmd", "Rmd", "tex"] }],
     defaultPath: suggestedSavePath(ctx.activeFile),
   })
   if (!path) return
@@ -865,6 +865,7 @@ const PANDOC_INPUT_FORMATS: Record<string, string> = {
   htm: "html",
   rst: "rst",
   org: "org",
+  ipynb: "ipynb",
 }
 
 /**
@@ -872,7 +873,7 @@ const PANDOC_INPUT_FORMATS: Record<string, string> = {
  * Markdown and dropping the result into the vault root as a new `.md` file,
  * then opening it.
  *
- * For DOCX/ODT/EPUB sources pandoc can embed images; we extract them to a
+ * For DOCX/ODT/EPUB/IPYNB sources pandoc can embed images; we extract them to a
  * sibling media folder so links resolve. If extraction fails for any reason
  * pandoc still emits the text+math, so the import is never blocked by media.
  */
@@ -900,6 +901,7 @@ export async function importDocument(ctx: ImportActionsContext) {
           "rtf",
           "md",
           "markdown",
+          "ipynb",
           "rst",
           "org",
         ],
@@ -925,7 +927,13 @@ export async function importDocument(ctx: ImportActionsContext) {
   // Extract embedded images alongside the new file so links resolve.
   const mediaDir = await pathJoin(ctx.vaultPath, `${stem}-media`)
 
-  const args: string[] = [source, "-t", "gfm", "-o", outPath, "--extract-media", mediaDir]
+  // A notebook keeps its markdown and code cells as prose and fenced code, and
+  // its text and image outputs follow each code cell. `-raw_html` makes pandoc
+  // drop the per-cell <div> wrappers (the output stays plain Markdown) and the
+  // math switch writes `$x$` instead of GitHub's $`x`$, which is what the editor reads.
+  const outputFormat = ext === "ipynb" ? "gfm-raw_html-tex_math_gfm+tex_math_dollars" : "gfm"
+  const args: string[] = [source, "-t", outputFormat, "-o", outPath, "--extract-media", mediaDir]
+  if (ext === "ipynb") args.push("--wrap=none")
   const inputFormat = PANDOC_INPUT_FORMATS[ext]
   if (inputFormat) args.unshift("-f", inputFormat) // pandoc reads flags before the input path too
 

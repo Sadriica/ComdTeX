@@ -3,6 +3,7 @@
 // Everything expensive is precomputed in the update functions so a provider
 // call stays a filter over ready-made arrays.
 
+import { isDocExt } from "../docExts"
 import { en } from "../i18n/en"
 import { es } from "../i18n/es"
 import { getUiLanguage } from "../docLang"
@@ -114,8 +115,7 @@ export function updateVaultFiles(files: VaultFileInput[], root: string) {
   for (const file of files) {
     const rel = relativeTo(root, file.path)
     const ext = (file.ext ?? file.name.split(".").pop() ?? "").toLowerCase()
-    if (ext === "md" || ext === "tex")
-      docs.push({ file, segs: rel.replace(/\.[^./]+$/, "").split("/") })
+    if (isDocExt(ext)) docs.push({ file, segs: rel.replace(/\.[^./]+$/, "").split("/") })
     else if (ext === "csv") csvs.push({ file, segs: rel.split("/") })
   }
 

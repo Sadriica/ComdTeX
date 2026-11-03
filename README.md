@@ -32,7 +32,7 @@ A [Witara](https://witara.site) product: local-first, your files stay yours, AI 
 
 ### 1. Open a Vault
 
-A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files directly: no database, no hidden format.
+A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.qmd`, `.Rmd`, `.tex`, and `.bib` files directly: no database, no hidden format.
 
 On first launch, click **Open Vault** and select any folder. Four special files in the vault root are recognized automatically:
 
@@ -351,7 +351,8 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - DOCX and Beamer via pandoc
 - Typst export (`.typ` via pandoc); Typst → PDF when the `typst` binary is installed
 - Obsidian-friendly Markdown export
-- Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, … → Markdown, with embedded images extracted)
+- Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, `.ipynb` Jupyter notebooks, … → Markdown, with embedded images and notebook image outputs extracted)
+- Quarto (`.qmd`) and R Markdown (`.Rmd`) files open in the vault as Markdown and are saved byte for byte (code chunks, chunk options and `::: {.callout-note}` divs are never rewritten); ComdTeX does not execute them
 - Copy as HTML or LaTeX
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
 - Typst as a first-class citizen: `.typ` files live in the vault with their own syntax highlighting and compile natively with the local `typst` binary straight into the PDF preview (auto-recompiling on save). Typst export from Markdown via pandoc remains available
