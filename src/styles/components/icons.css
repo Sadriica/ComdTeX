@@ -44,3 +44,37 @@
   flex: 1;
   min-height: 0;
 }
+
+/* ── Highlight colour swatches (Textos > Resaltar menu and the palette) ── */
+.menu-item-swatch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.hl-swatch {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid color-mix(in oklch, var(--fg) 25%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--mark-yellow);
+}
+.hl-swatch-green {
+  background: var(--mark-green);
+}
+.hl-swatch-blue {
+  background: var(--mark-blue);
+}
+.hl-swatch-purple {
+  background: var(--mark-purple);
+}
+.hl-swatch-orange {
+  background: var(--mark-orange);
+}
+.hl-swatch-red {
+  background: var(--mark-red);
+}
+.hl-swatch-pink {
+  background: var(--mark-pink);
+}

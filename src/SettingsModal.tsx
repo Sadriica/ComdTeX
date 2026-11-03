@@ -10,6 +10,7 @@ import { nextStep, type SyncPosture } from "./syncPosture"
 import { findSettings, type SettingsSectionId } from "./settingsIndex"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
+import FontPicker from "./FontPicker"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { docsUrl, type DocsPage } from "./docsLinks"
 
@@ -273,6 +274,15 @@ export default function SettingsModal({
                 </label>
                 <p className="setting-hint">{t.settings.hints.theme}</p>
 
+                <FontPicker
+                  role="ui"
+                  data-setting="uiFontFamily"
+                  label={t.typography.interfaceFont}
+                  hint={t.typography.hintInterface}
+                  value={settings.uiFontFamily}
+                  onChange={(v) => onChange({ uiFontFamily: v })}
+                />
+
                 <label className="setting-row" data-setting="touchpadGestures">
                   <span>{t.settings.touchpadGestures}</span>
                   <input
@@ -287,6 +297,15 @@ export default function SettingsModal({
 
             {section === "editor" && (
               <>
+                <FontPicker
+                  role="editor"
+                  data-setting="editorFontFamily"
+                  label={t.typography.editorFont}
+                  hint={t.typography.hintEditor}
+                  value={settings.editorFontFamily}
+                  onChange={(v) => onChange({ editorFontFamily: v })}
+                />
+
                 <label className="setting-row" data-setting="fontSize">
                   <span>{t.settings.editorFont}</span>
                   <div className="setting-control">
@@ -429,6 +448,15 @@ export default function SettingsModal({
 
             {section === "preview" && (
               <>
+                <FontPicker
+                  role="preview"
+                  data-setting="previewFontFamily"
+                  label={t.typography.previewFont}
+                  hint={t.typography.hintPreview}
+                  value={settings.previewFontFamily}
+                  onChange={(v) => onChange({ previewFontFamily: v })}
+                />
+
                 <label className="setting-row" data-setting="previewFontSize">
                   <span>{t.settings.previewFont}</span>
                   <div className="setting-control">

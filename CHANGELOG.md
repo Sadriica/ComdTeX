@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Completion understands Spanish and accents.** `teorema`, `lema`, `demostración`, `matriz`, `raíz`, `fracción` and other Spanish names find the block types and shorthands; `\alfa`, `\raiz`, `\infinito` find the LaTeX commands; wikilinks, citations and labels match without accents (`teoria` finds `Teoría`) and wikilinks accept the words in any order (`gap spectral` finds `spectral-gap`).
 - **LaTeX commands by part of the name.** `\arrow` now lists `\rightarrow`, `\leftarrow` and the rest after the prefix matches, and inside math a bare word such as `alpha`, `alfa` or `inf` offers the symbol with its backslash.
 - **References by word.** After `@`, `@theorem:`, `@teorema:`, `@ecuacion:` and the like complete to the short kind, and `@mixing` lists labels of any kind whose name or title contains the word, inserting the full `@thm:mixing`.
+- **Choose your typography.** Settings now has three typeface pickers: interface (General), editor (Editor) and preview (Preview). Each offers Default (the current look, so nothing changes until you choose), a short list of suggested stacks (Inter, Fira Code, Cascadia Code, Source Code Pro, Latin Modern, EB Garamond, Georgia and more) and every font installed on your system, each name shown in its own typeface with a live sample underneath. The editor list shows only monospace fonts. The desktop app scans system fonts once per session on a background thread; nothing is downloaded.
 
 ## [1.31.0] - 2026-11-03
 

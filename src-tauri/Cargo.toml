@@ -32,3 +32,4 @@ tauri-plugin-process = "2.4.0"
 # hard-coded list the user cannot change.
 tauri-plugin-http = "2.8.3"
 keyring = { version = "3", features = ["sync-secret-service", "vendored"] }
+fontdb = "0.24.0"

@@ -313,6 +313,22 @@ export interface T {
     }
   }
 
+  typography: {
+    interfaceFont: string
+    editorFont: string
+    previewFont: string
+    hintInterface: string
+    hintEditor: string
+    hintPreview: string
+    defaultOption: string
+    groupSuggested: string
+    groupInstalled: string
+    groupInstalledMono: string
+    scanning: string
+    noInstalled: string
+    sample: string
+    sampleCode: string
+  }
   help: {
     title: string
     file: string
@@ -1835,6 +1851,7 @@ export interface T {
     installing: string
     installRestart: string
     later: string
+    releaseNotes: string
   }
 
   comments: {

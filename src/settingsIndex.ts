@@ -26,6 +26,8 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "theme", section: "general", label: (t) => t.settings.theme },
   { id: "touchpadGestures", section: "general", label: (t) => t.settings.touchpadGestures },
 
+  { id: "uiFontFamily", section: "general", label: (t) => t.typography.interfaceFont },
+  { id: "editorFontFamily", section: "editor", label: (t) => t.typography.editorFont },
   { id: "fontSize", section: "editor", label: (t) => t.settings.editorFont },
   { id: "autoSaveMs", section: "editor", label: (t) => t.settings.autosave },
   { id: "wordGoal", section: "editor", label: (t) => t.settings.wordGoal },
@@ -38,6 +40,7 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "autoFoldExcalidraw", section: "editor", label: (t) => t.settings.autoFoldExcalidraw },
   { id: "readingWpm", section: "editor", label: (t) => t.settings.readingWpm },
 
+  { id: "previewFontFamily", section: "preview", label: (t) => t.typography.previewFont },
   { id: "previewFontSize", section: "preview", label: (t) => t.settings.previewFont },
   { id: "previewVisible", section: "preview", label: (t) => t.settings.previewVisible },
   { id: "syncScroll", section: "preview", label: (t) => t.settings.syncScroll },
