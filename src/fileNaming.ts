@@ -10,7 +10,7 @@ import { pathDirname } from "./pathUtils"
 import type { T } from "./i18n"
 
 /** Extensions a typed file name may carry; anything else gets `.md` appended. */
-export const CREATE_FILE_EXTS = ["md", "tex", "bib", "csv", "typ"] as const
+export const CREATE_FILE_EXTS = ["md", "tex", "bib", "csv", "typ", "qmd", "rmd"] as const
 
 export type NameKind = "file" | "folder"
 

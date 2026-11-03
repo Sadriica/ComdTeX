@@ -133,7 +133,7 @@ export const en: T = {
     newFolder: "New folder",
     changeVault: "Change vault",
     loading: "Loading…",
-    noFiles: "No .md, .tex or .bib files",
+    noFiles: "No .md, .qmd, .Rmd, .tex or .bib files",
     filenamePlaceholder: "filename.md",
     folderPlaceholder: "folder",
     open: "Open",

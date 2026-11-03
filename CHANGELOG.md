@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Write in Quarto and R Markdown, and bring Jupyter notebooks in.** `.qmd` and `.Rmd` files now show in the file tree, search, the graph and the label scan, and open as Markdown. ComdTeX does not run code (that stays with Quarto or knitr), and these files are saved exactly as you opened them: code chunks, chunk options such as `#| label: fig-x`, `::: {.callout-note}` blocks and the YAML header are never rewritten. You can also name a new note `analysis.qmd` or `report.Rmd`. Import document now accepts `.ipynb`: Markdown and code cells become text and fenced code, text outputs follow the cell, and image outputs are saved in a `-media` folder next to the note.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

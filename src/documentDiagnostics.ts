@@ -1,4 +1,5 @@
 import { scanStructuralLabels } from "./structuralLabels"
+import { isDocName } from "./docExts"
 import { pathBasename } from "./pathUtils"
 import { imageCandidates } from "./imagePaths"
 import { CITATION_GROUP_RE, parseCitationGroup } from "./bibtex"
@@ -88,7 +89,7 @@ function scanCitations(
   msg: DiagnosticMessages,
 ) {
   for (const file of files) {
-    if (!file.name.endsWith(".md") && !file.name.endsWith(".tex")) continue
+    if (!isDocName(file.name)) continue
     const re = new RegExp(CITATION_GROUP_RE.source, "g")
     let match: RegExpExecArray | null
     while ((match = re.exec(file.content)) !== null) {
@@ -119,7 +120,7 @@ function scanImages(
   const basenames = new Set(paths.map((p) => pathBasename(p).toLowerCase()))
   const vaultRoot = opts.vaultPath?.replace(/[\\/]+$/, "")
   for (const file of files) {
-    if (!file.name.endsWith(".md")) continue
+    if (!isDocName(file.name) || file.name.endsWith(".tex")) continue
     const re = /!\[[^\]]*\]\(([^)]+)\)/g
     let match: RegExpExecArray | null
     while ((match = re.exec(file.content)) !== null) {

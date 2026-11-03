@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react"
+import { isDocName } from "./docExts"
 import { displayBasename } from "./pathUtils"
 import {
   buildSearchRegExp,
@@ -120,7 +121,7 @@ export default function SearchReplacePanel({
           const fullPath = `${dirPath}/${entry.name}`
           if (entry.isDirectory) {
             await scanDir(fullPath)
-          } else if (entry.name.endsWith(".md") || entry.name.endsWith(".tex")) {
+          } else if (isDocName(entry.name)) {
             try {
               // mtime-gated: unchanged since the last sync (by this panel or
               // useVault.search) → served from memory, no readTextFile call.

@@ -133,7 +133,7 @@ export const es: T = {
     newFolder: "Nueva carpeta",
     changeVault: "Cambiar vault",
     loading: "Cargando…",
-    noFiles: "No hay archivos .md, .tex o .bib",
+    noFiles: "No hay archivos .md, .qmd, .Rmd, .tex o .bib",
     filenamePlaceholder: "nombre.md",
     folderPlaceholder: "carpeta",
     open: "Abrir",
