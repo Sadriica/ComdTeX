@@ -268,6 +268,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Tables from CSV by selection: a `:::csv` block naming `data.csv (A:B, D) (1:8, 12)` renders the slice as a table and re-reads the file on every render (letters, header names or indices; non-contiguous ranges; order preserved)
 - Units and chemistry: `si(9.81, m/s^2)` and `ce(H2O)` render in the preview and export as real `siunitx` and `mhchem`; packages load only when used
 - Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols
+- Accession numbers (same opt-in): GenBank, RefSeq, SRA/ENA, BioProject, GEO, ArrayExpress and Ensembl ids link to their database in the preview and the LaTeX export, `PDB 1ABC` and `UniProt P04637` too, and a note appears when you cite data but have no Data availability section
 - Shorthand system: expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
 - Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references

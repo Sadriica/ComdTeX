@@ -1371,6 +1371,12 @@ export interface T {
     fmAuthor: string
     fmDate: string
     fmTags: string
+    biology: string
+    bioDesc: string
+    bioItalicRow: string
+    bioAccessionRow: string
+    bioAccessionDesc: string
+    bioDataAvailDesc: string
     // wikilinks
     wikilinkRow: string
     wikilinkDesc: string
@@ -1941,6 +1947,7 @@ export interface T {
       dataUndeclared: (id: string) => string
       spellUnknown: (word: string) => string
       bioItalic: (text: string, suggestion: string) => string
+      bioDataAvailability: (accession: string | null) => string
       bibUnclosed: (type: string, close: string) => string
       bibUnknownType: (type: string) => string
       bibNoKey: (type: string) => string

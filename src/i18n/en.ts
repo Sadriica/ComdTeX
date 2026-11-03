@@ -1451,6 +1451,15 @@ export const en: T = {
     fmAuthor: "Author name",
     fmDate: "Document date",
     fmTags: "List: [t1, t2] or - bullet",
+    biology: "Biology",
+    bioDesc:
+      "Opt in with comdtex.domain: biology in the front matter. Nothing in your file is ever rewritten.",
+    bioItalicRow: "Binomials and gene symbols that are not italic get a warning",
+    bioAccessionRow: "Accession numbers",
+    bioAccessionDesc:
+      "In the preview and the LaTeX export they link to their database (GenBank, RefSeq, SRA, GEO, Ensembl, ArrayExpress; PDB and UniProt when written as PDB 1ABC or UniProt P04637)",
+    bioDataAvailDesc:
+      "A note appears when you cite accessions or sequencing data but have no Data availability section",
     wikilinkRow: "Link: click in preview to navigate",
     wikilinkDesc:
       "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
@@ -2129,6 +2138,10 @@ export const en: T = {
       dataUndeclared: (id) => `Undeclared dataset: @${id}`,
       spellUnknown: (word) => `Possible spelling mistake: ${word}`,
       bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
+      bioDataAvailability: (accession) =>
+        accession
+          ? `${accession} is cited but the document has no "Data availability" section. Journals expect one.`
+          : `This biology document has no "Data availability" section. Journals expect one.`,
       bibUnclosed: (type, close) => `Unclosed @${type} entry (missing '${close}')`,
       bibUnknownType: (type) => `Unknown entry type: @${type}`,
       bibNoKey: (type) => `@${type} entry has no citation key`,

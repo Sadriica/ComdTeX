@@ -36,6 +36,7 @@ import { checkText, type SpellLang } from "./spellcheck"
 import { raggedTableRows } from "./markdownEditing"
 import { findGaps } from "./aiGaps"
 import { findBioConventions } from "./bioConventions"
+import { findMissingDataAvailability } from "./accessions"
 import { preprocess } from "./preprocessor"
 import { imageCandidates } from "./imagePaths"
 import { matchesVaultRelPath } from "./wikilinks"
@@ -78,6 +79,7 @@ export const LINT_CODES = [
   "spell-unknown",
   "bio-binomial",
   "bio-gene",
+  "bio-data-availability",
   "bib-unclosed",
   "bib-unknown-type",
   "bib-no-key",
@@ -1362,6 +1364,26 @@ function lintBioConventions(env: Env, text: string): Marker[] {
 }
 
 /**
+ * A biology document that cites accession numbers or sequencing data (or is a
+ * paper with references) but has no Data availability section. Info only:
+ * the rule and its triggers live in `findMissingDataAvailability`.
+ */
+function lintDataAvailability(env: Env, text: string): Marker[] {
+  const f = findMissingDataAvailability(text)
+  if (!f) return []
+  return [
+    emit(
+      env,
+      "bio-data-availability",
+      f.start,
+      f.end,
+      env.msg.bioDataAvailability(f.accession ?? null),
+      env.Severity.Info,
+    ),
+  ]
+}
+
+/**
  * Datasets are declared with `{#data:x}` and used with `@data:x`. A typo in
  * either direction renders an honest note in the document, but the marker
  * catches it while writing, which is where it costs least.
@@ -1445,6 +1467,7 @@ export function lintContent(
     // Opt-in per document (frontmatter `comdtex.domain: biology`): journals
     // return manuscripts over un-italicized binomials and gene symbols.
     ...lintBioConventions(env, text),
+    ...lintDataAvailability(env, text),
     ...lintDataRefs(env, clean),
   ]
 
