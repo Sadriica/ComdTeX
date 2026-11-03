@@ -69,7 +69,7 @@ export function rankCommands(
   ctx: CursorContext | null,
 ): RankedCommand[] {
   const strict = rankCommandsStrict(leaves, query, categoryLabel, prefs, ctx)
-  if (strict.length > 0) return strict
+  if (strict.length > 0) return dropFaintMatches(strict)
   // Nothing has every word: people type a verb and a noun ("abrir ajustes",
   // "open settings") and the command is only named by the noun, or by a
   // synonym. Retry without filler verbs and with synonyms, then, as a last
@@ -81,8 +81,20 @@ export function rankCommands(
       if (!prev || r.score > prev.score) merged.set(r.flat.cmd.id, r)
     }
   }
-  if (merged.size > 0) return [...merged.values()].sort((a, b) => b.score - a.score)
+  if (merged.size > 0)
+    return dropFaintMatches([...merged.values()].sort((a, b) => b.score - a.score))
   return rankByAnyWord(leaves, query, categoryLabel, prefs, ctx)
+}
+
+/**
+ * Once one command clearly matches, letters scattered across unrelated names
+ * ("abrir ajustes" against "Exportar presentación") only bury it. Keep the
+ * results that score within reach of the best one.
+ */
+function dropFaintMatches(ranked: RankedCommand[]): RankedCommand[] {
+  const top = ranked[0]?.score ?? 0
+  if (top < 200) return ranked
+  return ranked.filter((r) => r.score >= top * 0.4)
 }
 
 /** Verbs that introduce a command without naming it. */

@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **References by word.** After `@`, `@theorem:`, `@teorema:`, `@ecuacion:` and the like complete to the short kind, and `@mixing` lists labels of any kind whose name or title contains the word, inserting the full `@thm:mixing`.
 - **Choose your typography.** Settings now has three typeface pickers: interface (General), editor (Editor) and preview (Preview). Each offers Default (the current look, so nothing changes until you choose), a short list of suggested stacks (Inter, Fira Code, Cascadia Code, Source Code Pro, Latin Modern, EB Garamond, Georgia and more) and every font installed on your system, each name shown in its own typeface with a live sample underneath. The editor list shows only monospace fonts. The desktop app scans system fonts once per session on a background thread; nothing is downloaded.
 
+### Fixed
+- **Highlight colours show their swatch.** The Textos > Resaltar submenu and the palette entries rendered an empty square instead of the colour; each entry now shows the highlight colour it inserts, in every theme.
+- **The update banner no longer overflows.** When the release notes are only a link, the banner shows a "Release notes" link instead of the raw URL, and longer notes wrap inside the card.
+
 ## [1.31.0] - 2026-11-03
 
 ComdTeX for computational biology, and in-app updates that finally arrive. Highlights:

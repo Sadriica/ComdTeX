@@ -152,6 +152,10 @@ describe("palette commands: verb plus noun, synonyms, any order", () => {
     expect(search("es", "configuracion abrir")).toContain("Configuración")
   })
 
+  it("does not bury the match under letters scattered across other names", () => {
+    expect(search("es", "abrir ajustes")).toEqual(["Configuración"])
+  })
+
   it("finds Settings from 'open settings' and 'preferences'", () => {
     expect(search("en", "open settings")[0]).toBe("Settings")
     expect(search("en", "go to preferences")).toContain("Settings")
