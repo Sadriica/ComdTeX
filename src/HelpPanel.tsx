@@ -478,6 +478,16 @@ export default function HelpPanel() {
           <Row code="## Data availability" desc={hp.bioDataAvailDesc} />
         </Section>
 
+        {/* ── Results values ── */}
+        <Section title={hp.resultValues}>
+          <p className="hp-intro">{hp.resultValuesIntro}</p>
+          <div className="hp-codeblock">{`:::data{#data:stats}\nstats.csv\n:::\n\nn = val(stats, n), (val(stats, pvalue, p))`}</div>
+          <Row code="val(stats, pvalue)" desc={hp.resultValuesCell} />
+          <Row code="val(fit, metrics.auc)" desc={hp.resultValuesJson} />
+          <Row code="val(stats, effect, 3sf)" desc={hp.resultValuesFormat} />
+          <Row code="si(val(stats, effect, 3sf), mg/L)" desc={hp.resultValuesP} />
+        </Section>
+
         {/* ── Wikilinks & backlinks ── */}
         <Section title={hp.wikilinks}>
           <Row code="[[nombre-nota]]" desc={hp.wikilinkRow} render="<u>nombre-nota</u>" />

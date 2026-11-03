@@ -525,3 +525,41 @@ describe("LintVaultIndex", () => {
     expect(doc("/v/z.md", "{#thm:q}").labels.has("thm:q")).toBe(true)
   })
 })
+
+// ── Rule: val() references to results files ──────────────────────────────────
+
+describe("val() references", () => {
+  const decl = ":::data{#data:stats}\nstats.csv\n:::\n\n"
+  const dataResolver = (t: string) => (t === "stats.csv" ? "metric,value\nn,48\nname,ok\n" : null)
+
+  it("accepts a value that resolves", () => {
+    expect(
+      codes(`${decl}n = val(stats, n, 3sf)`, { dataResolver }).filter((c) =>
+        c.startsWith("value-"),
+      ),
+    ).toEqual([])
+  })
+  it("flags an undeclared dataset, with or without vault data", () => {
+    expect(codes("val(nope, n)")).toContain("value-undeclared")
+    expect(codes("val(nope, n)", { dataResolver })).toContain("value-undeclared")
+  })
+  it("flags a missing file, a missing cell and a non-number", () => {
+    const text = `${decl}val(stats, ghost)\nval(stats, name, 3sf)`
+    const c = codes(text, { dataResolver })
+    expect(c).toContain("value-cell-missing")
+    expect(c).toContain("value-not-number")
+    expect(codes(`${decl}val(stats, n)`, { dataResolver: () => null })).toContain(
+      "value-source-missing",
+    )
+  })
+  it("stays quiet about cells when it cannot read the vault, and inside code", () => {
+    expect(codes(`${decl}val(stats, ghost)`).filter((c) => c.startsWith("value-"))).toEqual([])
+    expect(codes("`val(nope, n)`").filter((c) => c.startsWith("value-"))).toEqual([])
+  })
+  it("translates the message in both languages", () => {
+    const en1 = only("value-undeclared", "val(nope, n)", { messages: en.lint.messages })[0]
+    const es1 = only("value-undeclared", "val(nope, n)", { messages: es.lint.messages })[0]
+    expect(en1.message).toContain("no dataset")
+    expect(es1.message).toContain("no hay un dataset")
+  })
+})

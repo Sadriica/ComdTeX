@@ -490,7 +490,15 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       nodes.push({ name: entry.name, path: fullPath, type: "dir", children })
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
-      if (isDocExt(ext) || ext === "bib" || ext === "typ" || ext === "csv" || ext === "pdf")
+      if (
+        isDocExt(ext) ||
+        ext === "bib" ||
+        ext === "typ" ||
+        ext === "csv" ||
+        // Pipeline results (`val(...)` reads them), listed like a CSV.
+        ext === "json" ||
+        ext === "pdf"
+      )
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
     }
   }

@@ -1077,12 +1077,14 @@ function AppContent({
   const vaultCsvPathsKey = useMemo(
     () =>
       vaultFileNodes
-        .filter((f) => f.ext === "csv")
+        .filter((f) => f.ext === "csv" || f.ext === "json")
         .map((f) => f.path)
         .sort()
         .join("\x00"),
     [vaultFileNodes],
   )
+  // A pipeline rewrites its results in place: the path set does not change,
+  // so a new tree (every window refocus builds one) re-reads the files too.
   useEffect(() => {
     let cancelled = false
     const paths = vaultCsvPathsKey ? vaultCsvPathsKey.split("\x00") : []
@@ -1102,7 +1104,15 @@ function AppContent({
       }),
     )
       .then((files) => {
-        if (!cancelled) setVaultCsvFiles(files)
+        // Keep the old list when no content changed: an untouched file must
+        // return the identical string so the pointer caches short-circuit.
+        if (!cancelled)
+          setVaultCsvFiles((prev) =>
+            prev.length === files.length &&
+            prev.every((f, i) => f.path === files[i].path && f.content === files[i].content)
+              ? prev
+              : files,
+          )
       })
       .catch(() => {
         if (!cancelled) setVaultCsvFiles([])
@@ -1110,7 +1120,7 @@ function AppContent({
     return () => {
       cancelled = true
     }
-  }, [vaultCsvPathsKey])
+  }, [vaultCsvPathsKey, vaultFileNodes])
   const vaultCsvFilesRef = useRef(vaultCsvFiles)
   useEffect(() => {
     vaultCsvFilesRef.current = vaultCsvFiles
@@ -1570,8 +1580,22 @@ function AppContent({
       vaultDocs: lintDocs,
       vaultFilePaths: vaultFilePathSet,
       macros,
+      dataResolver: transclusionResolver,
     }),
-    [wikiNames, bibKeys, t, vault.vaultPath, lintDocs, vaultFilePathSet, macros],
+    // vaultCsvFiles: the resolver reads through a ref, so new data files must
+    // invalidate the context to re-lint `val()`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      wikiNames,
+      bibKeys,
+      t,
+      vault.vaultPath,
+      lintDocs,
+      vaultFilePathSet,
+      macros,
+      transclusionResolver,
+      vaultCsvFiles,
+    ],
   )
   const lintSharedRef = useRef(lintShared)
   useEffect(() => {
@@ -2219,6 +2243,8 @@ function AppContent({
       deferredPreviewContent,
       vault.activeTabPath,
       vaultFilePathSet,
+      // Results files rewritten by a pipeline: new content re-renders `val()`.
+      vaultCsvFiles,
     ],
   )
 
