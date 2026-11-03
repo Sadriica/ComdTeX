@@ -12,6 +12,7 @@ import {
   relPathOf,
   type VaultDoc,
 } from "./state"
+import { foldedTerms, includesAllTerms } from "./match"
 import type { CompletionSource } from "./types"
 import { closerPlan, makeRange, MAX_ITEMS } from "./util"
 
@@ -72,6 +73,7 @@ export const wikilinksSource: CompletionSource = (env) => {
   if (!m) return null
   const partial = m[1]
   const partialLc = partial.toLowerCase()
+  const terms = foldedTerms(partial)
   const closer = closerPlan(env.after, "]]")
   const range = makeRange(
     env,
@@ -84,7 +86,7 @@ export const wikilinksSource: CompletionSource = (env) => {
 
   const ranked: { doc: VaultDoc; sort: string }[] = []
   for (const doc of getVaultDocs()) {
-    if (partialLc && !doc.relLc.includes(partialLc)) continue
+    if (terms.length && !includesAllTerms(doc.relFold, terms)) continue
     const prefix = doc.baseLc.startsWith(partialLc) || doc.relLc.startsWith(partialLc) ? "0" : "1"
     const sameDir = currentDir !== null && doc.dir === currentDir ? "0" : "1"
     ranked.push({ doc, sort: prefix + sameDir + doc.relLc })
@@ -102,7 +104,10 @@ export const wikilinksSource: CompletionSource = (env) => {
       range,
       sortText: sort,
       // The folder is searchable too: typing `physics/` narrows to that folder.
-      filterText: doc.rel,
+      // The typed text leads, so Monaco keeps a match it would not make itself
+      // (an accent dropped, words in another order); the list is asked for
+      // again per keystroke so the narrowing stays ours.
+      filterText: partial ? `${partial} ${doc.rel}` : doc.rel,
     }))
-  return { suggestions, incomplete: truncated }
+  return { suggestions, incomplete: truncated || partial.length > 0 }
 }

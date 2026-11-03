@@ -9,6 +9,7 @@ import { es } from "../i18n/es"
 import { getUiLanguage } from "../docLang"
 import type { StructuralLabel, StructuralLabelIndex } from "../structuralLabels"
 import type { Completion } from "./catalog"
+import { foldText } from "./match"
 
 export function completionText() {
   return (getUiLanguage() === "en" ? en : es).completion
@@ -58,6 +59,8 @@ export interface VaultDoc {
   base: string
   baseLc: string
   relLc: string
+  /** `relLc` without accents (`ñ` kept): what a typed query is matched against. */
+  relFold: string
   /** Folder part of `rel` ("" for the vault root). */
   dir: string
   /** What to write inside `[[ ]]`: the name, or the shortest unique path. */
@@ -134,6 +137,7 @@ export function updateVaultFiles(files: VaultFileInput[], root: string) {
       base: segs[segs.length - 1],
       baseLc: segs[segs.length - 1].toLowerCase(),
       relLc: segs.join("/").toLowerCase(),
+      relFold: foldText(segs.join("/")),
       dir: segs.slice(0, -1).join("/"),
       wikiTarget: docTargets.get(segs) ?? segs.join("/"),
     }))
@@ -197,7 +201,7 @@ export interface BibEntry {
   year: string
   type: string
   fields: Record<string, string>
-  /** Lowercased "key author title year": what the pre-filter and Monaco's filterText search. */
+  /** Lowercased, accent-free "key author title year": what the pre-filter searches. */
   haystack: string
 }
 
@@ -217,7 +221,7 @@ export function updateBibSuggestions(entries: BibInput[]) {
         year,
         type: e.type ?? "",
         fields,
-        haystack: `${e.key} ${author} ${title} ${year}`.toLowerCase(),
+        haystack: foldText(`${e.key} ${author} ${title} ${year}`),
       }
     })
     .sort((a, b) => a.key.localeCompare(b.key))
@@ -239,8 +243,8 @@ let knownIds = new Set<string>()
 export function updateLabelIndex(index: Pick<StructuralLabelIndex, "labels" | "headings">) {
   labelEntries = index.labels.map((label) => ({
     ...label,
-    nameLc: label.name.toLowerCase(),
-    titleLc: (label.title ?? "").toLowerCase(),
+    nameLc: foldText(label.name),
+    titleLc: foldText(label.title ?? ""),
   }))
   labelsByKind = new Map()
   knownIds = new Set()

@@ -5,6 +5,7 @@
 //   csvBlocks     `:::csv` / `:::data` file names and column headers
 //   latex         `\command` (generated KaTeX table, lazy chunk) and user macros
 //   inBlock       keywords inside pseudocode / truth / graph / plot / commdiag
+//   valDataset    dataset names after `val(`
 //   wikilinks     `[[note]]`, `[[note#heading]]`
 //   citations     `[@key]`, `[@a; @b, p. 3]`
 //   labels        `@kind:name`, `@path@kind:name`, `@path@`
@@ -26,6 +27,7 @@ import { labelsSource, resolveLabelItem } from "./labels"
 import { latexSource } from "./latex"
 import { registerSignatureHelp } from "./signature"
 import { snippetsSource } from "./snippets"
+import { valDatasetSource } from "./valDataset"
 import type { CompletionEnv, CompletionList, CompletionSource } from "./types"
 import { wikilinksSource } from "./wikilinks"
 
@@ -35,6 +37,7 @@ export const COMPLETION_SOURCES: readonly CompletionSource[] = [
   csvBlocksSource,
   latexSource,
   inBlockSource,
+  valDatasetSource,
   wikilinksSource,
   citationsSource,
   labelsSource,
@@ -67,7 +70,7 @@ export function provideCompletion(
   return EMPTY
 }
 
-const TRIGGER_CHARACTERS = ["[", "@", "\\", "^", ":", "#", "{"]
+const TRIGGER_CHARACTERS = ["[", "@", "\\", "^", ":", "#", "{", "("]
 
 export function registerCompletion(monaco: typeof monacoApi): monacoApi.IDisposable {
   const disposables: monacoApi.IDisposable[] = []

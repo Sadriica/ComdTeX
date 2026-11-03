@@ -3,6 +3,17 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Ctrl+P finds more than file names.** Past the first letter, a plain search also lists matching commands, headings of the open document, labels from the vault, citations (Enter inserts it) and settings by name (Enter opens the right tab), each as its own short group under the files. Prefixes (`>`, `@`, `#`, `[`, `:`, `?`) work exactly as before. Files now show an icon for spreadsheets, bibliographies and code or data files.
+- **Commands accept verb plus noun and synonyms.** `Abrir Configuración`, `open settings`, `abrir ajustes` and `preferencias` all find the Settings command (filler verbs are ignored, ajustes, configuración and preferencias are treated as the same word, and words can come in any order).
+- **Typos in file names are forgiven.** When nothing matches, Ctrl+P offers "Similar files" within one or two typos of every word you typed (`itroduction` finds `introduction.md`).
+- **Dataset names after `val(`.** Typing `val(` offers the datasets declared with `:::data{#data:name}` in the note, with the file each one reads, and accepts them typed as `name`, `@name` or `data:name`.
+- **Completion understands Spanish and accents.** `teorema`, `lema`, `demostración`, `matriz`, `raíz`, `fracción` and other Spanish names find the block types and shorthands; `\alfa`, `\raiz`, `\infinito` find the LaTeX commands; wikilinks, citations and labels match without accents (`teoria` finds `Teoría`) and wikilinks accept the words in any order (`gap spectral` finds `spectral-gap`).
+- **LaTeX commands by part of the name.** `\arrow` now lists `\rightarrow`, `\leftarrow` and the rest after the prefix matches, and inside math a bare word such as `alpha`, `alfa` or `inf` offers the symbol with its backslash.
+- **References by word.** After `@`, `@theorem:`, `@teorema:`, `@ecuacion:` and the like complete to the short kind, and `@mixing` lists labels of any kind whose name or title contains the word, inserting the full `@thm:mixing`.
+
 ## [1.31.0] - 2026-11-03
 
 ComdTeX for computational biology, and in-app updates that finally arrive. Highlights:

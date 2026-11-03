@@ -12,6 +12,8 @@ import {
   Command,
   FilePlus,
   FileText,
+  FileCode,
+  FileSpreadsheet,
   Folder,
   Hash,
   Icon,
@@ -22,6 +24,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Settings,
   Sigma,
   Sparkles,
   Tag,
@@ -30,6 +33,7 @@ import {
 import { rankItems, positionRanges } from "./fuzzy"
 import { nameProblemText } from "./fileNaming"
 import { flattenCommands, rankCommands } from "./paletteCommandSearch"
+import { rankSettingEntries, settingSectionName, typoFileMatches } from "./paletteExtras"
 import {
   citationEntries,
   createNoteTarget,
@@ -65,6 +69,21 @@ export type { PaletteCategory, PaletteCommand, PaletteMode } from "./paletteType
 
 /** Commands whose action reopens the palette in another mode: it must stay open. */
 const OPENS_PALETTE = new Set(["ins:citation", "ins:envref"])
+
+/** Rows each extra group (commands, headings, ...) adds to a plain query. */
+const MIXED_PER_GROUP = 3
+/** Files kept above the extra groups, so those are not pushed off the list. */
+const FILES_WITH_MIXED = 30
+
+/** A glyph per kind of file, so data, bibliographies and PDFs read at a glance. */
+function fileIcon(entry: FileEntry, recent: boolean): ReactNode {
+  if (recent) return <Icon icon={Clock} size={14} />
+  const ext = entry.name.slice(entry.name.lastIndexOf(".") + 1).toLowerCase()
+  if (ext === "csv") return <Icon icon={FileSpreadsheet} size={14} />
+  if (ext === "bib") return <Icon icon={BookOpen} size={14} />
+  if (ext === "json" || ext === "typ") return <Icon icon={FileCode} size={14} />
+  return undefined
+}
 
 /** Rows rendered at most; past this the footer asks the user to keep typing. */
 export const PALETTE_MAX_ROWS = 60
@@ -215,6 +234,8 @@ export interface CommandPaletteProps {
   onInsertReference?: (text: string) => void
   /** Create `<folderRel>/<fileName>` in the vault and open it. */
   onCreateNote?: (fileName: string, folderRel: string) => void
+  /** Open Settings on a tab (a setting found by name in the files mode). */
+  onOpenSetting?: (section: string) => void
   /**
    * The vault-relative folder a new note goes in: the shared target-folder rule
    * (selected folder, else the selection's or active note's folder, else root).
@@ -245,6 +266,7 @@ export default function CommandPalette({
   onInsertCitation,
   onInsertReference,
   onCreateNote,
+  onOpenSetting,
   getCreateFolderRel,
 }: CommandPaletteProps) {
   const t = useT()
@@ -267,6 +289,7 @@ export default function CommandPalette({
     onInsertCitation,
     onInsertReference,
     onCreateNote,
+    onOpenSetting,
   })
   useEffect(() => {
     cb.current = {
@@ -276,6 +299,7 @@ export default function CommandPalette({
       onInsertCitation,
       onInsertReference,
       onCreateNote,
+      onOpenSetting,
     }
   })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -324,10 +348,13 @@ export default function CommandPalette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
   const outline = useMemo(
-    () => (mode === "outline" && docText ? documentOutline(docText) : []),
+    () => ((mode === "outline" || mode === "files") && docText ? documentOutline(docText) : []),
     [mode, docText],
   )
-  const citations = useMemo(() => (mode === "cite" ? citationEntries(bib) : []), [mode, bib])
+  const citations = useMemo(
+    () => (mode === "cite" || mode === "files" ? citationEntries(bib) : []),
+    [mode, bib],
+  )
 
   const inSubLevel = stack.length > 0
   const parent = inSubLevel ? stack[stack.length - 1] : null
@@ -391,6 +418,71 @@ export default function CommandPalette({
         pinned: prefs.pinned.includes(cmd.id),
         run: () => runCommand(cmd),
         ...extra,
+      }
+    }
+
+    const outlineRow = (r: ReturnType<typeof rankOutline>[number], prefix: string): Row => {
+      const e = r.entry
+      return {
+        key: `${prefix}:${e.kind}:${e.line}:${e.text}`,
+        kind: e.kind,
+        label: e.kind === "heading" ? "#".repeat(e.level ?? 1) + " " + e.text : e.text,
+        positions:
+          e.kind === "heading" && r.positions.length
+            ? r.positions.map((p) => p + (e.level ?? 1) + 1)
+            : r.positions,
+        detail: [
+          e.kind === "env" ? e.type : undefined,
+          e.kind === "label" ? undefined : e.label,
+          `L${e.line}`,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        icon:
+          e.kind === "heading" ? (
+            <Icon icon={Hash} size={14} />
+          ) : e.kind === "env" ? (
+            <Icon icon={Sigma} size={14} />
+          ) : (
+            <Icon icon={Tag} size={14} />
+          ),
+        run: () => finish(() => cb.current.onGoToLine?.(e.line)),
+      }
+    }
+    const labelRow = (r: ReturnType<typeof rankLabels>[number], prefix: string): Row => {
+      const l = r.label
+      const insert = () =>
+        finish(() => cb.current.onInsertReference?.(referenceText(l, activeFilePath, vaultRoot)))
+      const jump = () =>
+        finish(() =>
+          l.filePath === activeFilePath
+            ? cb.current.onGoToLine?.(l.line)
+            : cb.current.onOpenPath(l.filePath, l.line),
+        )
+      return {
+        key: `${prefix}:${l.filePath}:${l.id}:${l.line}`,
+        kind: "label",
+        label: l.id,
+        positions: r.positions,
+        detail: l.filePath === activeFilePath ? t.palette.inThisFile : `${l.fileName}:${l.line}`,
+        icon: <Icon icon={AtSign} size={14} />,
+        run: (mods) => {
+          const wantsInsert = intent === "insert" ? !mods.alt : mods.alt
+          if (wantsInsert) insert()
+          else jump()
+        },
+      }
+    }
+    const citeRow = (r: ReturnType<typeof rankCitations>[number], prefix: string): Row => {
+      const c = r.entry
+      return {
+        key: `${prefix}:${c.key}`,
+        kind: "cite",
+        label: c.label,
+        positions: r.positions,
+        detail: c.title ? `${c.title} · ${c.key}` : c.key,
+        icon: <Icon icon={BookOpen} size={14} />,
+        run: () => finish(() => cb.current.onInsertCitation?.(c.key)),
       }
     }
 
@@ -515,24 +607,97 @@ export default function CommandPalette({
         }
       } else {
         const recentPaths = (recentFiles ?? []).map((r) => r.path)
-        const ranked = rankFileEntries(fileEntries, query, recentPaths)
+        const q = query.trim()
+        let ranked = rankFileEntries(fileEntries, query, recentPaths)
+        // Nothing matched: forgive a typo or two before giving up on files.
+        let similar = false
+        if (q && ranked.length === 0) {
+          ranked = typoFileMatches(fileEntries, query)
+          similar = ranked.length > 0
+        }
+        // Past the first letter, the plain query also reaches commands, this
+        // document's headings, vault labels, citations and settings, each as
+        // its own short group after the files.
+        const mixed: Row[] = []
+        if (q.length >= 2) {
+          const first = (rs: Row[], group: string) => {
+            if (rs.length) rs[0] = { ...rs[0], group }
+            mixed.push(...rs)
+          }
+          first(
+            rankCommands(leaves, query, (c) => t.palette.categories[c], prefs, ctx)
+              .slice(0, MIXED_PER_GROUP)
+              .map((r) =>
+                commandRow(r.flat.cmd, {
+                  positions: r.positions,
+                  detail:
+                    r.flat.cmd.description ??
+                    (r.flat.parents.length ? r.flat.parents.join(" > ") : undefined),
+                }),
+              ),
+            t.palette.groups.commands,
+          )
+          first(
+            rankOutline(
+              outline.filter((e) => e.kind !== "label"),
+              query,
+            )
+              .slice(0, MIXED_PER_GROUP)
+              .map((r) => outlineRow(r, "xo")),
+            t.palette.groups.headings,
+          )
+          first(
+            rankLabels(labels, query, activeFilePath)
+              .slice(0, MIXED_PER_GROUP)
+              .map((r) => labelRow(r, "xl")),
+            t.palette.groups.labels,
+          )
+          first(
+            rankCitations(citations, query)
+              .slice(0, MIXED_PER_GROUP)
+              .map((r) => citeRow(r, "xc")),
+            t.palette.groups.citations,
+          )
+          if (cb.current.onOpenSetting) {
+            first(
+              rankSettingEntries(query, t)
+                .slice(0, MIXED_PER_GROUP)
+                .map((r) => ({
+                  key: `set:${r.entry.id}`,
+                  kind: "mode" as const,
+                  label: r.label,
+                  positions: r.positions,
+                  detail: settingSectionName(r.entry.section, t),
+                  icon: <Icon icon={Settings} size={14} />,
+                  run: () => finish(() => cb.current.onOpenSetting?.(r.entry.section)),
+                })),
+              t.palette.groups.settings,
+            )
+          }
+        }
+        const shown = mixed.length ? ranked.slice(0, FILES_WITH_MIXED) : ranked
         const fileRow = (r: (typeof ranked)[number], i: number): Row => ({
           key: `file:${r.entry.path}`,
-          kind: r.recent && !query.trim() ? "recent" : "file",
+          kind: r.recent && !q ? "recent" : "file",
           label: r.entry.name,
           positions: r.positions,
           detail: r.entry.folder || undefined,
-          icon: r.recent && !query.trim() ? <Icon icon={Clock} size={14} /> : undefined,
-          group: !query.trim()
+          icon: fileIcon(r.entry, r.recent && !q),
+          group: !q
             ? i === 0 && r.recent
               ? t.palette.groups.recentFiles
               : !r.recent && (i === 0 || ranked[i - 1].recent)
                 ? t.palette.groups.files
                 : undefined
-            : undefined,
+            : i === 0 && similar
+              ? t.palette.groups.similarFiles
+              : i === 0 && mixed.length
+                ? t.palette.groups.files
+                : undefined,
           run: () => finish(() => cb.current.onOpenPath(r.entry.path)),
         })
-        ranked.forEach((r, i) => out.push(fileRow(r, i)))
+        shown.forEach((r, i) => out.push(fileRow(r, i)))
+        out.push(...mixed)
         const activeFolder = getCreateFolderRel?.() ?? activeFileFolder(fileEntries, activeFilePath)
         const target = query.trim() ? createNoteTarget(query, activeFolder) : null
         const exact = target
@@ -571,79 +736,18 @@ export default function CommandPalette({
       if (!docText) {
         out.push({ key: "msg", kind: "message", label: t.palette.noDocument, inert: true })
       } else {
-        for (const r of rankOutline(outline, query)) {
-          const e = r.entry
-          out.push({
-            key: `ol:${e.kind}:${e.line}:${e.text}`,
-            kind: e.kind,
-            label: e.kind === "heading" ? "#".repeat(e.level ?? 1) + " " + e.text : e.text,
-            positions:
-              e.kind === "heading" && r.positions.length
-                ? r.positions.map((p) => p + (e.level ?? 1) + 1)
-                : r.positions,
-            detail: [
-              e.kind === "env" ? e.type : undefined,
-              e.kind === "label" ? undefined : e.label,
-              `L${e.line}`,
-            ]
-              .filter(Boolean)
-              .join(" · "),
-            icon:
-              e.kind === "heading" ? (
-                <Icon icon={Hash} size={14} />
-              ) : e.kind === "env" ? (
-                <Icon icon={Sigma} size={14} />
-              ) : (
-                <Icon icon={Tag} size={14} />
-              ),
-            run: () => finish(() => cb.current.onGoToLine?.(e.line)),
-          })
-        }
+        for (const r of rankOutline(outline, query)) out.push(outlineRow(r, "ol"))
       }
     } else if (mode === "labels") {
       if (labels.length === 0) {
         out.push({ key: "msg", kind: "message", label: t.palette.noLabels, inert: true })
       }
-      for (const r of rankLabels(labels, query, activeFilePath)) {
-        const l = r.label
-        const insert = () =>
-          finish(() => cb.current.onInsertReference?.(referenceText(l, activeFilePath, vaultRoot)))
-        const jump = () =>
-          finish(() =>
-            l.filePath === activeFilePath
-              ? cb.current.onGoToLine?.(l.line)
-              : cb.current.onOpenPath(l.filePath, l.line),
-          )
-        out.push({
-          key: `lb:${l.filePath}:${l.id}:${l.line}`,
-          kind: "label",
-          label: l.id,
-          positions: r.positions,
-          detail: l.filePath === activeFilePath ? t.palette.inThisFile : `${l.fileName}:${l.line}`,
-          icon: <Icon icon={AtSign} size={14} />,
-          run: (mods) => {
-            const wantsInsert = intent === "insert" ? !mods.alt : mods.alt
-            if (wantsInsert) insert()
-            else jump()
-          },
-        })
-      }
+      for (const r of rankLabels(labels, query, activeFilePath)) out.push(labelRow(r, "lb"))
     } else if (mode === "cite") {
       if (bib.size === 0) {
         out.push({ key: "msg", kind: "message", label: t.palette.noCitations, inert: true })
       }
-      for (const r of rankCitations(citations, query)) {
-        const c = r.entry
-        out.push({
-          key: `bib:${c.key}`,
-          kind: "cite",
-          label: c.label,
-          positions: r.positions,
-          detail: c.title ? `${c.title} · ${c.key}` : c.key,
-          icon: <Icon icon={BookOpen} size={14} />,
-          run: () => finish(() => cb.current.onInsertCitation?.(c.key)),
-        })
-      }
+      for (const r of rankCitations(citations, query)) out.push(citeRow(r, "bib"))
     } else if (mode === "line") {
       const count = lineCount?.() ?? 1
       const parsed = parseLineQuery(query, count)

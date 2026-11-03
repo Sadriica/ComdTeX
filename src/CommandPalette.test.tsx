@@ -606,6 +606,64 @@ describe("closed state", () => {
     expect(getDocumentText).not.toHaveBeenCalled()
   })
 
+  it("adds commands, headings, labels, citations and settings after the files", () => {
+    const onOpenSetting = vi.fn()
+    const { input, props } = setup({ onOpenSetting })
+    type(input, "gap")
+    const ls = labels()
+    expect(ls[0]).toBe("spectral-gap.md")
+    expect(ls).toContain("thm:gap")
+    const heads = screen.getAllByText(
+      /^(Files|Commands|In this document|Labels|Citations|Settings)$/,
+    )
+    expect(heads.map((h) => h.textContent)).toContain("Labels")
+    type(input, "intro")
+    expect(labels()).toContain("# Intro")
+    type(input, "levin")
+    const cite = options().find((o) => o.textContent?.includes("levin2017"))
+    expect(cite).toBeTruthy()
+    fireEvent.click(cite as HTMLElement)
+    expect(props.onInsertCitation).toHaveBeenCalledWith("levin2017")
+  })
+
+  it("lists matching commands under a plain query and runs one", () => {
+    const run = vi.fn()
+    const { input } = setup({ commands: makeCommands({ table: run }) })
+    type(input, "table ed")
+    const row = options().find((o) => o.textContent?.includes("Table editor"))
+    expect(row).toBeTruthy()
+    fireEvent.click(row as HTMLElement)
+    expect(run).toHaveBeenCalled()
+  })
+
+  it("finds a setting by name and opens its tab", () => {
+    const onOpenSetting = vi.fn()
+    const { input } = setup({ onOpenSetting })
+    type(input, "word wrap")
+    const row = options().find((o) => o.textContent?.includes("Word wrap"))
+    expect(row).toBeTruthy()
+    fireEvent.click(row as HTMLElement)
+    expect(onOpenSetting).toHaveBeenCalledWith("editor")
+  })
+
+  it("offers similar files for a typo and no create row hides them", () => {
+    const { input } = setup()
+    type(input, "spectrl-gap")
+    expect(labels()[0]).toBe("spectral-gap.md")
+    type(input, "typsetting")
+    expect(labels()[0]).toBe("typesetting.md")
+  })
+
+  it("keeps extra groups reachable when many files match", () => {
+    const many = Array.from({ length: 80 }, (_, i) => ({
+      path: `${ROOT}/gap/gap-${i}.md`,
+      name: `gap-${i}.md`,
+    }))
+    const { input } = setup({ files: many })
+    type(input, "gap")
+    expect(labels()).toContain("thm:gap")
+  })
+
   it("act helper is available", () => {
     expect(typeof act).toBe("function")
   })

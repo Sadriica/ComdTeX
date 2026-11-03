@@ -5358,6 +5358,10 @@ function AppContent({
       editor.executeEdits("palette-ref", [{ range: selection, text, forceMoveMarkers: true }])
       editor.focus()
     },
+    onOpenSetting: (section: string) => {
+      setSettingsSection(section)
+      setSettingsOpen(true)
+    },
     // With no vault there is nowhere to write: the palette explains instead.
     onCreateNote: vault.vaultPath
       ? (fileName: string, folderRel: string) => {

@@ -4,6 +4,7 @@
 
 import type * as monacoApi from "monaco-editor"
 import type { LatexCommandRow } from "../latexCommands"
+import { foldText, LATEX_SPANISH } from "./match"
 import { completionText, getMacroCompletions } from "./state"
 import type { CompletionSource } from "./types"
 import { makeRange } from "./util"
@@ -95,9 +96,33 @@ export const latexSource: CompletionSource = (env) => {
         sortText: "0" + macro.slice(1),
       })
     }
+    // Prefix matches first. Behind them, a name that merely contains what was
+    // typed (`arrow` finds `rightarrow`) and the Spanish name of a command
+    // (`alfa` finds `alpha`, `raiz` finds `sqrt`). Those carry the typed text
+    // in their filterText, so Monaco keeps them while the word is typed, and
+    // the list is marked incomplete so it is asked for again per keystroke.
+    const folded = foldText(suffix)
+    const loose = folded.length >= 2
+    let fuzzy = false
     for (const { name, item } of baseItems(env.monaco, table)) {
-      if (name.startsWith(suffix)) suggestions.push({ ...item, range })
+      if (name.startsWith(suffix)) {
+        suggestions.push({ ...item, range })
+        continue
+      }
+      if (!loose) continue
+      const aliases = (LATEX_SPANISH[name] ?? []).map(foldText)
+      const aliasHit = aliases.some((a) => a.startsWith(folded))
+      // Case matters for names (`\Alpha` is not `\alpha`); aliases are plain words.
+      if (!aliasHit && !name.includes(suffix)) continue
+      fuzzy = true
+      suggestions.push({
+        ...item,
+        range,
+        sortText: (aliasHit ? "1" : "2") + name,
+        filterText: [`\\${suffix}`, name, ...aliases].join(" "),
+      })
     }
+    if (fuzzy) return { suggestions, incomplete: true }
     return { suggestions }
   })
 }

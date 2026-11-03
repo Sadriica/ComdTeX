@@ -605,6 +605,12 @@ export interface T {
       recentFiles: string
       files: string
       categories: string
+      commands: string
+      headings: string
+      labels: string
+      citations: string
+      settings: string
+      similarFiles: string
     }
     pin: string
     unpin: string
@@ -2024,6 +2030,8 @@ export interface T {
     kindNames: Record<string, string>
     otherFileLine: (file: string, line: number) => string
     thisFile: string
+    /** Detail of a dataset name offered inside val(. */
+    valDataset: string
     nextFootnote: string
     footnoteDefined: (line: number) => string
     footnoteUndefined: string
