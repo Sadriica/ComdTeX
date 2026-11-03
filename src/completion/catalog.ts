@@ -61,6 +61,12 @@ export const COMPLETIONS: Completion[] = [
     detail: ":::truth → truth table block",
     snippet: ":::truth[${1:title}]\n${2:p ∧ q}\n:::",
   },
+  // ── Sequence ────────────────────────────────────────────────────────────────
+  {
+    label: ":::seq",
+    detail: ":::seq → DNA/RNA/protein sequence block",
+    snippet: ":::seq[${1:title}]\n>${2:name}\n${3:ATGGAATTCGGATCC}\n:::",
+  },
   // ── Graph visualizer ────────────────────────────────────────────────────────
   {
     label: ":::graph",

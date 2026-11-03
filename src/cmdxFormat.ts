@@ -13,6 +13,7 @@
  * temporary inputs live in exportConversion.ts, even when they reuse one of
  * these low-level format transforms.
  */
+import { looksLikeSeqBody } from "./sequence"
 
 export type StorageFormat = "md" | "tex"
 
@@ -387,6 +388,7 @@ const SPECIAL_ENVS = new Set([
   "commdiag",
   "code",
   "excalidraw",
+  "seq",
 ])
 
 // A `:::code` block may carry a language after a space (`:::code python`),
@@ -859,7 +861,7 @@ const SPECIAL_TITLE_TO_ENV: Record<string, string> = Object.fromEntries(
 // a note title with → recovering those requires the BODY to look like the
 // block's DSL (heuristic). The other special names ("Truth", "Flowchart", …)
 // are virtually never legit note titles, so they always recover.
-const AMBIGUOUS_SPECIAL = new Set(["graph", "plot", "code"])
+const AMBIGUOUS_SPECIAL = new Set(["graph", "plot", "code", "seq"])
 
 function bodyLooksLikeSpecial(env: string, body: string): boolean {
   const b = body.trim()
@@ -871,6 +873,8 @@ function bodyLooksLikeSpecial(env: string, body: string): boolean {
     // a function/assignment or a math function or an x-range
     case "plot":
       return /=|\b(sin|cos|tan|exp|ln|log|sqrt|abs)\s*\(|\bx(min|max)\b/i.test(b)
+    case "seq":
+      return looksLikeSeqBody(b)
     // code-like tokens / common keywords
     case "code":
       return /[{};]|\b(def|function|class|return|import|const|let|var|public|private|print|for|while|if|else)\b/.test(

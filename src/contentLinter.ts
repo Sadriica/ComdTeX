@@ -38,6 +38,7 @@ import { findGaps } from "./aiGaps"
 import { findBioConventions } from "./bioConventions"
 import { findMissingDataAvailability } from "./accessions"
 import { preprocess } from "./preprocessor"
+import { parseSeq } from "./sequence"
 import { imageCandidates } from "./imagePaths"
 import { matchesVaultRelPath } from "./wikilinks"
 import { findVaultFile } from "./vaultResolve"
@@ -83,6 +84,10 @@ export const LINT_CODES = [
   "value-source-unreadable",
   "value-cell-missing",
   "value-not-number",
+  "seq-empty",
+  "seq-invalid-char",
+  "seq-bad-option",
+  "seq-bad-range",
   "spell-unknown",
   "bio-binomial",
   "bio-gene",
@@ -267,6 +272,7 @@ const OPAQUE_BLOCKS = [
   "plot",
   "commdiag",
   "excalidraw",
+  "seq",
 ]
 const OPAQUE_BLOCK_RE = new RegExp(
   `^:::(?:${OPAQUE_BLOCKS.join("|")})\\b[^\\n]*\\n[\\s\\S]*?^:::[ \\t]*$`,
@@ -352,6 +358,7 @@ export const KNOWN_BLOCK_TYPES: readonly string[] = [
   "commdiag",
   "code",
   "excalidraw",
+  "seq",
   "csv",
   "data",
 ]
@@ -1508,6 +1515,56 @@ function lintValueRefs(env: Env, text: string): Marker[] {
   return markers
 }
 
+const SEQ_BLOCK_RE = /^:::seq\b[^\n]*\n([\s\S]*?)^:::[ \t]*$/gm
+
+/**
+ * `:::seq` bodies: invalid residues, empty sequences, unknown options and
+ * highlights past the end of the sequence. The preview shows the same problems
+ * as an inline error; the marker finds them while writing.
+ */
+function lintSequences(env: Env, text: string): Marker[] {
+  const markers: Marker[] = []
+  const re = new RegExp(SEQ_BLOCK_RE.source, SEQ_BLOCK_RE.flags)
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const bodyStart = m.index + m[0].indexOf("\n") + 1
+    const bodyLines = m[1].split("\n")
+    const lineStart: number[] = []
+    let acc = bodyStart
+    for (const l of bodyLines) {
+      lineStart.push(acc)
+      acc += l.length + 1
+    }
+    for (const issue of parseSeq(m[1]).issues) {
+      const base = lineStart[Math.min(issue.line, lineStart.length - 1)] ?? bodyStart
+      const lineText = bodyLines[Math.min(issue.line, bodyLines.length - 1)] ?? ""
+      const start =
+        issue.col >= 0 ? base + issue.col : base + (lineText.length - lineText.trimStart().length)
+      const end =
+        issue.col >= 0 ? start + Math.max(1, issue.length) : base + Math.max(lineText.length, 1)
+      const message =
+        issue.code === "seq-empty"
+          ? env.msg.seqEmpty()
+          : issue.code === "seq-invalid-char"
+            ? env.msg.seqInvalidChar(issue.char ?? "?", issue.position ?? 0)
+            : issue.code === "seq-bad-range"
+              ? env.msg.seqBadRange(issue.message)
+              : env.msg.seqBadOption(issue.message)
+      markers.push(
+        emit(
+          env,
+          issue.code,
+          start,
+          Math.max(end, start + 1),
+          message,
+          issue.code === "seq-bad-option" ? env.Severity.Warning : env.Severity.Error,
+        ),
+      )
+    }
+  }
+  return markers
+}
+
 function makeEnv(text: string, context: LintContext, Severity: Severities): Env {
   return {
     lineIdx: buildLineIndex(text),
@@ -1548,6 +1605,7 @@ export function lintContent(
     ...lintDataAvailability(env, text),
     ...lintDataRefs(env, clean),
     ...lintValueRefs(env, clean),
+    ...lintSequences(env, clean),
   ]
 
   if (context.spellcheck) {

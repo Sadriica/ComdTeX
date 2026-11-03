@@ -85,6 +85,7 @@ import { renderTruthTableHTML } from "./truthTable"
 import { renderGraphSVG } from "./graphViz"
 import { renderPlotHTML } from "./functionPlot"
 import { renderCommDiagSVG } from "./commDiag"
+import { renderSeqHTML } from "./sequence"
 
 function escHtml(s: string): string {
   return s
@@ -534,6 +535,21 @@ export function extractEnvironments(
             html = memoSpecial("plot", t, body, num, () => renderPlotHTML(t, body, num))
           } catch (e) {
             html = specialEnvError("plot", e)
+          }
+          slots.push(wrapWithSourceLine(html, srcLine))
+          return `\x02ENV${slots.length - 1}\x03`
+        }
+
+        if (envName === "seq") {
+          counters["seq"] = (counters["seq"] ?? 0) + 1
+          const num = String(counters["seq"])
+          const body = content.trim()
+          const t = title ?? ""
+          let html: string
+          try {
+            html = memoSpecial("seq", t, body, num, () => renderSeqHTML(t, body, num))
+          } catch (e) {
+            html = specialEnvError("seq", e)
           }
           slots.push(wrapWithSourceLine(html, srcLine))
           return `\x02ENV${slots.length - 1}\x03`

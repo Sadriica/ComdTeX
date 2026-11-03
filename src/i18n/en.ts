@@ -1592,6 +1592,11 @@ export const en: T = {
     truthTable: "Truth table",
     truthTableDesc: "Generates the truth table for one or more boolean expressions.",
     truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    seq: "Sequence (DNA, RNA, protein)",
+    seqDesc:
+      "Shows a FASTA record or raw sequence in numbered groups of 10, with GC content and length. Options: type, highlight (12-31 label), motif, revcomp, width, group. Numbered as “Sequence N” (not referenceable).",
+    seqExample:
+      ":::seq[Primers]\ntype: dna\nhighlight: 1-20 primer-F, 41-60 primer-R\nmotif: GAATTC\n>pUC-insert cloning site\nATGGAATTCGGATCCAAGCTTGCATGCCTGCAGGTCGACTCTAGAGGATCCCCGGGTACCGAGCTCGAATTC\n:::",
     graphViz: "Graph (Graph theory)",
     graphVizDesc: "Visualizes directed and undirected graphs from an edge list.",
     graphVizExample: ":::graph[Example]\nA -- B\nA -- C\nB -> D\n:::",
@@ -1948,6 +1953,8 @@ export const en: T = {
         "References to environments in another document cannot be numbered outside the app; they are exported as Theorem (?)",
       bibtex: "BibTeX citations need an external plugin in Obsidian",
       macros: "Global LaTeX macros need MathJax/KaTeX configured in Obsidian",
+      seqHighlights:
+        "Sequence highlights and motifs are exported as plain text with a legend of their ranges (no colour)",
     },
     diag: {
       brokenRef: (id) => `Broken reference: @${id}`,
@@ -2154,6 +2161,11 @@ export const en: T = {
       valueSourceUnreadable: (file) => `val(): ${file} could not be read`,
       valueCellMissing: (cell) => `val(): no value at ${cell}`,
       valueNotNumber: (text) => `val(): "${text}" is not a number, so it cannot be formatted`,
+      seqEmpty: () => "The sequence block has no sequence",
+      seqInvalidChar: (char, position) =>
+        `Invalid sequence character "${char}" at position ${position}`,
+      seqBadOption: (detail) => `Sequence option: ${detail}`,
+      seqBadRange: (detail) => `Sequence highlight: ${detail}`,
       spellUnknown: (word) => `Possible spelling mistake: ${word}`,
       bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
       bioDataAvailability: (accession) =>

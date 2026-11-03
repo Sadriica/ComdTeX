@@ -1606,6 +1606,11 @@ export const es: T = {
     truthTable: "Tabla de verdad",
     truthTableDesc: "Genera la tabla de verdad de una o varias expresiones booleanas.",
     truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    seq: "Secuencia (ADN, ARN, proteína)",
+    seqDesc:
+      "Muestra un registro FASTA o una secuencia cruda en grupos numerados de 10, con contenido GC y longitud. Opciones: type, highlight (12-31 etiqueta), motif, revcomp, width, group. Se numera como “Sequence N” (sin referencias).",
+    seqExample:
+      ":::seq[Cebadores]\ntype: dna\nhighlight: 1-20 cebador-F, 41-60 cebador-R\nmotif: GAATTC\n>pUC-insert sitio de clonación\nATGGAATTCGGATCCAAGCTTGCATGCCTGCAGGTCGACTCTAGAGGATCCCCGGGTACCGAGCTCGAATTC\n:::",
     graphViz: "Grafo (Teoría de grafos)",
     graphVizDesc: "Visualiza grafos dirigidos y no dirigidos a partir de una lista de aristas.",
     graphVizExample: ":::graph[Ejemplo]\nA -- B\nA -- C\nB -> D\n:::",
@@ -1966,6 +1971,8 @@ export const es: T = {
         "Referencias a entornos de otro documento no se pueden numerar fuera de la app; se exportan como Teorema (?)",
       bibtex: "Citas BibTeX requieren plugin externo en Obsidian",
       macros: "Macros LaTeX globales requieren MathJax/KaTeX configurado en Obsidian",
+      seqHighlights:
+        "Los resaltados y motivos de secuencia se exportan como texto plano con una leyenda de rangos (sin color)",
     },
     diag: {
       brokenRef: (id) => `Referencia rota: @${id}`,
@@ -2176,6 +2183,11 @@ export const es: T = {
       valueSourceUnreadable: (file) => `val(): no se pudo leer ${file}`,
       valueCellMissing: (cell) => `val(): no hay valor en ${cell}`,
       valueNotNumber: (text) => `val(): "${text}" no es un número, no se puede formatear`,
+      seqEmpty: () => "El bloque de secuencia no tiene secuencia",
+      seqInvalidChar: (char, position) =>
+        `Carácter de secuencia no válido "${char}" en la posición ${position}`,
+      seqBadOption: (detail) => `Opción de secuencia: ${detail}`,
+      seqBadRange: (detail) => `Resaltado de secuencia: ${detail}`,
       spellUnknown: (word) => `Posible error ortográfico: ${word}`,
       bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
       bioDataAvailability: (accession) =>

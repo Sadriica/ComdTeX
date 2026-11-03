@@ -21,6 +21,7 @@
 @import "./components/math-env.css" layer(components);
 @import "./components/preview.css" layer(components);
 @import "./components/truth-table.css" layer(components);
+@import "./components/sequence.css" layer(components);
 @import "./components/tabs.css" layer(components);
 @import "./components/palette.css" layer(components);
 @import "./components/modals.css" layer(components);

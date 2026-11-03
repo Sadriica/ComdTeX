@@ -244,6 +244,11 @@ export default function HelpPanel() {
           <Row code=":::truth[title]" desc={hp.truthTableDesc} />
           <pre className="hp-code hp-code-block">{hp.truthTableExample}</pre>
 
+          <div className="hp-label">{hp.seq}</div>
+          <p className="hp-intro">{hp.seqDesc}</p>
+          <Row code=":::seq[title]" desc={hp.seqDesc} />
+          <pre className="hp-code hp-code-block">{hp.seqExample}</pre>
+
           <div className="hp-label">{hp.graphViz}</div>
           <p className="hp-intro">{hp.graphVizDesc}</p>
           <Row code=":::graph[title]" desc={hp.graphVizDesc} />

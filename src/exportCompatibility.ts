@@ -54,6 +54,11 @@ export function analyzeExportCompatibility(
     [/```mermaid\b/i, "warning", m.mermaid],
     [/>\s*\[![A-Z]+\]/, "info", m.callout],
     [/\[\[[^\]]+\]\]/, "info", m.wikilink],
+    [
+      /^:::seq\b[^\n]*\n(?:(?!:::)[^\n]*\n)*?[ \t]*(?:highlight|motif)[ \t]*:/im,
+      "warning",
+      m.seqHighlights,
+    ],
     [/\{#(?!sec:|eq:|fig:|tbl:|thm:|lem:|cor:|prop:|def:|ex:|exc:)[\w:.-]+\}/, "warning", m.label],
   ])
 

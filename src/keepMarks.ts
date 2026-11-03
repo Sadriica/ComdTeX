@@ -139,6 +139,7 @@ const SPECIAL_ENVS = new Set([
   "commdiag",
   "code",
   "excalidraw",
+  "seq",
 ])
 
 const SPECIAL_START_RE = /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[[^\]]*\])?(?:\s*\{#[\w:.-]+\})?\s*$/
