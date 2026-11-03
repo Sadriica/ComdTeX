@@ -2058,6 +2058,7 @@ export const es: T = {
     installing: "Instalando…",
     installRestart: "Instalar y reiniciar",
     later: "Más tarde",
+    releaseNotes: "Notas de la versión",
   },
 
   comments: {

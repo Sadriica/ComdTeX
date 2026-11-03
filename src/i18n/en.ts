@@ -2039,6 +2039,7 @@ export const en: T = {
     installing: "Installing…",
     installRestart: "Install and restart",
     later: "Later",
+    releaseNotes: "Release notes",
   },
 
   comments: {

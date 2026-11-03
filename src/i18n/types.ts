@@ -1829,6 +1829,7 @@ export interface T {
     installing: string
     installRestart: string
     later: string
+    releaseNotes: string
   }
 
   comments: {

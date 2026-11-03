@@ -1,5 +1,7 @@
+import { openUrl } from "@tauri-apps/plugin-opener"
 import type { UpdateInfo } from "./useUpdater"
 import { useT } from "./i18n"
+import { ExternalLink, Icon } from "./icons"
 
 interface UpdateCheckerProps {
   updateInfo: UpdateInfo | null
@@ -17,12 +19,25 @@ export default function UpdateChecker({
   const t = useT()
   if (!updateInfo?.available) return null
 
-  const notes = updateInfo.body ? updateInfo.body.split("\n").slice(0, 3).join("\n") : null
+  const body = updateInfo.body?.trim() ?? ""
+  // The release feed ships a bare link to the release page as its notes
+  const notesUrl = /^https?:\/\/\S+$/.test(body) ? body : null
+  const notes = body && !notesUrl ? body.split("\n").slice(0, 3).join("\n") : null
 
   return (
     <div className="update-banner">
       <h4>{t.updateBanner.available(updateInfo.version)}</h4>
       {notes && <p>{notes}</p>}
+      {notesUrl && (
+        <button
+          className="update-banner-notes"
+          onClick={() => {
+            void openUrl(notesUrl).catch(() => {})
+          }}
+        >
+          {t.updateBanner.releaseNotes} <Icon icon={ExternalLink} size={14} />
+        </button>
+      )}
       <div className="update-banner-actions">
         <button className="update-btn-install" onClick={onInstall} disabled={installing}>
           {installing ? t.updateBanner.installing : t.updateBanner.installRestart}
