@@ -2,6 +2,7 @@ import { toStorageMd } from "./cmdxFormat"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { stripKeepMarks } from "./keepMarks"
 import { numberEnvironmentsForExport } from "./envExport"
+import { seqBlockToMarkdown } from "./sequence"
 
 /**
  * Export conversion starts from CMDX editor content but does not represent a
@@ -36,17 +37,19 @@ const SPECIAL_BLOCK_CAPTIONS: Record<string, string> = {
   commdiag: "Diagram",
   code: "Code",
   excalidraw: "Excalidraw",
+  seq: "Sequence",
 }
 
 export function specialBlocksToPandoc(md: string): string {
   const lines = md.split("\n")
   const out: string[] = []
+  let seqCount = 0
   let i = 0
   while (i < lines.length) {
     // Openers: ":::type", ":::type[Title]", and the ":::code python" language
     // variant (bare word after the type, code blocks only).
     const open =
-      /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(
+      /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw|seq)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(
         lines[i],
       )
     if (!open) {
@@ -65,6 +68,16 @@ export function specialBlocksToPandoc(md: string): string {
       i++
       continue
     } // unclosed: leave as-is
+    if (open[1] === "seq") {
+      // Grouped, numbered text in a fence; highlights become a plain legend.
+      seqCount++
+      const md = seqBlockToMarkdown(open[2] ?? "", body.join("\n"), seqCount)
+      if (md) {
+        out.push(...md)
+        i = j + 1
+        continue
+      }
+    }
     const caption = SPECIAL_BLOCK_CAPTIONS[open[1]] + (open[2] ? `: ${open[2]}` : "")
     out.push(`**${caption}**`, "")
     if (open[1] === "excalidraw") {

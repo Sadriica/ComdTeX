@@ -37,7 +37,7 @@ export interface SpecialBlock {
 }
 
 const OPEN_RE =
-  /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw)(?:\[([^\]]*)\])?\s*(\S+)?\s*$/
+  /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw|seq)(?:\[([^\]]*)\])?\s*(\S+)?\s*$/
 
 /** Scan a document for special blocks (fenced code is respected). */
 export function findSpecialBlocks(md: string): SpecialBlock[] {
@@ -76,6 +76,7 @@ export const EXPORT_CAPTIONS: Record<string, string> = {
   commdiag: "Diagram",
   excalidraw: "Excalidraw",
   truth: "Truth Table",
+  seq: "Sequence",
 }
 
 /** The block types that become raster images in exports. */

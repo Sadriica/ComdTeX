@@ -269,7 +269,7 @@ const INLINE_CODE_RE = /(`+)(?!`)([\s\S]+?)\1(?!`)/g
 // plot parser chokes on the literal `$`. Same hazard for graph/truth/commdiag/
 // pseudocode/flowchart blocks.
 const SPECIAL_ENV_RE =
-  /^:::(plot|graph|truth|commdiag|pseudocode|flowchart|code)(?:\[[^\]]*\]|\s+\S+)?\s*\n[\s\S]*?^:::\s*$/gm
+  /^:::(plot|graph|truth|commdiag|pseudocode|flowchart|code|seq)(?:\[[^\]]*\]|\s+\S+)?\s*\n[\s\S]*?^:::\s*$/gm
 
 function maskCode(text: string): { masked: string; slots: string[] } {
   const slots: string[] = []

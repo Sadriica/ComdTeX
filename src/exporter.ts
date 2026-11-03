@@ -23,6 +23,7 @@ import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
 import { resolveDocLanguage } from "./docLang"
+import { seqBlockToLatex } from "./sequence"
 
 interface LatexMacro {
   command: string
@@ -264,6 +265,8 @@ function crossRefToTex(docPath: string, prefix: string, id: string): string {
 // Set while converting a document: tells exportToTex whether to emit the
 // bibliography commands. Reset at the start of every export.
 let citedInLastPass = false
+// Numbers `:::seq` blocks in document order across the nested mdToTex calls.
+let seqExportCount = 0
 
 function textRefsToTex(text: string): string {
   const out: string[] = []
@@ -708,6 +711,15 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
     /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*\n([\s\S]*?)^:::\s*$/gm,
     (_, rawName, title, label, content) => {
       const envName = rawName.toLowerCase()
+      if (envName === "seq") {
+        // Sequences degrade to verbatim text plus a legend (no texshade).
+        seqExportCount++
+        const tex = seqBlockToLatex(title ?? "", content, seqExportCount, escTex)
+        if (tex === null) return _
+        const key = `ENV${n++}`
+        slots.set(key, tex)
+        return `\x02${key}\x03`
+      }
       if (!ALL_ENVS[envName]) return _
 
       // Convert inner content to LaTeX recursively
@@ -1110,6 +1122,7 @@ export function exportToTex(
   const raw = stripKeepMarks(rawInput)
   const parsed = extractFrontmatter(raw)
   citedInLastPass = false
+  seqExportCount = 0
   const body = mdToTex(parsed?.content ?? raw)
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)

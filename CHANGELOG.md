@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Sequence blocks.** `:::seq` shows DNA, RNA and protein sequences the way methods sections do: FASTA records or raw lines in numbered groups of 10, with GC content and length, highlighted ranges (`highlight: 12-31 primer-F`), motifs and their reverse complement (`motif: GAATTC`, `revcomp: yes`), and a legend. Invalid characters are reported in place instead of being drawn. LaTeX exports a plain monospace listing with the ranges in a legend; other exports get a fenced block.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

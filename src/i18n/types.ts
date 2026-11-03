@@ -1491,6 +1491,10 @@ export interface T {
     truthTable: string
     truthTableDesc: string
     truthTableExample: string
+    // sequence section
+    seq: string
+    seqDesc: string
+    seqExample: string
     // graph visualizer section
     graphViz: string
     graphVizDesc: string
@@ -1738,6 +1742,7 @@ export interface T {
       crossEnvRef: string
       bibtex: string
       macros: string
+      seqHighlights: string
     }
     diagnostics: string
     compatibility: string
@@ -1937,6 +1942,10 @@ export interface T {
       mathError: (detail: string) => string
       dataDuplicate: (id: string) => string
       dataUndeclared: (id: string) => string
+      seqEmpty: () => string
+      seqInvalidChar: (char: string, position: number) => string
+      seqBadOption: (detail: string) => string
+      seqBadRange: (detail: string) => string
       spellUnknown: (word: string) => string
       bioItalic: (text: string, suggestion: string) => string
       bibUnclosed: (type: string, close: string) => string
