@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **The biology check knows mouse genes from human ones.** Add `comdtex.organism: human | mouse | rat | zebrafish | drosophila | yeast | bacteria` next to `comdtex.domain: biology` and the check follows that organism's gene and protein conventions: `TP53` for human, `Trp53` for mouse and rat, `tp53` for zebrafish, `CDC28` and `Cdc28p` for yeast, `lacZ` and `LacZ` for bacteria. It warns about an italic gene in the wrong case (`*TRP53*` in a mouse paper), a protein set in italics (`*Cdc28p*`, `*LacZ*`) and a gene that is not italic, and stays quiet on lines that compare organisms. With an organism set, an upright symbol is reported only when the sentence calls it a gene ("the TP53 gene"), since upright capitals are usually proteins. The check also warns when `E. coli` appears before `Escherichia coli`, and knows a few more model-organism genera. Ctrl+. italicizes, un-italicizes or fixes the case in one undoable edit. Warnings only, never automatic rewrites.
+
 ### Fixed
 - **In-app updates work.** No release had ever published the `latest.json` manifest the app reads, and only the AppImage was signed, so the update banner never appeared. Releases now sign the AppImage, the `.deb` and the Windows installer and publish the manifest, which the release refuses to skip if a signature is missing. The AppImage replaces itself, the Windows installer runs on its own, and the `.deb` asks for your password. Installs of 1.30.0 will see the next version.
 

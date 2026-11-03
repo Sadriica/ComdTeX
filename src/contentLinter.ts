@@ -78,6 +78,9 @@ export const LINT_CODES = [
   "spell-unknown",
   "bio-binomial",
   "bio-gene",
+  "bio-binomial-first",
+  "bio-gene-case",
+  "bio-protein-italic",
   "bib-unclosed",
   "bib-unknown-type",
   "bib-no-key",
@@ -1343,22 +1346,36 @@ function lintGaps(env: Env, text: string): Marker[] {
 }
 
 /**
- * Taxonomic binomials and gene symbols that should be italic. Warnings only:
- * `Bacillus` may be a genus or a surname, and only the author knows.
+ * Taxonomic binomials, gene symbols and (with `comdtex.organism`) per-organism
+ * symbol conventions. Warnings only: `Bacillus` may be a genus or a surname,
+ * and only the author knows.
  */
 function lintBioConventions(env: Env, text: string): Marker[] {
-  return findBioConventions(text).map((f) =>
-    emit(
-      env,
-      f.kind === "gene" ? "bio-gene" : "bio-binomial",
-      f.start,
-      f.end,
-      env.ctx.bioMessage
-        ? env.ctx.bioMessage(f.kind, f.text)
-        : env.msg.bioItalic(f.text, f.suggestion),
-      env.Severity.Warning,
-    ),
-  )
+  return findBioConventions(text).map((f) => {
+    const org = f.organism ? env.msg.bioOrganisms[f.organism] : ""
+    let code: LintCode
+    let message: string
+    switch (f.kind) {
+      case "binomial-first":
+        code = "bio-binomial-first"
+        message = env.msg.bioAbbrevFirst(f.text, f.full ?? f.suggestion)
+        break
+      case "gene-case":
+        code = "bio-gene-case"
+        message = env.msg.bioGeneCase(f.text, f.suggestion, org)
+        break
+      case "protein-italic":
+        code = "bio-protein-italic"
+        message = env.msg.bioProteinItalic(f.text, f.suggestion, org)
+        break
+      default:
+        code = f.kind === "gene" ? "bio-gene" : "bio-binomial"
+        message = env.ctx.bioMessage
+          ? env.ctx.bioMessage(f.kind, f.text)
+          : env.msg.bioItalic(f.text, f.suggestion)
+    }
+    return emit(env, code, f.start, f.end, message, env.Severity.Warning)
+  })
 }
 
 /**

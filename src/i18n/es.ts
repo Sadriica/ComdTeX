@@ -1460,6 +1460,10 @@ export const es: T = {
     fmAuthor: "Nombre del autor",
     fmDate: "Fecha del documento",
     fmTags: "Lista: [t1, t2] o - bullet",
+    fmDomainDesc:
+      "Activa la revisión de biología: avisa de nombres de especies y símbolos de genes sin cursiva, y de E. coli usado antes que Escherichia coli. Nunca reescribe tu texto.",
+    fmOrganismDesc:
+      "Con la revisión de biología, aplica además las convenciones de genes y proteínas de un organismo (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 frente a TP53, tp53, CDC28, lacZ. Ctrl+. pone o quita la cursiva.",
     wikilinkRow: "Enlace: clic en preview para navegar",
     wikilinkDesc:
       "La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.",
@@ -2130,6 +2134,21 @@ export const es: T = {
       dataUndeclared: (id) => `Dataset no declarado: @${id}`,
       spellUnknown: (word) => `Posible error ortográfico: ${word}`,
       bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
+      bioAbbrevFirst: (abbreviated, full) =>
+        `${abbreviated} aparece antes que su nombre completo: escribe ${full} en la primera mención`,
+      bioGeneCase: (text, suggestion, organism) =>
+        `${text}: los genes de ${organism} se escriben ${suggestion}`,
+      bioProteinItalic: (text, suggestion, organism) =>
+        `${text}: las proteínas de ${organism} no van en cursiva, escríbelo como ${suggestion}`,
+      bioOrganisms: {
+        human: "humanos",
+        mouse: "ratón",
+        rat: "rata",
+        zebrafish: "pez cebra",
+        drosophila: "Drosophila",
+        yeast: "levadura",
+        bacteria: "bacterias",
+      },
       bibUnclosed: (type, close) => `Entrada @${type} sin cerrar (falta '${close}')`,
       bibUnknownType: (type) => `Tipo de entrada desconocido: @${type}`,
       bibNoKey: (type) => `Entrada @${type} sin clave de citación`,
@@ -2147,6 +2166,8 @@ export const es: T = {
       closeEnv: (name) => `Cerrar el entorno :::${name}`,
       removeStrayClose: "Quitar el ::: sobrante",
       replaceWith: (text) => `Cambiar a "${text}"`,
+      italicize: (text) => `Poner ${text} en cursiva`,
+      unitalicize: (text) => `Quitar la cursiva de ${text}`,
       useCrossFileRef: (ref) => `Usar la forma entre archivos ${ref}`,
       createNote: (name) => `Crear la nota "${name}"`,
       addBibStub: (key) => `Añadir una entrada BibTeX para "${key}" a references.bib`,
@@ -2197,12 +2218,22 @@ export const es: T = {
       "comdtex.texclass": "Clase de LaTeX al exportar",
       "comdtex.citestyle": "Estilo de citas y bibliografía",
       "comdtex.domain": "Convenciones de dominio (biología)",
+      "comdtex.organism": "Organismo para símbolos de genes y proteínas",
     },
     langValues: { en: "Inglés", es: "Español" },
     domainValues: {
       biology: "Convenciones de biología",
       microbiology: "Convenciones de microbiología",
       biomedicine: "Convenciones de biomedicina",
+    },
+    organismValues: {
+      human: "Genes TP53 (cursiva), proteínas TP53",
+      mouse: "Genes Trp53 (cursiva), proteínas TRP53",
+      rat: "Genes Trp53 (cursiva), proteínas TRP53",
+      zebrafish: "Genes tp53 (cursiva), proteínas Tp53",
+      drosophila: "Genes con el nombre del fenotipo mutante",
+      yeast: "Genes CDC28 (cursiva), proteínas Cdc28p",
+      bacteria: "Genes lacZ (cursiva), proteínas LacZ",
     },
     texclassValues: {
       ieeetran: "Congreso IEEE",

@@ -1451,6 +1451,10 @@ export const en: T = {
     fmAuthor: "Author name",
     fmDate: "Document date",
     fmTags: "List: [t1, t2] or - bullet",
+    fmDomainDesc:
+      "Turns on the biology check: warnings for species names and gene symbols that are not italic, and for E. coli used before Escherichia coli. It never rewrites your text.",
+    fmOrganismDesc:
+      "With the biology check, also applies one organism's gene and protein conventions (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 vs TP53, tp53, CDC28, lacZ. Ctrl+. wraps or unwraps the italics.",
     wikilinkRow: "Link: click in preview to navigate",
     wikilinkDesc:
       "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
@@ -2109,6 +2113,21 @@ export const en: T = {
       dataUndeclared: (id) => `Undeclared dataset: @${id}`,
       spellUnknown: (word) => `Possible spelling mistake: ${word}`,
       bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
+      bioAbbrevFirst: (abbreviated, full) =>
+        `${abbreviated} comes before its full name: write ${full} at the first mention`,
+      bioGeneCase: (text, suggestion, organism) =>
+        `${text}: ${organism} gene symbols are written ${suggestion}`,
+      bioProteinItalic: (text, suggestion, organism) =>
+        `${text}: ${organism} protein symbols are not italic, write ${suggestion}`,
+      bioOrganisms: {
+        human: "human",
+        mouse: "mouse",
+        rat: "rat",
+        zebrafish: "zebrafish",
+        drosophila: "Drosophila",
+        yeast: "yeast",
+        bacteria: "bacterial",
+      },
       bibUnclosed: (type, close) => `Unclosed @${type} entry (missing '${close}')`,
       bibUnknownType: (type) => `Unknown entry type: @${type}`,
       bibNoKey: (type) => `@${type} entry has no citation key`,
@@ -2126,6 +2145,8 @@ export const en: T = {
       closeEnv: (name) => `Close the :::${name} environment`,
       removeStrayClose: "Remove the stray :::",
       replaceWith: (text) => `Change to "${text}"`,
+      italicize: (text) => `Italicize ${text}`,
+      unitalicize: (text) => `Remove the italics from ${text}`,
       useCrossFileRef: (ref) => `Use the cross-file form ${ref}`,
       createNote: (name) => `Create note "${name}"`,
       addBibStub: (key) => `Add a BibTeX entry for "${key}" to references.bib`,
@@ -2177,12 +2198,22 @@ export const en: T = {
       "comdtex.texclass": "LaTeX class used on export",
       "comdtex.citestyle": "Citation and bibliography style",
       "comdtex.domain": "Domain conventions (biology)",
+      "comdtex.organism": "Organism for gene and protein symbols",
     },
     langValues: { en: "English", es: "Spanish" },
     domainValues: {
       biology: "Biology conventions",
       microbiology: "Microbiology conventions",
       biomedicine: "Biomedicine conventions",
+    },
+    organismValues: {
+      human: "Genes TP53 (italic), proteins TP53",
+      mouse: "Genes Trp53 (italic), proteins TRP53",
+      rat: "Genes Trp53 (italic), proteins TRP53",
+      zebrafish: "Genes tp53 (italic), proteins Tp53",
+      drosophila: "Genes named for the mutant phenotype",
+      yeast: "Genes CDC28 (italic), proteins Cdc28p",
+      bacteria: "Genes lacZ (italic), proteins LacZ",
     },
     texclassValues: {
       ieeetran: "IEEE conference",

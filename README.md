@@ -267,7 +267,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - Named datasets: a `:::data{#data:growth}` block declares a CSV selection once and prints nothing; other blocks use it with `@data:growth` and can narrow it further. Duplicate, missing and unused datasets are reported in the Labels panel and flagged while writing
 - Tables from CSV by selection: a `:::csv` block naming `data.csv (A:B, D) (1:8, 12)` renders the slice as a table and re-reads the file on every render (letters, header names or indices; non-contiguous ranges; order preserved)
 - Units and chemistry: `si(9.81, m/s^2)` and `ce(H2O)` render in the preview and export as real `siunitx` and `mhchem`; packages load only when used
-- Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols
+- Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols, abbreviated species used before their full name, and, with `comdtex.organism: human | mouse | rat | zebrafish | drosophila | yeast | bacteria`, gene and protein symbols that break that organism's capitalization and italic rules (quick fixes with Ctrl+.)
 - Shorthand system: expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
 - Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references

@@ -483,6 +483,52 @@ describe("tables, gaps, shorthands, footnotes, labels", () => {
   })
 })
 
+describe("biology quick fixes", () => {
+  const bio = (body: string, organism = "") =>
+    `---\ncomdtex.domain: biology\n${organism ? `comdtex.organism: ${organism}\n` : ""}---\n${body}`
+
+  it("italicizes a binomial and the result no longer warns", () => {
+    const out = fixedBy(
+      bio("We grew Escherichia coli."),
+      "bio-binomial",
+      "Italicize Escherichia coli",
+    )
+    expect(out).toBe(bio("We grew *Escherichia coli*."))
+    expect(lintMarkers(out).filter((m) => m.code === "bio-binomial")).toHaveLength(0)
+  })
+
+  it("italicizes a gene symbol", () => {
+    expect(fixedBy(bio("Expression of TP53 rose."), "bio-gene", "Italicize TP53")).toBe(
+      bio("Expression of *TP53* rose."),
+    )
+  })
+
+  it("italicizes a gene with the organism's capitalization", () => {
+    const out = fixedBy(bio("The TRP53 gene.", "mouse"), "bio-gene", "Italicize Trp53")
+    expect(out).toBe(bio("The *Trp53* gene.", "mouse"))
+    expect(lintMarkers(out).filter((m) => String(m.code).startsWith("bio-"))).toHaveLength(0)
+  })
+
+  it("fixes the capitalization of an italic gene", () => {
+    const out = fixedBy(bio("We cut *TRP53* here.", "mouse"), "bio-gene-case", /Change to/)
+    expect(out).toBe(bio("We cut *Trp53* here.", "mouse"))
+  })
+
+  it("removes the italics from a protein", () => {
+    const out = fixedBy(
+      bio("The *Cdc28p* kinase.", "yeast"),
+      "bio-protein-italic",
+      /Remove the italics/,
+    )
+    expect(out).toBe(bio("The Cdc28p kinase.", "yeast"))
+  })
+
+  it("offers no fix for an abbreviation used before its full name", () => {
+    const text = bio("*E. coli* grew; later *Escherichia coli*.")
+    expect(actionsFor(text, "bio-binomial-first")).toEqual([])
+  })
+})
+
 describe("suggestion helpers", () => {
   it("editDistance is Levenshtein and gives up past the limit", () => {
     expect(editDistance("kitten", "sitting")).toBe(3)

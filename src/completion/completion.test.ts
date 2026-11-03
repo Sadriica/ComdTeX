@@ -493,6 +493,16 @@ describe("frontmatter", () => {
     )
     const domain = await complete("---\ncomdtex.domain: |\n---")
     expect(labels(domain)).toEqual(["biology", "microbiology", "biomedicine"])
+    const organism = await complete("---\ncomdtex.organism: |\n---")
+    expect(labels(organism)).toEqual([
+      "human",
+      "mouse",
+      "rat",
+      "zebrafish",
+      "drosophila",
+      "yeast",
+      "bacteria",
+    ])
   })
 
   it("offers today for date", async () => {

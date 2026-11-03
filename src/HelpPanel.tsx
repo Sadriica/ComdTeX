@@ -464,6 +464,8 @@ export default function HelpPanel() {
           <Row code="author" desc={hp.fmAuthor} />
           <Row code="date" desc={hp.fmDate} />
           <Row code="tags" desc={hp.fmTags} />
+          <Row code="comdtex.domain: biology" desc={hp.fmDomainDesc} />
+          <Row code="comdtex.organism: mouse" desc={hp.fmOrganismDesc} />
         </Section>
 
         {/* ── Wikilinks & backlinks ── */}
