@@ -1201,6 +1201,12 @@ export interface T {
 
   helpPanel: {
     docsLink: string
+    resultValues: string
+    resultValuesIntro: string
+    resultValuesCell: string
+    resultValuesJson: string
+    resultValuesFormat: string
+    resultValuesP: string
     environments: string
     shorthands: string
     equations: string
@@ -1371,6 +1377,14 @@ export interface T {
     fmAuthor: string
     fmDate: string
     fmTags: string
+    biology: string
+    bioDesc: string
+    bioItalicRow: string
+    bioAccessionRow: string
+    bioAccessionDesc: string
+    bioDataAvailDesc: string
+    fmDomainDesc: string
+    fmOrganismDesc: string
     // wikilinks
     wikilinkRow: string
     wikilinkDesc: string
@@ -1456,6 +1470,8 @@ export interface T {
     figureLabelDesc: string
     figureRef: string
     figureRefDesc: string
+    supplementMarker: string
+    supplementMarkerDesc: string
     // user snippets section
     userSnippets: string
     userSnippetsDesc: string
@@ -1491,6 +1507,10 @@ export interface T {
     truthTable: string
     truthTableDesc: string
     truthTableExample: string
+    // sequence section
+    seq: string
+    seqDesc: string
+    seqExample: string
     // graph visualizer section
     graphViz: string
     graphVizDesc: string
@@ -1738,6 +1758,7 @@ export interface T {
       crossEnvRef: string
       bibtex: string
       macros: string
+      seqHighlights: string
     }
     diagnostics: string
     compatibility: string
@@ -1937,8 +1958,26 @@ export interface T {
       mathError: (detail: string) => string
       dataDuplicate: (id: string) => string
       dataUndeclared: (id: string) => string
+      valueUndeclared: (id: string) => string
+      valueSourceMissing: (file: string) => string
+      valueSourceUnreadable: (file: string) => string
+      valueCellMissing: (cell: string) => string
+      valueNotNumber: (text: string) => string
+      seqEmpty: () => string
+      seqInvalidChar: (char: string, position: number) => string
+      seqBadOption: (detail: string) => string
+      seqBadRange: (detail: string) => string
       spellUnknown: (word: string) => string
       bioItalic: (text: string, suggestion: string) => string
+      bioDataAvailability: (accession: string | null) => string
+      bioAbbrevFirst: (abbreviated: string, full: string) => string
+      bioGeneCase: (text: string, suggestion: string, organism: string) => string
+      bioProteinItalic: (text: string, suggestion: string, organism: string) => string
+      /** Organism names as the messages above use them, keyed by `comdtex.organism` value. */
+      bioOrganisms: Record<
+        "human" | "mouse" | "rat" | "zebrafish" | "drosophila" | "yeast" | "bacteria",
+        string
+      >
       bibUnclosed: (type: string, close: string) => string
       bibUnknownType: (type: string) => string
       bibNoKey: (type: string) => string
@@ -1963,6 +2002,8 @@ export interface T {
       trimExtraArgs: (name: string, expected: number) => string
       addFootnoteDef: (id: string) => string
       renameLabel: (id: string) => string
+      italicize: (text: string) => string
+      unitalicize: (text: string) => string
       noteCreated: (name: string) => string
       bibStubAdded: (key: string) => string
       bibStubFailed: string
@@ -1993,6 +2034,7 @@ export interface T {
     frontmatterKeys: Record<string, string>
     langValues: Record<string, string>
     domainValues: Record<string, string>
+    organismValues: Record<string, string>
     texclassValues: Record<string, string>
     citestyleValues: Record<string, string>
   }

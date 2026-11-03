@@ -133,7 +133,7 @@ export const es: T = {
     newFolder: "Nueva carpeta",
     changeVault: "Cambiar vault",
     loading: "Cargando…",
-    noFiles: "No hay archivos .md, .tex o .bib",
+    noFiles: "No hay archivos .md, .qmd, .Rmd, .tex o .bib",
     filenamePlaceholder: "nombre.md",
     folderPlaceholder: "carpeta",
     open: "Abrir",
@@ -1279,6 +1279,15 @@ export const es: T = {
   },
 
   helpPanel: {
+    resultValues: "Números desde tus archivos de resultados",
+    resultValuesIntro:
+      "Declara el archivo de resultados una vez con :::data{#data:stats} y cita valores con val(). Se actualizan cuando el pipeline reescribe el archivo; un valor que falta muestra una nota visible.",
+    resultValuesCell:
+      "Por clave de fila (primera columna) o por celda: val(stats, pvalue), val(stats, effect, ci), val(stats, B4)",
+    resultValuesJson: "Archivo JSON, ruta con puntos: val(fit, metrics.auc), val(fit, folds.0.acc)",
+    resultValuesFormat:
+      "Formato: 3sf (cifras significativas), .2f (decimales), .2e (científico), p (valor p)",
+    resultValuesP: "Dentro de otros atajos: si(val(stats, effect, 3sf), mg/L)",
     docsLink: "Documentación completa",
     environments: "Entornos matemáticos",
     shorthands: "Shorthands matemáticos: Tab",
@@ -1460,6 +1469,20 @@ export const es: T = {
     fmAuthor: "Nombre del autor",
     fmDate: "Fecha del documento",
     fmTags: "Lista: [t1, t2] o - bullet",
+    biology: "Biología",
+    bioDesc:
+      "Actívalo con comdtex.domain: biology en el front matter. Tu archivo nunca se reescribe.",
+    bioItalicRow:
+      "Los binomios y símbolos de genes que no están en cursiva reciben una advertencia",
+    bioAccessionRow: "Números de acceso",
+    bioAccessionDesc:
+      "En la vista previa y en la exportación a LaTeX enlazan a su base de datos (GenBank, RefSeq, SRA, GEO, Ensembl, ArrayExpress; PDB y UniProt cuando se escriben como PDB 1ABC o UniProt P04637)",
+    bioDataAvailDesc:
+      "Aparece una nota cuando citas accesos o datos de secuenciación y no tienes una sección de Disponibilidad de datos",
+    fmDomainDesc:
+      "Activa la revisión de biología: avisa de nombres de especies y símbolos de genes sin cursiva, y de E. coli usado antes que Escherichia coli. Nunca reescribe tu texto.",
+    fmOrganismDesc:
+      "Con la revisión de biología, aplica además las convenciones de genes y proteínas de un organismo (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 frente a TP53, tp53, CDC28, lacZ. Ctrl+. pone o quita la cursiva.",
     wikilinkRow: "Enlace: clic en preview para navegar",
     wikilinkDesc:
       "La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.",
@@ -1539,6 +1562,9 @@ export const es: T = {
     figureLabelDesc: "Imagen numerada: genera 'Figura N: Leyenda'",
     figureRef: "@fig:diagrama",
     figureRefDesc: "Referencia → (N)",
+    supplementMarker: "<!-- supplement -->",
+    supplementMarkerDesc:
+      "En su propia línea: desde ahí las figuras y tablas reinician en 1 como Figura S1, Tabla S1 (la exportación a LaTeX también reinicia los contadores)",
     userSnippets: "Snippets de usuario (snippets.md)",
     userSnippetsDesc:
       "Crea snippets personalizados en snippets.md en la raíz del vault. Se expanden en el autocompletado del editor.",
@@ -1580,6 +1606,11 @@ export const es: T = {
     truthTable: "Tabla de verdad",
     truthTableDesc: "Genera la tabla de verdad de una o varias expresiones booleanas.",
     truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    seq: "Secuencia (ADN, ARN, proteína)",
+    seqDesc:
+      "Muestra un registro FASTA o una secuencia cruda en grupos numerados de 10, con contenido GC y longitud. Opciones: type, highlight (12-31 etiqueta), motif, revcomp, width, group. Se numera como “Sequence N” (sin referencias).",
+    seqExample:
+      ":::seq[Cebadores]\ntype: dna\nhighlight: 1-20 cebador-F, 41-60 cebador-R\nmotif: GAATTC\n>pUC-insert sitio de clonación\nATGGAATTCGGATCCAAGCTTGCATGCCTGCAGGTCGACTCTAGAGGATCCCCGGGTACCGAGCTCGAATTC\n:::",
     graphViz: "Grafo (Teoría de grafos)",
     graphVizDesc: "Visualiza grafos dirigidos y no dirigidos a partir de una lista de aristas.",
     graphVizExample: ":::graph[Ejemplo]\nA -- B\nA -- C\nB -> D\n:::",
@@ -1735,7 +1766,7 @@ export const es: T = {
     venueJournal: "Revista (journal)",
     venueBooktitle: "Evento (booktitle)",
     venueSource: "Booktitle / Fuente",
-    doiPlaceholder: "DOI o ID de arXiv (p. ej. 10.1000/… o 2301.00001)",
+    doiPlaceholder: "DOI, ID de arXiv, PMID o PMCID (p. ej. 10.1000/…, 2301.00001, PMID: 12345678)",
     doiAdd: "Buscar y añadir",
     doiFetching: "Buscando…",
     doiSuccess: (key) => `Entrada "${key}" añadida desde DOI`,
@@ -1905,6 +1936,23 @@ export const es: T = {
       name: "Manuscrito APA",
       description: "Manuscrito estilo APA 7 (apa7); exporta con la clase real",
     },
+    "journal-plos": {
+      name: "Paper PLOS",
+      description:
+        "PLOS ONE / PLOS Computational Biology; exporta sobre article con el preámbulo de PLOS",
+    },
+    "journal-bioinformatics": {
+      name: "Paper Bioinformatics",
+      description: "Bioinformatics (OUP); exporta sobre article a dos columnas",
+    },
+    "journal-biorxiv": {
+      name: "Preprint bioRxiv",
+      description: "Preprint de biología con afiliaciones (authblk) y números de línea",
+    },
+    "journal-bmc": {
+      name: "Paper BMC",
+      description: "BMC Bioinformatics / Genome Biology; artículo con números de línea",
+    },
   },
 
   documentLab: {
@@ -1923,6 +1971,8 @@ export const es: T = {
         "Referencias a entornos de otro documento no se pueden numerar fuera de la app; se exportan como Teorema (?)",
       bibtex: "Citas BibTeX requieren plugin externo en Obsidian",
       macros: "Macros LaTeX globales requieren MathJax/KaTeX configurado en Obsidian",
+      seqHighlights:
+        "Los resaltados y motivos de secuencia se exportan como texto plano con una leyenda de rangos (sin color)",
     },
     diag: {
       brokenRef: (id) => `Referencia rota: @${id}`,
@@ -2128,8 +2178,37 @@ export const es: T = {
       mathError: (detail) => `Error de matemáticas: ${detail}`,
       dataDuplicate: (id) => `Dataset duplicado: ${id}`,
       dataUndeclared: (id) => `Dataset no declarado: @${id}`,
+      valueUndeclared: (id) => `val(): no hay un dataset ${id} declarado en esta nota`,
+      valueSourceMissing: (file) => `val(): no se encontró ${file} en este vault`,
+      valueSourceUnreadable: (file) => `val(): no se pudo leer ${file}`,
+      valueCellMissing: (cell) => `val(): no hay valor en ${cell}`,
+      valueNotNumber: (text) => `val(): "${text}" no es un número, no se puede formatear`,
+      seqEmpty: () => "El bloque de secuencia no tiene secuencia",
+      seqInvalidChar: (char, position) =>
+        `Carácter de secuencia no válido "${char}" en la posición ${position}`,
+      seqBadOption: (detail) => `Opción de secuencia: ${detail}`,
+      seqBadRange: (detail) => `Resaltado de secuencia: ${detail}`,
       spellUnknown: (word) => `Posible error ortográfico: ${word}`,
       bioItalic: (text, suggestion) => `${text}: escríbelo en cursiva como ${suggestion}`,
+      bioDataAvailability: (accession) =>
+        accession
+          ? `Citas ${accession}, pero el documento no tiene una sección "Disponibilidad de datos". Las revistas la esperan.`
+          : `Este documento de biología no tiene una sección "Disponibilidad de datos". Las revistas la esperan.`,
+      bioAbbrevFirst: (abbreviated, full) =>
+        `${abbreviated} aparece antes que su nombre completo: escribe ${full} en la primera mención`,
+      bioGeneCase: (text, suggestion, organism) =>
+        `${text}: los genes de ${organism} se escriben ${suggestion}`,
+      bioProteinItalic: (text, suggestion, organism) =>
+        `${text}: las proteínas de ${organism} no van en cursiva, escríbelo como ${suggestion}`,
+      bioOrganisms: {
+        human: "humanos",
+        mouse: "ratón",
+        rat: "rata",
+        zebrafish: "pez cebra",
+        drosophila: "Drosophila",
+        yeast: "levadura",
+        bacteria: "bacterias",
+      },
       bibUnclosed: (type, close) => `Entrada @${type} sin cerrar (falta '${close}')`,
       bibUnknownType: (type) => `Tipo de entrada desconocido: @${type}`,
       bibNoKey: (type) => `Entrada @${type} sin clave de citación`,
@@ -2147,6 +2226,8 @@ export const es: T = {
       closeEnv: (name) => `Cerrar el entorno :::${name}`,
       removeStrayClose: "Quitar el ::: sobrante",
       replaceWith: (text) => `Cambiar a "${text}"`,
+      italicize: (text) => `Poner ${text} en cursiva`,
+      unitalicize: (text) => `Quitar la cursiva de ${text}`,
       useCrossFileRef: (ref) => `Usar la forma entre archivos ${ref}`,
       createNote: (name) => `Crear la nota "${name}"`,
       addBibStub: (key) => `Añadir una entrada BibTeX para "${key}" a references.bib`,
@@ -2197,6 +2278,7 @@ export const es: T = {
       "comdtex.texclass": "Clase de LaTeX al exportar",
       "comdtex.citestyle": "Estilo de citas y bibliografía",
       "comdtex.domain": "Convenciones de dominio (biología)",
+      "comdtex.organism": "Organismo para símbolos de genes y proteínas",
     },
     langValues: { en: "Inglés", es: "Español" },
     domainValues: {
@@ -2204,11 +2286,24 @@ export const es: T = {
       microbiology: "Convenciones de microbiología",
       biomedicine: "Convenciones de biomedicina",
     },
+    organismValues: {
+      human: "Genes TP53 (cursiva), proteínas TP53",
+      mouse: "Genes Trp53 (cursiva), proteínas TRP53",
+      rat: "Genes Trp53 (cursiva), proteínas TRP53",
+      zebrafish: "Genes tp53 (cursiva), proteínas Tp53",
+      drosophila: "Genes con el nombre del fenotipo mutante",
+      yeast: "Genes CDC28 (cursiva), proteínas Cdc28p",
+      bacteria: "Genes lacZ (cursiva), proteínas LacZ",
+    },
     texclassValues: {
       ieeetran: "Congreso IEEE",
       acmart: "Artículo ACM",
       elsarticle: "Artículo Elsevier",
       apa7: "Manuscrito APA 7",
+      plos: "Artículo PLOS",
+      bioinformatics: "Artículo Bioinformatics",
+      biorxiv: "Preprint bioRxiv",
+      bmc: "Artículo BMC",
     },
     citestyleValues: {
       default: "Predeterminado de ComdTeX",

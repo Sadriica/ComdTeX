@@ -2,6 +2,7 @@
 // closed vocabulary (`lang`, `comdtex.texclass`, `comdtex.citestyle`,
 // `comdtex.domain`) and today's date for `date`.
 
+import { BIO_ORGANISMS } from "../bioConventions"
 import type * as monacoApi from "monaco-editor"
 import { CITE_STYLES } from "../citeStyles"
 import { completionText } from "./state"
@@ -65,6 +66,7 @@ export const FRONTMATTER_KEYS = [
   "comdtex.texclass",
   "comdtex.citestyle",
   "comdtex.domain",
+  "comdtex.organism",
 ] as const
 
 const KEY_SNIPPETS: Record<string, string> = {
@@ -95,6 +97,8 @@ async function valuesFor(key: string): Promise<{ value: string; note: string }[]
       return Object.keys(CITE_STYLES).map((v) => ({ value: v, note: t.citestyleValues[v] ?? "" }))
     case "comdtex.domain":
       return DOMAIN_VALUES.map((v) => ({ value: v, note: t.domainValues[v] ?? "" }))
+    case "comdtex.organism":
+      return BIO_ORGANISMS.map((v) => ({ value: v, note: t.organismValues[v] ?? "" }))
     case "date":
       return [{ value: todayIso(), note: t.todayDate }]
     default:

@@ -133,7 +133,7 @@ export const en: T = {
     newFolder: "New folder",
     changeVault: "Change vault",
     loading: "Loading…",
-    noFiles: "No .md, .tex or .bib files",
+    noFiles: "No .md, .qmd, .Rmd, .tex or .bib files",
     filenamePlaceholder: "filename.md",
     folderPlaceholder: "folder",
     open: "Open",
@@ -1272,6 +1272,15 @@ export const en: T = {
 
   helpPanel: {
     docsLink: "Full documentation",
+    resultValues: "Numbers from your results files",
+    resultValuesIntro:
+      "Declare the results file once with :::data{#data:stats}, then quote values with val(). They update when the pipeline rewrites the file; a missing value shows a visible note.",
+    resultValuesCell:
+      "By row key (first column) or by cell: val(stats, pvalue), val(stats, effect, ci), val(stats, B4)",
+    resultValuesJson: "JSON file, dotted path: val(fit, metrics.auc), val(fit, folds.0.acc)",
+    resultValuesFormat:
+      "Format: 3sf (significant figures), .2f (decimals), .2e (scientific), p (p-value)",
+    resultValuesP: "Inside other shorthands: si(val(stats, effect, 3sf), mg/L)",
     environments: "Math environments",
     shorthands: "Math shorthands: Tab",
     formatting: "Text formatting (Markdown)",
@@ -1451,6 +1460,19 @@ export const en: T = {
     fmAuthor: "Author name",
     fmDate: "Document date",
     fmTags: "List: [t1, t2] or - bullet",
+    biology: "Biology",
+    bioDesc:
+      "Opt in with comdtex.domain: biology in the front matter. Nothing in your file is ever rewritten.",
+    bioItalicRow: "Binomials and gene symbols that are not italic get a warning",
+    bioAccessionRow: "Accession numbers",
+    bioAccessionDesc:
+      "In the preview and the LaTeX export they link to their database (GenBank, RefSeq, SRA, GEO, Ensembl, ArrayExpress; PDB and UniProt when written as PDB 1ABC or UniProt P04637)",
+    bioDataAvailDesc:
+      "A note appears when you cite accessions or sequencing data but have no Data availability section",
+    fmDomainDesc:
+      "Turns on the biology check: warnings for species names and gene symbols that are not italic, and for E. coli used before Escherichia coli. It never rewrites your text.",
+    fmOrganismDesc:
+      "With the biology check, also applies one organism's gene and protein conventions (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 vs TP53, tp53, CDC28, lacZ. Ctrl+. wraps or unwraps the italics.",
     wikilinkRow: "Link: click in preview to navigate",
     wikilinkDesc:
       "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
@@ -1527,6 +1549,9 @@ export const en: T = {
     figureLabelDesc: "Numbered image: generates 'Figure N: Caption'",
     figureRef: "@fig:diagram",
     figureRefDesc: "Reference → (N)",
+    supplementMarker: "<!-- supplement -->",
+    supplementMarkerDesc:
+      "Own line: from here on, figures and tables restart at 1 as Figure S1, Table S1 (LaTeX export restarts the counters too)",
     userSnippets: "User snippets (snippets.md)",
     userSnippetsDesc:
       "Create custom snippets in snippets.md at the vault root. They appear in the editor's autocomplete.",
@@ -1567,6 +1592,11 @@ export const en: T = {
     truthTable: "Truth table",
     truthTableDesc: "Generates the truth table for one or more boolean expressions.",
     truthTableExample: ":::truth[De Morgan]\n¬(p ∧ q)\n¬p ∨ ¬q\n:::",
+    seq: "Sequence (DNA, RNA, protein)",
+    seqDesc:
+      "Shows a FASTA record or raw sequence in numbered groups of 10, with GC content and length. Options: type, highlight (12-31 label), motif, revcomp, width, group. Numbered as “Sequence N” (not referenceable).",
+    seqExample:
+      ":::seq[Primers]\ntype: dna\nhighlight: 1-20 primer-F, 41-60 primer-R\nmotif: GAATTC\n>pUC-insert cloning site\nATGGAATTCGGATCCAAGCTTGCATGCCTGCAGGTCGACTCTAGAGGATCCCCGGGTACCGAGCTCGAATTC\n:::",
     graphViz: "Graph (Graph theory)",
     graphVizDesc: "Visualizes directed and undirected graphs from an edge list.",
     graphVizExample: ":::graph[Example]\nA -- B\nA -- C\nB -> D\n:::",
@@ -1721,7 +1751,7 @@ export const en: T = {
     venueJournal: "Journal",
     venueBooktitle: "Event (booktitle)",
     venueSource: "Booktitle / Source",
-    doiPlaceholder: "DOI or arXiv id (e.g. 10.1000/… or 2301.00001)",
+    doiPlaceholder: "DOI, arXiv id, PMID or PMCID (e.g. 10.1000/…, 2301.00001, PMID: 12345678)",
     doiAdd: "Fetch & add",
     doiFetching: "Fetching…",
     doiSuccess: (key) => `Added entry "${key}" from DOI`,
@@ -1888,6 +1918,23 @@ export const en: T = {
       name: "APA manuscript",
       description: "APA 7 style manuscript (apa7); exports against the real class",
     },
+    "journal-plos": {
+      name: "PLOS paper",
+      description:
+        "PLOS ONE / PLOS Computational Biology; exports on article with the PLOS preamble",
+    },
+    "journal-bioinformatics": {
+      name: "Bioinformatics paper",
+      description: "Bioinformatics (OUP); exports on two-column article",
+    },
+    "journal-biorxiv": {
+      name: "bioRxiv preprint",
+      description: "Biology preprint with affiliations (authblk) and line numbers",
+    },
+    "journal-bmc": {
+      name: "BMC paper",
+      description: "BMC Bioinformatics / Genome Biology; article with line numbers",
+    },
   },
 
   documentLab: {
@@ -1906,6 +1953,8 @@ export const en: T = {
         "References to environments in another document cannot be numbered outside the app; they are exported as Theorem (?)",
       bibtex: "BibTeX citations need an external plugin in Obsidian",
       macros: "Global LaTeX macros need MathJax/KaTeX configured in Obsidian",
+      seqHighlights:
+        "Sequence highlights and motifs are exported as plain text with a legend of their ranges (no colour)",
     },
     diag: {
       brokenRef: (id) => `Broken reference: @${id}`,
@@ -2107,8 +2156,37 @@ export const en: T = {
       mathError: (detail) => `Math error: ${detail}`,
       dataDuplicate: (id) => `Duplicate dataset: ${id}`,
       dataUndeclared: (id) => `Undeclared dataset: @${id}`,
+      valueUndeclared: (id) => `val(): no dataset ${id} is declared in this note`,
+      valueSourceMissing: (file) => `val(): ${file} was not found in this vault`,
+      valueSourceUnreadable: (file) => `val(): ${file} could not be read`,
+      valueCellMissing: (cell) => `val(): no value at ${cell}`,
+      valueNotNumber: (text) => `val(): "${text}" is not a number, so it cannot be formatted`,
+      seqEmpty: () => "The sequence block has no sequence",
+      seqInvalidChar: (char, position) =>
+        `Invalid sequence character "${char}" at position ${position}`,
+      seqBadOption: (detail) => `Sequence option: ${detail}`,
+      seqBadRange: (detail) => `Sequence highlight: ${detail}`,
       spellUnknown: (word) => `Possible spelling mistake: ${word}`,
       bioItalic: (text, suggestion) => `${text}: italicize as ${suggestion}`,
+      bioDataAvailability: (accession) =>
+        accession
+          ? `${accession} is cited but the document has no "Data availability" section. Journals expect one.`
+          : `This biology document has no "Data availability" section. Journals expect one.`,
+      bioAbbrevFirst: (abbreviated, full) =>
+        `${abbreviated} comes before its full name: write ${full} at the first mention`,
+      bioGeneCase: (text, suggestion, organism) =>
+        `${text}: ${organism} gene symbols are written ${suggestion}`,
+      bioProteinItalic: (text, suggestion, organism) =>
+        `${text}: ${organism} protein symbols are not italic, write ${suggestion}`,
+      bioOrganisms: {
+        human: "human",
+        mouse: "mouse",
+        rat: "rat",
+        zebrafish: "zebrafish",
+        drosophila: "Drosophila",
+        yeast: "yeast",
+        bacteria: "bacterial",
+      },
       bibUnclosed: (type, close) => `Unclosed @${type} entry (missing '${close}')`,
       bibUnknownType: (type) => `Unknown entry type: @${type}`,
       bibNoKey: (type) => `@${type} entry has no citation key`,
@@ -2126,6 +2204,8 @@ export const en: T = {
       closeEnv: (name) => `Close the :::${name} environment`,
       removeStrayClose: "Remove the stray :::",
       replaceWith: (text) => `Change to "${text}"`,
+      italicize: (text) => `Italicize ${text}`,
+      unitalicize: (text) => `Remove the italics from ${text}`,
       useCrossFileRef: (ref) => `Use the cross-file form ${ref}`,
       createNote: (name) => `Create note "${name}"`,
       addBibStub: (key) => `Add a BibTeX entry for "${key}" to references.bib`,
@@ -2177,6 +2257,7 @@ export const en: T = {
       "comdtex.texclass": "LaTeX class used on export",
       "comdtex.citestyle": "Citation and bibliography style",
       "comdtex.domain": "Domain conventions (biology)",
+      "comdtex.organism": "Organism for gene and protein symbols",
     },
     langValues: { en: "English", es: "Spanish" },
     domainValues: {
@@ -2184,11 +2265,24 @@ export const en: T = {
       microbiology: "Microbiology conventions",
       biomedicine: "Biomedicine conventions",
     },
+    organismValues: {
+      human: "Genes TP53 (italic), proteins TP53",
+      mouse: "Genes Trp53 (italic), proteins TRP53",
+      rat: "Genes Trp53 (italic), proteins TRP53",
+      zebrafish: "Genes tp53 (italic), proteins Tp53",
+      drosophila: "Genes named for the mutant phenotype",
+      yeast: "Genes CDC28 (italic), proteins Cdc28p",
+      bacteria: "Genes lacZ (italic), proteins LacZ",
+    },
     texclassValues: {
       ieeetran: "IEEE conference",
       acmart: "ACM article",
       elsarticle: "Elsevier article",
       apa7: "APA 7 manuscript",
+      plos: "PLOS article",
+      bioinformatics: "Bioinformatics article",
+      biorxiv: "bioRxiv preprint",
+      bmc: "BMC article",
     },
     citestyleValues: {
       default: "ComdTeX default",

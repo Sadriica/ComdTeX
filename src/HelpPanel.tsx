@@ -244,6 +244,11 @@ export default function HelpPanel() {
           <Row code=":::truth[title]" desc={hp.truthTableDesc} />
           <pre className="hp-code hp-code-block">{hp.truthTableExample}</pre>
 
+          <div className="hp-label">{hp.seq}</div>
+          <p className="hp-intro">{hp.seqDesc}</p>
+          <Row code=":::seq[title]" desc={hp.seqDesc} />
+          <pre className="hp-code hp-code-block">{hp.seqExample}</pre>
+
           <div className="hp-label">{hp.graphViz}</div>
           <p className="hp-intro">{hp.graphVizDesc}</p>
           <Row code=":::graph[title]" desc={hp.graphVizDesc} />
@@ -464,6 +469,28 @@ export default function HelpPanel() {
           <Row code="author" desc={hp.fmAuthor} />
           <Row code="date" desc={hp.fmDate} />
           <Row code="tags" desc={hp.fmTags} />
+          <Row code="comdtex.domain: biology" desc={hp.fmDomainDesc} />
+          <Row code="comdtex.organism: mouse" desc={hp.fmOrganismDesc} />
+        </Section>
+
+        {/* ── Biology ── */}
+        <Section title={hp.biology}>
+          <p className="hp-intro">{hp.bioDesc}</p>
+          <div className="hp-codeblock">{`---\ncomdtex.domain: biology\n---`}</div>
+          <Row code="E. coli, TP53" desc={hp.bioItalicRow} />
+          <Row code="MN908947.3, SRR1234567, GSE12345" desc={hp.bioAccessionRow} />
+          <p className="hp-intro">{hp.bioAccessionDesc}</p>
+          <Row code="## Data availability" desc={hp.bioDataAvailDesc} />
+        </Section>
+
+        {/* ── Results values ── */}
+        <Section title={hp.resultValues}>
+          <p className="hp-intro">{hp.resultValuesIntro}</p>
+          <div className="hp-codeblock">{`:::data{#data:stats}\nstats.csv\n:::\n\nn = val(stats, n), (val(stats, pvalue, p))`}</div>
+          <Row code="val(stats, pvalue)" desc={hp.resultValuesCell} />
+          <Row code="val(fit, metrics.auc)" desc={hp.resultValuesJson} />
+          <Row code="val(stats, effect, 3sf)" desc={hp.resultValuesFormat} />
+          <Row code="si(val(stats, effect, 3sf), mg/L)" desc={hp.resultValuesP} />
         </Section>
 
         {/* ── Wikilinks & backlinks ── */}
@@ -555,6 +582,7 @@ export default function HelpPanel() {
           <p className="hp-intro">{hp.figuresDesc}</p>
           <Row code={hp.figureLabel} desc={hp.figureLabelDesc} render="Figura 1: Leyenda" />
           <Row code={hp.figureRef} desc={hp.figureRefDesc} render="Figura 1" />
+          <Row code={hp.supplementMarker} desc={hp.supplementMarkerDesc} render="Figura S1" />
         </Section>
 
         {/* ── User snippets ── */}

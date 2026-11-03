@@ -11,6 +11,10 @@
  */
 import { blankInlineCode, stripCodeFences } from "./equations"
 import { activeDocTerms } from "./docLang"
+import { SUPPLEMENT_HTML_SRC, SUPPLEMENT_LINE_SRC, supplementNumber } from "./supplement"
+
+/** A figure's printed number: `2` in the main text, `"S2"` after the supplement marker. */
+export type FigNumber = number | string
 
 let figCounter = 0
 const figLabels = new Map<string, number>()
@@ -28,9 +32,10 @@ export function nextFigNumber(): number {
  * First pass: scan for all figure labels and assign sequential numbers.
  * Returns a Map<label, number> including the "fig:" prefix.
  */
-export function prescanFigures(text: string): Map<string, number> {
-  const labels = new Map<string, number>()
+export function prescanFigures(text: string): Map<string, FigNumber> {
+  const labels = new Map<string, FigNumber>()
   let counter = 0
+  let inSupplement = false
 
   // Strip fenced + inline code first so an `![...](...)` written inside a code
   // sample isn't counted: `wrapFigures` only counts rendered <img> tags, which
@@ -38,12 +43,23 @@ export function prescanFigures(text: string): Map<string, number> {
   // resolve to the wrong number.
   const stripped = blankInlineCode(stripCodeFences(text))
 
-  // Match: ![...](...)  optionally followed by {#fig:label}
-  const re = /!\[[^\]]*\]\([^)]*\)(?:\s*\{#(fig:[\w:.-]+)\})?/g
+  // Match: ![...](...)  optionally followed by {#fig:label}, or the supplement
+  // marker line, after which numbering restarts with the "S" prefix.
+  const re = new RegExp(
+    String.raw`(${SUPPLEMENT_LINE_SRC})|!\[[^\]]*\]\([^)]*\)(?:\s*\{#(fig:[\w:.-]+)\})?`,
+    "gim",
+  )
   let m: RegExpExecArray | null
   while ((m = re.exec(stripped)) !== null) {
+    if (m[1] !== undefined) {
+      if (!inSupplement) {
+        inSupplement = true
+        counter = 0
+      }
+      continue
+    }
     counter++
-    if (m[1]) labels.set(m[1], counter)
+    if (m[2]) labels.set(m[2], supplementNumber(counter, inSupplement))
   }
 
   return labels
@@ -53,7 +69,7 @@ export function prescanFigures(text: string): Map<string, number> {
  * Replace `@fig:label` references in HTML text.
  * `@fig:1` style numeric refs are always resolved to "Figura N".
  */
-export function resolveFigRefs(text: string, labels: Map<string, number>): string {
+export function resolveFigRefs(text: string, labels: Map<string, FigNumber>): string {
   const word = activeDocTerms().figure
   return text.replace(/@fig:([\w:-]+(?:\.\w+)*)/g, (_full, ref) => {
     // Direct numeric reference
@@ -79,14 +95,27 @@ function figureAnchorId(labelOrNumber: string): string {
  */
 const FIG_LABEL_TITLE_RE = /\s*title="fig-label:(fig:[\w:.-]+)"/
 
-export function wrapFigures(html: string, labels: Map<string, number>): string {
+const FIG_OR_MARKER_RE = new RegExp(
+  String.raw`(${SUPPLEMENT_HTML_SRC})|<img([^>]*?)alt="([^"]*)"([^>]*?)>`,
+  "gi",
+)
+
+export function wrapFigures(html: string, labels: Map<string, FigNumber>): string {
   const word = activeDocTerms().figure
   // Reset a local counter for this pass
   let n = 0
+  let inSupplement = false
 
   return html.replace(
-    /<img([^>]*?)alt="([^"]*)"([^>]*?)>/g,
-    (_match, before: string, alt: string, after: string) => {
+    FIG_OR_MARKER_RE,
+    (match, marker: string | undefined, before: string, alt: string, after: string) => {
+      if (marker !== undefined) {
+        if (!inSupplement) {
+          inSupplement = true
+          n = 0
+        }
+        return match
+      }
       n++
       // `preprocessFigureLabels` smuggles the label through markdown-it in the
       // title slot as `title="fig-label:fig:name"`. Recover it, then strip the
@@ -97,7 +126,9 @@ export function wrapFigures(html: string, labels: Map<string, number>): string {
         before = before.replace(FIG_LABEL_TITLE_RE, "")
         after = after.replace(FIG_LABEL_TITLE_RE, "")
       }
-      const figNum = label ? (labels.get(label) ?? n) : n
+      const figNum = label
+        ? (labels.get(label) ?? supplementNumber(n, inSupplement))
+        : supplementNumber(n, inSupplement)
       const id = figureAnchorId(label ?? String(figNum))
       const escapedAlt = alt.replace(/</g, "&lt;").replace(/>/g, "&gt;")
 

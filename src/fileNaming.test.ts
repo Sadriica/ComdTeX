@@ -77,6 +77,8 @@ describe("finalName", () => {
     expect(finalName("a.tex", "file")).toBe("a.tex")
     expect(finalName("v1.2 notes", "file")).toBe("v1.2 notes.md")
     expect(finalName("name.png", "file")).toBe("name.png.md")
+    expect(finalName("analysis.qmd", "file")).toBe("analysis.qmd")
+    expect(finalName("report.Rmd", "file")).toBe("report.Rmd")
     expect(finalName("name.md", "folder")).toBe("name.md")
   })
 })

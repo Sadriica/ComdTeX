@@ -19,10 +19,14 @@ import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
 import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
+import { SUPPLEMENT_LINE_RE, hasSupplementMarker } from "./supplement"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
 import { resolveDocLanguage } from "./docLang"
+import { accessionsPlugin } from "./accessions"
+import { isBiologyDocument } from "./bioConventions"
+import { seqBlockToLatex } from "./sequence"
 
 interface LatexMacro {
   command: string
@@ -41,6 +45,7 @@ interface LatexMacro {
 const md = new MarkdownIt({ html: true, linkify: false, typographer: false })
   .use(footnotePlugin)
   .use(markPlugin)
+  .use(accessionsPlugin)
   .enable("table")
   .enable("strikethrough")
 
@@ -264,6 +269,8 @@ function crossRefToTex(docPath: string, prefix: string, id: string): string {
 // Set while converting a document: tells exportToTex whether to emit the
 // bibliography commands. Reset at the start of every export.
 let citedInLastPass = false
+// Numbers `:::seq` blocks in document order across the nested mdToTex calls.
+let seqExportCount = 0
 
 function textRefsToTex(text: string): string {
   const out: string[] = []
@@ -708,6 +715,15 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
     /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#([\w:.-]+)\})?\s*\n([\s\S]*?)^:::\s*$/gm,
     (_, rawName, title, label, content) => {
       const envName = rawName.toLowerCase()
+      if (envName === "seq") {
+        // Sequences degrade to verbatim text plus a legend (no texshade).
+        seqExportCount++
+        const tex = seqBlockToLatex(title ?? "", content, seqExportCount, escTex)
+        if (tex === null) return _
+        const key = `ENV${n++}`
+        slots.set(key, tex)
+        return `\x02${key}\x03`
+      }
       if (!ALL_ENVS[envName]) return _
 
       // Convert inner content to LaTeX recursively
@@ -724,13 +740,54 @@ function extractEnvBlocks(text: string): { text: string; slots: Map<string, stri
 
 // ── Main conversion ───────────────────────────────────────────────────────────
 
+/**
+ * The supplement marker (`<!-- supplement -->`, see supplement.ts) becomes the
+ * standard LaTeX restart: flush floats, zero the figure and table counters and
+ * print them with an "S" prefix. `\ref` then yields "S1" with no other change.
+ * Fence-aware so a marker shown in a code sample stays text; only the first
+ * marker counts, matching the preview.
+ */
+const SUPPLEMENT_TEX = [
+  "\\clearpage",
+  "\\setcounter{figure}{0}",
+  "\\setcounter{table}{0}",
+  "\\renewcommand{\\thefigure}{S\\arabic{figure}}",
+  "\\renewcommand{\\thetable}{S\\arabic{table}}",
+].join("\n")
+
+function extractSupplementMarker(text: string): { text: string; slots: Map<string, string> } {
+  const slots = new Map<string, string>()
+  if (!hasSupplementMarker(text)) return { text, slots }
+  let fence: string | null = null
+  let done = false
+  const out = text.split("\n").map((line) => {
+    const f = /^(`{3,}|~{3,})/.exec(line)
+    if (f) {
+      if (fence === null) fence = f[1][0]
+      else if (f[1][0] === fence) fence = null
+      return line
+    }
+    if (fence !== null || !SUPPLEMENT_LINE_RE.test(line)) return line
+    if (done) return ""
+    done = true
+    slots.set("SUPPLEMENT0", SUPPLEMENT_TEX)
+    return "\x02SUPPLEMENT0\x03"
+  })
+  return { text: out.join("\n"), slots }
+}
+
+// Set by exportToTex for documents that opted in with `comdtex.domain: biology`:
+// accession numbers in prose become \href links to their database.
+let linkAccessionsInTex = false
+
 function mdToTex(raw: string): string {
-  const { text: afterEnv, slots: envSlots } = extractEnvBlocks(raw)
+  const { text: markedRaw, slots: supplementSlots } = extractSupplementMarker(raw)
+  const { text: afterEnv, slots: envSlots } = extractEnvBlocks(markedRaw)
   // Callouts run after :::env extraction (so a callout nested inside an env
   // block is handled by that env's own recursive mdToTex call, not here) but
   // before markdown-it ever parses the blockquote lines.
   const { text, slots: calloutSlots } = extractCallouts(afterEnv)
-  const slots = new Map([...envSlots, ...calloutSlots])
+  const slots = new Map([...envSlots, ...calloutSlots, ...supplementSlots])
   const tableSafeText = text.replace(
     /((?:^\s*\|.*\|\s*\n)+)\s*\{#(tbl:[\w:.-]+)\}/gm,
     (_match, tableRows, label) => `${tableRows}\n{#${label}}\n`,
@@ -738,9 +795,9 @@ function mdToTex(raw: string): string {
   const preprocessed = preprocess(preprocessFigureLabels(tableSafeText), "tex")
   let tokens
   try {
-    tokens = md.parse(preprocessed, {})
+    tokens = md.parse(preprocessed, { accessions: linkAccessionsInTex })
   } catch {
-    tokens = md.parse(raw, {})
+    tokens = md.parse(raw, { accessions: linkAccessionsInTex })
   }
   const { tokens: bodyTokens, footnotes } = extractFootnotes(tokens)
   return tokensToTex(bodyTokens, slots, footnotes)
@@ -800,7 +857,8 @@ function bibStyleFor(style: { id: string }): string {
 // hand edits. Without the key, the export is byte-identical to the classic
 // article preamble below.
 
-export type TexClassId = "ieeetran" | "acmart" | "elsarticle" | "apa7"
+export type TexClassId =
+  "ieeetran" | "acmart" | "elsarticle" | "apa7" | "plos" | "bioinformatics" | "biorxiv" | "bmc"
 
 interface TexClass {
   documentclass: string
@@ -809,6 +867,12 @@ interface TexClass {
   theoremPolicy: "full" | "supplement-only"
   titleBlock: (title: string, author: string) => string
   maketitle: boolean
+  // Packages and settings the class needs on top of the shared preamble, for
+  // journals that ship no class of their own (PLOS, Bioinformatics, bioRxiv).
+  extraPreamble?: string[]
+  // Title and authors that live inside the document body, for classes with
+  // no \maketitle (PLOS); elsarticle is handled separately.
+  bodyFrontmatter?: (title: string, author: string) => string
 }
 
 const THEOREM_SUPPLEMENT = [
@@ -847,6 +911,55 @@ export const TEX_CLASSES: Record<TexClassId, TexClass> = {
       `\\title{${escTex(title)}}\n\\authorsnames{${escTex(author) || "Author"}}\n\\authorsaffiliations{{~}}\n`,
     maketitle: true,
   },
+  // Computational-biology journals. PLOS and bioRxiv use stock article and
+  // OUP's `bioinfo` and BMC's `bmcart` are distributed only by the publisher,
+  // so all four map to article plus the preamble that reproduces their layout.
+  plos: {
+    documentclass: "\\documentclass[10pt,letterpaper]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}",
+      "\\usepackage[right]{lineno}",
+      "\\raggedright",
+      "\\linenumbers",
+    ],
+    titleBlock: () => "",
+    maketitle: false,
+    bodyFrontmatter: (title, author) =>
+      `\\begin{flushleft}\n{\\Large\n\\textbf\\newline{${escTex(title)}}\n}\n\\newline\n\\\\\n${escTex(author) || "Author"}\n\\end{flushleft}\n\n`,
+  },
+  bioinformatics: {
+    documentclass: "\\documentclass[10pt,twocolumn]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=0.75in]{geometry}"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
+  },
+  biorxiv: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: [
+      "\\usepackage[margin=1in]{geometry}",
+      "\\usepackage{authblk}",
+      "\\usepackage{lineno}",
+      "\\linenumbers",
+    ],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author[1]{${escTex(author) || "Author"}}\n\\affil[1]{Affiliation}\n\\date{}\n`,
+    maketitle: true,
+  },
+  // BMC's own bmcart class is publisher-distributed (not in TeX Live, not on
+  // the WASM package server), and BMC accepts any LaTeX manuscript at
+  // submission, so the template exports to article with line numbers.
+  bmc: {
+    documentclass: "\\documentclass[11pt]{article}",
+    theoremPolicy: "full",
+    extraPreamble: ["\\usepackage[margin=1in]{geometry}", "\\usepackage{lineno}", "\\linenumbers"],
+    titleBlock: (title, author) =>
+      `\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\date{}\n`,
+    maketitle: true,
+  },
 }
 
 export function pickTexClass(raw: unknown): TexClassId | null {
@@ -870,6 +983,7 @@ function buildJournalPreamble(
     // Journal submissions are overwhelmingly in English; babel-spanish is
     // deliberately not loaded here (the classic article export keeps it).
     "\\usepackage[T1]{fontenc}",
+    ...(cls.extraPreamble ?? []),
     "\\usepackage{amsmath, amssymb, amsfonts}",
     cls.theoremPolicy === "full" ? buildTheoremPreamble() : THEOREM_SUPPLEMENT,
     "\\usepackage{graphicx}",
@@ -1110,7 +1224,14 @@ export function exportToTex(
   const raw = stripKeepMarks(rawInput)
   const parsed = extractFrontmatter(raw)
   citedInLastPass = false
-  const body = mdToTex(parsed?.content ?? raw)
+  linkAccessionsInTex = isBiologyDocument(raw)
+  seqExportCount = 0
+  let body: string
+  try {
+    body = mdToTex(parsed?.content ?? raw)
+  } finally {
+    linkAccessionsInTex = false
+  }
 
   const hasCode = /\\begin\{(lstlisting|verbatim)\}/.test(body)
   const hasLinks = /\\href\{/.test(body)
@@ -1151,7 +1272,9 @@ export function exportToTex(
   const elsFrontmatter =
     classId === "elsarticle" && title
       ? `\\begin{frontmatter}\n\\title{${escTex(title)}}\n\\author{${escTex(author) || "Author"}}\n\\end{frontmatter}\n\n`
-      : ""
+      : title && cls?.bodyFrontmatter
+        ? cls.bodyFrontmatter(title, author)
+        : ""
 
   // Custom headers/footers using fancyhdr
   const hasCustomHF =

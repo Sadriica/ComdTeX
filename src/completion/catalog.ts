@@ -61,6 +61,12 @@ export const COMPLETIONS: Completion[] = [
     detail: ":::truth → truth table block",
     snippet: ":::truth[${1:title}]\n${2:p ∧ q}\n:::",
   },
+  // ── Sequence ────────────────────────────────────────────────────────────────
+  {
+    label: ":::seq",
+    detail: ":::seq → DNA/RNA/protein sequence block",
+    snippet: ":::seq[${1:title}]\n>${2:name}\n${3:ATGGAATTCGGATCC}\n:::",
+  },
   // ── Graph visualizer ────────────────────────────────────────────────────────
   {
     label: ":::graph",
@@ -147,6 +153,11 @@ export const COMPLETIONS: Completion[] = [
   { label: "num", detail: "num(6.022e23) → formatted number", snippet: "num(${1:6.022e23})" },
   { label: "unit", detail: "unit(mol/L) → standalone unit", snippet: "unit(${1:mol/L})" },
   { label: "ce", detail: "ce(H2O) → chemical formula (mhchem)", snippet: "ce(${1:H2O})" },
+  {
+    label: "val",
+    detail: "val(data, cell, format) → a number read from pipeline output",
+    snippet: "val(${1:stats}, ${2:pvalue})",
+  },
   {
     label: "csv",
     detail: ":::csv block → table from a CSV selection",

@@ -145,6 +145,41 @@ describe("journal classes via comdtex.texclass", () => {
     expect(tex).toContain("\\authorsnames{Ada}")
   })
 
+  it("exports PLOS on stock article with its margins, line numbers and flushleft title", () => {
+    const tex = exportToTex(doc("plos"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[10pt,letterpaper]{article}")
+    expect(tex).toContain("left=2.75in")
+    expect(tex).toContain("\\linenumbers")
+    expect(tex).toContain("\\begin{flushleft}")
+    expect(tex).toContain("\\textbf\\newline{Paper}")
+    expect(tex).not.toContain("\\maketitle")
+    expect(tex).not.toContain("{babel}")
+  })
+
+  it("exports Bioinformatics as two-column article with a maketitle block", () => {
+    const tex = exportToTex(doc("bioinformatics"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[10pt,twocolumn]{article}")
+    expect(tex).toContain("\\author{Ada}")
+    expect(tex).toContain("\\maketitle")
+  })
+
+  it("exports bioRxiv with authblk affiliations and line numbers", () => {
+    const tex = exportToTex(doc("biorxiv"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[11pt]{article}")
+    expect(tex).toContain("\\usepackage{authblk}")
+    expect(tex).toContain("\\author[1]{Ada}")
+    expect(tex).toContain("\\affil[1]{Affiliation}")
+    expect(tex).toContain("\\linenumbers")
+  })
+
+  it("exports BMC on the article class with line numbers", () => {
+    const tex = exportToTex(doc("bmc"), "", "Paper", "Ada")
+    expect(tex).toContain("\\documentclass[11pt]{article}")
+    expect(tex).not.toContain("bmcart")
+    expect(tex).toContain("\\linenumbers")
+    expect(tex).toContain("\\maketitle")
+  })
+
   it("keeps the classic article export byte-compatible when the key is absent", () => {
     const tex = exportToTex("---\ntitle: T\n---\n# Body", "", "T")
     expect(tex).toContain("\\documentclass[12pt,a4paper]{article}")

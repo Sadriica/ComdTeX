@@ -486,13 +486,32 @@ describe("frontmatter", () => {
   it("completes the language, texclass and citestyle values", async () => {
     expect(labels(await complete("---\nlang: |\n---"))).toEqual(["en", "es"])
     const tex = await complete("---\ncomdtex.texclass: |\n---")
-    expect(labels(tex).sort()).toEqual(["acmart", "apa7", "elsarticle", "ieeetran"])
+    expect(labels(tex).sort()).toEqual([
+      "acmart",
+      "apa7",
+      "bioinformatics",
+      "biorxiv",
+      "bmc",
+      "elsarticle",
+      "ieeetran",
+      "plos",
+    ])
     const cite = await complete("---\ncomdtex.citestyle: |\n---")
     expect(labels(cite)).toEqual(
       expect.arrayContaining(["default", "vancouver", "ama", "apa", "author-year"]),
     )
     const domain = await complete("---\ncomdtex.domain: |\n---")
     expect(labels(domain)).toEqual(["biology", "microbiology", "biomedicine"])
+    const organism = await complete("---\ncomdtex.organism: |\n---")
+    expect(labels(organism)).toEqual([
+      "human",
+      "mouse",
+      "rat",
+      "zebrafish",
+      "drosophila",
+      "yeast",
+      "bacteria",
+    ])
   })
 
   it("offers today for date", async () => {

@@ -39,6 +39,7 @@ describe("findVaultFile", () => {
 describe("the app resolver can reach data files", () => {
   it("keeps a csv source next to the document source", () => {
     expect(appSrc).toContain("vaultCsvFilesRef")
-    expect(appSrc).toMatch(/filter\(\(f\) => f\.ext === "csv"\)/)
+    // json joined csv for val(): results files are data files too.
+    expect(appSrc).toMatch(/filter\(\(f\) => f\.ext === "csv"( \|\| f\.ext === "json")?\)/)
   })
 })

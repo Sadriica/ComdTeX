@@ -20,6 +20,7 @@ import {
   type LintContext,
   type LintVaultDoc,
 } from "./contentLinter"
+import { bioOrganism, geneSuggestion, isComparativeLine } from "./bioConventions"
 import { crossFileRefText, refPathTarget } from "./crossFileRef"
 import { findTableBlock, normalizeTableBlock } from "./markdownEditing"
 import type { T } from "./i18n/types"
@@ -488,6 +489,54 @@ function fixDuplicateLabel({ model, marker, covered, actions, ctx }: FixInput) {
   ]
 }
 
+/** Italic or plain: the biology check's fixes are plain edits of the flagged text. */
+function fixBio({ model, marker, covered, actions }: FixInput, code: string) {
+  const range = markerRange(marker)
+  const organism = bioOrganism(model.getValue())
+  if (code === "bio-binomial") {
+    return [
+      quickFix(actions.italicize(covered), marker, {
+        edits: [textEdit(model, range, `*${covered}*`)],
+        preferred: true,
+      }),
+    ]
+  }
+  if (code === "bio-gene") {
+    // With an organism the symbol also takes that organism's capitalization.
+    const sym =
+      organism && !isComparativeLine(organism, model.getLineContent(marker.startLineNumber))
+        ? geneSuggestion(organism, covered)
+        : covered
+    return [
+      quickFix(actions.italicize(sym), marker, {
+        edits: [textEdit(model, range, `*${sym}*`)],
+        preferred: true,
+      }),
+    ]
+  }
+  const inner = /^[*_]([^*_]+)[*_]$/.exec(covered)?.[1]
+  if (!inner) return []
+  if (code === "bio-protein-italic") {
+    return [
+      quickFix(actions.unitalicize(inner), marker, {
+        edits: [textEdit(model, range, inner)],
+        preferred: true,
+      }),
+    ]
+  }
+  if (code === "bio-gene-case") {
+    const next = geneSuggestion(organism, inner)
+    if (next === inner) return []
+    return [
+      quickFix(actions.replaceWith(`*${next}*`), marker, {
+        edits: [textEdit(model, range, `*${next}*`)],
+        preferred: true,
+      }),
+    ]
+  }
+  return []
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 /** All fixes for one marker (exported for tests). */
@@ -534,6 +583,11 @@ export function fixesForMarker(
       return fixFootnote(input)
     case "label-duplicate":
       return fixDuplicateLabel(input)
+    case "bio-binomial":
+    case "bio-gene":
+    case "bio-gene-case":
+    case "bio-protein-italic":
+      return fixBio(input, code)
     default:
       return []
   }

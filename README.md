@@ -32,7 +32,7 @@ A [Witara](https://witara.site) product: local-first, your files stay yours, AI 
 
 ### 1. Open a Vault
 
-A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.tex`, and `.bib` files directly: no database, no hidden format.
+A **vault** is a regular folder on your filesystem. ComdTeX reads and writes `.md`, `.qmd`, `.Rmd`, `.tex`, and `.bib` files directly: no database, no hidden format.
 
 On first launch, click **Open Vault** and select any folder. Four special files in the vault root are recognized automatically:
 
@@ -262,16 +262,19 @@ All cited entries are collected into a bibliography at the bottom of the preview
 
 ### Math & Writing
 - Citation styles that match the venue: `comdtex.citestyle: vancouver | ama | apa | author-year`, applied to the preview, the bibliography and the exported natbib options
-- Cite by NASA ADS bibcode or INSPIRE-HEP record, not only DOI and arXiv (ADS token stored in the OS keychain)
+- Cite by NASA ADS bibcode, INSPIRE-HEP record or PubMed PMID/PMCID, not only DOI and arXiv (ADS token stored in the OS keychain)
 - Plots from data: `:::plot` with `@data:growth` draws one series per column as lines with markers, scatter, grouped bars or error bars, with axis titles taken from the headers
 - Named datasets: a `:::data{#data:growth}` block declares a CSV selection once and prints nothing; other blocks use it with `@data:growth` and can narrow it further. Duplicate, missing and unused datasets are reported in the Labels panel and flagged while writing
 - Tables from CSV by selection: a `:::csv` block naming `data.csv (A:B, D) (1:8, 12)` renders the slice as a table and re-reads the file on every render (letters, header names or indices; non-contiguous ranges; order preserved)
+- Numbers from your pipeline: `val(stats, pvalue)` puts a value from a results file into the text, so n, p-values and effect sizes follow the analysis instead of going stale. Declare the file once (`:::data{#data:stats}` over a CSV or a JSON), then address a cell by row key (`val(stats, pvalue)`, `val(stats, effect, ci)`), by spreadsheet reference (`val(stats, B4)`, row 1 is the header line; quote a key that looks like a cell, `"B4"`) or, for JSON, by dotted path (`val(fit, metrics.auc)`, `val(fit, folds.0.acc)`). An optional last argument formats it: `3sf` significant figures, `.2f` decimals, `.2e` scientific, `p` for a p-value (`p = 0.032`, or `p < 0.001`). It works inside math and inside other shorthands, `si(val(stats, effect, 3sf), mg/L)`, and the preview and every export print the same number. A missing file or value shows a visible note and a warning in the editor. Results files are re-read when the window regains focus
 - Units and chemistry: `si(9.81, m/s^2)` and `ce(H2O)` render in the preview and export as real `siunitx` and `mhchem`; packages load only when used
-- Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols
+- Biology typography check (opt-in via `comdtex.domain: biology`): warns about un-italicized binomials and gene symbols, abbreviated species used before their full name, and, with `comdtex.organism: human | mouse | rat | zebrafish | drosophila | yeast | bacteria`, gene and protein symbols that break that organism's capitalization and italic rules (quick fixes with Ctrl+.)
+- Accession numbers (same opt-in): GenBank, RefSeq, SRA/ENA, BioProject, GEO, ArrayExpress and Ensembl ids link to their database in the preview and the LaTeX export, `PDB 1ABC` and `UniProt P04637` too, and a note appears when you cite data but have no Data availability section
 - Shorthand system: expands to LaTeX on Tab, works inside and outside `$...$`, supports nesting
 - Structured math environments: auto-numbered `theorem`, `lemma`, `corollary`, `proposition`, `definition`, `example`, `exercise`; unnumbered `proof`, `remark`, `note`; size prefixes `sm`/`lg`; labels and `@thm:...` cross-references
 - Auto-numbered `$$...$$` equations with `{#eq:label}` labels and `@eq:label` cross-references
 - Auto-numbered figures with `{#fig:label}` labels and `@fig:label` cross-references
+- Supplementary material: a `<!-- supplement -->` line restarts figures and tables as Figure S1, Table S1 (preview, LaTeX and text exports)
 - Structural labels for headings, equations, figures, tables, and theorem-like environments, plus `@...` cross-references
 - BibTeX citations via `references.bib` and `[@key]` syntax
 - Custom LaTeX macros via `\newcommand` in `macros.md` (applied vault-wide)
@@ -279,7 +282,7 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - YAML frontmatter (title, author, date, abstract, tags)
 - Callout blocks (`> [!NOTE]`, `> [!WARNING]`, `> [!TIP]`, etc.)
 - Special blocks render as real diagrams in exports too: flowcharts, graphs, plots, commutative diagrams and Excalidraw drawings rasterize into the PDF (and as PNGs beside an exported `.tex`); truth tables export as real tables. Documents with diagrams compile through a local engine (the bundled WASM engine cannot read image files and keeps the code-fence fallback)
-- Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor), each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
+- Auto-numbered special blocks, independent per type: `:::truth` (Truth Table N), `:::graph` (Graph N, Graphviz/DOT), `:::plot` (Plot N), `:::commdiag` (Diagram N, tikz-cd), `:::pseudocode` (Algorithm N), `:::flowchart` (Flowchart N, Mermaid), `:::excalidraw` (a built-in, lazy-loaded freehand drawing editor), `:::seq` (Sequence N: DNA, RNA or protein in numbered groups with GC content, highlighted ranges and motifs; a plain monospace listing with a legend in LaTeX), each accepts an optional `[name]` and is stored verbatim in the file (data-safe round-trip)
 - Text formatting: `==highlight==`, coloured highlights (`<mark class="hl-green">…</mark>` and friends), `<u>underline</u>`
 - Live auto table of contents: drop a `[[toc]]` line and it expands into a navigable, always-current heading list
 - Mermaid diagrams
@@ -351,11 +354,12 @@ All cited entries are collected into a bibliography at the bottom of the preview
 - DOCX and Beamer via pandoc
 - Typst export (`.typ` via pandoc); Typst → PDF when the `typst` binary is installed
 - Obsidian-friendly Markdown export
-- Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, … → Markdown, with embedded images extracted)
+- Document import via pandoc (`.docx`, `.odt`, `.tex`, `.html`, `.epub`, `.rst`, `.org`, `.ipynb` Jupyter notebooks, … → Markdown, with embedded images and notebook image outputs extracted)
+- Quarto (`.qmd`) and R Markdown (`.Rmd`) files open in the vault as Markdown and are saved byte for byte (code chunks, chunk options and `::: {.callout-note}` divs are never rewritten); ComdTeX does not execute them
 - Copy as HTML or LaTeX
 - Academic templates: article, notes, problem set, theorem sheet, research notes, Overleaf paper, thesis, book
 - Typst as a first-class citizen: `.typ` files live in the vault with their own syntax highlighting and compile natively with the local `typst` binary straight into the PDF preview (auto-recompiling on save). Typst export from Markdown via pandoc remains available
-- Journal templates: IEEE (IEEEtran), ACM (acmart), Elsevier (elsarticle) and APA 7 (apa7). Each carries `comdtex.texclass` in its frontmatter, so **Export as .tex** targets the real journal class with the right title block and theorem setup; the result compiles on Overleaf without hand edits
+- Journal templates: IEEE (IEEEtran), ACM (acmart), Elsevier (elsarticle) and APA 7 (apa7), plus computational-biology templates for PLOS, Bioinformatics (OUP), bioRxiv preprints and BMC. Each carries `comdtex.texclass` in its frontmatter, so **Export as .tex** targets the real journal class with the right title block and theorem setup; the result compiles on Overleaf without hand edits
 
 ### App
 - Themes: light, dark, and high-contrast, driven by CSS variables (`data-theme`), switchable at runtime in Settings
@@ -752,7 +756,7 @@ Requires updating **all five** of the following; omitting any causes inconsisten
 | `environments.ts` | Renders `:::type[title]{#label}` blocks |
 | `figures.ts` | Figure numbering and `@fig:label` cross-references |
 | `bibtex.ts` | BibTeX parser and `[@key]` citation resolver |
-| `doiFetch.ts` | DOI / arXiv → BibTeX fetch (CrossRef / DataCite) used by the Citation Manager |
+| `doiFetch.ts` | DOI / arXiv / PubMed → BibTeX fetch (CrossRef / DataCite / NCBI) used by the Citation Manager |
 | `ai/aiProvider.ts` | BYO AI provider layer (Anthropic / OpenAI / Gemini / OpenAI-compatible / CLI) |
 | `ai/comdtex-context.md` | Built-in AI system prompt (ComdTeX syntax) bundled at build time |
 | `pomodoro.ts` | Pomodoro state machine + writing-session stats (backs `FocusTimerPanel`) |

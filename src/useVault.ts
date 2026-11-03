@@ -3,6 +3,7 @@ import { readDir, readTextFile, mkdir, remove, rename, stat } from "@tauri-apps/
 import { open, save, message } from "@tauri-apps/plugin-dialog"
 import { documentDir } from "@tauri-apps/api/path"
 import { pathJoin, pathDirname, pathBasename, displayBasename } from "./pathUtils"
+import { isDocExt } from "./docExts"
 import { writeTextFileAtomic, TEMP_FILE_RE } from "./atomicWrite"
 import { allowVaultDir } from "./vaultScope"
 import {
@@ -460,7 +461,7 @@ function textCandidates(tree: FileNode[]): SearchCandidate[] {
 
 function isTextVaultFile(node: FileNode): boolean {
   const ext = (node.ext ?? "").toLowerCase()
-  return ext === "md" || ext === "tex" || ext === "bib" || ext === "typ" || ext === "csv"
+  return isDocExt(ext) || ext === "bib" || ext === "typ" || ext === "csv"
 }
 
 async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
@@ -490,11 +491,12 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
     } else if (entry.isFile) {
       const ext = entry.name.split(".").pop()?.toLowerCase()
       if (
-        ext === "md" ||
-        ext === "tex" ||
+        isDocExt(ext) ||
         ext === "bib" ||
         ext === "typ" ||
         ext === "csv" ||
+        // Pipeline results (`val(...)` reads them), listed like a CSV.
+        ext === "json" ||
         ext === "pdf"
       )
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })

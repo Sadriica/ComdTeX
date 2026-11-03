@@ -36,10 +36,14 @@ import { checkText, type SpellLang } from "./spellcheck"
 import { raggedTableRows } from "./markdownEditing"
 import { findGaps } from "./aiGaps"
 import { findBioConventions } from "./bioConventions"
+import { findMissingDataAvailability } from "./accessions"
 import { preprocess } from "./preprocessor"
+import { parseSeq } from "./sequence"
 import { imageCandidates } from "./imagePaths"
 import { matchesVaultRelPath } from "./wikilinks"
 import { findVaultFile } from "./vaultResolve"
+import { parseDataBlocks } from "./datasets"
+import { findValueRefs, formatValue, lookupValue } from "./resultValues"
 import { slugifyHeading } from "./toc"
 import { es } from "./i18n/es"
 import type { T } from "./i18n/types"
@@ -75,9 +79,22 @@ export const LINT_CODES = [
   "math-parse-error",
   "data-duplicate",
   "data-undeclared",
+  "value-undeclared",
+  "value-source-missing",
+  "value-source-unreadable",
+  "value-cell-missing",
+  "value-not-number",
+  "seq-empty",
+  "seq-invalid-char",
+  "seq-bad-option",
+  "seq-bad-range",
   "spell-unknown",
   "bio-binomial",
   "bio-gene",
+  "bio-data-availability",
+  "bio-binomial-first",
+  "bio-gene-case",
+  "bio-protein-italic",
   "bib-unclosed",
   "bib-unknown-type",
   "bib-no-key",
@@ -134,6 +151,12 @@ export interface LintContext {
   vaultFilePaths?: ReadonlySet<string>
   /** User macros (`macros.md`): without them `\mycmd` would be a KaTeX error. */
   macros?: Record<string, string>
+  /**
+   * Reads a data file by the name a `:::data` block writes (the vault's CSV
+   * and JSON results). Without it `val()` calls are only checked against the
+   * declarations; with it a missing file or cell is reported too.
+   */
+  dataResolver?: (target: string) => string | null
 }
 
 export interface LintSummary {
@@ -249,6 +272,7 @@ const OPAQUE_BLOCKS = [
   "plot",
   "commdiag",
   "excalidraw",
+  "seq",
 ]
 const OPAQUE_BLOCK_RE = new RegExp(
   `^:::(?:${OPAQUE_BLOCKS.join("|")})\\b[^\\n]*\\n[\\s\\S]*?^:::[ \\t]*$`,
@@ -334,6 +358,7 @@ export const KNOWN_BLOCK_TYPES: readonly string[] = [
   "commdiag",
   "code",
   "excalidraw",
+  "seq",
   "csv",
   "data",
 ]
@@ -1343,22 +1368,56 @@ function lintGaps(env: Env, text: string): Marker[] {
 }
 
 /**
- * Taxonomic binomials and gene symbols that should be italic. Warnings only:
- * `Bacillus` may be a genus or a surname, and only the author knows.
+ * Taxonomic binomials, gene symbols and (with `comdtex.organism`) per-organism
+ * symbol conventions. Warnings only: `Bacillus` may be a genus or a surname,
+ * and only the author knows.
  */
 function lintBioConventions(env: Env, text: string): Marker[] {
-  return findBioConventions(text).map((f) =>
+  return findBioConventions(text).map((f) => {
+    const org = f.organism ? env.msg.bioOrganisms[f.organism] : ""
+    let code: LintCode
+    let message: string
+    switch (f.kind) {
+      case "binomial-first":
+        code = "bio-binomial-first"
+        message = env.msg.bioAbbrevFirst(f.text, f.full ?? f.suggestion)
+        break
+      case "gene-case":
+        code = "bio-gene-case"
+        message = env.msg.bioGeneCase(f.text, f.suggestion, org)
+        break
+      case "protein-italic":
+        code = "bio-protein-italic"
+        message = env.msg.bioProteinItalic(f.text, f.suggestion, org)
+        break
+      default:
+        code = f.kind === "gene" ? "bio-gene" : "bio-binomial"
+        message = env.ctx.bioMessage
+          ? env.ctx.bioMessage(f.kind, f.text)
+          : env.msg.bioItalic(f.text, f.suggestion)
+    }
+    return emit(env, code, f.start, f.end, message, env.Severity.Warning)
+  })
+}
+
+/**
+ * A biology document that cites accession numbers or sequencing data (or is a
+ * paper with references) but has no Data availability section. Info only:
+ * the rule and its triggers live in `findMissingDataAvailability`.
+ */
+function lintDataAvailability(env: Env, text: string): Marker[] {
+  const f = findMissingDataAvailability(text)
+  if (!f) return []
+  return [
     emit(
       env,
-      f.kind === "gene" ? "bio-gene" : "bio-binomial",
+      "bio-data-availability",
       f.start,
       f.end,
-      env.ctx.bioMessage
-        ? env.ctx.bioMessage(f.kind, f.text)
-        : env.msg.bioItalic(f.text, f.suggestion),
-      env.Severity.Warning,
+      env.msg.bioDataAvailability(f.accession ?? null),
+      env.Severity.Info,
     ),
-  )
+  ]
 }
 
 /**
@@ -1408,6 +1467,104 @@ function lintDataRefs(env: Env, text: string): Marker[] {
   return markers
 }
 
+/**
+ * `val(dataset, cell)` reads a number from a results file. The preview prints
+ * a note when it cannot, but the marker says so while writing. The file and
+ * cell checks need the vault's data (`ctx.dataResolver`); the declaration
+ * check does not.
+ */
+function lintValueRefs(env: Env, text: string): Marker[] {
+  const refs = findValueRefs(text)
+  if (refs.length === 0) return []
+  const { datasets } = parseDataBlocks(text)
+  const resolver = env.ctx.dataResolver
+  const markers: Marker[] = []
+  for (const ref of refs) {
+    let result: ReturnType<typeof lookupValue>
+    if (resolver) {
+      result = lookupValue(ref.args, ref.quoted, datasets, resolver)
+    } else {
+      // No vault data: only the declaration can be judged.
+      const declared = lookupValue(ref.args, ref.quoted, datasets, () => null)
+      if (declared.ok || declared.error.kind !== "dataset-undeclared") continue
+      result = declared
+    }
+    let kind: string | null = null
+    let detail = ""
+    if (!result.ok) {
+      kind = result.error.kind
+      detail = result.error.detail
+    } else if (result.format && formatValue(result.text, result.format, true) === null) {
+      kind = "not-number"
+      detail = result.text
+    }
+    if (!kind) continue
+    const m = env.msg
+    const [code, message] =
+      kind === "dataset-undeclared"
+        ? (["value-undeclared", m.valueUndeclared(detail)] as const)
+        : kind === "source-missing"
+          ? (["value-source-missing", m.valueSourceMissing(detail)] as const)
+          : kind === "source-unreadable"
+            ? (["value-source-unreadable", m.valueSourceUnreadable(detail)] as const)
+            : kind === "cell-missing"
+              ? (["value-cell-missing", m.valueCellMissing(detail)] as const)
+              : (["value-not-number", m.valueNotNumber(detail)] as const)
+    markers.push(emit(env, code, ref.start, ref.end, message, env.Severity.Warning))
+  }
+  return markers
+}
+
+const SEQ_BLOCK_RE = /^:::seq\b[^\n]*\n([\s\S]*?)^:::[ \t]*$/gm
+
+/**
+ * `:::seq` bodies: invalid residues, empty sequences, unknown options and
+ * highlights past the end of the sequence. The preview shows the same problems
+ * as an inline error; the marker finds them while writing.
+ */
+function lintSequences(env: Env, text: string): Marker[] {
+  const markers: Marker[] = []
+  const re = new RegExp(SEQ_BLOCK_RE.source, SEQ_BLOCK_RE.flags)
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const bodyStart = m.index + m[0].indexOf("\n") + 1
+    const bodyLines = m[1].split("\n")
+    const lineStart: number[] = []
+    let acc = bodyStart
+    for (const l of bodyLines) {
+      lineStart.push(acc)
+      acc += l.length + 1
+    }
+    for (const issue of parseSeq(m[1]).issues) {
+      const base = lineStart[Math.min(issue.line, lineStart.length - 1)] ?? bodyStart
+      const lineText = bodyLines[Math.min(issue.line, bodyLines.length - 1)] ?? ""
+      const start =
+        issue.col >= 0 ? base + issue.col : base + (lineText.length - lineText.trimStart().length)
+      const end =
+        issue.col >= 0 ? start + Math.max(1, issue.length) : base + Math.max(lineText.length, 1)
+      const message =
+        issue.code === "seq-empty"
+          ? env.msg.seqEmpty()
+          : issue.code === "seq-invalid-char"
+            ? env.msg.seqInvalidChar(issue.char ?? "?", issue.position ?? 0)
+            : issue.code === "seq-bad-range"
+              ? env.msg.seqBadRange(issue.message)
+              : env.msg.seqBadOption(issue.message)
+      markers.push(
+        emit(
+          env,
+          issue.code,
+          start,
+          Math.max(end, start + 1),
+          message,
+          issue.code === "seq-bad-option" ? env.Severity.Warning : env.Severity.Error,
+        ),
+      )
+    }
+  }
+  return markers
+}
+
 function makeEnv(text: string, context: LintContext, Severity: Severities): Env {
   return {
     lineIdx: buildLineIndex(text),
@@ -1445,7 +1602,10 @@ export function lintContent(
     // Opt-in per document (frontmatter `comdtex.domain: biology`): journals
     // return manuscripts over un-italicized binomials and gene symbols.
     ...lintBioConventions(env, text),
+    ...lintDataAvailability(env, text),
     ...lintDataRefs(env, clean),
+    ...lintValueRefs(env, clean),
+    ...lintSequences(env, clean),
   ]
 
   if (context.spellcheck) {
