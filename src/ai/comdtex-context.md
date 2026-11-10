@@ -146,7 +146,7 @@ B -> C
   gene symbols are checked; a Data availability section is expected) and
   `comdtex.organism: human | mouse | rat | zebrafish | drosophila | yeast | bacteria`
   (gene case: `TP53` human, `Trp53` mouse, `tp53` zebrafish; proteins upright).
-  Name a species in full (*Escherichia coli*) before abbreviating it (*E. coli*).
+  Name a species in full (_Escherichia coli_) before abbreviating it (_E. coli_).
 - The Citation manager adds entries by DOI, arXiv id, PMID or PMCID.
 - `.qmd` and `.Rmd` files open and save untouched (code chunks are not run).
 - Custom macros live in `macros.md` via `\newcommand`, e.g.
