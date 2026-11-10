@@ -14,6 +14,7 @@
  * these low-level format transforms.
  */
 import { looksLikeSeqBody } from "./sequence"
+import { activeDocLanguage, docTermsFor, type DocLang } from "./docLang"
 
 export type StorageFormat = "md" | "tex"
 
@@ -53,6 +54,10 @@ export function storageFormatForPath(path: string): StorageFormat | null {
  * first save and every line showed up as changed in git.
  */
 const crlfPaths = new Set<string>()
+// The language of the reference names a .tex file was written with
+// ("Figura~\ref" or "Figure~\ref"), so saving keeps them instead of
+// rewriting the file into the interface language.
+const texRefLang = new Map<string, DocLang>()
 
 /** True when most line breaks in `text` are CRLF. */
 export function usesCrlf(text: string): boolean {
@@ -73,6 +78,7 @@ function isSameOrUnderPath(p: string, root: string): boolean {
  */
 export function forgetLineEnding(path: string): void {
   for (const p of [...crlfPaths]) if (isSameOrUnderPath(p, path)) crlfPaths.delete(p)
+  for (const p of [...texRefLang.keys()]) if (isSameOrUnderPath(p, path)) texRefLang.delete(p)
 }
 
 /** Carry a file's remembered line ending over to its new path after a rename or move. */
@@ -84,6 +90,12 @@ export function renameLineEnding(oldPath: string, newPath: string): void {
       crlfPaths.add(newPath + p.slice(oldPath.length))
     }
   }
+  for (const [p, lang] of [...texRefLang]) {
+    if (isSameOrUnderPath(p, oldPath)) {
+      texRefLang.delete(p)
+      texRefLang.set(newPath + p.slice(oldPath.length), lang)
+    }
+  }
 }
 
 export function toEditorContent(path: string, content: string): string {
@@ -91,13 +103,18 @@ export function toEditorContent(path: string, content: string): string {
   if (!format) return content
   if (usesCrlf(content)) crlfPaths.add(path)
   else crlfPaths.delete(path)
+  if (format === "tex") {
+    const lang = texRefLanguage(content)
+    if (lang) texRefLang.set(path, lang)
+    else texRefLang.delete(path)
+  }
   return toCmdx(content.replace(/\r\n/g, "\n"), format)
 }
 
 export function toDiskContent(path: string, content: string): string {
   const format = storageFormatForPath(path)
   if (!format) return content
-  const stored = toStorage(content, format)
+  const stored = toStorage(content, format, texRefLang.get(path))
   return crlfPaths.has(path) ? stored.replace(/\r?\n/g, "\r\n") : stored
 }
 
@@ -190,8 +207,8 @@ function withFrontmatter(text: string, convertBody: (body: string) => string): s
 /**
  * Convert CMDX to storage format (.md or .tex).
  */
-export function toStorage(text: string, format: StorageFormat): string {
-  if (format === "tex") return toStorageTex(text)
+export function toStorage(text: string, format: StorageFormat, texLang?: DocLang): string {
+  if (format === "tex") return toStorageTex(text, texLang)
   return toStorageMd(text)
 }
 
@@ -247,12 +264,13 @@ function maskInlineCode(text: string): { masked: string; restore: (s: string) =>
 /**
  * Convert CMDX to LaTeX (.tex).
  */
-export function toStorageTex(text: string): string {
+export function toStorageTex(text: string, lang: DocLang = activeDocLanguage()): string {
   return withFrontmatter(text, (body) => {
     const { masked, restore } = maskSpecialBlocks(body)
     return restore(
       convertTexLabelsAndRefs(
         convertCmdxEnvironments(convertFunctions(masked, LATEX_FUNCTIONS), "tex"),
+        lang,
       ),
     )
   })
@@ -701,16 +719,67 @@ function cmdxEnvironmentToTex(envStart: CmdxEnvStart, rawBody: string): string {
   return `\\begin{${env}}${optTitle}${labelLine}\n${body}\n\\end{${env}}`
 }
 
-function convertTexLabelsAndRefs(text: string): string {
+// A reference label as the storage conversion reads it after `@kind:`. It may
+// hold `.` and `:` but not END with one, so `see @fig:a.` keeps its full stop
+// outside `\ref{fig:a}`.
+const REF_LABEL = String.raw`[\w:.-]*[\w-]`
+
+// Environment prefixes a `.tex` file references with a bare `\ref{}`.
+const ENV_REF_KINDS = "thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise"
+
+// The names ComdTeX writes before `\ref` in either language. Reading absorbs
+// them, so `Figura~\ref{fig:a}` opens as `@fig:a` and saves back unchanged
+// instead of gaining a second "Figura~" on every save.
+const TEX_REF_NAMES: Record<"fig" | "tbl" | "sec", Record<DocLang, string>> = {
+  fig: { en: docTermsFor("en").figure, es: docTermsFor("es").figure },
+  tbl: { en: docTermsFor("en").table, es: docTermsFor("es").table },
+  sec: { en: docTermsFor("en").section, es: docTermsFor("es").section },
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+/** The language of the reference names in a .tex file, or null when it has none. */
+export function texRefLanguage(text: string): DocLang | null {
+  const count = (lang: DocLang) =>
+    (["fig", "tbl", "sec"] as const).reduce((n, kind) => {
+      const re = new RegExp(String.raw`${escapeRe(TEX_REF_NAMES[kind][lang])}~\\ref\{${kind}:`, "g")
+      return n + (text.match(re)?.length ?? 0)
+    }, 0)
+  const es = count("es")
+  const en = count("en")
+  if (es === 0 && en === 0) return null
+  return es >= en ? "es" : "en"
+}
+
+function convertTexLabelsAndRefs(text: string, lang: DocLang): string {
+  const terms = docTermsFor(lang)
+  // A cross-file reference (`@doc@thm:x`, `@[a b]@thm:x`) is not a local
+  // \ref and stays as written.
+  const local = (kind: string) => new RegExp(String.raw`(?<![\w\]/@])@(${kind}:${REF_LABEL})`, "g")
   return text
     .replace(/\{#eq:([\w:.-]+)\}/g, "\\label{eq:$1}")
     .replace(/\{#(fig:[\w:.-]+)\}/g, "\\label{$1}")
     .replace(/\{#(sec:[\w:.-]+)\}/g, "\\label{$1}")
     .replace(/\{#(tbl:[\w:.-]+)\}/g, "\\label{$1}")
-    .replace(/@eq:([\w:.-]+)/g, "\\eqref{eq:$1}")
-    .replace(/@fig:([\w:.-]+)/g, "Figura~\\ref{fig:$1}")
-    .replace(/@sec:([\w:.-]+)/g, "sección~\\ref{sec:$1}")
-    .replace(/@tbl:([\w:.-]+)/g, "Tabla~\\ref{tbl:$1}")
+    .replace(local("eq"), "\\eqref{$1}")
+    .replace(local("fig"), `${terms.figure}~\\ref{$1}`)
+    .replace(local("sec"), `${terms.section}~\\ref{$1}`)
+    .replace(local("tbl"), `${terms.table}~\\ref{$1}`)
+    .replace(local(`(?:${ENV_REF_KINDS})`), "\\ref{$1}")
+}
+
+/**
+ * `Figura~\ref{fig:a}` (either language, exactly as ComdTeX writes it) back to
+ * `@fig:a`. Anything else, a bare `\ref{fig:a}` or a hand-written
+ * `Sección~\ref{sec:a}`, stays LaTeX so it saves back byte for byte.
+ */
+function absorbTexRefNames(text: string): string {
+  let out = text
+  for (const kind of ["fig", "tbl", "sec"] as const) {
+    const names = Object.values(TEX_REF_NAMES[kind]).map(escapeRe).join("|")
+    out = out.replace(new RegExp(String.raw`(?:${names})~\\ref\{(${kind}:[\w:.-]+)\}`, "g"), "@$1")
+  }
+  return out
 }
 
 // ── Storage → CMDX ────────────────────────────────────────────────────────────────
@@ -1041,10 +1110,11 @@ export function toCmdxTex(text: string): string {
         "{#$1}",
       )
       .replace(/\\eqref\{(eq:[\w:.-]+)\}/g, "@$1")
-      .replace(
-        /\\ref\{((?:fig|sec|tbl|thm|theorem|lem|lemma|cor|prop|def|definition|ex|example|exc|exercise):[\w:.-]+)\}/g,
-        "@$1",
-      ),
+      // Figure, table and section refs come back only with the name ComdTeX
+      // writes before them; a bare \ref{fig:x} is kept as LaTeX, since
+      // saving `@fig:x` would add a name the author never wrote.
+      .replace(/^[\s\S]*$/, (all) => absorbTexRefNames(all))
+      .replace(new RegExp(String.raw`\\ref\{((?:${ENV_REF_KINDS}):[\w:.-]+)\}`, "g"), "@$1"),
   )
 }
 
