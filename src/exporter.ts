@@ -16,6 +16,7 @@ import markPlugin from "markdown-it-mark"
 type Token = any
 import { preprocess } from "./preprocessor"
 import { ALL_ENVS, envToLatex, buildTheoremPreamble } from "./environments"
+import { activeDocLanguage, activeDocTerms, resolveDocLanguage, withDocLanguage } from "./docLang"
 import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
@@ -23,7 +24,6 @@ import { SUPPLEMENT_LINE_RE, hasSupplementMarker } from "./supplement"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
-import { resolveDocLanguage } from "./docLang"
 import { accessionsPlugin } from "./accessions"
 import { isBiologyDocument } from "./bioConventions"
 import { seqBlockToLatex } from "./sequence"
@@ -209,42 +209,37 @@ export function codeBlockToTex(body: string, info = ""): string {
   return `\\begin{lstlisting}\n${defused}\\end{lstlisting}\n`
 }
 
-function refToTex(prefix: string, id: string): string {
-  const label = `${prefix}:${id}`
-  if (prefix === "eq") return `\\eqref{${label}}`
-  if (prefix === "fig") return `Figura~\\ref{${label}}`
-  if (prefix === "tbl") return `Tabla~\\ref{${label}}`
-  if (prefix === "sec") return `sección~\\ref{${label}}`
-  const envNames: Record<string, string> = {
-    thm: "Teorema",
-    theorem: "Teorema",
-    lem: "Lema",
-    lemma: "Lema",
-    cor: "Corolario",
-    prop: "Proposición",
-    def: "Definición",
-    definition: "Definición",
-    ex: "Ejemplo",
-    example: "Ejemplo",
-    exc: "Ejercicio",
-    exercise: "Ejercicio",
-  }
-  return envNames[prefix] ? `${envNames[prefix]}~\\ref{${label}}` : `@${label}`
+/** Reference prefix to the environment key whose name `docTerms.env` holds. */
+const ENV_REF_KEYS: Record<string, string> = {
+  thm: "theorem",
+  theorem: "theorem",
+  lem: "lemma",
+  lemma: "lemma",
+  cor: "corollary",
+  prop: "proposition",
+  def: "definition",
+  definition: "definition",
+  ex: "example",
+  example: "example",
+  exc: "exercise",
+  exercise: "exercise",
 }
 
-const ENV_REF_NAMES: Record<string, string> = {
-  thm: "Teorema",
-  theorem: "Teorema",
-  lem: "Lema",
-  lemma: "Lema",
-  cor: "Corolario",
-  prop: "Proposición",
-  def: "Definición",
-  definition: "Definición",
-  ex: "Ejemplo",
-  example: "Ejemplo",
-  exc: "Ejercicio",
-  exercise: "Ejercicio",
+/** Name an env reference prints ("Teorema" / "Theorem") in the document language. */
+function envRefName(prefix: string): string | undefined {
+  const key = ENV_REF_KEYS[prefix]
+  return key ? activeDocTerms().env[key] : undefined
+}
+
+function refToTex(prefix: string, id: string): string {
+  const label = `${prefix}:${id}`
+  const terms = activeDocTerms()
+  if (prefix === "eq") return `\\eqref{${label}}`
+  if (prefix === "fig") return `${terms.figure}~\\ref{${label}}`
+  if (prefix === "tbl") return `${terms.table}~\\ref{${label}}`
+  if (prefix === "sec") return `${terms.section}~\\ref{${label}}`
+  const name = envRefName(prefix)
+  return name ? `${name}~\\ref{${label}}` : `@${label}`
 }
 
 /**
@@ -261,7 +256,7 @@ const ENV_REF_NAMES: Record<string, string> = {
  * cross-reference, and it tells the reader where the result lives.
  */
 function crossRefToTex(docPath: string, prefix: string, id: string): string {
-  const name = ENV_REF_NAMES[prefix]
+  const name = envRefName(prefix)
   if (!name) return escTex(`@${docPath}@${prefix}:${id}`)
   return `${name}~(${escTex(docPath)})`
 }
@@ -875,11 +870,14 @@ interface TexClass {
   bodyFrontmatter?: (title: string, author: string) => string
 }
 
-const THEOREM_SUPPLEMENT = [
-  "\\newtheorem*{exercise}{Ejercicio}",
-  "\\newtheorem*{remark}{Observación}",
-  "\\newtheorem*{note}{Nota}",
-].join("\n")
+function theoremSupplement(): string {
+  const env = activeDocTerms().env
+  return [
+    `\\newtheorem*{exercise}{${env.exercise}}`,
+    `\\newtheorem*{remark}{${env.remark}}`,
+    `\\newtheorem*{note}{${env.note}}`,
+  ].join("\n")
+}
 
 export const TEX_CLASSES: Record<TexClassId, TexClass> = {
   ieeetran: {
@@ -985,7 +983,7 @@ function buildJournalPreamble(
     "\\usepackage[T1]{fontenc}",
     ...(cls.extraPreamble ?? []),
     "\\usepackage{amsmath, amssymb, amsfonts}",
-    cls.theoremPolicy === "full" ? buildTheoremPreamble() : THEOREM_SUPPLEMENT,
+    cls.theoremPolicy === "full" ? buildTheoremPreamble(activeDocLanguage()) : theoremSupplement(),
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
   ]
@@ -1016,7 +1014,7 @@ function buildJournalPreamble(
       : `\\newcommand{${command}}{${definition}}`,
   )
   if (macroLines.length > 0) {
-    lines.push("", "% Macros de usuario", ...macroLines)
+    lines.push("", "% User macros", ...macroLines)
   }
   return lines.join("\n")
 }
@@ -1040,9 +1038,11 @@ function buildPreamble(
     // arrow text like \texttt{->>} emits a stray \end{quoting} and kills the
     // compile. es-noshorthands disables the remaining active-char surprises
     // ("n, "u, …): exported docs use real Unicode, never babel shorthands.
-    "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
+    activeDocLanguage() === "en"
+      ? "\\usepackage[english]{babel}"
+      : "\\usepackage[spanish,es-noquoting,es-noshorthands]{babel}",
     "\\usepackage{amsmath, amssymb, amsfonts}",
-    buildTheoremPreamble(),
+    buildTheoremPreamble(activeDocLanguage()),
     "\\usepackage{ulem}", // \sout
     "\\usepackage{graphicx}",
     "\\usepackage{float}",
@@ -1091,7 +1091,7 @@ function buildPreamble(
       : `\\newcommand{${command}}{${definition}}`,
   )
   if (macroLines.length > 0) {
-    lines.push("", "% Macros de usuario", ...macroLines)
+    lines.push("", "% User macros", ...macroLines)
   }
 
   return lines.join("\n")
@@ -1205,6 +1205,28 @@ ${slideHtml}
 }
 
 export function exportToTex(
+  rawInput: string,
+  macrosText = "",
+  title = "",
+  author = "",
+  frontmatter?: TexHeaderFooter,
+): string {
+  // The document's own `lang` wins, else the interface language; everything
+  // the export prints ("Figura"/"Figure", theorem names, babel) follows it.
+  const lang = resolveDocLanguage(extractFrontmatter(stripKeepMarks(rawInput))?.data)
+  return withDocLanguage(lang, () => exportToTexIn(rawInput, macrosText, title, author, frontmatter))
+}
+
+interface TexHeaderFooter {
+  headerLeft?: string
+  headerCenter?: string
+  headerRight?: string
+  footerLeft?: string
+  footerCenter?: string
+  footerRight?: string
+}
+
+function exportToTexIn(
   rawInput: string,
   macrosText = "",
   title = "",
