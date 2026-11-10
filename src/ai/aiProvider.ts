@@ -414,6 +414,30 @@ async function errText(res: Response): Promise<string> {
 // CLI provider: one-shot bridge to a local agent CLI.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// The vault the app has open, set by App.tsx. A local agent CLI runs with it
+// as its working directory: without one it inherited the app's own (wherever
+// ComdTeX was launched), so it could not see the notes and could only reach
+// the folders its own settings add (for example /tmp or Downloads).
+let vaultDir: string | null = null
+
+export function setAiVaultDir(dir: string | null): void {
+  vaultDir = dir && dir.trim() ? dir : null
+}
+
+/** What the agent is told about where it runs (exported for tests). */
+export function cliWorkspaceNote(dir: string | null): string {
+  if (!dir) {
+    return "No vault is open, so you have no access to the user's notes on disk; work only from what this conversation contains."
+  }
+  return (
+    `You are running as a local agent whose working directory is the user's ComdTeX vault: ${dir}\n` +
+    "Every note, bibliography (references.bib), macro file (macros.md) and data file of the vault is under it, " +
+    "so read them when the user asks about their notes, other files or the vault as a whole. " +
+    "Do not create, edit or delete files there: return the text, and the user applies it through the editor, " +
+    "where every change can be undone."
+  )
+}
+
 class CliProvider {
   constructor(private command: string) {}
 
@@ -421,8 +445,12 @@ class CliProvider {
     const cmdLine = this.command.trim()
     if (!cmdLine) throw new AiError("missing-cli-command")
 
-    // Flatten the conversation into a single prompt for the one-shot call.
-    const prompt = messages
+    // Flatten the conversation into a single prompt for the one-shot call,
+    // starting with where the agent runs.
+    const prompt = [
+      { role: "system", content: cliWorkspaceNote(vaultDir) } as ChatMessage,
+      ...messages,
+    ]
       .map((m) =>
         m.role === "system"
           ? m.content
@@ -446,7 +474,7 @@ class CliProvider {
     const args = [...tokens.slice(1), "--", prompt]
 
     // Lazy import so the shell plugin isn't pulled in unless the CLI is used.
-    const cmd = Command.create(name, args)
+    const cmd = Command.create(name, args, vaultDir ? { cwd: vaultDir } : undefined)
 
     let full = ""
     // Stream stdout if the plugin emits incremental data events.

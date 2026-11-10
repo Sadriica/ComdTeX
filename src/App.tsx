@@ -210,7 +210,7 @@ import {
 } from "./markdownEditing"
 import { minimalEdit } from "./textDiff"
 import { findGaps, gapAtOffset, gapContext, cleanGapCompletion } from "./aiGaps"
-import { isAiReady, sendInlineEdit } from "./ai/aiProvider"
+import { isAiReady, sendInlineEdit, setAiVaultDir } from "./ai/aiProvider"
 import { formatClock } from "./pomodoro"
 import { useFolderRules } from "./useFolderRules"
 import FolderRulesModal from "./FolderRulesModal"
@@ -2373,6 +2373,11 @@ function AppContent({
     }
     /* eslint-enable react-hooks/refs */
   }
+
+  // A local agent CLI runs with the open vault as its working directory.
+  useEffect(() => {
+    setAiVaultDir(vault.vaultPath)
+  }, [vault.vaultPath])
 
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
