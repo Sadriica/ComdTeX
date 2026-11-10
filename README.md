@@ -47,6 +47,8 @@ None of these files are required; ComdTeX works without them.
 
 ComdTeX also writes a `.comdtex-comments.json` in the vault root to persist per-line comments out-of-band, so your `.md` and `.tex` files stay clean.
 
+The first time a vault opens, ComdTeX writes `comdtex.md` (in the interface language) with a live example of every feature, and a `comdtex-examples` folder with a computational biology example and the results files it reads. They are yours to edit or delete; a deleted welcome file is not recreated, and **Restore example files** in the command palette writes fresh copies (anything you changed is kept as `name-old.md` first). An older `comdtex.md` is updated on open, keeping edited copies as `comdtex-old.md`.
+
 ### 2. Vault Structure
 
 A typical math student's vault:
