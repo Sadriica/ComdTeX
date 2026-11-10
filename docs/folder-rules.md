@@ -1,176 +1,179 @@
-# Reglas por carpeta y archivos generados
+# Folder rules and generated files
 
-Una carpeta puede llevar sus propias convenciones: la plantilla con la que
-empiezan sus notas, cómo se nombran, qué frontmatter traen por defecto, y qué
-vistas (tareas, calendario, índice) se generan a partir de ellas.
+A folder can carry its own conventions: the template its notes start from, how
+they are named, which frontmatter they get by default, and which views (tasks,
+calendar, index) are generated from them.
 
-Está pensado para el caso "una carpeta por materia": abres la carpeta, creas una
-nota, y ya viene con la plantilla, el nombre con fecha y el `materia:` puesto.
+It is designed for the "one folder per subject" case: you open the folder,
+create a note, and it already comes with the template, the dated name and the
+`subject:` key filled in.
 
 ---
 
-## Dónde viven las reglas
+## Where the rules live
 
-En un archivo **`.comdtex-folder.json` dentro de la propia carpeta**. Empieza por
-punto, así que ComdTeX lo oculta del árbol de archivos y de la búsqueda del
-vault; lo ves desde el gestor de archivos del sistema y viaja con la carpeta si
-la mueves o la subes a git.
+In a **`.comdtex-folder.json` file inside the folder itself**. It starts with a
+dot, so ComdTeX hides it from the file tree and from vault search; you can see
+it from the system file manager, and it travels with the folder if you move it
+or push it to git.
 
 ```
-mi-vault/
+my-vault/
   algebra/
-    .comdtex-folder.json      ← las reglas de esta carpeta
-    2026-03-04-derivadas.md
-    2026-03-11-integrales.md
-    _tareas.md                ← generado
+    .comdtex-folder.json      ← this folder's rules
+    2026-03-04-derivatives.md
+    2026-03-11-integrals.md
+    _tasks.md                 ← generated
 ```
 
-## Cómo se crean
+## How to create them
 
-Clic derecho sobre la carpeta → **Reglas de la carpeta…**
+Right-click the folder → **Folder rules…**
 
-El diálogo tiene cuatro partes. Ninguna es obligatoria: puedes usar solo el
-patrón de nombre, o solo los archivos generados.
+The dialog has four parts. None is required: you can use just the filename
+pattern, or just the generated files.
 
-### Plantilla por defecto
+### Default template
 
-Qué contenido trae una nota nueva creada en esta carpeta. La lista incluye las
-plantillas de fábrica y las tuyas (ver *Crear una plantilla desde un archivo*).
+The content a new note created in this folder starts with. The list includes the
+built-in templates and your own (see *Create a template from a file*).
 
-> Si creas la nota con **Nuevo desde plantilla…** y eliges una plantilla a mano,
-> gana tu elección: la de la carpeta solo se aplica cuando no dices otra cosa.
+> If you create the note with **New from template…** and pick a template by
+> hand, your choice wins: the folder's template only applies when you do not
+> say otherwise.
 
-### Patrón de nombre
+### Filename pattern
 
-Cómo se nombra el archivo a partir de lo que escribes. Con el patrón
-`{{date:YYYY-MM-DD}}-{{title}}`, teclear `derivadas` crea
-`2026-03-04-derivadas.md`.
+How the file is named from what you type. With the pattern
+`{{date:YYYY-MM-DD}}-{{title}}`, typing `derivatives` creates
+`2026-03-04-derivatives.md`.
 
-Variables disponibles:
+Available variables:
 
-| Variable | Resultado |
+| Variable | Result |
 |---|---|
-| `{{title}}` | lo que escribiste |
+| `{{title}}` | what you typed |
 | `{{date}}` | `2026-03-04` |
-| `{{date:YYYY-MM-DD}}` | fecha con formato propio (`YYYY`, `MM`, `DD`, `HH`, `mm`, `ss`) |
+| `{{date:YYYY-MM-DD}}` | date with a custom format (`YYYY`, `MM`, `DD`, `HH`, `mm`, `ss`) |
 | `{{year}}` | `2026` |
 | `{{time}}` | `15:42` |
 
-Si escribes la extensión (`derivadas.md`), se respeta.
+If you type the extension (`derivatives.md`), it is respected.
 
-### Frontmatter por defecto (YAML)
+### Default frontmatter (YAML)
 
-Claves que se añaden al frontmatter de las notas nuevas:
+Keys added to the frontmatter of new notes:
 
 ```yaml
-materia: Álgebra II
+subject: Algebra II
 tags: ["algebra"]
 ```
 
-**Solo se añaden las claves que el documento no defina ya.** Si la plantilla ya
-trae `title:`, el de la carpeta no lo pisa.
+**Only keys the document does not already define are added.** If the template
+already has `title:`, the folder's value does not override it.
 
-### Archivos generados
+### Generated files
 
-Ver la sección siguiente.
+See the next section.
 
-## Herencia
+## Inheritance
 
-Las subcarpetas heredan **campo a campo**, y gana la carpeta más cercana:
+Subfolders inherit **field by field**, and the nearest folder wins:
 
 ```
-mate/            defaultTemplate: "clase"     frontmatter: {profesor: Ruiz}
-mate/algebra/    filenamePattern: "{{date}}-{{title}}"
+math/            defaultTemplate: "lecture"     frontmatter: {professor: Ruiz}
+math/algebra/    filenamePattern: "{{date}}-{{title}}"
 ```
 
-Una nota creada en `mate/algebra/` usa la plantilla `clase` (heredada), el patrón
-de nombre de `algebra`, y `profesor: Ruiz` (heredado).
+A note created in `math/algebra/` uses the `lecture` template (inherited), the
+filename pattern from `algebra`, and `professor: Ruiz` (inherited).
 
-**Los archivos generados NO se heredan.** Nombran un archivo concreto dentro de
-la carpeta que los declaró; si se heredasen, cada subcarpeta acabaría con una
-copia del índice del padre.
+**Generated files are NOT inherited.** They name a concrete file inside the
+folder that declared them; if they were inherited, every subfolder would end up
+with a copy of its parent's index.
 
 ---
 
-## Archivos generados
+## Generated files
 
-Son vistas construidas a partir de las notas de alrededor. Se declaran en el
-diálogo de reglas con tres campos: **nombre del archivo**, **tipo** y **alcance**.
+These are views built from the surrounding notes. They are declared in the rules
+dialog with three fields: **file name**, **type** and **scope**.
 
-| Tipo | Qué produce |
+| Type | What it produces |
 |---|---|
-| **Tareas** | Todas las `- [ ]` agrupadas por archivo, con enlace `[[nota]]`, pendientes primero y un recuento arriba |
-| **Calendario** | Las notas agrupadas por mes y fecha, de más reciente a más antigua |
-| **Índice** | Lista alfabética de las notas con su título |
+| **Tasks** | Every `- [ ]` grouped by file, with a `[[note]]` link, pending ones first and a count at the top |
+| **Calendar** | Notes grouped by month and date, newest to oldest |
+| **Index** | Alphabetical list of the notes with their title |
 
-El **alcance** es `Solo esta carpeta` (por defecto) o `Todo el vault`.
+The **scope** is `This folder only` (the default) or `Whole vault`.
 
-La fecha de una nota para el calendario sale de su frontmatter `date:` o del
-prefijo del nombre (`2026-03-04-clase.md`). Las que no tienen fecha se agrupan al
-final bajo *Sin fecha*, no se descartan.
+A note's date for the calendar comes from its `date:` frontmatter or from the
+filename prefix (`2026-03-04-lecture.md`). Notes without a date are grouped at
+the end under an undated heading; they are not discarded.
 
-### Cómo se regeneran
+### How they are regenerated
 
-No es automático. Se ejecuta cuando tú lo pides:
+It is not automatic. It runs when you ask for it:
 
-- **Menú Vault → Regenerar archivos de carpeta**
-- **Ctrl+Shift+P → "Regenerar archivos de carpeta"**
+- **Vault menu → Regenerate folder files**
+- **Ctrl+Shift+P → "Regenerate folder files"**
 
-Regenera las reglas de la carpeta del archivo que tengas abierto.
+It regenerates the rules of the folder that holds the file you have open.
 
-### La protección contra sobrescritura
+### Overwrite protection
 
-Cada archivo generado empieza así:
+Every generated file starts like this (the second line is a warning comment,
+currently written in Spanish):
 
 ```markdown
 <!-- comdtex:generated -->
 <!-- Este archivo se regenera automáticamente. Los cambios manuales se perderán. -->
 ```
 
-**ComdTeX solo sobrescribe un archivo si está vacío o si lleva esa marca.** Si
-borras la marca y escribes ahí, la regeneración se salta ese archivo y te avisa,
-en vez de destruir lo que escribiste. Es la vía para "adoptar" un archivo
-generado y hacerlo tuyo.
+**ComdTeX only overwrites a file if it is empty or carries that marker.** If you
+delete the marker and write there, regeneration skips that file and tells you,
+instead of destroying what you wrote. That is the way to "adopt" a generated
+file and make it yours.
 
 ---
 
-## Crear una plantilla desde un archivo
+## Create a template from a file
 
-Clic derecho sobre un archivo → **Guardar como plantilla…**
+Right-click a file → **Save as template…**
 
-Toma el contenido actual y sustituye por variables lo que es propio de *esa* nota
-en concreto:
+It takes the current content and replaces with variables whatever is specific to
+*that* particular note:
 
-- el `title:` del frontmatter → `{{title}}`
-- las fechas ISO del frontmatter → `{{date}}`
-- el `# H1`, **solo si repite el título o el nombre del archivo** → `{{title}}`
+- the frontmatter `title:` → `{{title}}`
+- ISO dates in the frontmatter → `{{date}}`
+- the `# H1`, **only if it repeats the title or the file name** → `{{title}}`
 
-El cuerpo no se toca. Una fecha mencionada dentro de un párrafo es contenido, no
-un campo, y reescribirla corrompería la plantilla en silencio.
+The body is left alone. A date mentioned inside a paragraph is content, not a
+field, and rewriting it would silently corrupt the template.
 
-La plantilla queda disponible en el diálogo de plantillas y en la lista de
-plantilla por defecto de las reglas de carpeta.
+The template becomes available in the templates dialog and in the default
+template list of the folder rules.
 
 ---
 
-## Formato del archivo, para editarlo a mano
+## File format, for editing by hand
 
 ```json
 {
   "version": 1,
-  "defaultTemplate": "clase",
+  "defaultTemplate": "lecture",
   "filenamePattern": "{{date:YYYY-MM-DD}}-{{title}}",
   "frontmatter": {
-    "materia": "Álgebra II",
+    "subject": "Algebra II",
     "tags": ["algebra"]
   },
   "generated": [
-    { "file": "_tareas.md", "type": "tasks", "scope": "folder" },
-    { "file": "_calendario.md", "type": "calendar", "scope": "folder" }
+    { "file": "_tasks.md", "type": "tasks", "scope": "folder" },
+    { "file": "_calendar.md", "type": "calendar", "scope": "folder" }
   ]
 }
 ```
 
-El parser es tolerante: una entrada mal escrita se descarta y el resto se aplica
-igual. Un `file` con `/`, `\` o `..` se rechaza: un archivo generado no puede
-escribir fuera de su propia carpeta.
+The parser is tolerant: a malformed entry is discarded and the rest is applied
+anyway. A `file` containing `/`, `\` or `..` is rejected: a generated file
+cannot write outside its own folder.

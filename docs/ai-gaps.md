@@ -1,78 +1,76 @@
-# Huecos `{{?}}`: dejar espacios para que la IA los rellene
+# Gaps `{{?}}`: leave blanks for the AI to fill in
 
-Escribiendo apuntes en clase sabes que ahí va una definición, un enunciado o un
-ejemplo, pero no quieres pararte a escribirlo. Dejas un hueco, sigues, y lo
-rellenas después.
+When you take notes in class you know a definition, a statement or an example
+belongs somewhere, but you do not want to stop and write it. You leave a gap,
+keep going, and fill it in later.
 
 ```markdown
 :::definition
-Una función es continua en $a$ cuando {{? define continuidad con épsilon-delta}}
+A function is continuous at $a$ when {{? define continuity with epsilon-delta}}
 :::
 
-El teorema fundamental dice que {{?}}
+The fundamental theorem says that {{?}}
 ```
 
 ---
 
-## La sintaxis
+## The syntax
 
-| Forma | Uso |
+| Form | Use |
 |---|---|
-| `{{?}}` | Hueco sin más: la IA deduce del contexto qué va ahí |
-| `{{? una pista}}` | Con indicación de qué quieres |
+| `{{?}}` | A bare gap: the AI infers from the context what belongs there |
+| `{{? a hint}}` | With a hint about what you want |
 
-La pista puede ser cualquier texto hasta el `}}`.
+The hint can be any text up to the `}}`.
 
-Puedes insertar uno con **Ctrl+Shift+P → "Insertar hueco {{?}}"**.
+You can insert one with **Ctrl+Shift+P → "Insert {{?}} gap"**.
 
-Los huecos aparecen marcados en el editor con un aviso informativo (no un
-error: un hueco pendiente es un recordatorio deliberado, no un fallo). Así ves
-de un vistazo cuántos te quedan en un documento largo.
+Gaps are marked in the editor with an informational notice (not an error: a
+pending gap is a deliberate reminder, not a fault). That way you see at a
+glance how many are left in a long document.
 
-Un `{{?}}` dentro de un bloque de código ` ``` ` **no** cuenta como hueco: ahí
-es documentación sobre la función, no una petición.
+A `{{?}}` inside a ` ``` ` code block does **not** count as a gap: there it is
+documentation about the feature, not a request.
 
-## Rellenarlos
+## Filling them
 
-Requiere tener el **asistente IA activado y configurado** (Configuración →
-Asistente IA). ComdTeX no trae claves ni hace ninguna petición hasta que lo
-enciendes tú.
+This requires the **AI assistant to be enabled and configured** (Settings →
+AI assistant). ComdTeX ships no keys and makes no requests until you turn it
+on.
 
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| **Completar hueco con IA** | Rellena el hueco donde está el cursor |
-| **Completar todos los huecos con IA** | Recorre el documento entero |
+| **Fill gap with AI** | Fills the gap where the cursor is |
+| **Fill all gaps with AI** | Goes through the whole document |
 
-Ambos desde **Ctrl+Shift+P**. Mientras trabaja, la barra inferior muestra
-*Completando huecos…*.
+Both are available from **Ctrl+Shift+P**. While it works, the status bar shows
+*Filling gaps…*.
 
-### Qué se le envía al modelo
+### What is sent to the model
 
-Solo el bloque alrededor del hueco (unas 12 líneas a cada lado) más tu pista.
-No se manda el documento entero: para un hueco local no mejora el resultado y
-encarece cada llamada.
+Only the block around the gap (about 12 lines on each side) plus your hint. The
+whole document is not sent: for a local gap it does not improve the result and
+it makes every call more expensive.
 
-### Cómo se aplica
+### How it is applied
 
-Por `executeEdits` de Monaco, igual que toda edición de IA en ComdTeX. Esto
-significa que:
+Through Monaco's `executeEdits`, like every AI edit in ComdTeX. This means that:
 
-- **Un Ctrl+Z deshace el relleno**, como si lo hubieras escrito tú.
-- **Nunca se escribe directamente al disco.** El cambio pasa por el editor y por
-  el autoguardado normal.
+- **A Ctrl+Z undoes the fill**, as if you had typed it yourself.
+- **Nothing is ever written directly to disk.** The change goes through the
+  editor and the normal autosave.
 
-Si el modelo devuelve la respuesta envuelta en un bloque de código, se
-desenvuelve; si repite el marcador `{{?}}`, se elimina. Si devuelve vacío, el
-hueco se queda como estaba.
+If the model wraps its answer in a code block, the wrapper is removed; if it
+repeats the `{{?}}` marker, the marker is dropped. If it returns nothing, the
+gap stays as it was.
 
 ---
 
-## Por qué no es autocompletado tipo Copilot
+## Why this is not Copilot-style autocomplete
 
-Es una decisión deliberada, no una limitación:
+This is a deliberate decision, not a limitation:
 
-- **Tú decides dónde puede escribir la IA.** No aparece texto que no pediste.
-- **No se genera nada hasta que lo pides.** Sin latencia ni coste mientras
-  escribes.
-- **Tab sigue libre** para expandir shorthands (`frac` → `\frac{}{}`), que es el
-  atajo central de ComdTeX. Un autocompletado fantasma competiría por esa tecla.
+- **You decide where the AI may write.** No text appears that you did not ask for.
+- **Nothing is generated until you ask.** No latency or cost while you type.
+- **Tab stays free** to expand shorthands (`frac` → `\frac{}{}`), which is
+  ComdTeX's central shortcut. A ghost-text autocomplete would compete for that key.

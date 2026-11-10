@@ -13,18 +13,18 @@ The **Keep** panel then collects every mark in the vault in one place, grouped b
 Wrap a fragment in double carets:
 
 ```markdown
-Un grupo es ^^abeliano^^ si su operación es conmutativa.
+A group is ^^abelian^^ if its operation is commutative.
 ```
 
 Add an optional category with a `word: ` prefix:
 
 ```markdown
-Un ^^def: grupo abeliano^^ tiene operación conmutativa.
-El teorema exige compacidad; ^^duda: revisar la hipótesis^^.
-La constante vale ^^dato: 6.022e23^^.
+An ^^def: abelian group^^ has a commutative operation.
+The theorem needs compactness; ^^doubt: check the hypothesis^^.
+The constant is ^^data: 6.022e23^^.
 ```
 
-Categories are **freeform**: invent your own (`keep`, `def`, `dato`, `duda`, `pendiente`, …). There is no fixed list, and no need to declare one. The panel discovers them from your documents.
+Categories are **freeform**: invent your own (`keep`, `def`, `data`, `doubt`, `todo`, …). There is no fixed list, and no need to declare one. The panel discovers them from your documents.
 
 ---
 
@@ -58,12 +58,12 @@ The panel reads your documents directly, so it is always in sync; there is no se
 
 ## def
 
-- grupo abeliano (`algebra.md:12`)
-- anillo (`algebra.md:40`)
+- abelian group (`algebra.md:12`)
+- ring (`algebra.md:40`)
 
-## duda
+## doubt
 
-- revisar la hipótesis (`topologia.md:7`)
+- check the hypothesis (`topology.md:7`)
 ```
 
 This is a one-off snapshot, on demand. Nothing is auto-written.
@@ -72,7 +72,7 @@ This is a one-off snapshot, on demand. Nothing is auto-written.
 
 ## Rules and edge cases
 
-**A caret inside the text is fine.** `^^dato: 2^10 = 1024^^` marks the whole fragment; the text may contain a single `^`. And ordinary carets in prose never accidentally become marks: a mark needs two *adjacent* carets on both sides, so `Compara x^2 con y^3` is untouched.
+**A caret inside the text is fine.** `^^data: 2^10 = 1024^^` marks the whole fragment; the text may contain a single `^`. And ordinary carets in prose never accidentally become marks: a mark needs two *adjacent* carets on both sides, so `Compare x^2 with y^3` is untouched.
 
 **Marks are never parsed inside math or code:**
 
