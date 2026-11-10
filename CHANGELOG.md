@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Shorthands inside display math.** `$$frac(1, 2)$$`, `$$sum(n=1, 100)$$` and labeled inline math such as `$sqrt(2)$ {#eq:x}` reached the preview as raw text since 1.1.0. Exports were not affected.
 - **Embeds written in code stay code.** `` `![[note]]` `` in inline code or a fenced block was expanded into a "Not found" box instead of showing the syntax.
 - The new welcome file appears in the file tree right away, instead of after the next refresh.
+- **Biology journal templates start clean.** The biology check flagged PLOS, ONE, LB, DOI and URL as gene symbols in the PLOS, Bioinformatics, bioRxiv and BMC templates, and asked PLOS and Bioinformatics papers for a Data availability section the templates did not have. Common publishing and statistics acronyms are no longer read as genes, and both templates now include the section.
 
 ## [1.32.0] - 2026-11-03
 

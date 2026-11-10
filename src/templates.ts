@@ -683,6 +683,10 @@ As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summ
 
 S1 Fig. Caption of the first supporting figure.
 
+# Data availability {#sec:data-availability}
+
+All relevant data are within the manuscript and its Supporting information files, or in a public repository (name it and give the accession numbers).
+
 # Acknowledgments {#sec:acknowledgments}
 
 # References {#sec:references}
@@ -740,6 +744,10 @@ As shown in @tbl:growth, the strains differ in growth rate. The pipeline is summ
 ![Overview of the analysis workflow](figures/workflow.png){#fig:workflow}
 
 # Discussion {#sec:discussion}
+
+# Data availability {#sec:data-availability}
+
+The data underlying this article are available in a public repository (name it and give the accession numbers).
 
 # Funding {#sec:funding}
 

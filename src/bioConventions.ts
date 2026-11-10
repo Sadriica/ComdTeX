@@ -192,6 +192,35 @@ const NOT_GENES = new Set([
   "NOTE",
   "TODO",
   "FIXME",
+  // Publishing, identifiers and file formats that papers and journal
+  // templates mention in prose.
+  "LB",
+  "URL",
+  "DOI",
+  "PLOS",
+  "ONE",
+  "BMC",
+  "OUP",
+  "ISBN",
+  "ISSN",
+  "ORCID",
+  "XML",
+  "YAML",
+  "HTTP",
+  "HTTPS",
+  // Statistics and repositories.
+  "SD",
+  "SE",
+  "CI",
+  "IQR",
+  "AUC",
+  "ROC",
+  "FDR",
+  "NCBI",
+  "EBI",
+  "GEO",
+  "SRA",
+  "PDB",
 ])
 
 /** Regions where prose rules do not apply: code, math, links, existing italics. */
