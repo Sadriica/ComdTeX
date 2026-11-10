@@ -5,7 +5,7 @@ import UpdateChecker from "./UpdateChecker"
 import { LINUX_INSTALL_COMMAND } from "./useUpdater"
 import { LANGS } from "./i18n"
 
-const t = LANGS.es
+const t = LANGS.en
 const props = { onInstall: () => {}, onDismiss: () => {}, installing: false }
 
 afterEach(cleanup)

@@ -69,7 +69,7 @@ class Boundary extends Component<Props, State> {
  * full-screen last resort; with `region` it is a compact inline notice.
  *
  * Strings come from LanguageContext. If a boundary is ever mounted outside the
- * provider the context holds its Spanish default, which is acceptable.
+ * provider the context holds its English default, which is acceptable.
  */
 export default function ErrorBoundary({
   children,

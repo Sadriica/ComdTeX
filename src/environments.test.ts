@@ -10,6 +10,11 @@ import {
   clearEnvRefCache,
   envRefCacheStats,
 } from "./environments"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 beforeEach(() => {
   resetEnvCounters()

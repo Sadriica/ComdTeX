@@ -198,8 +198,8 @@ describe("useVault CMDX integration", () => {
     })
 
     await waitFor(() => expect(result.current.openTabs).toHaveLength(1))
-    expect(fsMock.files.get(welcomePath)?.content).toBe(welcomeContent("es"))
-    expect(result.current.openTabs[0].content).toContain("# Bienvenido a ComdTeX")
+    expect(fsMock.files.get(welcomePath)?.content).toBe(welcomeContent("en"))
+    expect(result.current.openTabs[0].content).toContain("# Welcome to ComdTeX")
     expect(fsMock.files.has(`${VAULT}/comdtex-examples/stats.csv`)).toBe(true)
     // An untouched old copy needs no backup.
     expect(fsMock.files.has(`${VAULT}/comdtex-old.md`)).toBe(false)

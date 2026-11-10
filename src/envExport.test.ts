@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { numberEnvironmentsForExport } from "./envExport"
 import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversion"
 import { exportToObsidianMarkdown } from "./obsidianExport"
 import { exportReveal } from "./exporter"
 import { renderMarkdown } from "./renderer"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 const DOC = [
   "# Notes",

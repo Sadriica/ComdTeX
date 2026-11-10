@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { prescanFigures, resolveFigRefs } from "./figures"
 import { renderMarkdown } from "./renderer"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 function ids(html: string): string[] {
   return [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])

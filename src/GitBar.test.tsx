@@ -40,7 +40,7 @@ describe("StashSection", () => {
       expect(executed).toContainEqual(expect.arrayContaining(["-C", "/vault", "stash", "list"]))
     })
 
-    fireEvent.click(screen.getByRole("button", { name: /Lista de stashes/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Stash list/i }))
     await screen.findByText("stash@{1}: older change")
 
     const popButtons = screen.getAllByTitle("Pop stash")

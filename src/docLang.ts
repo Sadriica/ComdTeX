@@ -6,7 +6,7 @@
  * Which language: the document's own `lang`/`language` frontmatter when it names
  * one we have, else the interface language. The interface language is held
  * here (`setUiLanguage`, called by the app when the setting changes) so the
- * export paths need no extra argument; it defaults to Spanish, which is also
+ * export paths need no extra argument; it defaults to English, which is also
  * what the app's `LanguageContext` defaults to.
  *
  * `renderMarkdown` pins the resolved language for the duration of a render
@@ -23,7 +23,7 @@ import type { Lang } from "./i18n/types"
 
 export type DocLang = Lang
 
-let uiLanguage: DocLang = "es"
+let uiLanguage: DocLang = "en"
 let pinnedLanguage: DocLang | null = null
 
 export function setUiLanguage(lang: DocLang): void {

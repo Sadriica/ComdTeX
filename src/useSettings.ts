@@ -101,7 +101,7 @@ export const DEFAULTS: Settings = {
   vimMode: false,
   typewriterMode: false,
   previewVisible: true,
-  language: "es",
+  language: "en",
   wordGoal: 0,
   touchpadGestures: true,
   previewTheme: "same",

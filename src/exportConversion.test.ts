@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { toExportMarkdownContent, toPandocMarkdownInput } from "./exportConversion"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 describe("exportConversion", () => {
   it("makes user-facing markdown export Obsidian-clean", () => {

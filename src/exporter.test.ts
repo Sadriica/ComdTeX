@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { exportToTex, exportReveal, detectFeaturePackages } from "./exporter"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 describe("exportToTex", () => {
   it("loads babel with es-noquoting so literal ->> / >-> text survives", () => {

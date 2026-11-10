@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { renderMarkdown, annotateSourceLines, buildParagraphLineMap } from "./renderer"
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 describe("renderMarkdown", () => {
   it("expands shorthands inside display math and labeled inline math", () => {

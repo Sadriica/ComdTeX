@@ -10,7 +10,7 @@ export { es, en }
 
 export const LANGS: Record<Lang, T> = { en, es }
 
-export const LanguageContext = createContext<T>(es)
+export const LanguageContext = createContext<T>(en)
 
 export function useT(): T {
   return useContext(LanguageContext)

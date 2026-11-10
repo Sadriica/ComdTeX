@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, beforeEach } from "vitest"
 import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { renderMarkdown } from "./renderer"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+// Set at load too: some describe blocks render while they are collected.
+setUiLanguage("es")
+beforeEach(() => setUiLanguage("es"))
 
 const TABLE = "| A | B |\n|---|---|\n| 1 | 2 |"
 /** Label directly after the last row (markdown-it folds it in as a lazy row). */

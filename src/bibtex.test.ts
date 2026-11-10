@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { CITE_STYLES } from "./citeStyles"
 import { parseBibtex, resolveCitations, renderBibliography, citationsToLatex } from "./bibtex"
+import { setUiLanguage } from "./docLang"
+
+// These assertions use the Spanish document terms (Teorema, Figura, sección). The
+// interface defaults to English; English output is covered by the *.lang tests.
+beforeEach(() => setUiLanguage("es"))
 
 const SAMPLE_BIB = `
 @book{knuth84,
