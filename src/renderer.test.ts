@@ -4,6 +4,16 @@ import { renderMarkdown, annotateSourceLines, buildParagraphLineMap } from "./re
 import { sanitizeRenderedHtml } from "./sanitizeRenderedHtml"
 
 describe("renderMarkdown", () => {
+  it("expands shorthands inside display math and labeled inline math", () => {
+    const annotations = (html: string) =>
+      [...html.matchAll(/<annotation[^>]*>([^<]*)<\/annotation>/g)].map((m) => m[1])
+    expect(annotations(renderMarkdown("$$frac(1, 2)$$"))).toEqual(["\\frac{1}{2}"])
+    expect(annotations(renderMarkdown("$$\nsum(n=0, \\infty) sup(x, n)\n$$ {#eq:g}"))[0]).toContain(
+      "\\sum_{n=0}^{\\infty}",
+    )
+    expect(annotations(renderMarkdown("$sqrt(2)$ {#eq:r}"))).toEqual(["\\sqrt{2}"])
+  })
+
   it("numbers headings without exposing internal anchor text", () => {
     const html = renderMarkdown("# Intro\n\n## Details")
 

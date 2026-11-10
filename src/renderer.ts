@@ -6,7 +6,7 @@ import katex from "katex"
 // exactly as it will in the LaTeX export (which loads the mhchem package).
 import "katex/contrib/mhchem"
 import { convertFileSrc } from "@tauri-apps/api/core"
-import { preprocess } from "./preprocessor"
+import { expandMathShorthands, preprocess } from "./preprocessor"
 import {
   extractEnvironments,
   prescanEnvironmentLabels,
@@ -244,7 +244,9 @@ function preRenderDisplayMath(
     if (m.index > cursor) out.push(text.slice(cursor, m.index))
     n++
     const isDisplay = m[1] !== undefined
-    const expr = isDisplay ? m[1] : m[3]
+    // Shorthands first: this math is rendered before `preprocess` runs on the
+    // rest of the document, so without it `$$frac(1, 2)$$` reached KaTeX raw.
+    const expr = expandMathShorthands(isDisplay ? m[1] : m[3])
     const rendered = renderKatex(expr, isDisplay, macros)
     const html = isDisplay ? wrapNumbered(rendered, n) : wrapInlineNumbered(rendered, n)
     slots.push(html)

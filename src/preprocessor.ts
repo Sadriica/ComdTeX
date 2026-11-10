@@ -294,6 +294,15 @@ function unmaskCode(text: string, slots: string[]): string {
   return text.replace(/\x02CODE(\d+)\x03/g, (_, i) => slots[parseInt(i)] ?? "")
 }
 
+/**
+ * Shorthands inside a math expression that is already delimited (no `$`
+ * wrapping), for callers that render math before `preprocess` sees the text:
+ * the renderer pre-renders numbered display and inline math.
+ */
+export function expandMathShorthands(expr: string, target: ShorthandTarget = "preview"): string {
+  return expandShorthandsInRegion(expr, false, target)
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 export function preprocess(text: string, target: ShorthandTarget = "preview"): string {
