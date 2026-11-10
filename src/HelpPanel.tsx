@@ -232,7 +232,7 @@ export default function HelpPanel() {
             render={`${t.docTerms.env.definition} 2`}
           />
           <Row
-            code="@[mi carpeta/mi nota]@def:valor"
+            code={`@[${hp.sample.crossFileNote}]@def:${hp.sample.crossFileValue}`}
             desc={hp.envRefSpacesDesc}
             render={`${t.docTerms.env.definition} 3`}
           />
@@ -292,18 +292,42 @@ export default function HelpPanel() {
         {/* ── Markdown text formatting ── */}
         <Section title={hp.formatting}>
           <p className="hp-intro">{hp.formattingIntro}</p>
-          <Row code="**texto**" desc={hp.fmtBoldDesc} render="<strong>texto</strong>" />
-          <Row code="_texto_" desc={hp.fmtItalicDesc} render="<em>texto</em>" />
-          <Row code="~~texto~~" desc={hp.fmtStrikeDesc} render="<s>texto</s>" />
-          <Row code="<u>texto</u>" desc={hp.fmtUnderlineDesc} render="<u>texto</u>" />
-          <Row code="==texto==" desc={hp.fmtHighlightDesc} render="<mark>texto</mark>" />
           <Row
-            code={`<mark class="hl-green">texto</mark>`}
-            desc={hp.fmtHighlightColorDesc}
-            render={`<mark class="hl-green">texto</mark>`}
+            code={`**${hp.sample.text}**`}
+            desc={hp.fmtBoldDesc}
+            render={`<strong>${hp.sample.text}</strong>`}
           />
-          <Row code="`código`" desc={hp.fmtInlineCodeDesc} render="<code>código</code>" />
-          <Row code="<!-- comentario -->" desc={hp.fmtCommentDesc} />
+          <Row
+            code={`_${hp.sample.text}_`}
+            desc={hp.fmtItalicDesc}
+            render={`<em>${hp.sample.text}</em>`}
+          />
+          <Row
+            code={`~~${hp.sample.text}~~`}
+            desc={hp.fmtStrikeDesc}
+            render={`<s>${hp.sample.text}</s>`}
+          />
+          <Row
+            code={`<u>${hp.sample.text}</u>`}
+            desc={hp.fmtUnderlineDesc}
+            render={`<u>${hp.sample.text}</u>`}
+          />
+          <Row
+            code={`==${hp.sample.text}==`}
+            desc={hp.fmtHighlightDesc}
+            render={`<mark>${hp.sample.text}</mark>`}
+          />
+          <Row
+            code={`<mark class="hl-green">${hp.sample.text}</mark>`}
+            desc={hp.fmtHighlightColorDesc}
+            render={`<mark class="hl-green">${hp.sample.text}</mark>`}
+          />
+          <Row
+            code={`\`${hp.sample.code}\``}
+            desc={hp.fmtInlineCodeDesc}
+            render={`<code>${hp.sample.code}</code>`}
+          />
+          <Row code={`<!-- ${hp.sample.comment} -->`} desc={hp.fmtCommentDesc} />
           <Row code="Ctrl+Shift+M" desc={hp.fmtAnnotationDesc} />
           <Row code="[[toc]]" desc={hp.fmtTocDesc} />
         </Section>
@@ -421,14 +445,14 @@ export default function HelpPanel() {
         <Section title={hp.structuralLabels}>
           <p className="hp-intro">{hp.structuralLabelsDesc}</p>
           <Row
-            code="# Introducción {#sec:intro}"
+            code={`# ${hp.sample.heading} {#sec:${hp.sample.headingId}}`}
             desc={hp.sectionLabelDesc}
-            render={`@sec:intro → ${t.docTerms.section} 1`}
+            render={`@sec:${hp.sample.headingId} → ${t.docTerms.section} 1`}
           />
           <Row
-            code="![Leyenda](img.png){#fig:diagrama}"
+            code={`![${hp.sample.caption}](img.png){#fig:${hp.sample.figId}}`}
             desc={hp.figureLabelDesc}
-            render={`@fig:diagrama → ${t.docTerms.figure} 1`}
+            render={`@fig:${hp.sample.figId} → ${t.docTerms.figure} 1`}
           />
           <Row
             code={"| A | B |\n|---|---|\n| 1 | 2 |\n{#tbl:constants}"}
@@ -436,11 +460,14 @@ export default function HelpPanel() {
             render={`@tbl:constants → ${t.docTerms.table} 1`}
           />
           <Row
-            code=":::theorem[Título]{#thm:main}"
+            code={`:::theorem[${hp.sample.envTitle}]{#thm:main}`}
             desc={hp.envLabelDesc}
             render={`@thm:main → ${t.docTerms.env.theorem} 1`}
           />
-          <Row code="@eq:energia, @fig:diagrama, @tbl:constants" desc={hp.labelAutocompleteDesc} />
+          <Row
+            code={`@eq:${hp.sample.labelEnergy}, @fig:${hp.sample.figId}, @tbl:constants`}
+            desc={hp.labelAutocompleteDesc}
+          />
           <Row code={t.labelsPanel.title} desc={hp.labelsPanelDesc} />
         </Section>
 
@@ -448,7 +475,7 @@ export default function HelpPanel() {
         <Section title={hp.qualityWorkflow}>
           <p className="hp-intro">{hp.qualityWorkflowDesc}</p>
           <Row code="comdtex.main: true" desc={hp.projectMainDesc} />
-          <Row code="![[capitulo]]" desc={hp.projectTransclusionDesc} />
+          <Row code={`![[${hp.sample.chapter}]]`} desc={hp.projectTransclusionDesc} />
           <Row code={t.palette.exportProjectTex} desc={hp.projectExportDesc} />
           <Row code={t.palette.compileLatexPdf} desc={hp.localLatexCompileDesc} />
           <Row code={t.documentLab.mathlinks} desc={hp.mathBacklinksDesc} />
@@ -472,7 +499,7 @@ export default function HelpPanel() {
 
         {/* ── Front matter ── */}
         <Section title={hp.frontmatter}>
-          <div className="hp-codeblock">{`---\ntitle: Análisis Real\nauthor: Ada Lovelace\ndate: 2024-03-15\ntags: [análisis, topología]\n---`}</div>
+          <div className="hp-codeblock">{`---\ntitle: ${hp.sample.fmTitleValue}\nauthor: Ada Lovelace\ndate: 2024-03-15\ntags: [${hp.sample.fmTagsValue}]\n---`}</div>
           <Row code="title" desc={hp.fmTitle} />
           <Row code="author" desc={hp.fmAuthor} />
           <Row code="date" desc={hp.fmDate} />
@@ -503,7 +530,11 @@ export default function HelpPanel() {
 
         {/* ── Wikilinks & backlinks ── */}
         <Section title={hp.wikilinks}>
-          <Row code="[[nombre-nota]]" desc={hp.wikilinkRow} render="<u>nombre-nota</u>" />
+          <Row
+            code={`[[${hp.sample.noteName}]]`}
+            desc={hp.wikilinkRow}
+            render={`<u>${hp.sample.noteName}</u>`}
+          />
           <Row code={hp.transclusionFile} desc={hp.transclusionFileDesc} />
           <Row code={hp.transclusionHeading} desc={hp.transclusionHeadingDesc} />
           <Row code={hp.transclusionBlock} desc={hp.transclusionBlockDesc} />
@@ -574,7 +605,11 @@ export default function HelpPanel() {
         {/* ── Footnotes ── */}
         <Section title={hp.footnotes}>
           <p className="hp-intro">{hp.footnotesDesc}</p>
-          <Row code={hp.footnoteInline} desc={hp.footnoteInlineDesc} render="texto<sup>1</sup>" />
+          <Row
+            code={hp.footnoteInline}
+            desc={hp.footnoteInlineDesc}
+            render={`${hp.sample.text}<sup>1</sup>`}
+          />
           <Row code={hp.footnoteDef} desc={hp.footnoteDefDesc} />
         </Section>
 

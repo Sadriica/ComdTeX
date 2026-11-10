@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { MACROS_FILENAME, MACROS_TEMPLATE, parseMacros } from "./macros"
+import { MACROS_FILENAME, MACROS_TEMPLATE, macrosTemplate, parseMacros } from "./macros"
 
 describe("parseMacros", () => {
   it("returns an empty object for empty input", () => {
@@ -112,6 +112,20 @@ describe("parseMacros", () => {
       "\\abs": "\\left|#1\\right|",
       "\\inner": "\\langle #1,\\, #2 \\rangle",
     })
+  })
+})
+
+describe("macrosTemplate", () => {
+  it("writes English comments for the English interface and parses the same macros", () => {
+    const en = macrosTemplate("en")
+    expect(en).toContain("% Custom macros")
+    expect(en).not.toContain("personalizados")
+    expect(parseMacros(en)).toEqual(parseMacros(MACROS_TEMPLATE))
+  })
+
+  it("keeps the Spanish template as the default", () => {
+    expect(macrosTemplate()).toBe(MACROS_TEMPLATE)
+    expect(MACROS_TEMPLATE).toContain("% Macros personalizados")
   })
 })
 

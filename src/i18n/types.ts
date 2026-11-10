@@ -1428,6 +1428,24 @@ export interface T {
     fmOrganismDesc: string
     // wikilinks
     wikilinkRow: string
+    /** Sample words shown inside code examples, so the examples read in the interface language. */
+    sample: {
+      text: string
+      code: string
+      comment: string
+      heading: string
+      headingId: string
+      caption: string
+      figId: string
+      envTitle: string
+      labelEnergy: string
+      crossFileNote: string
+      crossFileValue: string
+      chapter: string
+      noteName: string
+      fmTitleValue: string
+      fmTagsValue: string
+    }
     wikilinkDesc: string
     transclusionFile: string
     transclusionFileDesc: string
@@ -1622,6 +1640,19 @@ export interface T {
     unusedChip: string
     /** Section headings, keyed by label kind (sec, eq, fig, ...). */
     kindTitles: Record<string, string>
+  }
+
+  /** Text of the folder files ComdTeX generates (tasks, calendar, index). */
+  generatedFiles: {
+    regenerateNotice: string
+    tasksTitle: string
+    calendarTitle: string
+    indexTitle: string
+    noTasks: string
+    noNotes: string
+    noDate: string
+    pending: (n: number) => string
+    completed: (n: number) => string
   }
 
   /** Words the document itself prints (preview and non-LaTeX exports). */

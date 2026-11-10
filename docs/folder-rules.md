@@ -122,13 +122,17 @@ It regenerates the rules of the folder that holds the file you have open.
 
 ### Overwrite protection
 
-Every generated file starts like this (the second line is a warning comment,
-currently written in Spanish):
+Every generated file starts like this (the second line is a warning comment):
 
 ```markdown
 <!-- comdtex:generated -->
-<!-- Este archivo se regenera automáticamente. Los cambios manuales se perderán. -->
+<!-- This file is regenerated automatically. Manual changes will be lost. -->
 ```
+
+The text of the generated files (titles such as "Tasks"/"Tareas", "No tasks",
+"pending", "No date", and that warning comment) follows the interface
+language. A Spanish interface writes "Tareas", "Calendario", "Índice" and the
+Spanish comment. The `comdtex:generated` marker is always the same.
 
 **ComdTeX only overwrites a file if it is empty or carries that marker.** If you
 delete the marker and write there, regeneration skips that file and tells you,

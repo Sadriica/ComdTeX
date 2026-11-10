@@ -143,7 +143,7 @@ import { buildMenus, type EditorActionId } from "./menus"
 import { insertSnippet } from "./editorInsert"
 import ToastContainer from "./Toast"
 import { previewLangTag, setUiLanguage } from "./docLang"
-import { parseMacros, MACROS_FILENAME, MACROS_TEMPLATE, type KatexMacros } from "./macros"
+import { parseMacros, MACROS_FILENAME, macrosTemplate, type KatexMacros } from "./macros"
 import { parseBibtex, BIBTEX_FILENAME } from "./bibtex"
 import type { BibEntry } from "./bibtex"
 import type { LatexDiagnostic } from "./latexErrors"
@@ -4051,10 +4051,10 @@ function AppContent({
     const vaultPath = vaultRef.current.vaultPath
     if (!vaultPath) return
     const mp = await pathJoin(vaultPath, MACROS_FILENAME)
-    if (!(await exists(mp))) await writeTextFileAtomic(mp, MACROS_TEMPLATE)
+    if (!(await exists(mp))) await writeTextFileAtomic(mp, macrosTemplate(settings.language))
     await vaultRef.current.loadVault()
     await vaultRef.current.openFilePath(mp)
-  }, [])
+  }, [settings.language])
 
   // Dismiss the focus popover on Escape or a click outside it. The toolbar
   // button is excluded: it toggles, and letting this handler also fire would
@@ -4583,7 +4583,10 @@ function AppContent({
           const sources = (await collectSourceFiles(scopeRoot, rule.scope === "vault")).filter(
             (file) => file.path !== targetPath,
           )
-          await vaultRef.current.writeFileSafe(targetPath, runGenerator(rule.type, sources))
+          await vaultRef.current.writeFileSafe(
+            targetPath,
+            runGenerator(rule.type, sources, undefined, settings.language),
+          )
           written++
         } catch (e) {
           showToast(e instanceof Error ? e.message : String(e), "error")
@@ -4594,7 +4597,7 @@ function AppContent({
         showToast(t.folderRules.regenerated(written), "success")
       }
     },
-    [folderRules, t],
+    [folderRules, t, settings.language],
   )
 
   // ── Rename with wikilink refactor ─────────────────────────────────────────

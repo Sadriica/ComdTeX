@@ -13,6 +13,13 @@
 import { GENERATED_MARKER, type GeneratorType } from "./folderRules"
 import { extractFrontmatter } from "./frontmatter"
 import { pathBasename } from "./pathUtils"
+import { en } from "./i18n/en"
+import { es } from "./i18n/es"
+import type { Lang } from "./i18n/types"
+
+function words(lang: Lang) {
+  return (lang === "en" ? en : es).generatedFiles
+}
 
 export interface SourceFile {
   /** Absolute path. */
@@ -92,7 +99,7 @@ export function documentTitle(file: SourceFile): string {
 /**
  * A date for the file: its frontmatter `date`, else a `YYYY-MM-DD` found at the
  * start of its filename. Null when neither is present: those files are grouped
- * under "sin fecha" rather than dropped, so nothing silently disappears.
+ * under "no date" rather than dropped, so nothing silently disappears.
  */
 export function documentDate(file: SourceFile): string | null {
   const fm = extractFrontmatter(file.content)
@@ -105,32 +112,24 @@ export function documentDate(file: SourceFile): string | null {
   return fromName ? fromName[1] : null
 }
 
-function header(title: string): string[] {
-  return [
-    GENERATED_MARKER,
-    `<!-- Este archivo se regenera automáticamente. Los cambios manuales se perderán. -->`,
-    "",
-    `# ${title}`,
-    "",
-  ]
+function header(title: string, lang: Lang): string[] {
+  return [GENERATED_MARKER, `<!-- ${words(lang).regenerateNotice} -->`, "", `# ${title}`, ""]
 }
 
 /** Pending-first task list, grouped by source file. */
-export function generateTasks(files: SourceFile[], title = "Tareas"): string {
+export function generateTasks(files: SourceFile[], title?: string, lang: Lang = "es"): string {
+  const w = words(lang)
   const items = parseTasks(files)
-  const lines = header(title)
+  const lines = header(title ?? w.tasksTitle, lang)
 
   if (items.length === 0) {
-    lines.push("_No hay tareas._", "")
+    lines.push(`_${w.noTasks}_`, "")
     return lines.join("\n")
   }
 
   const pending = items.filter((i) => !i.done)
   const done = items.filter((i) => i.done)
-  lines.push(
-    `**${pending.length} pendiente${pending.length === 1 ? "" : "s"}** · ${done.length} completada${done.length === 1 ? "" : "s"}`,
-    "",
-  )
+  lines.push(`**${w.pending(pending.length)}** · ${w.completed(done.length)}`, "")
 
   const byFile = new Map<string, TaskItem[]>()
   for (const item of items) {
@@ -151,8 +150,9 @@ export function generateTasks(files: SourceFile[], title = "Tareas"): string {
 }
 
 /** Notes grouped by date, newest first. */
-export function generateCalendar(files: SourceFile[], title = "Calendario"): string {
-  const lines = header(title)
+export function generateCalendar(files: SourceFile[], title?: string, lang: Lang = "es"): string {
+  const w = words(lang)
+  const lines = header(title ?? w.calendarTitle, lang)
   const dated = files.map((f) => ({ file: f, date: documentDate(f) }))
   const withDate = dated
     .filter((d) => d.date !== null)
@@ -160,7 +160,7 @@ export function generateCalendar(files: SourceFile[], title = "Calendario"): str
   const withoutDate = dated.filter((d) => d.date === null)
 
   if (withDate.length === 0 && withoutDate.length === 0) {
-    lines.push("_No hay notas._", "")
+    lines.push(`_${w.noNotes}_`, "")
     return lines.join("\n")
   }
 
@@ -174,7 +174,7 @@ export function generateCalendar(files: SourceFile[], title = "Calendario"): str
     lines.push(`- **${date}**: [[${noteName(file.path)}]] ${documentTitle(file)}`)
   }
   if (withoutDate.length > 0) {
-    lines.push("", "## Sin fecha", "")
+    lines.push("", `## ${w.noDate}`, "")
     for (const { file } of withoutDate) {
       lines.push(`- [[${noteName(file.path)}]] ${documentTitle(file)}`)
     }
@@ -184,10 +184,11 @@ export function generateCalendar(files: SourceFile[], title = "Calendario"): str
 }
 
 /** Plain index of the folder, alphabetical, showing each note's title. */
-export function generateIndex(files: SourceFile[], title = "Índice"): string {
-  const lines = header(title)
+export function generateIndex(files: SourceFile[], title?: string, lang: Lang = "es"): string {
+  const w = words(lang)
+  const lines = header(title ?? w.indexTitle, lang)
   if (files.length === 0) {
-    lines.push("_No hay notas._", "")
+    lines.push(`_${w.noNotes}_`, "")
     return lines.join("\n")
   }
   const sorted = [...files].sort((a, b) => noteName(a.path).localeCompare(noteName(b.path)))
@@ -201,13 +202,18 @@ export function generateIndex(files: SourceFile[], title = "Índice"): string {
 }
 
 /** Dispatch to the generator named by a `.comdtex-folder.json` rule. */
-export function runGenerator(type: GeneratorType, files: SourceFile[], title?: string): string {
+export function runGenerator(
+  type: GeneratorType,
+  files: SourceFile[],
+  title?: string,
+  lang: Lang = "es",
+): string {
   switch (type) {
     case "tasks":
-      return generateTasks(files, title)
+      return generateTasks(files, title, lang)
     case "calendar":
-      return generateCalendar(files, title)
+      return generateCalendar(files, title, lang)
     case "index":
-      return generateIndex(files, title)
+      return generateIndex(files, title, lang)
   }
 }

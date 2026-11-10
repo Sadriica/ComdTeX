@@ -1530,6 +1530,23 @@ export const es: T = {
     fmOrganismDesc:
       "Con la revisión de biología, aplica además las convenciones de genes y proteínas de un organismo (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 frente a TP53, tp53, CDC28, lacZ. Ctrl+. pone o quita la cursiva.",
     wikilinkRow: "Enlace: clic en preview para navegar",
+    sample: {
+      text: "texto",
+      code: "código",
+      comment: "comentario",
+      heading: "Introducción",
+      headingId: "intro",
+      caption: "Leyenda",
+      figId: "diagrama",
+      envTitle: "Título",
+      labelEnergy: "energia",
+      crossFileNote: "mi carpeta/mi nota",
+      crossFileValue: "valor",
+      chapter: "capitulo",
+      noteName: "nombre-nota",
+      fmTitleValue: "Análisis Real",
+      fmTagsValue: "análisis, topología",
+    },
     wikilinkDesc:
       "La pestaña ← muestra los backlinks del archivo activo. El autocompletado sugiere nombres al escribir [[.",
     transclusionFile: "![[nota]]",
@@ -1747,6 +1764,18 @@ export const es: T = {
       exc: "Ejercicios",
       data: "Datos",
     },
+  },
+
+  generatedFiles: {
+    regenerateNotice: "Este archivo se regenera automáticamente. Los cambios manuales se perderán.",
+    tasksTitle: "Tareas",
+    calendarTitle: "Calendario",
+    indexTitle: "Índice",
+    noTasks: "No hay tareas.",
+    noNotes: "No hay notas.",
+    noDate: "Sin fecha",
+    pending: (n) => `${n} pendiente${n === 1 ? "" : "s"}`,
+    completed: (n) => `${n} completada${n === 1 ? "" : "s"}`,
   },
 
   docTerms: {
