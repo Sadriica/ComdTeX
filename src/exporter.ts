@@ -1214,7 +1214,9 @@ export function exportToTex(
   // The document's own `lang` wins, else the interface language; everything
   // the export prints ("Figura"/"Figure", theorem names, babel) follows it.
   const lang = resolveDocLanguage(extractFrontmatter(stripKeepMarks(rawInput))?.data)
-  return withDocLanguage(lang, () => exportToTexIn(rawInput, macrosText, title, author, frontmatter))
+  return withDocLanguage(lang, () =>
+    exportToTexIn(rawInput, macrosText, title, author, frontmatter),
+  )
 }
 
 interface TexHeaderFooter {
