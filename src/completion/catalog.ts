@@ -225,16 +225,16 @@ export const COMPLETIONS_LC: string[] = COMPLETIONS.map((c) => c.label.toLowerCa
 // graphViz.ts, functionPlot.ts, commDiag.ts).
 
 const PSEUDOCODE_BLOCK_COMPLETIONS: Completion[] = [
-  { label: "INPUT", detail: "INPUT: value (I/O)", snippet: "INPUT: ${1:valor}" },
-  { label: "OUTPUT", detail: "OUTPUT: result (I/O)", snippet: "OUTPUT: ${1:resultado}" },
-  { label: "PRINT", detail: "PRINT message (I/O)", snippet: "PRINT ${1:mensaje}" },
-  { label: "IF", detail: "IF … THEN / END IF", snippet: "IF ${1:condición} THEN\n  ${2}\nEND IF" },
+  { label: "INPUT", detail: "INPUT: value (I/O)", snippet: "INPUT: ${1:value}" },
+  { label: "OUTPUT", detail: "OUTPUT: result (I/O)", snippet: "OUTPUT: ${1:result}" },
+  { label: "PRINT", detail: "PRINT message (I/O)", snippet: "PRINT ${1:message}" },
+  { label: "IF", detail: "IF … THEN / END IF", snippet: "IF ${1:condition} THEN\n  ${2}\nEND IF" },
   {
     label: "IFELSE",
     detail: "IF … THEN / ELSE / END IF",
-    snippet: "IF ${1:condición} THEN\n  ${2}\nELSE\n  ${3}\nEND IF",
+    snippet: "IF ${1:condition} THEN\n  ${2}\nELSE\n  ${3}\nEND IF",
   },
-  { label: "ELSEIF", detail: "ELSE IF … THEN", snippet: "ELSE IF ${1:condición} THEN\n  ${2}" },
+  { label: "ELSEIF", detail: "ELSE IF … THEN", snippet: "ELSE IF ${1:condition} THEN\n  ${2}" },
   { label: "ELSE", detail: "ELSE branch", snippet: "ELSE\n  ${1}" },
   {
     label: "FOR",
@@ -244,11 +244,11 @@ const PSEUDOCODE_BLOCK_COMPLETIONS: Completion[] = [
   {
     label: "WHILE",
     detail: "WHILE … DO / END WHILE",
-    snippet: "WHILE ${1:condición} DO\n  ${2}\nEND WHILE",
+    snippet: "WHILE ${1:condition} DO\n  ${2}\nEND WHILE",
   },
-  { label: "REPEAT", detail: "REPEAT / UNTIL …", snippet: "REPEAT\n  ${1}\nUNTIL ${2:condición}" },
+  { label: "REPEAT", detail: "REPEAT / UNTIL …", snippet: "REPEAT\n  ${1}\nUNTIL ${2:condition}" },
   { label: "SWAP", detail: "SWAP a ↔ b", snippet: "SWAP ${1:A[i]} ↔ ${2:A[j]}" },
-  { label: "RETURN", detail: "RETURN value (terminal)", snippet: "RETURN ${1:valor}" },
+  { label: "RETURN", detail: "RETURN value (terminal)", snippet: "RETURN ${1:value}" },
   { label: "END", detail: "END (terminal)", snippet: "END" },
 ]
 

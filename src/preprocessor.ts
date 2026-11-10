@@ -99,7 +99,7 @@ export const HANDLERS: Record<string, Handler> = {
   matf: (args) => {
     const r = parseInt(args[0])
     const c = parseInt(args[1])
-    if (isNaN(r) || isNaN(c) || r < 1 || c < 1) return "\\text{matf: dimensiones inválidas}"
+    if (isNaN(r) || isNaN(c) || r < 1 || c < 1) return "\\text{matf: invalid dimensions}"
     const values = args.slice(2)
     const rowStrs = Array.from({ length: r }, (_, i) =>
       Array.from({ length: c }, (_, j) => values[i * c + j] ?? `a_{${i + 1}${j + 1}}`).join(" & "),
@@ -159,7 +159,7 @@ export const HANDLERS: Record<string, Handler> = {
 const NAMES = Object.keys(HANDLERS).join("|")
 const SHORTHAND_RE = new RegExp(`\\b(${NAMES})\\s*\\(`, "g")
 
-/** Expande shorthands en `text`. Si `wrap=true`, los envuelve en $...$ */
+/** Expands shorthands in `text`. When `wrap=true`, wraps them in $...$ */
 function expandShorthandsInRegion(text: string, wrap: boolean, target: ShorthandTarget): string {
   let result = ""
   let cursor = 0
@@ -193,7 +193,7 @@ function expandShorthandsInRegion(text: string, wrap: boolean, target: Shorthand
   return result
 }
 
-// ── Table shorthand (genera Markdown, no LaTeX) ──────────────────────────────
+// ── Table shorthand (generates Markdown, not LaTeX) ──────────────────────────────
 
 // table(Col1, Col2, Col3) → markdown table with those headers and one empty row
 const TABLE_NAME_RE = /\btable\(/g
@@ -328,7 +328,7 @@ export function preprocess(text: string, target: ShorthandTarget = "preview"): s
       applyTableShorthand(applyMatrixShorthand(expandShorthandsInRegion(before, true, target))),
     )
 
-    // Dentro del bloque math → shorthands sin wrap
+    // Inside a math block: shorthands without wrapping
     if (m[1] !== undefined) {
       // Display block $$...$$
       parts.push(`$$${expandShorthandsInRegion(m[1], false, target)}$$`)

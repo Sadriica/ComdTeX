@@ -1,100 +1,100 @@
-# Plan v1.2.0: CMDX Formato Interno Bidireccional
+# Plan v1.2.0: CMDX bidirectional internal format
 
 > **Status: superseded.** This is the original v1.2.0 design plan; the CMDX
 > format has long since shipped. For the current behaviour see
 > [`docs/cmdx-contract.md`](docs/cmdx-contract.md) and the README.
 > Kept for historical reference only.
 
-## Estado: EN DESARROLLO
+## Status: IN DEVELOPMENT
 
-> **Fecha inicio:** 2026-04-24
-> **Versión target:** 1.2.0
-> **Dependencias:** preprocessor.ts, obsidianExport.ts (existentes)
-
----
-
-## Resumen Ejecutivo
-
-**CMDX** (ComdTeX Internal Format) es el formato de trabajo interno que existe solo en memoria mientras el usuario edita. Los archivos en disco (.md o .tex) se convierten a CMDX al abrirlos y se convierten de vuelta al guardarlos.
-
-```
-.archivo.md (disco) ←→ CMDX (memoria) ←→ Usuario.edita
-.archivo.tex (disco) ←→ CMDX (memoria) ←→ Usuario.edita
-```
-
-Esto permite:
-1. Interoperabilidad con Obsidian (archivos .md)
-2. Working format con shorthands (table(), mat(), :::env, etc.)
-3. Conversión bidireccional transparente
-4. Soporte para ambos .md y .tex
+> **Start date:** 2026-04-24
+> **Target version:** 1.2.0
+> **Dependencies:** preprocessor.ts, obsidianExport.ts (existing)
 
 ---
 
-## Arquitectura
+## Executive summary
 
-### Capas del Sistema
+**CMDX** (ComdTeX Internal Format) is the internal working format that exists only in memory while the user edits. Files on disk (.md or .tex) are converted to CMDX when opened and converted back when saved.
 
-| Capa | Existencia | Usuario ve |
+```
+.file.md (disk) ←→ CMDX (memory) ←→ User.edits
+.file.tex (disk) ←→ CMDX (memory) ←→ User.edits
+```
+
+This allows:
+1. Interoperability with Obsidian (.md files)
+2. A working format with shorthands (table(), mat(), :::env, etc.)
+3. Transparent bidirectional conversion
+4. Support for both .md and .tex
+
+---
+
+## Architecture
+
+### System layers
+
+| Layer | Existence | User sees |
 |------|------------|-----------|
-| Archivo en disco (.md/.tex) | ✅ Persistente | ✅ |
-| Formato CMDX (interno) | ✅ Solo en memoria | ❌ |
-| UI (editando) | - | Solo contenido |
+| File on disk (.md/.tex) | ✅ Persistent | ✅ |
+| CMDX format (internal) | ✅ Memory only | ❌ |
+| UI (editing) | - | Content only |
 
-### Flujo de Datos
+### Data flow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Usuarioabre un archivo                                      │
-│  └─→ Detectar extensión (.md / .tex)                        │
-│  └─→ Leer contenido del archivo                            │
-│  └─→ Aplicar conversor: formato → CMDX                   │
-│  └─→ Almacenar en tab como content (formato CMDX)         │
+│  User opens a file                                          │
+│  └─→ Detect extension (.md / .tex)                          │
+│  └─→ Read the file content                                  │
+│  └─→ Apply converter: format → CMDX                         │
+│  └─→ Store in the tab as content (CMDX format)              │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Usuario edita el archivo (trabaja en formato CMDX)          │
-│  └─→ Monaco editor muestra contenido CMDX                    │
-│  └─→ Preview renderiza con shorthandsexpandidos              │
+│  User edits the file (works in CMDX format)                  │
+│  └─→ Monaco editor shows the CMDX content                    │
+│  └─→ Preview renders with expanded shorthands                │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Usuario guarda el archivo                                 │
-│  └─→ Aplicar conversor: CMDX → formato original            │
-│  └─→ Escribir archivo en disco                             │
+│  User saves the file                                        │
+│  └─→ Apply converter: CMDX → original format                │
+│  └─→ Write the file to disk                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Código Existente a Reutilizar
+## Existing code to reuse
 
-### Archivos Existentes Relevantes
+### Relevant existing files
 
-| Archivo | Función | Reutilizar Para |
+| File | Function | Reuse for |
 |---------|---------|--------------|
-| `src/preprocessor.ts` | `expandShorthandsInRegion()`, `HANDLERS`, `applyTableShorthand()` | Conversión CMDX → LaTeX (tex) |
-| `src/obsidianExport.ts` | `exportToObsidianMarkdown()` | Conversión CMDX → .md (Obsidian callouts) |
-| `src/environments.ts` | `ALL_ENVS`, `NUMBERED_ENVS`, `UNNUMBERED_ENVS` | Mapeo envs y tipos |
-| `src/exporter.ts` | `mdToTex()` | Conversión CMDX → .tex (export) |
+| `src/preprocessor.ts` | `expandShorthandsInRegion()`, `HANDLERS`, `applyTableShorthand()` | CMDX → LaTeX (tex) conversion |
+| `src/obsidianExport.ts` | `exportToObsidianMarkdown()` | CMDX → .md conversion (Obsidian callouts) |
+| `src/environments.ts` | `ALL_ENVS`, `NUMBERED_ENVS`, `UNNUMBERED_ENVS` | Mapping of envs and types |
+| `src/exporter.ts` | `mdToTex()` | CMDX → .tex conversion (export) |
 
-### Estrategia de Reutilización
+### Reuse strategy
 
 ```
-CMDX → .md  → Usar obsidianExport.ts (invertir lógica)
-CMDX → .tex → Usar exporter.ts (mdToTex) o preprocessor.ts
-.md → CMDX  → Nuevas funciones (callouts → :::env)
-.tex → CMDX → Nuevas funciones (LaTeX → shorthands)
+CMDX → .md  → Use obsidianExport.ts (invert the logic)
+CMDX → .tex → Use exporter.ts (mdToTex) or preprocessor.ts
+.md → CMDX  → New functions (callouts → :::env)
+.tex → CMDX → New functions (LaTeX → shorthands)
 ```
 
 ---
 
-## Especificación de Conversiones
+## Conversion specification
 
-### 1. Conversiones para archivos .md
+### 1. Conversions for .md files
 
-#### Al Abrir: .md → CMDX (Markdown/Obsidian → Formato Interno)
+#### On open: .md → CMDX (Markdown/Obsidian → internal format)
 
-| .md (Obsidian) | → CMDX interno |
+| .md (Obsidian) | → internal CMDX |
 |--------------|---------------|
 | `> [!note]` | `:::note` |
 | `> [!tip]` | `:::tip` |
@@ -105,19 +105,19 @@ CMDX → .tex → Usar exporter.ts (mdToTex) o preprocessor.ts
 | `> [!important]` | `:::remark` |
 | `| A | B |` | `table(A, B)` |
 | `| A | B |` | `table(A, B, C...)` |
-| `\| --- \| --- \|` | (se ignora, es separador) |
-| `{#eq:label}` | Mantener |
-| `{#fig:label}` | Mantener |
-| `{#sec:label}` | Mantener |
+| `\| --- \| --- \|` | (ignored, it is a separator) |
+| `{#eq:label}` | Keep |
+| `{#fig:label}` | Keep |
+| `{#sec:label}` | Keep |
 
-**Casos especiales .md:**
-- Frontmatter (YAML): Mantener al inicio sin modificar
-- Blockquotes simples (`>` sin callout): Mantener como están
-- Encabezados (`#`) con labels: `# Title {#sec:label}` → mantener
+**Special .md cases:**
+- Frontmatter (YAML): keep at the start, unmodified
+- Plain blockquotes (`>` without a callout): keep as they are
+- Headings (`#`) with labels: `# Title {#sec:label}` → keep
 
-#### Al Guardar: CMDX → .md (Formato Interno → Markdown/Obsidian)
+#### On save: CMDX → .md (internal format → Markdown/Obsidian)
 
-| CMDX interno | → .md |
+| Internal CMDX | → .md |
 |-------------|-------|
 | `:::theorem[Title]` | `> [!abstract] Title` |
 | `:::lemma[Title]` | `> [!abstract] Lemma` |
@@ -131,21 +131,21 @@ CMDX → .tex → Usar exporter.ts (mdToTex) o preprocessor.ts
 | `:::note[Title]` | `> [!note] Note` |
 | `:::tip[Title]` | `> [!tip] Tip` |
 | `:::warning[Title]` | `> [!warning] Warning` |
-| `:::folded[Title]` | `> [!note] (Collapsed)` o remover |
+| `:::folded[Title]` | `> [!note] (Collapsed)` or remove |
 | `table(A, B, C)` | `| A | B | C |` |
-| `table(A, B)` | `\| A \| B \|` + separador `\| --- \| --- \|` |
+| `table(A, B)` | `\| A \| B \|` + separator `\| --- \| --- \|` |
 
-**Labels (se mantienen en ambos sentidos):**
-- `{#eq:label}` → mantener en .md
-- `{#fig:label}` → mantener en .md
-- `{#sec:label}` → mantener en .md
-- `{#tbl:label}` → mantener en .md
+**Labels (kept in both directions):**
+- `{#eq:label}` → keep in .md
+- `{#fig:label}` → keep in .md
+- `{#sec:label}` → keep in .md
+- `{#tbl:label}` → keep in .md
 
 ---
 
-### 2. Conversiones para archivos .tex
+### 2. Conversions for .tex files
 
-#### Al Abrir: .tex → CMDX (LaTeX → Formato Interno)
+#### On open: .tex → CMDX (LaTeX → internal format)
 
 | .tex | → CMDX |
 |------|-------|
@@ -166,20 +166,20 @@ CMDX → .tex → Usar exporter.ts (mdToTex) o preprocessor.ts
 | `\mathbf{x}` | `bf(x)` |
 | `\mathcal{A}` | `cal(A)` |
 | `\mathbb{R}` | `bb(R)` |
-| `\partial` | `pder(f, x)` (parcial, requiere contexto) |
-| Labels `\label{eq:foo}` | Mantener `{#eq:foo}` |
-| Referencias `\eqref{eq:foo}` | Mantener `@eq:foo` |
-| Includes `\input{file}` | Mantener |
-| Custom macros `\newcommand` | Mantener (en preamble) |
+| `\partial` | `pder(f, x)` (partial, needs context) |
+| Labels `\label{eq:foo}` | Keep `{#eq:foo}` |
+| References `\eqref{eq:foo}` | Keep `@eq:foo` |
+| Includes `\input{file}` | Keep |
+| Custom macros `\newcommand` | Keep (in the preamble) |
 
-**LaTeX environments a convertir:**
+**LaTeX environments to convert:**
 - `theorem`, `lemma`, `corollary`, `proposition`
 - `definition`, `example`, `exercise`
 - `proof`, `remark`, `note`
-- `figure`, `table` (verificar si hay contenido)
+- `figure`, `table` (check whether they have content)
 - `equation`, `align`, `gather`
 
-#### Al Guardar: CMDX → .tex (Formato Interno → LaTeX)
+#### On save: CMDX → .tex (internal format → LaTeX)
 
 | CMDX | → .tex |
 |------|--------|
@@ -195,45 +195,45 @@ CMDX → .tex → Usar exporter.ts (mdToTex) o preprocessor.ts
 | `{... #eq:label}` | `\label{eq:label}` |
 | `@eq:label` | `\eqref{eq:label}` |
 
-**Mantenidos en .tex:**
-- Frontmatter de LaTeX (entre `---` y `---` al inicio)
-- Paquetes usepackage
-- Comandos personalizados \newcommand
-- Referencias cruzadas
+**Kept in .tex:**
+- LaTeX frontmatter (between `---` and `---` at the start)
+- usepackage packages
+- Custom \newcommand commands
+- Cross-references
 
 ---
 
-### 3. Funciones del Conversor (API)
+### 3. Converter functions (API)
 
 ```typescript
 // src/cmdxFormat.ts
 
 /**
- * Convierte formato de almacenamiento a formato CMDX interno.
- * @param text - Contenido del archivo (.md o .tex)
- * @param format - "md" o "tex"
- * @returns Contenido en formato CMDX interno
+ * Converts the storage format to the internal CMDX format.
+ * @param text - File content (.md or .tex)
+ * @param format - "md" or "tex"
+ * @returns Content in the internal CMDX format
  */
 export function toCmdx(text: string, format: "md" | "tex"): string
 
 /**
- * Convierte formato CMDX interno a formato de almacenamiento.
- * @param text - Contenido en formato CMDX
- * @param format - "md" o "tex"
- * @returns Contenido en formato de almacenamiento
+ * Converts the internal CMDX format to the storage format.
+ * @param text - Content in CMDX format
+ * @param format - "md" or "tex"
+ * @returns Content in the storage format
  */
 export function toStorage(text: string, format: "md" | "tex"): string
 
 /**
- * Detecta si el texto ya está en formato CMDX (contiene :::env o shorthands).
- * @param text - Contenido a evaluar
- * @returns true si está en formato CMDX
+ * Detects whether the text is already in CMDX format (contains :::env or shorthands).
+ * @param text - Content to evaluate
+ * @returns true if it is in CMDX format
  */
 export function isCmdxFormat(text: string): boolean
 
 /**
- * Detecta el formato de almacenamiento basado en contenido.
- * @param text - Contenido a evaluar
+ * Detects the storage format based on content.
+ * @param text - Content to evaluate
  * @returns "md" | "tex" | "unknown"
  */
 export function detectStorageFormat(text: string): "md" | "tex" | "unknown"
@@ -241,16 +241,16 @@ export function detectStorageFormat(text: string): "md" | "tex" | "unknown"
 
 ---
 
-## Integración con useVault.ts
+## Integration with useVault.ts
 
-### Flujo de Apertura (openFileNode / openFilePath)
+### Open flow (openFileNode / openFilePath)
 
 ```typescript
-// Pseudo-código de integración
+// Integration pseudocode
 const content = await readTextFile(path)
 const format = path.endsWith(".tex") ? "tex" : "md"
 
-// Convertir a CMDX solo si NO está ya en formato CMDX
+// Convert to CMDX only if NOT already in CMDX format
 const internalContent = isCmdxFormat(content)
   ? content
   : toCmdx(content, format)
@@ -258,465 +258,465 @@ const internalContent = isCmdxFormat(content)
 const newTab: OpenFile = {
   path,
   name,
-  content: internalContent,  // Almacena en formato CMDX
+  content: internalContent,  // Stored in CMDX format
   isDirty: false,
   mode: format,
 }
 ```
 
-### Flujo de Guardado (saveFile)
+### Save flow (saveFile)
 
 ```typescript
-// Pseudo-código de integración
+// Integration pseudocode
 const tab = openTabs.find(t => t.path === path)
 const format = path.endsWith(".tex") ? "tex" : "md"
 
-// Convertir de CMDX a formato de almacenamiento
+// Convert from CMDX to the storage format
 const storageContent = toStorage(tab.content, format)
 
 await writeTextFile(path, storageContent)
 ```
 
-### Determinación del Formato
+### Format detection
 
 ```typescript
-// Función auxiliar para detectar formato
+// Helper to detect the format
 function detectFormat(path: string, content: string): "md" | "tex" {
   if (path.endsWith(".tex")) return "tex"
   if (path.endsWith(".md")) return "md"
-  // Fallback: detectar por contenido
+  // Fallback: detect by content
   return detectStorageFormat(content)
 }
 ```
 
 ---
 
-## Casos Edge y Manejo
+## Edge cases and handling
 
-### 1. Archivo Ya En Formato CMDX
+### 1. File already in CMDX format
 
-**Problema:** Usuario abre un archivo que ya contiene sintaxis CMDX (:::env, table(), etc.)
+**Problem:** The user opens a file that already contains CMDX syntax (:::env, table(), etc.)
 
-**Solución:**
+**Solution:**
 ```typescript
-// Si ya tiene formato CMDX, no reconvertir
+// If it is already CMDX, do not convert again
 if (!isCmdxFormat(content)) {
   content = toCmdx(content, format)
 }
 ```
 
-### 2. Archivo con Contenido Mixto
+### 2. File with mixed content
 
-**Problema:** Archivo .md tiene tanto callouts (`> [!note]`) como `:::env`
+**Problem:** A .md file has both callouts (`> [!note]`) and `:::env`
 
-**Solución:** Ejecutar conversor en orden:
-1. Convertir callouts a CMDX
-2. Mantener :::env existente
-3. Unificar resultado
+**Solution:** Run the converter in order:
+1. Convert callouts to CMDX
+2. Keep existing :::env
+3. Merge the result
 
 ### 3. Frontmatter
 
-**Problema:** Mantener frontmatter (YAML) al inicio del archivo
+**Problem:** Keep the frontmatter (YAML) at the start of the file
 
-**Solución:**
+**Solution:**
 ```typescript
-// Separar frontmatter antes de convertir
+// Split off the frontmatter before converting
 function processContent(text: string, format: StorageFormat): string {
-  // Si tiene frontmatter, separarlo
+  // If it has frontmatter, split it off
   const frontmatterMatch = text.match(/^---\n[\s\S]*?\n---\n/)
   const frontmatter = frontmatterMatch?.[0] ?? ""
   const body = text.slice(frontmatter.length)
   
-  // Convertir body
+  // Convert the body
   const convertedBody = toCmdx(body, format)
   
-  // Recombinar
+  // Recombine
   return frontmatter + convertedBody
 }
 ```
 
-### 4. Error de Conversión
+### 4. Conversion error
 
-**Problema:** La conversión falla por contenido inesperado
+**Problem:** The conversion fails because of unexpected content
 
-**Solución:**
-- Wrap en try-catch
-- Si falla, warn al usuario y guardar raw
-- No perder datos
+**Solution:**
+- Wrap in try-catch
+- If it fails, warn the user and save raw
+- Never lose data
 
-### 5. Conflictos de Editado Externo
+### 5. External-edit conflicts
 
-**Problema:** Usuario edita archivo en Obsidian mientras está abierto en ComdTeX
+**Problem:** The user edits a file in Obsidian while it is open in ComdTeX
 
-**Solución:** Ya manejado por `cachedMtime` en useVault.ts (verificar cambio externo antes de guardar)
+**Solution:** Already handled by `cachedMtime` in useVault.ts (check for external changes before saving)
 
-### 6. Archivos Binarios
+### 6. Binary files
 
-**Problema:** Imágenes, PDFs, etc.
+**Problem:** Images, PDFs, etc.
 
-**Solución:** Ya manejado, skip de BINARY_EXTS en useVault.ts
+**Solution:** Already handled, skipped through BINARY_EXTS in useVault.ts
 
-### 7. Labels y Referencias
+### 7. Labels and references
 
-**Problema:** Mantener labels en conversiones
+**Problem:** Keep labels across conversions
 
-**Solución:**
-- `{#eq:label}` → сохраняется en ambos sentidos
-- `{#fig:label}` → сохраняется
-- `{#sec:label}` → сохраняется
-- `@eq:label` → сохраняется
+**Solution:**
+- `{#eq:label}` → preserved in both directions
+- `{#fig:label}` → preserved
+- `{#sec:label}` → preserved
+- `@eq:label` → preserved
 
 ---
 
-## Archivos a Modificar
+## Files to modify
 
-| Archivo | Cambio | Tipo |
+| File | Change | Type |
 |---------|--------|------|
-| `src/cmdxFormat.ts` | **NUEVO**: conversores | Crear |
-| `src/useVault.ts` | Integrar conversores en openFileNode, openFilePath, saveFile | Modificar |
-| `src/i18n.ts` | Añadir strings para warnings de conversión | Modificar |
-| `src/exporter.ts` | (Opcional) exportar vault a .md | Modificar |
+| `src/cmdxFormat.ts` | **NEW**: converters | Create |
+| `src/useVault.ts` | Integrate the converters in openFileNode, openFilePath, saveFile | Modify |
+| `src/i18n.ts` | Add strings for conversion warnings | Modify |
+| `src/exporter.ts` | (Optional) export the vault to .md | Modify |
 
 ---
 
 ## Testing
 
-### Casos de Prueba
+### Test cases
 
 | # | Scenario | Input | Expected |
 |---|---------|-------|----------|
-| 1 | Abrir .md con callout | `> [!note] Hola` | `:::note Hola` |
-| 2 | Abrir .md con table | `\| A \| B \|` | `table(A, B)` |
-| 3 | Guardar CMDX → .md | `:::theorem Hola` | `> [!abstract] Hola` |
-| 4 | Guardar CMDX → .md | `table(A, B)` | `\| A \| B \|` |
-| 5 | Abrir .tex con theorem | `\begin theorem}...` | `:::theorem...` |
-| 6 | Abrir .tex con matrix | `\begin{bmatrix}1 & 2` | `mat(1, 2)` |
-| 7 | Guardar CMDX → .tex | `mat(1,2)` | `\begin{bmatrix}1 & 2\end{bmatrix}` |
-| 8 | Archivo ya CMDX | `:::note Hola` | Sin cambios |
-| 9 | Frontmatter | `---\ntitle: X\n---` | Mantener |
-| 10 | Labels | `$$x^2$$ {#eq:foo}` | Mantener |
-| 11 | Error de conversión | Contenido inválido | Warn + guardar raw |
+| 1 | Open .md with callout | `> [!note] Hello` | `:::note Hello` |
+| 2 | Open .md with table | `\| A \| B \|` | `table(A, B)` |
+| 3 | Save CMDX → .md | `:::theorem Hello` | `> [!abstract] Hello` |
+| 4 | Save CMDX → .md | `table(A, B)` | `\| A \| B \|` |
+| 5 | Open .tex with theorem | `\begin theorem}...` | `:::theorem...` |
+| 6 | Open .tex with matrix | `\begin{bmatrix}1 & 2` | `mat(1, 2)` |
+| 7 | Save CMDX → .tex | `mat(1,2)` | `\begin{bmatrix}1 & 2\end{bmatrix}` |
+| 8 | File already CMDX | `:::note Hello` | Unchanged |
+| 9 | Frontmatter | `---\ntitle: X\n---` | Keep |
+| 10 | Labels | `$$x^2$$ {#eq:foo}` | Keep |
+| 11 | Conversion error | Invalid content | Warn + save raw |
 
 ---
 
-## Resumen de Implementación
+## Implementation summary
 
-### Tareas Principales
+### Main tasks
 
-- [ ] **Crear** `src/cmdxFormat.ts`
-  - [ ] Implementar conversores .md → CMDX
-  - [ ] Implementar conversores CMDX → .md
-  - [ ] Implementar conversores .tex → CMDX
-  - [ ] Implementar conversores CMDX → .tex
-  - [ ] Implementar `isCmdxFormat()`
-  - [ ] Implementar `detectStorageFormat()`
+- [ ] **Create** `src/cmdxFormat.ts`
+  - [ ] Implement .md → CMDX converters
+  - [ ] Implement CMDX → .md converters
+  - [ ] Implement .tex → CMDX converters
+  - [ ] Implement CMDX → .tex converters
+  - [ ] Implement `isCmdxFormat()`
+  - [ ] Implement `detectStorageFormat()`
 
-- [ ] **Modificar** `src/useVault.ts`
-  - [ ] Integrar `toCmdx()` en `openFileNode()`
-  - [ ] Integrar `toCmdx()` en `openFilePath()`
-  - [ ] Integrar `toStorage()` en `saveFile()`
-  - [ ] Manejar formato según extensión
+- [ ] **Modify** `src/useVault.ts`
+  - [ ] Integrate `toCmdx()` in `openFileNode()`
+  - [ ] Integrate `toCmdx()` in `openFilePath()`
+  - [ ] Integrate `toStorage()` in `saveFile()`
+  - [ ] Handle the format according to the extension
 
 - [ ] **Testing**
-  - [ ] Covered casos de conversión para .md
-  - [ ] Covered casos de conversión para .tex
-  - [ ] Covered casos edge
+  - [ ] Cover the conversion cases for .md
+  - [ ] Cover the conversion cases for .tex
+  - [ ] Cover the edge cases
 
-- [ ] **Documentación**
-  - [ ] Actualizar README con nueva feature
-
----
-
-## Benefits Esperados
-
-1. **Interoperabilidad:** Archivos .md funcionan en Obsidian
-2. **Flexibilidad:** Trabajar con shorthands mientras se edita
-3. **Bidireccionalidad:**round-trip sin pérdida de datos
-4. **Soporte .tex:** Lo mismo para archivos LaTeX
-5. **UX:** Usuario no nota la conversión, es transparente
-
-## Notas Técnicas
-
-- **Performance:** Conversión es ~1-2ms por archivo, negligible
-- **Memoria:** Solo existe en memoria mientras el tab está abierto
-- **I/O:** Una lectura + una escritura por operación (no duplicados)
-- **Conflictos:** Manejado por mtime cache existente
-- **Autosave:** Conversión aplica antes de escribir a disco
+- [ ] **Documentation**
+  - [ ] Update the README with the new feature
 
 ---
 
-## Casos Especiales Adicionales
+## Expected benefits
 
-### 1. Archivos Nuevos (createFile)
+1. **Interoperability:** .md files work in Obsidian
+2. **Flexibility:** Work with shorthands while editing
+3. **Bidirectionality:** lossless round-trip
+4. **.tex support:** The same for LaTeX files
+5. **UX:** The user does not notice the conversion, it is transparent
 
-**Problema:** Usuario crea archivo nuevo desde cero
+## Technical notes
 
-**Solución:**
-- Apply conversor solo al abrir archivos existentes
--Archivos nuevos mantienen formato por defecto (.md)
-- Opcional: setting `defaultFileFormat` para elegir .md vs .tex
+- **Performance:** Conversion takes ~1-2ms per file, negligible
+- **Memory:** Exists only in memory while the tab is open
+- **I/O:** One read + one write per operation (no duplicates)
+- **Conflicts:** Handled by the existing mtime cache
+- **Autosave:** The conversion applies before writing to disk
+
+---
+
+## Additional special cases
+
+### 1. New files (createFile)
+
+**Problem:** The user creates a new file from scratch
+
+**Solution:**
+- Apply the converter only when opening existing files
+- New files keep the default format (.md)
+- Optional: a `defaultFileFormat` setting to choose .md vs .tex
 
 ```typescript
-// createFile NO aplica conversión
-await writeTextFile(filePath, content) // content ya en formato original
+// createFile does NOT apply a conversion
+await writeTextFile(filePath, content) // content is already in the original format
 ```
 
-### 2. Archivos .bib (BibTeX)
+### 2. .bib files (BibTeX)
 
-**Problema:** Archivos BibTeX no deben convertirse
+**Problem:** BibTeX files must not be converted
 
-**Solución:**
-- Ya manejado por extensión en useVault.ts
-- Skip conversión para `.bib`
+**Solution:**
+- Already handled by extension in useVault.ts
+- Skip the conversion for `.bib`
 
-### 3. Ctrl+S / Guardado Manual
+### 3. Ctrl+S / manual save
 
-**Problema:** Conversión debe aplica en todo guardado
+**Problem:** The conversion must apply on every save
 
-**Solución:**
-- La función `saveFile()` maneja tanto autosave como guardado manual
-- La conversión se aplica ahí, no importa el trigger
+**Solution:**
+- `saveFile()` handles both autosave and manual save
+- The conversion is applied there, whatever the trigger
 
-### 4. Exportación (Export to .tex)
+### 4. Export (Export to .tex)
 
-**Problema:** El export ya tiene su propio flujo (exporter.ts)
+**Problem:** Export already has its own flow (exporter.ts)
 
-**Solución:**
-- Export usa mdToTex(), NO debe usar toStorage()
-- El export genera .tex independiente del archivo fuente
-- Solo el guardado normal usa toStorage()
+**Solution:**
+- Export uses mdToTex() and must NOT use toStorage()
+- Export generates a .tex independent of the source file
+- Only the normal save uses toStorage()
 
 ### 5. Revert / Undo
 
-**Problema:** Usuario hace undo después de abrir
+**Problem:** The user undoes after opening
 
-**Solución:**
-- El contenido ya está en CMDX interno
-- Undo opera sobre el contenido en memoria, no hay problema
+**Solution:**
+- The content is already in internal CMDX
+- Undo operates on the in-memory content, so there is no problem
 
-### 6. Diff / Version History
+### 6. Diff / version history
 
-**Problema:** Ver diferencias entre versiones
+**Problem:** Viewing differences between versions
 
-**Solución:**
-- diff debería compararversion原始 (.md/.tex en disco)
-- no la versión CMDX interna
-- Opcional: herramienta de diff externa
-
----
-
-## Checklist de Implementación Detallado
-
-### Fase 1: Crear cmdxFormat.ts
-
-- [ ] Imports de archivos existentes (preprocessor, environments, obsidianExport)
-- [ ] Función `isCmdxFormat(text)` - detecta si ya tiene sintaxis CMDX
-- [ ] Función `toCmdxMd(text)` - .md → CMDX
-  - [ ] Convertir callouts a :::env
-  - [ ] Convertir tables a table()
-- [ ] Función `toCmdxTex(text)` - .tex → CMDX
-  - [ ] Convertir environments
-  - [ ] Convertir matrices a mat()
-- [ ] Función `toStorageMd(text)` - CMDX → .md (reutilizar obsidianExport.ts)
-- [ ] Función `toStorageTex(text)` - CMDX → .tex (reutilizar exporter.ts)
-- [ ] Función `toCmdx(text, format)` - Router
-- [ ] Función `toStorage(text, format)` - Router
-
-### Fase 2: Integrar en useVault.ts
-
-- [ ] Importar cmdxFormat
-- [ ] Modificar `openFileNode()` - apply toCmdx después de readTextFile
-- [ ] Modificar `openFilePath()` - apply toCmdx después de readTextFile
-- [ ] Modificar `saveFile()` - apply toStorage antes de writeTextFile
-- [ ] Manejar formato según extensión (.md/.tex)
-- [ ] Skip conversión si ya está en formato CMDX
-
-### Fase 3: Testing
-
-- [ ] Testing: covered para .md → CMDX
-- [ ] Testing: covered para CMDX → .md
-- [ ] Testing: covered para .tex → CMDX
-- [ ] Testing: covered para CMDX → .tex
-- [ ] Testing: archivos binarios no se tocan
-- [ ] Testing: archivos .bib no se tocan
-
-### Fase 4: Documentación
-
-- [ ] README actualizado con feature
-- [ ] CHANGELOG.md entrada para v1.2.0
+**Solution:**
+- diff should compare against the original version (.md/.tex on disk)
+- not the internal CMDX version
+- Optional: an external diff tool
 
 ---
 
-## Riesgos y Mitigaciones
+## Detailed implementation checklist
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
+### Phase 1: Create cmdxFormat.ts
+
+- [ ] Imports from existing files (preprocessor, environments, obsidianExport)
+- [ ] `isCmdxFormat(text)` function - detects whether it already has CMDX syntax
+- [ ] `toCmdxMd(text)` function - .md → CMDX
+  - [ ] Convert callouts to :::env
+  - [ ] Convert tables to table()
+- [ ] `toCmdxTex(text)` function - .tex → CMDX
+  - [ ] Convert environments
+  - [ ] Convert matrices to mat()
+- [ ] `toStorageMd(text)` function - CMDX → .md (reuse obsidianExport.ts)
+- [ ] `toStorageTex(text)` function - CMDX → .tex (reuse exporter.ts)
+- [ ] `toCmdx(text, format)` function - Router
+- [ ] `toStorage(text, format)` function - Router
+
+### Phase 2: Integrate into useVault.ts
+
+- [ ] Import cmdxFormat
+- [ ] Modify `openFileNode()` - apply toCmdx after readTextFile
+- [ ] Modify `openFilePath()` - apply toCmdx after readTextFile
+- [ ] Modify `saveFile()` - apply toStorage before writeTextFile
+- [ ] Handle the format according to the extension (.md/.tex)
+- [ ] Skip the conversion if it is already in CMDX format
+
+### Phase 3: Testing
+
+- [ ] Testing: coverage for .md → CMDX
+- [ ] Testing: coverage for CMDX → .md
+- [ ] Testing: coverage for .tex → CMDX
+- [ ] Testing: coverage for CMDX → .tex
+- [ ] Testing: binary files are not touched
+- [ ] Testing: .bib files are not touched
+
+### Phase 4: Documentation
+
+- [ ] README updated with the feature
+- [ ] CHANGELOG.md entry for v1.2.0
+
+---
+
+## Risks and mitigations
+
+| Risk | Probability | Impact | Mitigation |
 |-------|------------|---------|------------|
-| Conversión incompleta | Media | Medio | Covered testing extenso |
-| Pérdida de datos | Baja | Alto | Try-catch, guardar raw si falla |
-| Conflictos con archivos externos | Media | Medio | Warn si detectacambio externo |
-| Performance lenta | Baja | Bajo | Conversión es ~1-2ms |
-| Loop de reconversión | Baja | Medio | isCmdxFormat() check |
+| Incomplete conversion | Medium | Medium | Extensive test coverage |
+| Data loss | Low | High | Try-catch, save raw if it fails |
+| Conflicts with external files | Medium | Medium | Warn if an external change is detected |
+| Slow performance | Low | Low | Conversion takes ~1-2ms |
+| Reconversion loop | Low | Medium | `isCmdxFormat()` check |
 
 ---
 
-## Errores Potenciales de Implementación
+## Potential implementation errors
 
-### 1. Loop de Reconversión Infinita
+### 1. Infinite reconversion loop
 
-**Problema:** Al abrir, convertimos .md → CMDX. Al guardar, convertimos CMDX → .md. Al abrir de nuevo, el .md se convierte otra vez... si la conversión no es perfecta, se degrada cada ciclo.
+**Problem:** On open we convert .md → CMDX. On save we convert CMDX → .md. On the next open the .md is converted again... if the conversion is not perfect, it degrades on every cycle.
 
-**Escenario:**
+**Scenario:**
 ```
-.open(#1): .md "Hola" → CMDX "Hola"
-.save(#1): CMDX "Hola" → .md "Hola"
-.open(#2): .md "Hola" → CMDX "Hola" ✓ (debería ser igual)
+.open(#1): .md "Hello" → CMDX "Hello"
+.save(#1): CMDX "Hello" → .md "Hello"
+.open(#2): .md "Hello" → CMDX "Hello" ✓ (should be the same)
 ```
 
-**Verificación requerida:**
-- La conversión debe ser idempotente: `toCmdx(toStorage(x)) === x` (o al menos equivalent)
-- Probar 10+ ciclos de open/save sin degradación
+**Required verification:**
+- The conversion must be idempotent: `toCmdx(toStorage(x)) === x` (or at least equivalent)
+- Test 10+ open/save cycles without degradation
 
-### 2. Pérdida de Frontmatter o Metadatos
+### 2. Loss of frontmatter or metadata
 
-**Problema:** El frontmatter (YAML al inicio) podría perderse o duplicarse en conversiones.
+**Problem:** The frontmatter (YAML at the start) could be lost or duplicated in conversions.
 
-**Verificación requerida:**
-- Archivos con frontmatter mantienen el frontmatter intacto después de open + save
+**Required verification:**
+- Files with frontmatter keep the frontmatter intact after open + save
 
-### 3. Regex Incompleto para Callouts
+### 3. Incomplete regex for callouts
 
-**Problema:** Los callouts de Obsidian pueden tener variaciones:
-- `> [!NOTE]` (mayúsculas)
-- `> [!NOTE] Title` (con título en la misma línea)
-- `> [!NOTE]\n> Content` (multilínea)
-- `> [!warning] Mensaje` (sin corchetes)
+**Problem:** Obsidian callouts can have variations:
+- `> [!NOTE]` (uppercase)
+- `> [!NOTE] Title` (with a title on the same line)
+- `> [!NOTE]\n> Content` (multiline)
+- `> [!warning] Message` (without brackets)
 
-**Verificación:**
-- Cubrir todos los formatos de callout de Obsidian
+**Verification:**
+- Cover all Obsidian callout formats
 
-### 4. Tablas con Celdas Vacías o pipes en contenido
+### 4. Tables with empty cells or pipes in the content
 
-**Problema:**
-- `| A | | B |` (celda vacía)
-- `| "A | B" | C |` (pipe en contenido)
-- `| A \| B | C |` (pipe escapado)
+**Problem:**
+- `| A | | B |` (empty cell)
+- `| "A | B" | C |` (pipe in the content)
+- `| A \| B | C |` (escaped pipe)
 
-**Verificación:**
-- Cubrir tablas con contenido especial
+**Verification:**
+- Cover tables with special content
 
-### 5. Conflictos con Preprocessor Existente
+### 5. Conflicts with the existing preprocessor
 
-**Problema:** El preprocessor ya tiene:
-- `table()` → markdown table (preprocessor.ts línea 170)
-- `mat()` → LaTeX matrix (preprocessor.ts línea 76)
+**Problem:** The preprocessor already has:
+- `table()` → markdown table (preprocessor.ts line 170)
+- `mat()` → LaTeX matrix (preprocessor.ts line 76)
 
-**Conflicto potencial:** Si convertimos `| A | B |` a `table(A,B)` en CMDX, y luego el preview usa el preprocessor, podemos tener doble conversión.
+**Potential conflict:** If we convert `| A | B |` to `table(A,B)` in CMDX, and the preview then uses the preprocessor, we could get a double conversion.
 
-**Solución:**
-- El preprocessor debe ejecutarse DESPUÉS de cargar el archivo (ya es así)
-- El contenido en memoria es CMDX, el preprocessor lo convierte a LaTeX para preview
-- Esto es correcto: CMDX → preview usa preprocessor → HTML
+**Solution:**
+- The preprocessor must run AFTER the file is loaded (it already does)
+- The in-memory content is CMDX, the preprocessor converts it to LaTeX for the preview
+- This is correct: CMDX → preview uses preprocessor → HTML
 
-### 6. Editor Monaco con Contenido CMDX
+### 6. Monaco editor with CMDX content
 
-**Problema:** El usuario ve CMDX en el editor, pero el archivo original era .md
+**Problem:** The user sees CMDX in the editor, but the original file was .md
 
-**Verificación:**
-- El contenido se muestra correctamente en Monaco
-- Cmd+S guarda correctamente en .md (no en CMDX)
+**Verification:**
+- The content is displayed correctly in Monaco
+- Cmd+S saves correctly to .md (not CMDX)
 
-### 7. Preview Renderiza Diferente
+### 7. Preview renders differently
 
-**Problema:** El preview debe renderizar el contenido CMDX (lo que ya hace con preprocessor)
+**Problem:** The preview must render the CMDX content (which it already does with the preprocessor)
 
-**Confirmación:**
-- El preview ya usa `preprocess()` que convierte shorthands a LaTeX
-- No hay cambio necesario en preview
+**Confirmation:**
+- The preview already uses `preprocess()`, which converts shorthands to LaTeX
+- No change is needed in the preview
 
-### 8. Undo/Redo Después de Conversión
+### 8. Undo/Redo after conversion
 
-**Problema:** Después de abrir un archivo, el historial de undo tiene el contenido convertido.
+**Problem:** After opening a file, the undo history holds the converted content.
 
-**Verificación:**
-- Probar Ctrl+Z después de abrir - debería funcionar
-- No debería permitir undo a versión previa a la apertura
+**Verification:**
+- Test Ctrl+Z after opening - it should work
+- It should not allow undoing to a version from before the file was opened
 
-### 9. Autosave Durante Conversión
+### 9. Autosave during conversion
 
-**Problema:** Autosave se activa mientras se está convirtiendo
+**Problem:** Autosave fires while the conversion is in progress
 
-**Verificación:**
-- Probar abrir archivo grande (1MB+) - el autosave no debería ejecutarse durante la carga
-- El guardado manual (Ctrl+S) debe esperar conversión
+**Verification:**
+- Test opening a large file (1MB+) - autosave should not run during the load
+- Manual save (Ctrl+S) must wait for the conversion
 
-### 10. Archivos Binarios (.png, .jpg, .pdf)
+### 10. Binary files (.png, .jpg, .pdf)
 
-**Problema:** Intentar convertir archivos binarios
+**Problem:** Trying to convert binary files
 
-**Verificación:**
-- Monaco ya excluye archivos binarios en BINARY_EXTS
-- Verificar que no se intenta convertir
+**Verification:**
+- Monaco already excludes binary files through BINARY_EXTS
+- Verify that no conversion is attempted
 
-### 11. Archivos Vacíos o Solo con Whitespace
+### 11. Empty files or files with only whitespace
 
-**Problema:** Archivos vacíos o con solo espacios
+**Problem:** Empty files or files with only spaces
 
-**Verificación:**
-- Archivos vacíos se cargan sin error
-- Whitespace se preserva
+**Verification:**
+- Empty files load without error
+- Whitespace is preserved
 
-### 12. Grandes Archivos (10MB+)
+### 12. Large files (10MB+)
 
-**Problema:** Conversión de archivos grandes puede ser lenta
+**Problem:** Converting large files can be slow
 
-**Verificación:**
-- Rendimiento con archivos grandes
-- Memory usage durante conversión
+**Verification:**
+- Performance with large files
+- Memory usage during conversion
 
 ---
 
-## Errores Comunes a Evitar
+## Common mistakes to avoid
 
 ```typescript
-// ❌ ERROR 1: Olvidar extensiones
+// ❌ ERROR 1: Forgetting extensions
 if (!isCmdxFormat(content)) {
-  content = toCmdx(content, format)  // ✅ Check antes
+  content = toCmdx(content, format)  // ✅ Check beforehand
 }
 
-// ❌ ERROR 2: No manejar excepciones
+// ❌ ERROR 2: Not handling exceptions
 try {
   content = toCmdx(content, format)
 } catch (e) {
-  showToast("Conversión fallida", "error")
-  return originalContent // ✅ Guardar original si falla
+  showToast("Conversion failed", "error")
+  return originalContent // ✅ Keep the original if it fails
 }
 
-// ❌ ERROR 3: No detectar formato origen
-const format = path.endsWith(".tex") ? "tex" : "md"  // ✅ Detectar por extensión
+// ❌ ERROR 3: Not detecting the source format
+const format = path.endsWith(".tex") ? "tex" : "md"  // ✅ Detect by extension
 
-// ❌ ERROR 4: Modificar tab sin marcar dirty
+// ❌ ERROR 4: Modifying a tab without marking it dirty
 setOpenTabs(tabs.map(t => t.path === path ? { ...t, content: newContent, isDirty: true } : t))
-// ✅ isDirty debe ser true después de cambiar contenido
+// ✅ isDirty must be true after the content changes
 
-// ❌ ERROR 5: Usar toStorage en export
-// El export NO usa toStorage - usa exporter.ts directamente
-// toStorage solo para saveFile (guardado normal)
+// ❌ ERROR 5: Using toStorage in export
+// Export does NOT use toStorage - it uses exporter.ts directly
+// toStorage is only for saveFile (normal save)
 
-// ❌ ERROR 6: Olvidar update de cachedMtime
+// ❌ ERROR 6: Forgetting to update cachedMtime
 await writeTextFile(path, storageContent)
-// ✅ Actualizar cachedMtime después de guardar
+// ✅ Update cachedMtime after saving
 const info = await stat(path)
 setOpenTabs(tabs.map(t => t.path === path ? { ...t, isDirty: false, cachedMtime: info.mtime?.getTime() } : t))
 
-// ❌ ERROR 7: Dirty flag no se resetea
-// ✅ isDirty debe ser false después de guardar exitoso
+// ❌ ERROR 7: The dirty flag is not reset
+// ✅ isDirty must be false after a successful save
 
-// ❌ ERROR 8: No limpiar draft después de guardar
-clearDraft(path)  // ✅ Limpiar draft también
+// ❌ ERROR 8: Not clearing the draft after saving
+clearDraft(path)  // ✅ Clear the draft too
 
-// ❌ ERROR 9: Conversion en el momento incorrecto
-// El contenido debe convertirse ANTES de guardar en tab
-// Pero DESPUÉS de leer del archivo
+// ❌ ERROR 9: Converting at the wrong moment
+// The content must be converted BEFORE it is stored in the tab
+// but AFTER it is read from the file
 // openFilePath:
 //   1. readTextFile → content (raw)
 //   2. toCmdx(content) → cmdxContent
@@ -725,31 +725,31 @@ clearDraft(path)  // ✅ Limpiar draft también
 //   1. get tab.content (cmdx)
 //   2. toStorage(cmdx) → rawContent
 //   3. writeTextFile(rawContent)
+```
 
 ---
 
-## Cobertura de Testing Mínima Requerida
+## Minimum required test coverage
 
 | # | Test | Input | Expected |
 |---|------|-------|----------|
-| 1 | .md → CMDX callout simple | `> [!note] Hola` | `:::note Hola` |
-| 2 | .md → CMDX callout con title | `> [!NOTE] Título` | `:::note[Título]` |
-| 3 | .md → CMDX callout multilínea | `> [!tip]\n> línea 1\n> línea 2` | `:::tip\nlínea 1\nlínea 2` |
-| 4 | .md → CMDX table simple | `| A | B |` | `table(A, B)` |
-| 5 | .md → CMDX table 3 columnas | `| A | B | C |` | `table(A, B, C)` |
-| 6 | .md → CMDX con frontmatter | `---\ntitle: X\n---\nHola` | frontmatter + CMDX |
+| 1 | .md → CMDX simple callout | `> [!note] Hello` | `:::note Hello` |
+| 2 | .md → CMDX callout with title | `> [!NOTE] Title` | `:::note[Title]` |
+| 3 | .md → CMDX multiline callout | `> [!tip]\n> line 1\n> line 2` | `:::tip\nline 1\nline 2` |
+| 4 | .md → CMDX simple table | `| A | B |` | `table(A, B)` |
+| 5 | .md → CMDX 3-column table | `| A | B | C |` | `table(A, B, C)` |
+| 6 | .md → CMDX with frontmatter | `---\ntitle: X\n---\nHello` | frontmatter + CMDX |
 | 7 | CMDX → .md callout | `:::theorem` | `> [!abstract] Theorem` |
 | 8 | CMDX → .md table | `table(A, B)` | `| A | B |` |
-| 9 | CMDX → .md labels | `$$x^2$$ {#eq:foo}` | mantiene `{#eq:foo}` |
-| 10 | .tex → CMDX theorem | `\begin theorem}Hola\end theorem}` | `:::theorem Hola` |
+| 9 | CMDX → .md labels | `$$x^2$$ {#eq:foo}` | keeps `{#eq:foo}` |
+| 10 | .tex → CMDX theorem | `\begin theorem}Hello\end theorem}` | `:::theorem Hello` |
 | 11 | .tex → CMDX matrix | `\begin{bmatrix}1 & 2 \\ 3 & 4\end{bmatrix}` | `mat(1, 2, 3, 4)` |
-| 12 | CMDX → .tex theorem | `:::theorem Hola` | `\begin theorem}Hola\end theorem}` |
+| 12 | CMDX → .tex theorem | `:::theorem Hello` | `\begin theorem}Hello\end theorem}` |
 | 13 | CMDX → .tex matrix | `mat(1, 2)` | `\begin{bmatrix}1 & 2\end{bmatrix}` |
-| 14 | Archivo ya en CMDX | `:::note Hola` | sin cambios |
-| 15 | Callout + :::env mixto | `> [!note] X\n\n:::theorem Y` | convierte callout, mantiene env |
-| 16 | Archivo vacío | `` | sin error |
-| 17 | Solo whitespace | `   \n\n   ` | mantiene whitespace |
-| 18 | 10 ciclos open/save | archivo.md | sin degradación |
-| 19 | Archivo binario | imagen.png | skip (no convierte) |
-| 20 | Archivo .bib | refs.bib | skip (no convierte) |
-```
+| 14 | File already in CMDX | `:::note Hello` | unchanged |
+| 15 | Mixed callout + :::env | `> [!note] X\n\n:::theorem Y` | converts the callout, keeps the env |
+| 16 | Empty file | `` | no error |
+| 17 | Whitespace only | `   \n\n   ` | keeps the whitespace |
+| 18 | 10 open/save cycles | file.md | no degradation |
+| 19 | Binary file | image.png | skip (no conversion) |
+| 20 | .bib file | refs.bib | skip (no conversion) |

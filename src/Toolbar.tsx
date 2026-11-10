@@ -198,6 +198,7 @@ function collectPanelModes(items: MenuItem[]): PanelMode[] {
 // ── Menu data ─────────────────────────────────────────────────────────────────
 
 function getSections(t: T): MenuSection[] {
+  const ph = t.toolbar.ph
   const p = (label: string, mode: PanelMode): MenuItem => ({ kind: "panel", label, mode })
   const a = (label: string, snippet: string, title?: string, swatch?: string): MenuItem => ({
     kind: "action",
@@ -227,41 +228,59 @@ function getSections(t: T): MenuSection[] {
       icon: <Icon icon={Pencil} size={14} />,
       label: t.toolbar.secTexts,
       items: [
-        a(t.toolbar.bold, "**${1:texto}**", t.toolbar.bold),
-        a(t.toolbar.italic, "_${1:texto}_", t.toolbar.italic),
-        a(t.toolbar.underline, "<u>${1:texto}</u>", t.toolbar.underline),
-        a(t.toolbar.strikethrough, "~~${1:texto}~~", t.toolbar.strikethrough),
-        a(t.toolbar.inlineCode, "`${1:código}`", t.toolbar.inlineCode),
-        a(t.toolbar.link, "[${1:texto}](${2:url})", t.toolbar.link),
+        a(t.toolbar.bold, `**\${1:${ph.text}}**`, t.toolbar.bold),
+        a(t.toolbar.italic, `_\${1:${ph.text}}_`, t.toolbar.italic),
+        a(t.toolbar.underline, `<u>\${1:${ph.text}}</u>`, t.toolbar.underline),
+        a(t.toolbar.strikethrough, `~~\${1:${ph.text}}~~`, t.toolbar.strikethrough),
+        a(t.toolbar.inlineCode, `\`\${1:${ph.code}}\``, t.toolbar.inlineCode),
+        a(t.toolbar.link, `[\${1:${ph.text}}](\${2:url})`, t.toolbar.link),
         {
           kind: "submenu",
           label: t.toolbar.highlight,
           items: [
-            a(t.toolbar.hlDefault, "==${1:texto}==", undefined, "yellow"),
-            a(t.toolbar.hlGreen, '<mark class="hl-green">${1:texto}</mark>', undefined, "green"),
-            a(t.toolbar.hlBlue, '<mark class="hl-blue">${1:texto}</mark>', undefined, "blue"),
-            a(t.toolbar.hlPurple, '<mark class="hl-purple">${1:texto}</mark>', undefined, "purple"),
-            a(t.toolbar.hlOrange, '<mark class="hl-orange">${1:texto}</mark>', undefined, "orange"),
-            a(t.toolbar.hlRed, '<mark class="hl-red">${1:texto}</mark>', undefined, "red"),
-            a(t.toolbar.hlPink, '<mark class="hl-pink">${1:texto}</mark>', undefined, "pink"),
+            a(t.toolbar.hlDefault, `==\${1:${ph.text}}==`, undefined, "yellow"),
+            a(
+              t.toolbar.hlGreen,
+              `<mark class="hl-green">\${1:${ph.text}}</mark>`,
+              undefined,
+              "green",
+            ),
+            a(t.toolbar.hlBlue, `<mark class="hl-blue">\${1:${ph.text}}</mark>`, undefined, "blue"),
+            a(
+              t.toolbar.hlPurple,
+              `<mark class="hl-purple">\${1:${ph.text}}</mark>`,
+              undefined,
+              "purple",
+            ),
+            a(
+              t.toolbar.hlOrange,
+              `<mark class="hl-orange">\${1:${ph.text}}</mark>`,
+              undefined,
+              "orange",
+            ),
+            a(t.toolbar.hlRed, `<mark class="hl-red">\${1:${ph.text}}</mark>`, undefined, "red"),
+            a(t.toolbar.hlPink, `<mark class="hl-pink">\${1:${ph.text}}</mark>`, undefined, "pink"),
           ],
         },
         {
           kind: "submenu",
           label: t.toolbar.headings,
           items: [
-            a(t.toolbar.lbl_heading1, "# ${1:Título}"),
-            a(t.toolbar.lbl_heading2, "## ${1:Título}"),
-            a(t.toolbar.lbl_heading3, "### ${1:Título}"),
+            a(t.toolbar.lbl_heading1, `# \${1:${ph.title}}`),
+            a(t.toolbar.lbl_heading2, `## \${1:${ph.title}}`),
+            a(t.toolbar.lbl_heading3, `### \${1:${ph.title}}`),
           ],
         },
         {
           kind: "submenu",
           label: t.toolbar.list,
           items: [
-            a(t.toolbar.lbl_list, "- ${1:ítem}\n- ${2:ítem}\n- ${3:ítem}"),
-            a(t.toolbar.lbl_orderedList, "1. ${1:ítem}\n2. ${2:ítem}\n3. ${3:ítem}"),
-            a(t.toolbar.lbl_taskList, "- [ ] ${1:tarea}\n- [ ] ${2:tarea}"),
+            a(t.toolbar.lbl_list, `- \${1:${ph.item}}\n- \${2:${ph.item}}\n- \${3:${ph.item}}`),
+            a(
+              t.toolbar.lbl_orderedList,
+              `1. \${1:${ph.item}}\n2. \${2:${ph.item}}\n3. \${3:${ph.item}}`,
+            ),
+            a(t.toolbar.lbl_taskList, `- [ ] \${1:${ph.task}}\n- [ ] \${2:${ph.task}}`),
           ],
         },
         a(t.toolbar.quote, "> ${1:cita}", t.toolbar.quote),
@@ -305,14 +324,17 @@ function getSections(t: T): MenuSection[] {
             a(t.toolbar.lbl_matAuto, "mat(${1:1}, ${2:2}, ${3:3}, ${4:4})"),
             a(t.toolbar.lbl_matFixed, "matf(${1:2}, ${2:2})"),
             a(t.toolbar.lbl_matLiteral, "[[${1:1},${2:2}],[${3:3},${4:4}]]"),
-            a(t.toolbar.lbl_csv, ":::csv[${1:Título}]\n${2:datos.csv} (${3:A:C}) (${4:1:10})\n:::"),
+            a(
+              t.toolbar.lbl_csv,
+              `:::csv[\${1:${ph.title}}]\n\${2:${ph.file}} (\${3:A:C}) (\${4:1:10})\n:::`,
+            ),
             a(
               t.toolbar.lbl_data,
-              ":::data{#data:${1:datos}}\n${2:datos.csv} (${3:A:D}) (${4:1:20})\n:::",
+              `:::data{#data:\${1:${ph.data}}}\n\${2:${ph.file}} (\${3:A:D}) (\${4:1:20})\n:::`,
             ),
             a(
               t.toolbar.lbl_dataplot,
-              ":::plot[${1:Título}]\n@data:${2:datos}\nx: ${3:tiempo}\ny: (${4:S1, S2})\nkind: line\n:::",
+              `:::plot[\${1:${ph.title}}]\n@data:\${2:${ph.data}}\nx: \${3:${ph.time}}\ny: (\${4:S1, S2})\nkind: line\n:::`,
             ),
           ],
         },
@@ -346,13 +368,13 @@ function getSections(t: T): MenuSection[] {
           kind: "submenu",
           label: t.toolbar.environments,
           items: [
-            a(t.toolbar.lbl_theorem, ":::theorem[${1:título}]\n${2:enunciado}\n:::"),
-            a(t.toolbar.lbl_lemma, ":::lemma[${1:título}]\n${2:enunciado}\n:::"),
-            a(t.toolbar.lbl_corollary, ":::corollary\n${1:enunciado}\n:::"),
-            a(t.toolbar.lbl_proposition, ":::proposition\n${1:enunciado}\n:::"),
-            a(t.toolbar.lbl_definition, ":::definition\n${1:definición}\n:::"),
+            a(t.toolbar.lbl_theorem, `:::theorem[\${1:${ph.title}}]\n\${2:${ph.statement}}\n:::`),
+            a(t.toolbar.lbl_lemma, `:::lemma[\${1:${ph.title}}]\n\${2:${ph.statement}}\n:::`),
+            a(t.toolbar.lbl_corollary, `:::corollary\n\${1:${ph.statement}}\n:::`),
+            a(t.toolbar.lbl_proposition, `:::proposition\n\${1:${ph.statement}}\n:::`),
+            a(t.toolbar.lbl_definition, `:::definition\n\${1:${ph.definition}}\n:::`),
             a(t.toolbar.lbl_example, ":::example\n${1:ejemplo}\n:::"),
-            a(t.toolbar.lbl_proof, ":::proof\n${1:demostración}\n:::"),
+            a(t.toolbar.lbl_proof, `:::proof\n\${1:${ph.proof}}\n:::`),
           ],
         },
         { kind: "sep" },

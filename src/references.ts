@@ -1,3 +1,4 @@
+import { activeDocTerms } from "./docLang"
 import { extractTocEntries, headingAnchorId } from "./toc"
 
 export interface SectionReference {
@@ -75,8 +76,8 @@ export function resolveSectionRefs(
     const section = sections.get(id)
     // Unknown label: show a broken-reference marker rather than leaking the raw
     // `@sec:…` source text, matching how `@tbl:` / `@fig:` degrade.
-    if (!section) return `<span class="xref-broken">sección (?)</span>`
-    const label = section.number ? `sección ${section.number}` : section.title
+    if (!section) return `<span class="xref-broken">${activeDocTerms().section} (?)</span>`
+    const label = section.number ? `${activeDocTerms().section} ${section.number}` : section.title
     return `<a class="xref xref-sec" data-section="${section.id}" href="#${section.id}">${label}</a>`
   })
 }

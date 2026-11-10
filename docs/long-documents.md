@@ -1,90 +1,88 @@
-# Archivos largos: una materia, un archivo
+# Long files: one subject, one file
 
-El caso: vas escribiendo una asignatura clase a clase sobre el mismo `.md`, y a
-los dos meses tiene 3000 líneas. Estas son las herramientas para que siga siendo
-manejable.
+The case: you write a course class by class in the same `.md`, and two months
+later it has 3000 lines. These are the tools that keep it manageable.
 
 ---
 
-## Plegado por secciones
+## Folding by section
 
-Cada encabezado se pliega desde su línea hasta justo antes del siguiente
-encabezado del mismo nivel o superior. Plegar `## Clase 3` esconde esa clase y
-nada más.
+Each heading folds from its line to just before the next heading of the same or a
+higher level. Folding `## Class 3` hides that class and nothing else.
 
-Se usa desde la flecha del margen izquierdo, o con los atajos de Monaco:
+Use the arrow in the left margin, or Monaco's shortcuts:
 
-| Atajo | Acción |
+| Shortcut | Action |
 |---|---|
-| `Ctrl+Shift+[` | Plegar la sección del cursor |
-| `Ctrl+Shift+]` | Desplegar |
-| `Ctrl+K Ctrl+0` | Plegar todo |
-| `Ctrl+K Ctrl+J` | Desplegar todo |
+| `Ctrl+Shift+[` | Fold the section at the cursor |
+| `Ctrl+Shift+]` | Unfold |
+| `Ctrl+K Ctrl+0` | Fold all |
+| `Ctrl+K Ctrl+J` | Unfold all |
 
-Los encabezados dentro de bloques de código se ignoran: un `# comentario` en un
-script de shell no es una sección.
+Headings inside code blocks are ignored: a `# comment` in a shell script is not
+a section.
 
-**El plegado se recuerda por archivo**, junto con el cursor y el scroll. Cambias
-de pestaña y vuelves, y todo sigue como lo dejaste. (En versiones anteriores se
-perdía en cada cambio de pestaña, que es por lo que los bloques parecían
-desplegarse solos.)
+**Folding is remembered per file**, together with the cursor and the scroll. You
+switch tabs and come back, and everything is as you left it. (In earlier
+versions it was lost on every tab switch, which is why blocks seemed to unfold
+by themselves.)
 
-Los bloques `:::excalidraw` se pliegan solos la primera vez que abres un archivo,
-porque su escena es una única línea de base64 que ocupa media pantalla. Se puede
-desactivar en Configuración → Editor.
+`:::excalidraw` blocks fold themselves the first time you open a file, because
+their scene is a single base64 line that takes up half the screen. This can be
+turned off in Settings → Editor.
 
-## El outline como índice
+## The outline as an index
 
-El panel **Vistas → Esquema** lista los encabezados y ahora tiene **filtro**:
-escribe "clase 7" y saltas directo. Con el filtro activo se desactiva el arrastrar
-para reordenar, porque reordenar una lista filtrada movería secciones que no ves.
+The **Views → Outline** panel lists the headings and now has a **filter**: type
+"class 7" and you jump straight there. While the filter is active, drag to
+reorder is disabled, because reordering a filtered list would move sections you
+cannot see.
 
-## Dividir el archivo cuando ya pesa demasiado
+## Splitting the file when it gets too heavy
 
-**Ctrl+Shift+P → "Dividir documento en secciones (##)"**
+**Ctrl+Shift+P → "Split document into sections (##)"**
 
-Corta el documento por sus `##` y crea un archivo por sección junto al original.
-El original se queda con su preámbulo (frontmatter, introducción) y una lista de
-transclusiones:
+It cuts the document at its `##` headings and creates one file per section next
+to the original. The original keeps its preamble (frontmatter, introduction) and
+a list of transclusions:
 
 ```markdown
 ---
-title: Álgebra II
+title: Algebra II
 ---
 
-![[algebra-clase-1]]
+![[algebra-class-1]]
 
-![[algebra-clase-2]]
+![[algebra-class-2]]
 
-![[algebra-clase-3]]
+![[algebra-class-3]]
 ```
 
-**La vista previa no cambia**: las transclusiones incluyen el contenido, así que
-el documento renderizado es el mismo de antes. Lo que ganas es que cada clase es
-un archivo independiente, enlazable con `[[…]]` y buscable por separado.
+**The preview does not change**: transclusions include the content, so the
+rendered document is the same as before. What you gain is that each class is an
+independent file, linkable with `[[…]]` and searchable on its own.
 
-Salvaguardas:
+Safeguards:
 
-- Pide confirmación antes de tocar nada.
-- Si alguno de los nombres destino ya existe, **no divide nada** y te avisa. No
-  sobrescribe.
-- Nada se pierde: el preámbulo más las secciones reconstruyen el original.
+- It asks for confirmation before touching anything.
+- If any of the target names already exists, it **splits nothing** and tells
+  you. It never overwrites.
+- Nothing is lost: the preamble plus the sections rebuild the original.
 
-## Vistas derivadas en vez de mantenidas a mano
+## Derived views instead of hand-maintained ones
 
-Para no llevar a mano una lista de tareas o un calendario de la materia, declara
-un archivo generado en las reglas de la carpeta, ver
-[folder-rules.md](folder-rules.md).
+To avoid keeping a task list or a calendar of the subject by hand, declare a
+generated file in the folder rules, see [folder-rules.md](folder-rules.md).
 
-## Continuación de listas y tablas
+## List and table continuation
 
-Al pulsar Enter se mantiene la estructura: el guion, el número (que se
-incrementa), la casilla `- [ ]`, la cita `>` o una fila de tabla con el mismo
-número de columnas. Sobre un marcador vacío, Enter sale de la lista en vez de
-añadir otro vacío; si estaba anidado, sube un nivel.
+Pressing Enter keeps the structure: the dash, the number (which increments), the
+`- [ ]` checkbox, the `>` quote or a table row with the same number of columns.
+On an empty marker, Enter leaves the list instead of adding another empty one;
+if it was nested, it goes up one level.
 
-Se puede desactivar en Configuración → Editor.
+This can be turned off in Settings → Editor.
 
-Para tablas descuadradas (filas con menos columnas que la cabecera) hay un aviso
-en el editor y el comando **Normalizar tabla**, que rellena las celdas que faltan
-y realinea los `|` en un solo paso de deshacer.
+For ragged tables (rows with fewer columns than the header) there is a warning in
+the editor and the **Normalize table** command, which fills in the missing cells
+and realigns the `|` in a single undo step.

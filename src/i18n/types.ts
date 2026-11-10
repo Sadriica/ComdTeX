@@ -127,6 +127,20 @@ export interface T {
     secFiles: string
     secTexts: string
     secMath: string
+    /** Placeholder words inside the snippets the menu bar inserts. */
+    ph: {
+      text: string
+      code: string
+      title: string
+      item: string
+      task: string
+      data: string
+      file: string
+      time: string
+      statement: string
+      definition: string
+      proof: string
+    }
     secViews: string
     symbols: string
   }
@@ -1495,6 +1509,7 @@ export interface T {
     figuresDesc: string
     figureLabel: string
     figureLabelDesc: string
+    figureCaptionSample: string
     figureRef: string
     figureRefDesc: string
     supplementMarker: string
@@ -1616,6 +1631,10 @@ export interface T {
     collapsed: string
     figure: string
     table: string
+    /** Lower-case in Spanish ("sección 2"), as it reads inside a sentence. */
+    section: string
+    /** Warning printed in place of an embed that would include itself. */
+    circularEmbed: (target: string) => string
     bibliography: {
       heading: string
       untitled: string
