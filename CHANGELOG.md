@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.33.0] - 2026-11-09
 
 ### Added
 - **A welcome file that shows every feature, in your language.** `comdtex.md` was a Spanish-only tour from March that predated data tables, plots from data, units, callouts, footnotes, Mermaid, and the whole computational biology layer. It is now written in English or Spanish (the interface language) with a live example of each feature, and a new `comdtex-examples` folder holds what those examples read: a biology note (pipeline values with `val()`, gene and species conventions, accession links, a `:::seq` block, supplementary numbering), CSV and JSON results files and a figure.
