@@ -220,6 +220,7 @@ import {
   type FolderRules,
 } from "./folderRules"
 import { runGenerator, type SourceFile, type TaskItem } from "./generators"
+import { noFileContent } from "./welcome"
 import "./styles/index.css"
 
 const RECENT_KEY = STORAGE_KEYS.RECENT_FILES
@@ -370,144 +371,6 @@ const BIB_TEMPLATE = `% references.bib: BibTeX references for ComdTeX
   year      = {1984},
   publisher = {Addison-Wesley},
 }
-`
-
-const WELCOME = `# Bienvenido a ComdTeX
-
-Editor de **Markdown + LaTeX** para matemáticas y ciencias.
-Abre tu vault con **Abrir carpeta** en la barra lateral, o desde \`Archivo → Abrir vault\`.
-
----
-
-## Entornos matemáticos
-
-Sintaxis: \`:::tipo[Título opcional]\` (contenido en Markdown + math) \`:::\`
-
-Los tipos **numerados** son: \`theorem\`, \`lemma\`, \`corollary\`, \`proposition\`, \`definition\`, \`example\`, \`exercise\`.
-Los tipos **sin número** son: \`proof\`, \`remark\`, \`note\`.
-
-:::definition[Función continua]
-Una función $f: A \\to \\mathbb{R}$ es **continua** en $x_0 \\in A$ si
-para todo $\\varepsilon > 0$ existe $\\delta > 0$ tal que
-$$|x - x_0| < \\delta \\implies |f(x) - f(x_0)| < \\varepsilon$$ {#eq:cont}
-:::
-
-:::theorem[Teorema del valor intermedio]
-Si $f$ es continua en $[a, b]$ y $f(a) \\cdot f(b) < 0$,
-entonces existe $c \\in (a, b)$ con $f(c) = 0$.
-:::
-
-:::proof
-Por la completitud de $\\mathbb{R}$ y la definición @eq:cont. $\\square$
-:::
-
-:::lemma
-Toda función continua en un compacto es uniformemente continua.
-:::
-
-:::corollary
-Un polinomio continuo en $[a,b]$ alcanza su máximo y su mínimo.
-:::
-
-:::proposition
-Si $f$ y $g$ son continuas en $x_0$, entonces $f + g$ y $f \\cdot g$ también lo son.
-:::
-
-:::example[Función par]
-$f(x) = x^2$ es continua en $\\mathbb{R}$ y satisface $f(-x) = f(x)$.
-:::
-
-:::exercise
-Demuestra que $f(x) = |x|$ es continua pero no diferenciable en $x = 0$.
-:::
-
-:::remark
-Los entornos admiten **negritas**, *cursivas*, math inline $e^{i\\pi}+1=0$ y ecuaciones en bloque.
-:::
-
-:::note
-Los entornos se pueden **anidar**: un theorem puede contener un example en su interior.
-:::
-
----
-
-## Ecuaciones numeradas y referencias cruzadas
-
-Toda ecuación \`$$...$$\` se numera automáticamente. Añade \`{#eq:etiqueta}\` para referenciarla:
-
-$$\\int_a^b f'(x)\\,dx = f(b) - f(a)$$ {#eq:tfc}
-
-$$\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}$$ {#eq:basel}
-
-El Teorema Fundamental del Cálculo (@eq:tfc) y la identidad de Basel (@eq:basel) son resultados clásicos.
-
----
-
-## Shorthands matemáticos: escribe y pulsa Tab
-
-Los shorthands funcionan **dentro y fuera** de \`$...$\`. Fuera se envuelven automáticamente.
-
-La fracción frac(1, n+1) tiende a $0$ cuando $n \\to \\infty$.
-
-El límite fundamental: lim(x, 0) sin(x)/x = 1.
-
-La suma de Basel: sum(n=1, \\infty) frac(1, sup(n, 2)) = frac(sup(\\pi, 2), 6).
-
-La integral de Gauss: int(-\\infty, \\infty) sup(e, -sup(x, 2)) \\, dx = sqrt(\\pi).
-
-La derivada de una composición: der(f(g(x)), x) = der(f, g) \\cdot der(g, x).
-
-La norma de un vector: norm(vec(v)) = sqrt(sup(v,T) \\cdot v)
-
-La derivada parcial del calor: pder(u, t) = pder(sup(u, 2), x)
-
-Shorthands anidados: $frac(sqrt(abs(x)), 1 + norm(vec(x)))$
-
-Todos los shorthands: \`frac\`, \`sqrt\`, \`root\`, \`sum\`, \`int\`, \`lim\`,
-\`der\`, \`pder\`, \`abs\`, \`norm\`, \`ceil\`, \`floor\`, \`vec\`, \`hat\`, \`bar\`,
-\`tilde\`, \`dot\`, \`ddot\`, \`bf\`, \`cal\`, \`bb\`, \`sup\`, \`sub\`, \`inv\`, \`trans\`,
-\`mat\`, \`matf\`, \`table\`
-
----
-
-## Matrices
-
-La identidad 2×2: mat(1, 0, 0, 1)
-
-Matriz 2×3 con entradas: matf(2, 3, a, b, c, d, e, f)
-
----
-
-## Tablas
-
-El shorthand \`table\` genera una tabla Markdown lista para rellenar:
-
-table(Variable, Tipo, Descripción)
-
----
-
-## Wikilinks y backlinks
-
-Escribe \`[[nombre-de-nota]]\` para enlazar. Haz clic en el preview para navegar.
-La pestaña **←** en la barra lateral muestra los backlinks del archivo activo.
-
----
-
-## Macros personalizados
-
-En \`macros.md\` (raíz del vault):
-
-    \\newcommand{\\R}{\\mathbb{R}}
-    \\newcommand{\\norm}[1]{\\left\\|#1\\right\\|}
-
-Los macros se aplican automáticamente en todos los archivos del vault.
-
----
-
-## Bibliografía BibTeX
-
-En \`references.bib\` (raíz del vault) añade entradas BibTeX. Cita con \`[@clave]\` en el texto.
-La bibliografía completa se genera al final del preview.
 `
 
 const SIDEBAR_MIN = 150
@@ -2508,7 +2371,7 @@ function AppContent({
   // ── Sync preview ─────────────────────────────────────────────────────────
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- shows the newly opened file at once; paired with the debounce cancel below so a stale timer cannot overwrite it
-    setPreviewContent(vault.openFile ? vault.openFile.content : WELCOME)
+    setPreviewContent(vault.openFile ? vault.openFile.content : noFileContent(settings.language))
     // Cancel a pending preview debounce from the PREVIOUS file. Otherwise,
     // typing in file A and switching to file B within the debounce window lets
     // A's queued setPreviewContent fire after this effect set B's content; the
@@ -2521,7 +2384,7 @@ function AppContent({
     // onMount (see `restoreEditorPlacement`): no timer, so it can neither race
     // the user's first keystrokes nor visibly jump after the file appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vault.openFile?.path])
+  }, [vault.openFile?.path, settings.language])
 
   // ── Vim mode ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -5149,6 +5012,7 @@ function AppContent({
         startInlineCreate,
         handleOpenDailyNote,
         handleOpenMacros,
+        restoreExampleFiles: vault.restoreExampleFiles,
         handleOpenBib,
         setSettingsOpen,
         checkForUpdate,
@@ -5193,6 +5057,7 @@ function AppContent({
       vault.selectVault,
       handleOpenDailyNote,
       handleOpenMacros,
+      vault.restoreExampleFiles,
       handleOpenBib,
       handleAddCommentAtCursor,
       handleToggleCommentAtCursor,
@@ -5276,7 +5141,7 @@ function AppContent({
     ],
   )
 
-  const currentContent = vault.openFile?.content ?? WELCOME
+  const currentContent = vault.openFile?.content ?? noFileContent(settings.language)
   const editorFlex = editorWidth || undefined
   const showWelcome = !vault.vaultPath
 

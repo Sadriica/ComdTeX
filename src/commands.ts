@@ -55,6 +55,8 @@ export interface PaletteCommandsCtx {
   startInlineCreate: (kind: "file" | "folder") => void
   handleOpenDailyNote: () => void
   handleOpenMacros: () => void
+  /** Rewrites comdtex.md and comdtex-examples/, keeping changed copies as -old. */
+  restoreExampleFiles: () => void
   handleOpenBib: () => void
   setSettingsOpen: (open: boolean) => void
   checkForUpdate: () => Promise<UpdateInfo>
@@ -139,6 +141,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     startInlineCreate,
     handleOpenDailyNote,
     handleOpenMacros,
+    restoreExampleFiles,
     handleOpenBib,
     setSettingsOpen,
     checkForUpdate,
@@ -1331,6 +1334,13 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       action: handleOpenDailyNote,
     },
     { id: "macros", label: t.palette.editMacros, category: "Vault", action: handleOpenMacros },
+    {
+      id: "restoreExamples",
+      label: t.palette.restoreExamples,
+      category: "Vault",
+      keywords: ["welcome", "bienvenida", "examples", "ejemplos", "comdtex.md", "tutorial", "demo"],
+      action: restoreExampleFiles,
+    },
     { id: "bib", label: t.palette.editBib, category: "Vault", action: handleOpenBib },
     {
       id: "settings",

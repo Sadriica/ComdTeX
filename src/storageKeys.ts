@@ -86,6 +86,10 @@ export const STORAGE_KEYS = {
   /** JSON `{v,recent,pinned}`: the last 8 palette commands run (with use counts) and the pinned ones. Owner: palettePrefs.ts */
   PALETTE_PREFS: "comdtex_palette",
 
+  // ── welcome/seed.ts (via useVault.ts) ─────────────────────────────────────
+  /** JSON array of vault paths that already received the welcome file, so a deleted one is not recreated. Owner: useVault.ts */
+  WELCOME_SEEDED: "comdtex_welcome_seeded",
+
   // ── templates.ts ─────────────────────────────────────────────────────────
   /** JSON array of user-created custom document templates. Owner: templates.ts */
   CUSTOM_TEMPLATES: "comdtex.customTemplates",

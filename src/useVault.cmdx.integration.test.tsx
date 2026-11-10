@@ -89,6 +89,8 @@ vi.mock("./toastService", () => ({
 
 import { useVault } from "./useVault"
 import { readTextFile } from "@tauri-apps/plugin-fs"
+import { welcomeContent } from "./welcome"
+import legacyWelcome from "./welcome/fixtures/legacy-1.32.md?raw"
 
 const VAULT = "/vault"
 
@@ -183,6 +185,36 @@ describe("useVault CMDX integration", () => {
     )
   })
 
+  it("updates an old welcome file before restoring its tab, and adds the examples", async () => {
+    const welcomePath = `${VAULT}/comdtex.md`
+    fsMock.touch(welcomePath, legacyWelcome)
+    localStorage.setItem("comdtex_vault", VAULT)
+    localStorage.setItem("comdtex_tabs", JSON.stringify([welcomePath]))
+    localStorage.setItem("comdtex_active", welcomePath)
+
+    const { result } = renderHook(() => useVault())
+    await act(async () => {
+      await result.current.loadVault()
+    })
+
+    await waitFor(() => expect(result.current.openTabs).toHaveLength(1))
+    expect(fsMock.files.get(welcomePath)?.content).toBe(welcomeContent("es"))
+    expect(result.current.openTabs[0].content).toContain("# Bienvenido a ComdTeX")
+    expect(fsMock.files.has(`${VAULT}/comdtex-examples/stats.csv`)).toBe(true)
+    // An untouched old copy needs no backup.
+    expect(fsMock.files.has(`${VAULT}/comdtex-old.md`)).toBe(false)
+  })
+
+  it("does not recreate a welcome file deleted after it was seeded", async () => {
+    localStorage.setItem("comdtex_welcome_seeded", JSON.stringify([VAULT]))
+    fsMock.touch(`${VAULT}/note.md`, "Hi")
+    const { result } = renderHook(() => useVault())
+    await act(async () => {
+      await result.current.selectVault(VAULT)
+    })
+    expect(fsMock.files.has(`${VAULT}/comdtex.md`)).toBe(false)
+  })
+
   it("searches and replaces closed files using CMDX editor content", async () => {
     const mdPath = `${VAULT}/note.md`
     fsMock.touch(mdPath, "> [!abstract] Theorem: Main\n> Body")
@@ -194,7 +226,8 @@ describe("useVault CMDX integration", () => {
     })
     await waitFor(() => expect(result.current.tree.length).toBeGreaterThan(0))
 
-    const hits = await result.current.search(":::theorem")
+    // The vault also received the welcome file, which has theorems of its own.
+    const hits = (await result.current.search(":::theorem")).filter((h) => h.filePath === mdPath)
     expect(hits).toHaveLength(1)
     expect(hits[0].content).toContain(":::theorem")
 

@@ -542,6 +542,7 @@ export const es: T = {
     newFile: "Nuevo archivo",
     newFolder: "Nueva carpeta",
     editMacros: "Editar macros.md",
+    restoreExamples: "Restaurar archivos de ejemplo (comdtex.md)",
     editBib: "Editar references.bib",
     settings: "Configuración",
     shortcuts: "Atajos de teclado",
@@ -1246,7 +1247,14 @@ export const es: T = {
     nameStartsDot: "El nombre no puede empezar con punto",
     nameReserved: "Nombre reservado en Windows",
     errorReading: (e) => `Error leyendo vault: ${e}`,
-    errorCreatingReadme: (e) => `No se pudo crear README.md: ${e}`,
+    errorCreatingReadme: (e) => `No se pudieron escribir los archivos de ejemplo: ${e}`,
+    welcomeUpdated:
+      "comdtex.md se actualizó a la nueva versión, con ejemplos de todas las funciones.",
+    welcomeUpdatedKept: (backup) =>
+      `comdtex.md se actualizó a la nueva versión. Tu copia anterior está en ${backup}.`,
+    examplesRestored: "Archivos de ejemplo restaurados: comdtex.md y la carpeta comdtex-examples.",
+    examplesRestoredKept: (backups) =>
+      `Archivos de ejemplo restaurados. Se guardaron tus copias modificadas: ${backups}.`,
     binaryFile: (name) => `${name} es un archivo binario y no se puede abrir`,
     conversionWarning: (count, phase, name, line, detail) =>
       `${count === 1 ? "1 aviso" : `${count} avisos`} al ${phase === "opening" ? "abrir" : "guardar"} ${name}. Línea ${line}: ${detail}`,

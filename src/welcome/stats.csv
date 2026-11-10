@@ -1,0 +1,5 @@
+metric,value,ci_low,ci_high
+n,48,,
+pvalue,0.00042,,
+effect,2.3871,1.912,2.861
+fold_change,3.1,2.4,3.9

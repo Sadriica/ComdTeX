@@ -1,0 +1,5 @@
+{
+  "model": "random forest",
+  "metrics": { "auc": 0.9137, "accuracy": 0.8642 },
+  "folds": [{ "acc": 0.85 }, { "acc": 0.88 }, { "acc": 0.86 }]
+}

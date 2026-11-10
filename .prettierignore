@@ -1,2 +1,5 @@
 # Fixture notes are test data: their exact bytes are what the tests exercise.
 e2e/fixtures/
+# The welcome file and its examples ship byte for byte into users' vaults.
+src/welcome/*.md
+src/welcome/fixtures/

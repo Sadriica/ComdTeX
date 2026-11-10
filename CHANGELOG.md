@@ -3,6 +3,22 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **A welcome file that shows every feature, in your language.** `comdtex.md` was a Spanish-only tour from March that predated data tables, plots from data, units, callouts, footnotes, Mermaid, and the whole computational biology layer. It is now written in English or Spanish (the interface language) with a live example of each feature, and a new `comdtex-examples` folder holds what those examples read: a biology note (pipeline values with `val()`, gene and species conventions, accession links, a `:::seq` block, supplementary numbering), CSV and JSON results files and a figure.
+- **Restore example files** in the command palette writes a fresh copy of the welcome and example files whenever you want one. Any file you changed is kept beside it as `name-old.md` first.
+
+### Changed
+- **Old welcome files are updated.** The welcome file used to be created only when missing, so a vault never saw a newer one. On open, an untouched copy from an earlier version is now replaced by the current one; an edited copy is kept as `comdtex-old.md` before it is replaced; a copy you turned into your own note is left alone.
+- **A deleted welcome file stays deleted.** It used to come back every time the vault opened without saved tabs.
+- The preview shown while no file is open is now a short pointer to `comdtex.md` in the interface language, instead of a second Spanish-only tour.
+
+### Fixed
+- **Shorthands inside display math.** `$$frac(1, 2)$$`, `$$sum(n=1, 100)$$` and labeled inline math such as `$sqrt(2)$ {#eq:x}` reached the preview as raw text since 1.1.0. Exports were not affected.
+- **Embeds written in code stay code.** `` `![[note]]` `` in inline code or a fenced block was expanded into a "Not found" box instead of showing the syntax.
+- The new welcome file appears in the file tree right away, instead of after the next refresh.
+
 ## [1.32.0] - 2026-11-03
 
 ### Added

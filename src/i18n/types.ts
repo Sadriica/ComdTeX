@@ -518,6 +518,7 @@ export interface T {
     newFile: string
     newFolder: string
     editMacros: string
+    restoreExamples: string
     editBib: string
     settings: string
     shortcuts: string
@@ -1170,6 +1171,10 @@ export interface T {
     nameReserved: string
     errorReading: (e: string) => string
     errorCreatingReadme: (e: string) => string
+    welcomeUpdated: string
+    welcomeUpdatedKept: (backup: string) => string
+    examplesRestored: string
+    examplesRestoredKept: (backups: string) => string
     binaryFile: (name: string) => string
     conversionWarning: (
       count: number,
