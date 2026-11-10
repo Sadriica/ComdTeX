@@ -13,6 +13,16 @@ describe("resolveTransclusions", () => {
     expect(result).toContain('class="transclusion"')
   })
 
+  it("leaves an embed written inside inline code or a fence as text", () => {
+    const resolver = (target: string) => (target === "Note" ? "Body" : null)
+    const inline = resolveTransclusions("Write `![[Note]]` to embed, like ![[Note]]", resolver)
+    expect(inline).toContain("`![[Note]]`")
+    expect(inline.match(/class="transclusion"/g)).toHaveLength(1)
+
+    const fenced = resolveTransclusions("```markdown\n![[Note]]\n```\n", resolver)
+    expect(fenced).toBe("```markdown\n![[Note]]\n```\n")
+  })
+
   it("emits a transclusion-header showing the source", () => {
     const result = resolveTransclusions("![[Nota]]", () => "Body")
     expect(result).toContain("transclusion-header")

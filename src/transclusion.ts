@@ -63,44 +63,67 @@ function extractBlockSection(content: string, id: string): string | null {
   return block.replace(BLOCK_ID_TRAILING_RE, "")
 }
 
+// Fenced code and inline code spans, blanked to spaces with the same length,
+// so a match offset in the result is an offset in the original. An embed
+// written inside code documents the syntax (`![[note]]`) and stays text.
+const CODE_FENCE_RE = /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[ \t]*$/gm
+function maskCodeRegions(text: string): string {
+  return text
+    .replace(CODE_FENCE_RE, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(`+)([^`\n]*?)\1/g, (m) => " ".repeat(m.length))
+}
+
 export function resolveTransclusions(
   content: string,
   resolver?: TransclusionResolver,
   seen = new Set<string>(),
 ): string {
   if (!resolver) return content
+  if (!content.includes("![[")) return content
+  const masked =
+    content.includes("`") || content.includes("~~~") ? maskCodeRegions(content) : content
 
-  return content.replace(EMBED_RE, (_full, target: string, heading?: string, label?: string) => {
-    const key = `${target}#${heading ?? ""}`
-    if (seen.has(key)) return `> [!warning] Transclusión circular: ${target}`
+  return content.replace(
+    EMBED_RE,
+    (
+      full: string,
+      target: string,
+      heading: string | undefined,
+      label: string | undefined,
+      offset: number,
+    ) => {
+      if (masked !== content && masked.slice(offset, offset + full.length) !== full) return full
+      const key = `${target}#${heading ?? ""}`
+      if (seen.has(key)) return `> [!warning] Transclusión circular: ${target}`
 
-    const resolved = resolver(target.trim())
-    if (resolved == null) {
-      const cleanTarget = target.trim().replace(/"/g, "&quot;")
-      const suffix = heading ? `#${heading.trim().replace(/"/g, "&quot;")}` : ""
-      return `<div class="transclusion transclusion-missing" data-target="${cleanTarget}"><div class="transclusion-header">${cleanTarget}${suffix}</div><em>Not found</em></div>`
-    }
+      const resolved = resolver(target.trim())
+      if (resolved == null) {
+        const cleanTarget = target.trim().replace(/"/g, "&quot;")
+        const suffix = heading ? `#${heading.trim().replace(/"/g, "&quot;")}` : ""
+        return `<div class="transclusion transclusion-missing" data-target="${cleanTarget}"><div class="transclusion-header">${cleanTarget}${suffix}</div><em>Not found</em></div>`
+      }
 
-    seen.add(key)
-    const stripped = stripFrontmatter(resolved)
-    let body: string
-    if (heading && heading.startsWith("^")) {
-      const blockBody = extractBlockSection(stripped, heading.slice(1))
-      body = blockBody ?? `<em>Block not found: ^${heading.slice(1)}</em>`
-    } else if (heading) {
-      body = extractHeadingSection(stripped, heading)
-    } else {
-      body = stripped
-    }
-    const nested = resolveTransclusions(body, resolver, seen)
-    seen.delete(key)
+      seen.add(key)
+      const stripped = stripFrontmatter(resolved)
+      let body: string
+      if (heading && heading.startsWith("^")) {
+        const blockBody = extractBlockSection(stripped, heading.slice(1))
+        body = blockBody ?? `<em>Block not found: ^${heading.slice(1)}</em>`
+      } else if (heading) {
+        body = extractHeadingSection(stripped, heading)
+      } else {
+        body = stripped
+      }
+      const nested = resolveTransclusions(body, resolver, seen)
+      seen.delete(key)
 
-    const title = label?.trim() || target.trim()
-    const sourceLabel = heading
-      ? `${target.trim()}${heading.startsWith("^") ? `#${heading}` : `#${heading}`}`
-      : target.trim()
-    return `\n\n<div class="transclusion" data-target="${title.replace(/"/g, "&quot;")}" data-source="${target.trim().replace(/"/g, "&quot;")}"><div class="transclusion-header">from: ${sourceLabel.replace(/"/g, "&quot;")}</div>\n\n${nested}\n\n</div>\n\n`
-  })
+      const title = label?.trim() || target.trim()
+      const sourceLabel = heading
+        ? `${target.trim()}${heading.startsWith("^") ? `#${heading}` : `#${heading}`}`
+        : target.trim()
+      return `\n\n<div class="transclusion" data-target="${title.replace(/"/g, "&quot;")}" data-source="${target.trim().replace(/"/g, "&quot;")}"><div class="transclusion-header">from: ${sourceLabel.replace(/"/g, "&quot;")}</div>\n\n${nested}\n\n</div>\n\n`
+    },
+  )
 }
 
 /**
