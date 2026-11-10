@@ -221,12 +221,20 @@ export default function HelpPanel() {
 
           <div className="hp-label">{hp.envRefs}</div>
           <Row code=":::definition[Valor absoluto]{#def:valor}" desc={hp.envRefLabelDesc} />
-          <Row code="@def:valor" desc={hp.envRefLocalDesc} render="Definición 1" />
-          <Row code="@gp/calendario@def:valor" desc={hp.envRefCrossDesc} render="Definición 2" />
+          <Row
+            code="@def:valor"
+            desc={hp.envRefLocalDesc}
+            render={`${t.docTerms.env.definition} 1`}
+          />
+          <Row
+            code="@gp/calendario@def:valor"
+            desc={hp.envRefCrossDesc}
+            render={`${t.docTerms.env.definition} 2`}
+          />
           <Row
             code="@[mi carpeta/mi nota]@def:valor"
             desc={hp.envRefSpacesDesc}
-            render="Definición 3"
+            render={`${t.docTerms.env.definition} 3`}
           />
 
           <p className="hp-intro">{hp.specialBlocksNote}</p>
@@ -415,22 +423,22 @@ export default function HelpPanel() {
           <Row
             code="# Introducción {#sec:intro}"
             desc={hp.sectionLabelDesc}
-            render="@sec:intro → sección 1"
+            render={`@sec:intro → ${t.docTerms.section} 1`}
           />
           <Row
             code="![Leyenda](img.png){#fig:diagrama}"
             desc={hp.figureLabelDesc}
-            render="@fig:diagrama → Figura 1"
+            render={`@fig:diagrama → ${t.docTerms.figure} 1`}
           />
           <Row
             code={"| A | B |\n|---|---|\n| 1 | 2 |\n{#tbl:constants}"}
             desc={hp.tableLabelDesc}
-            render="@tbl:constants → Tabla 1"
+            render={`@tbl:constants → ${t.docTerms.table} 1`}
           />
           <Row
             code=":::theorem[Título]{#thm:main}"
             desc={hp.envLabelDesc}
-            render="@thm:main → Teorema 1"
+            render={`@thm:main → ${t.docTerms.env.theorem} 1`}
           />
           <Row code="@eq:energia, @fig:diagrama, @tbl:constants" desc={hp.labelAutocompleteDesc} />
           <Row code={t.labelsPanel.title} desc={hp.labelsPanelDesc} />
@@ -580,9 +588,17 @@ export default function HelpPanel() {
         {/* ── Figures ── */}
         <Section title={hp.figures}>
           <p className="hp-intro">{hp.figuresDesc}</p>
-          <Row code={hp.figureLabel} desc={hp.figureLabelDesc} render="Figura 1: Leyenda" />
-          <Row code={hp.figureRef} desc={hp.figureRefDesc} render="Figura 1" />
-          <Row code={hp.supplementMarker} desc={hp.supplementMarkerDesc} render="Figura S1" />
+          <Row
+            code={hp.figureLabel}
+            desc={hp.figureLabelDesc}
+            render={`${t.docTerms.figure} 1: ${hp.figureCaptionSample}`}
+          />
+          <Row code={hp.figureRef} desc={hp.figureRefDesc} render={`${t.docTerms.figure} 1`} />
+          <Row
+            code={hp.supplementMarker}
+            desc={hp.supplementMarkerDesc}
+            render={`${t.docTerms.figure} S1`}
+          />
         </Section>
 
         {/* ── User snippets ── */}

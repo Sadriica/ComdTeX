@@ -609,6 +609,11 @@ function AppContent({
   updateSettings: (p: Partial<Settings>) => void
 }) {
   const t = useT()
+  // Read inside Monaco commands, which are registered once on mount.
+  const tRef = useRef(t)
+  useLayoutEffect(() => {
+    tRef.current = t
+  })
   // Ref-bridge: useVault fires `onAfterSave` whenever a file lands on disk
   // (manual save or autosave). The actual reload logic lives further down in
   // this component (it needs vault.vaultPath + loadMacros), so we forward the
@@ -2645,10 +2650,10 @@ function AppContent({
       // the same selection-aware insert the palette uses so they wrap the current
       // selection (matching the palette's snippets exactly).
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () =>
-        insertSnippet(editorRef.current, "**${1:texto}**"),
+        insertSnippet(editorRef.current, `**\${1:${tRef.current.toolbar.ph.text}}**`),
       )
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () =>
-        insertSnippet(editorRef.current, "_${1:texto}_"),
+        insertSnippet(editorRef.current, `_\${1:${tRef.current.toolbar.ph.text}}_`),
       )
       // Ctrl/Cmd+K inline AI edit. Monaco reserves Ctrl+K as a CHORD prefix
       // (Ctrl+K Ctrl+0 folds everything, Ctrl+K Ctrl+J unfolds); a plain Ctrl+K
@@ -4829,7 +4834,7 @@ function AppContent({
   }, [])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  /** Elimina componentes de path para evitar traversal (../../../ etc.) */
+  /** Strips path components to prevent traversal (../../../ etc.) */
   const sanitizeFileName = (name: string) =>
     name
       .replace(/[/\\]/g, "_")
@@ -4954,7 +4959,7 @@ function AppContent({
           const fileName = await uniqueAssetName(assetsDir, sanitizeFileName(rawName))
           const destPath = await pathJoin(assetsDir, fileName)
 
-          // @ts-expect-error Tauri expone file.path en los File del portapapeles
+          // @ts-expect-error Tauri exposes file.path on clipboard File objects
           const sourcePath: string | undefined = file.path
           if (sourcePath) {
             await copyFile(sourcePath, destPath)

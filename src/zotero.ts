@@ -27,7 +27,7 @@ const STOCK_ITEMS = `${BASE}/api/users/0/items`
 const TIMEOUT_MS = 8000
 
 /** Clear, user-facing message when Zotero / BBT can't be reached. */
-export const ZOTERO_UNAVAILABLE = "Zotero/Better BibTeX no está disponible en localhost:23119"
+export const ZOTERO_UNAVAILABLE = "Zotero/Better BibTeX is not available at localhost:23119"
 
 export interface ZoteroItem {
   /** Better BibTeX citekey (used to export BibTeX). */

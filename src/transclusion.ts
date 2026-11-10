@@ -1,3 +1,4 @@
+import { activeDocTerms } from "./docLang"
 import { extractFrontmatter } from "./frontmatter"
 
 export type TransclusionResolver = (target: string) => string | null
@@ -72,7 +73,7 @@ export function resolveTransclusions(
 
   return content.replace(EMBED_RE, (_full, target: string, heading?: string, label?: string) => {
     const key = `${target}#${heading ?? ""}`
-    if (seen.has(key)) return `> [!warning] Transclusión circular: ${target}`
+    if (seen.has(key)) return `> [!warning] ${activeDocTerms().circularEmbed(target)}`
 
     const resolved = resolver(target.trim())
     if (resolved == null) {

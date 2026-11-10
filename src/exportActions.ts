@@ -566,7 +566,7 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
           ctx.toast(ctx.messages.pdfCompiledLocal, "success")
           return
         }
-        lastError = result.stderr || result.stdout || `${cmdName} falló`
+        lastError = result.stderr || result.stdout || `${cmdName} failed`
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err)
       }
