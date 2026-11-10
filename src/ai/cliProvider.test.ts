@@ -35,7 +35,7 @@ describe("local agent CLI", () => {
     const [run] = spawned
     expect(run.name).toBe("claude")
     expect(run.opts).toEqual({ cwd: "/home/me/thesis" })
-    const prompt = run.args.at(-1)!
+    const prompt = run.args[run.args.length - 1]
     expect(run.args.slice(0, -1)).toEqual(["-p", "--"])
     expect(prompt).toContain("working directory is the user's ComdTeX vault: /home/me/thesis")
     expect(prompt).toContain("User: Summarize chapter 2")
@@ -44,6 +44,6 @@ describe("local agent CLI", () => {
   it("keeps the app's directory, and says there is no vault, when none is open", async () => {
     await sendMessage(cli, [{ role: "user", content: "Hi" }])
     expect(spawned[0].opts).toBeUndefined()
-    expect(spawned[0].args.at(-1)).toContain(cliWorkspaceNote(null))
+    expect(spawned[0].args[spawned[0].args.length - 1]).toContain(cliWorkspaceNote(null))
   })
 })
