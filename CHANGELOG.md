@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Restore example files** in the command palette writes a fresh copy of the welcome and example files whenever you want one. Any file you changed is kept beside it as `name-old.md` first.
 
 ### Changed
+- **New-from-template documents follow the interface language.** The notes, article, problem set, theorem sheet, research note, Overleaf paper, thesis and lecture-notes templates were Spanish for everyone; an English interface now creates them with English headings and prompts (same structure). Journal templates were already English and custom templates are untouched.
 - **Old welcome files are updated.** The welcome file used to be created only when missing, so a vault never saw a newer one. On open, an untouched copy from an earlier version is now replaced by the current one; an edited copy is kept as `comdtex-old.md` before it is replaced; a copy you turned into your own note is left alone.
 - **A deleted welcome file stays deleted.** It used to come back every time the vault opened without saved tabs.
 - The preview shown while no file is open is now a short pointer to `comdtex.md` in the interface language, instead of a second Spanish-only tour.
