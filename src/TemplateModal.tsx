@@ -3,6 +3,7 @@ import {
   loadCustomTemplates,
   saveCustomTemplate,
   TEMPLATES,
+  templateBody,
   processTemplateVariables,
 } from "./templates"
 import { useT } from "./i18n"
@@ -96,7 +97,7 @@ export default function TemplateModal({
 
   const handleCreate = () => {
     if (!canCreate || !folder) return
-    onCreate(fileName, processTemplateVariables(template.content, fileName), folder.path)
+    onCreate(fileName, processTemplateVariables(templateBody(template), fileName), folder.path)
     setName("")
     setPickedFolder(null)
     onClose()

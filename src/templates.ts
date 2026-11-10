@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from "./storageKeys"
+import { getUiLanguage, type DocLang } from "./docLang"
 
 export interface Template {
   id: string
@@ -6,7 +7,10 @@ export interface Template {
   description: string
   /** Key into the TemplateModal icon map (Lucide); unknown keys fall back to a file icon. */
   icon: string
+  /** Spanish body (the original language of the built-ins). */
   content: string
+  /** English body of a built-in, same structure as `content`. Absent for journal templates (English already). */
+  contentEn?: string
   custom?: boolean
   // Journal templates target a real LaTeX class on export (see
   // `comdtex.texclass` in exporter.ts); they render in a separate section
@@ -15,11 +19,19 @@ export interface Template {
 }
 
 const today = () => new Date().toISOString().split("T")[0]
-const todayFormatted = () =>
-  new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
+const todayFormatted = (lang: DocLang = "es") =>
+  new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 const currentYear = () => new Date().getFullYear().toString()
 const now = () => new Date().toISOString()
-const time = () => new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+const time = (lang: DocLang = "es") =>
+  new Date().toLocaleTimeString(lang === "en" ? "en-US" : "es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
 function formatDate(pattern: string, date = new Date()): string {
   const pad = (n: number, w = 2) => String(n).padStart(w, "0")
@@ -32,16 +44,25 @@ function formatDate(pattern: string, date = new Date()): string {
     .replace(/ss/g, pad(date.getSeconds()))
 }
 
-export function processTemplateVariables(content: string, filename?: string): string {
+/** The body of a template in the interface language (Spanish when it has no English one). */
+export function templateBody(tpl: Template, lang: DocLang = getUiLanguage()): string {
+  return lang === "en" && tpl.contentEn !== undefined ? tpl.contentEn : tpl.content
+}
+
+export function processTemplateVariables(
+  content: string,
+  filename?: string,
+  lang: DocLang = getUiLanguage(),
+): string {
   const fileBasename = filename?.replace(/\.[^.]+$/, "") ?? ""
   return content
-    .replace(/\{\{date:formatted\}\}/g, todayFormatted())
+    .replace(/\{\{date:formatted\}\}/g, todayFormatted(lang))
     .replace(/\{\{date:([^}]+)\}\}/g, (_, pat) => formatDate(pat))
     .replace(/\{\{date\}\}/g, today())
     .replace(/\{\{year\}\}/g, currentYear())
-    .replace(/\{\{time\}\}/g, time())
+    .replace(/\{\{time\}\}/g, time(lang))
     .replace(/\{\{datetime\}\}/g, now())
-    .replace(/\{\{title\}\}/g, fileBasename || "Sin título")
+    .replace(/\{\{title\}\}/g, fileBasename || (lang === "en" ? "Untitled" : "Sin título"))
     .replace(/\{\{filename\}\}/g, fileBasename)
     .replace(/\{\{author\}\}/g, "")
     .replace(/\{\{today\}\}/g, today())
@@ -81,6 +102,27 @@ Breve descripción del contenido.
 
 ## Referencias
 `,
+    contentEn: `---
+title: Article title
+author:
+date: ${today()}
+tags: []
+---
+
+## Abstract
+
+A short description of the contents.
+
+## 1. Introduction
+
+## 2. Development
+
+## 3. Results
+
+## 4. Conclusions
+
+## References
+`,
   },
   {
     id: "notes",
@@ -110,6 +152,29 @@ tags: []
 **Ejemplo:**
 :::
 `,
+    contentEn: `---
+title:
+author:
+date: ${today()}
+tags: []
+---
+
+:::definition
+**Definition:**
+:::
+
+:::theorem
+**Theorem:**
+:::
+
+:::proof
+
+:::
+
+:::example
+**Example:**
+:::
+`,
   },
   {
     id: "problemset",
@@ -135,6 +200,25 @@ tags: []
 **Problema 3.**
 :::
 `,
+    contentEn: `---
+title: Problem set
+author:
+date: ${today()}
+tags: []
+---
+
+:::exercise
+**Problem 1.**
+:::
+
+:::exercise
+**Problem 2.**
+:::
+
+:::exercise
+**Problem 3.**
+:::
+`,
   },
   {
     id: "theoremsheet",
@@ -158,6 +242,25 @@ tags: []
 
 :::corollary
 **Corolario:**
+:::
+`,
+    contentEn: `---
+title: Theorem sheet
+author:
+date: ${today()}
+tags: []
+---
+
+:::theorem[Name]
+**Statement:**
+:::
+
+:::lemma
+**Auxiliary lemma:**
+:::
+
+:::corollary
+**Corollary:**
 :::
 `,
   },
@@ -186,6 +289,29 @@ $$ {#eq:main}
 Como se muestra en @eq:main...
 
 ## Referencias
+
+[@key]
+`,
+    contentEn: `---
+title:
+author:
+date: ${today()}
+tags: []
+---
+
+## Background
+
+## Main idea
+
+## Development
+
+$$
+% main equation
+$$ {#eq:main}
+
+As shown in @eq:main...
+
+## References
 
 [@key]
 `,
@@ -237,6 +363,48 @@ La ecuación @eq:main se usa en @thm:main.
 
 [@key]
 `,
+    contentEn: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [paper]
+comdtex.main: true
+---
+
+# Abstract {#sec:abstract}
+
+A summary of the main result.
+
+# Introduction {#sec:introduction}
+
+Motivation and contributions.
+
+# Main Result {#sec:main-result}
+
+:::theorem[Main result]{#thm:main}
+Statement of the main result.
+:::
+
+:::proof
+Proof of the main result.
+:::
+
+$$
+E = mc^2
+$$ {#eq:main}
+
+Equation @eq:main is used in @thm:main.
+
+| Symbol | Meaning |
+|---|---|
+| $E$ | Energy |
+| $m$ | Mass |
+{#tbl:notation}
+
+# References {#sec:references}
+
+[@key]
+`,
   },
   {
     id: "thesis",
@@ -268,6 +436,34 @@ comdtex.main: true
 ![[chapters/04-conclusiones]]
 
 # Bibliografía {#sec:bibliography}
+
+[@key]
+`,
+    contentEn: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [thesis]
+comdtex.main: true
+---
+
+# Introduction {#sec:intro}
+
+![[chapters/01-introduction]]
+
+# Theoretical framework {#sec:theory}
+
+![[chapters/02-theoretical-framework]]
+
+# Results {#sec:results}
+
+![[chapters/03-results]]
+
+# Conclusions {#sec:conclusions}
+
+![[chapters/04-conclusions]]
+
+# Bibliography {#sec:bibliography}
 
 [@key]
 `,
@@ -719,6 +915,40 @@ Demostración.
 
 :::exercise{#exc:one}
 Aplica @thm:key a un caso concreto.
+:::
+`,
+    contentEn: `---
+title: "{{title}}"
+author: "{{author}}"
+date: {{date}}
+tags: [notes, book]
+---
+
+# Goals {#sec:goals}
+
+- Goal 1
+- Goal 2
+
+# Definitions {#sec:definitions}
+
+:::definition[Central concept]{#def:central}
+Definition of the central concept.
+:::
+
+# Theorems {#sec:theorems}
+
+:::theorem[Key theorem]{#thm:key}
+A statement that uses @def:central.
+:::
+
+:::proof
+Proof.
+:::
+
+# Exercises {#sec:exercises}
+
+:::exercise{#exc:one}
+Apply @thm:key to a concrete case.
 :::
 `,
   },

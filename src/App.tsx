@@ -189,6 +189,7 @@ import {
   saveCustomTemplate,
   loadCustomTemplates,
   TEMPLATES,
+  templateBody,
 } from "./templates"
 import {
   setFlowchartSvg,
@@ -4144,7 +4145,7 @@ function AppContent({
         const template = templateId
           ? [...TEMPLATES, ...loadCustomTemplates()].find((tpl) => tpl.id === templateId)
           : undefined
-        content = template ? processTemplateVariables(template.content, fileName) : ""
+        content = template ? processTemplateVariables(templateBody(template), fileName) : ""
       }
       return vaultRef.current.createFile(
         fileName,
