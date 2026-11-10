@@ -162,7 +162,7 @@ describe("classifyWelcome", () => {
 
   it("reads the em dashes and callout lines older builds wrote as untouched", () => {
     const older = legacy132
-      .replace("# Mi Vault: ComdTeX", "# Mi Vault — ComdTeX")
+      .replace("# Mi Vault: ComdTeX", "# Mi Vault \u2014 ComdTeX")
       .replace(":::definition[Función continua]", "> [!note] definition[Función continua]")
     expect(classifyWelcome(older)).toEqual({ kind: "outdated", pristine: true })
     expect(classifyWelcome(`${older}\nA line of my own.\n`)).toEqual({
