@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **New-from-template documents follow the interface language.** The notes, article, problem set, theorem sheet, research note, Overleaf paper, thesis and lecture-notes templates were Spanish for everyone; an English interface now creates them with English headings and prompts (same structure). Journal templates were already English and custom templates are untouched.
 - **Old welcome files are updated.** The welcome file used to be created only when missing, so a vault never saw a newer one. On open, an untouched copy from an earlier version is now replaced by the current one; an edited copy is kept as `comdtex-old.md` before it is replaced; a copy you turned into your own note is left alone.
 - **A deleted welcome file stays deleted.** It used to come back every time the vault opened without saved tabs.
+- **LaTeX export speaks the document's language.** An English document (interface in English, or `lang: en` in its frontmatter) exported Spanish theorem names, `Figura~\ref`, `Tabla~\ref`, `sección~\ref` and `\usepackage[spanish]{babel}`. It now exports Theorem, Figure, Table, Section and English babel; journal classes get English theorem names too. Spanish documents export exactly as before.
+- **Generated folder files, the `macros.md` starter and the Help panel samples follow the interface language.** Task, calendar and index files were always written in Spanish, and so were the comments of a new `macros.md` and the examples in the Help panel.
+- **Insert snippets use English placeholders in the English interface** (text, item, title, statement and the rest), where they were Spanish in every language.
 - The preview shown while no file is open is now a short pointer to `comdtex.md` in the interface language, instead of a second Spanish-only tour.
 
 ### Fixed
