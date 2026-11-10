@@ -41,6 +41,10 @@ They **nest**: `frac(sqrt(abs(x)), 1 + norm(vec(x)))`.
 | `mat(1,0,0,1)`               | auto-sized matrix              | `matf(2,3, a,b,c, d,e,f)` | fixed r×c matrix                |
 | `table(Col1,Col2)`           | aligned table                  | `[[1,2],[3,4]]`           | matrix literal                  |
 
+Units and chemistry (preview through KaTeX, export as real `siunitx`/`mhchem`):
+`si(9.81, m/s^2)`, `si(1.5(2), mol/L)` (concise uncertainty), `num(6.022e23)`,
+`unit(kg*m/s^2)`, `ce(H2SO4)`. Prefer them to hand-typed `\mathrm{}` units.
+
 ## Environments
 
 `:::type[Optional title]` … `:::`.
@@ -68,7 +72,13 @@ Each is auto-numbered independently; all take an optional `[name]` title.
 - **`:::truth`**: truth tables. Negation `!` or `¬`; operators `->` (implies),
   `<->` (iff), `∧` (and), `∨` (or). One propositional formula per line.
 - **`:::graph`**: graphs. Edges: `A -- B : w` (weighted undirected), `A -> B` (directed).
-- **`:::plot`**: function plots. Body lines like `f(x) = x^2`, plus `xmin`/`xmax`.
+- **`:::plot`**: function plots. Body lines like `f(x) = x^2`, plus `range: [-3, 3]` (or `xmin = -3` and `xmax = 3` lines).
+  It can also plot a dataset: `@data:growth`, `x: hour`, `y: (S1, S2)`,
+  `kind: line | scatter | bars`, `error: sd`.
+- **`:::csv`**: a table read from a vault CSV, kept in sync with the file:
+  `data.csv (A:B, D) (1:8, 12)` or `@data:growth (A, C)`; caption `[Name]`, label `{#tbl:x}`.
+- **`:::data{#data:name}`**: declares a dataset once (prints nothing):
+  `results/stats.csv` or a JSON file; `:::csv`, `:::plot` and `val()` read through it.
 - **`val(dataset, cell[, format])`**: a number read from a results file declared with
   `:::data{#data:stats}` (CSV or JSON): `val(stats, pvalue)`, `val(stats, B4)`,
   `val(fit, metrics.auc, 3sf)`; formats `3sf`, `.2f`, `.2e`, `p`. Never type results by hand.
@@ -76,6 +86,13 @@ Each is auto-numbered independently; all take an optional `[name]` title.
   (control-flow keywords: if/else/while/for/return …).
 - **`:::commdiag`**: commutative diagrams (tikz-cd style: nodes and labeled arrows).
 - **`:::code lang`**: a syntax-highlighted code block (language after `code`).
+- **`:::seq`**: DNA, RNA or protein in numbered groups of 10 with length and GC
+  content. Options before the residues: `type: dna`, `highlight: 12-31 primer-F`,
+  `motif: GAATTC`, `revcomp: yes`, `width`, `group`; FASTA headers `>name` allowed.
+  Sequences cannot be referenced with `@`.
+- **`:::excalidraw`**: a freehand drawing stored in the note (inserted from the
+  palette, edited in a drawing editor; never write its scene by hand).
+- A fenced block in the `mermaid` language renders any Mermaid diagram.
 
 ```
 :::plot[Parabola]
@@ -92,10 +109,17 @@ B -> C
 
 ## Figures, tables, sections, cross-references
 
-- Figure: `![Caption](image.png){#fig:diagram}` → reference `@fig:diagram` → "Figura N".
+- Figure: `![Caption](image.png){#fig:diagram}` → reference `@fig:diagram` → "Figure N"
+  ("Figura N" in Spanish documents).
 - Table label: append `{#tbl:label}` on the line after a Markdown table → `@tbl:label`.
 - Section: `# Introduction {#sec:intro}` → reference `@sec:intro`.
 - All `@…:label` references autocomplete in the editor.
+- Supplementary material: a line `<!-- supplement -->` restarts figure and table
+  numbers as S1, S2 after it (equations keep one numbering).
+- Cross-file environment reference: `@folder/note@thm:name` (vault-relative path, no
+  extension); `@[path with spaces]@thm:name` when the path has spaces or accents.
+- Labels may contain `:` and `.`, so end a sentence after a reference with a space
+  or rephrase rather than writing `@thm:x.` or `@thm:x:`.
 
 ## Links, transclusion, formatting
 
@@ -107,12 +131,24 @@ B -> C
 - Standard Markdown: `**bold**`, `_italic_`, `~~strike~~`, `` `code` ``, lists,
   `> quotes`, `- [ ]`/`- [x]` checkboxes, footnotes `text[^1]` … `[^1]: note`.
 - Comments: `<!-- ... -->`.
+- Callouts (Obsidian style): `> [!note]`, `> [!tip] Title`, `> [!warning]`, also
+  `important`, `danger`, `success`, `question`, `quote`, `info`, `example`.
 
 ## Citations, frontmatter, macros
 
 - Citations from `references.bib`: `[@key]` or `[@key, p. 42]`.
 - YAML frontmatter at the top of a file: `title`, `author`, `date`, `tags: [...]`,
-  `abstract`. Enclose between `---` lines.
+  `abstract`, `lang` (`en`/`es`: captions such as Figure/Figura follow it).
+  Enclose between `---` lines.
+- Citation style: `comdtex.citestyle: default | vancouver | ama | apa | author-year`.
+- Biology conventions, opt-in per document: `comdtex.domain: biology` (accession
+  numbers such as `SRR1234567` or `GSE12345` become links; italic binomials and
+  gene symbols are checked; a Data availability section is expected) and
+  `comdtex.organism: human | mouse | rat | zebrafish | drosophila | yeast | bacteria`
+  (gene case: `TP53` human, `Trp53` mouse, `tp53` zebrafish; proteins upright).
+  Name a species in full (*Escherichia coli*) before abbreviating it (*E. coli*).
+- The Citation manager adds entries by DOI, arXiv id, PMID or PMCID.
+- `.qmd` and `.Rmd` files open and save untouched (code chunks are not run).
 - Custom macros live in `macros.md` via `\newcommand`, e.g.
   `\newcommand{\R}{\mathbb{R}}` or `\newcommand{\norm}[1]{\left\|#1\right\|}`.
 
@@ -142,17 +178,23 @@ Never invent a `{{?}}` marker in content you generate.
   (Help, Outline, Equations, Environments) have their own filter box.
 - **Focus timer**: a Pomodoro popover hanging off the top bar, with a compact
   clock in the bar while a session runs.
-- **Command palette**: `Ctrl+Shift+P` commands, `Ctrl+P` files (fuzzy launcher; prefixes `@` headings, `#` labels, `[` citations, `:` line). Notable commands:
-  "Normalizar tabla" (pad a pipe table's short rows and realign it),
-  "Dividir documento en secciones" (one file per `##`, linked by transclusions),
-  "Regenerar archivos de carpeta", "Completar hueco con IA".
+- **Command palette**: `Ctrl+Shift+P` commands, `Ctrl+P` files (a plain query also
+  finds commands, headings, labels, citations and settings; prefixes `@` headings,
+  `#` labels, `[` citations, `:` line). Notable commands (English UI names):
+  "Normalize table" (pad a pipe table's short rows and realign it),
+  "Split document into sections (##)" (one file per `##`, linked by transclusions),
+  "Regenerate folder files", "Fill gap with AI", "Restore example files (comdtex.md)".
+- Every vault has a `comdtex.md` with a live example of each feature, and a
+  `comdtex-examples` folder with a biology example note and results files.
 - **Per-folder rules** (`.comdtex-folder.json` inside a folder): default template,
   filename pattern, default frontmatter, and generated `tasks`/`calendar`/`index`
   files. Generated files carry a `<!-- comdtex:generated -->` marker and are only
   ever rewritten while it is present.
 - **Export**: LaTeX (`.tex`), Typst, Reveal.js slides, Obsidian, Anki; **PDF** via the
   bundled WASM LaTeX engine (no system LaTeX install needed).
-- Templates (article, notes, homework, theorems, research) and user snippets (`snippets.md`).
+- Templates (article, notes, homework, theorems, research, and journal layouts:
+  IEEE, ACM, Elsevier, APA, PLOS, Bioinformatics, BMC, bioRxiv) and user snippets
+  (`snippets.md`).
 
 ---
 
