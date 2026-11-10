@@ -13,8 +13,8 @@
  * (`withDocLanguage`), so the environment, figure and bibliography code reads
  * it through `activeDocTerms()` without a parameter on every function.
  *
- * LaTeX export is deliberately NOT routed through here: it names things
- * through its own babel-driven `\newtheorem` declarations.
+ * LaTeX export (`exportToTex`) pins the same language: "Figure~\ref", the
+ * `\newtheorem` names and the babel package all follow it.
  */
 
 import { en } from "./i18n/en"

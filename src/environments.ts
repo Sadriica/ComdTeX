@@ -15,7 +15,7 @@
  *   :::
  */
 
-import { activeDocLanguage, activeDocTerms, envTitle, type DocLang } from "./docLang"
+import { activeDocLanguage, activeDocTerms, docTermsFor, envTitle, type DocLang } from "./docLang"
 
 export const NUMBERED_ENVS: Record<string, { es: string; latex: string }> = {
   theorem: { es: "Teorema", latex: "theorem" },
@@ -830,18 +830,19 @@ export function envToLatex(
 }
 
 /** Build the \newtheorem declarations for the preamble */
-export function buildTheoremPreamble(): string {
+export function buildTheoremPreamble(lang: DocLang = "es"): string {
+  const env = docTermsFor(lang).env
   const lines: string[] = [
     "\\usepackage{amsthm}",
-    "\\newtheorem{theorem}{Teorema}",
-    "\\newtheorem{lemma}[theorem]{Lema}",
-    "\\newtheorem{corollary}[theorem]{Corolario}",
-    "\\newtheorem{proposition}[theorem]{Proposición}",
-    "\\newtheorem*{definition}{Definición}",
-    "\\newtheorem*{example}{Ejemplo}",
-    "\\newtheorem*{exercise}{Ejercicio}",
-    "\\newtheorem*{remark}{Observación}",
-    "\\newtheorem*{note}{Nota}",
+    `\\newtheorem{theorem}{${env.theorem}}`,
+    `\\newtheorem{lemma}[theorem]{${env.lemma}}`,
+    `\\newtheorem{corollary}[theorem]{${env.corollary}}`,
+    `\\newtheorem{proposition}[theorem]{${env.proposition}}`,
+    `\\newtheorem*{definition}{${env.definition}}`,
+    `\\newtheorem*{example}{${env.example}}`,
+    `\\newtheorem*{exercise}{${env.exercise}}`,
+    `\\newtheorem*{remark}{${env.remark}}`,
+    `\\newtheorem*{note}{${env.note}}`,
   ]
   return lines.join("\n")
 }

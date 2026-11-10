@@ -64,12 +64,7 @@ export function parseMacros(text: string): KatexMacros {
 
 export const MACROS_FILENAME = "macros.md"
 
-/** Template shown to users when they create a macros file */
-export const MACROS_TEMPLATE = `% Macros personalizados: se aplican en todo el vault
-% Sintaxis: \\newcommand{\\cmd}{definición}
-%           \\newcommand{\\cmd}[n]{definición con #1...#n}
-
-\\newcommand{\\R}{\\mathbb{R}}
+const MACROS_DEFINITIONS = `\\newcommand{\\R}{\\mathbb{R}}
 \\newcommand{\\N}{\\mathbb{N}}
 \\newcommand{\\Z}{\\mathbb{Z}}
 \\newcommand{\\Q}{\\mathbb{Q}}
@@ -78,3 +73,22 @@ export const MACROS_TEMPLATE = `% Macros personalizados: se aplican en todo el v
 \\newcommand{\\abs}[1]{\\left|#1\\right|}
 \\newcommand{\\inner}[2]{\\langle #1,\\, #2 \\rangle}
 `
+
+const MACROS_HEADERS: Record<"en" | "es", string> = {
+  es: `% Macros personalizados: se aplican en todo el vault
+% Sintaxis: \\newcommand{\\cmd}{definición}
+%           \\newcommand{\\cmd}[n]{definición con #1...#n}
+`,
+  en: `% Custom macros: they apply across the whole vault
+% Syntax: \\newcommand{\\cmd}{definition}
+%         \\newcommand{\\cmd}[n]{definition using #1...#n}
+`,
+}
+
+/** Template written into a new macros file, with comments in the interface language. */
+export function macrosTemplate(lang: "en" | "es" = "es"): string {
+  return `${MACROS_HEADERS[lang]}\n${MACROS_DEFINITIONS}`
+}
+
+/** Spanish template, kept for callers without a language at hand. */
+export const MACROS_TEMPLATE = macrosTemplate("es")

@@ -1518,6 +1518,23 @@ export const en: T = {
     fmOrganismDesc:
       "With the biology check, also applies one organism's gene and protein conventions (human, mouse, rat, zebrafish, drosophila, yeast, bacteria): Trp53 vs TP53, tp53, CDC28, lacZ. Ctrl+. wraps or unwraps the italics.",
     wikilinkRow: "Link: click in preview to navigate",
+    sample: {
+      text: "text",
+      code: "code",
+      comment: "comment",
+      heading: "Introduction",
+      headingId: "intro",
+      caption: "Caption",
+      figId: "diagram",
+      envTitle: "Title",
+      labelEnergy: "energy",
+      crossFileNote: "my folder/my note",
+      crossFileValue: "value",
+      chapter: "chapter",
+      noteName: "note-name",
+      fmTitleValue: "Real Analysis",
+      fmTagsValue: "analysis, topology",
+    },
     wikilinkDesc:
       "The ← tab shows backlinks of the active file. Autocomplete suggests names when typing [[.",
     transclusionFile: "![[note]]",
@@ -1730,6 +1747,18 @@ export const en: T = {
       exc: "Exercises",
       data: "Data",
     },
+  },
+
+  generatedFiles: {
+    regenerateNotice: "This file is regenerated automatically. Manual changes will be lost.",
+    tasksTitle: "Tasks",
+    calendarTitle: "Calendar",
+    indexTitle: "Index",
+    noTasks: "No tasks.",
+    noNotes: "No notes.",
+    noDate: "No date",
+    pending: (n) => `${n} pending`,
+    completed: (n) => `${n} completed`,
   },
 
   docTerms: {
