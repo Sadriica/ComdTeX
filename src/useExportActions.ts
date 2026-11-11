@@ -127,7 +127,8 @@ export function useExportActions(ctx: ExportActionsCtx) {
     if (!path) return
     // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png), so
     // it compiles anywhere; on Overleaf, upload them together.
-    let raw = editor.getValue()
+    // Resolved first, so plots fed by `:::data` have their series to draw.
+    let raw = resolveDocumentContent(editor.getValue(), transclusionResolver)
     if ((await loadDiagramExport()).hasRasterBlocks(raw)) {
       const outDir = pathDirname(path) || "."
       const outBase = (path.split(/[\\/]/).pop() ?? "export")
@@ -136,14 +137,23 @@ export function useExportActions(ctx: ExportActionsCtx) {
       try {
         const replaced = await (
           await loadDiagramExport()
-        ).replaceDiagramsForExport(raw, async (i, _block, png) => {
-          const file = `${outBase}-diag-${i}.png`
-          await writeFile(`${outDir}/${file}`, png)
-          return file
-        })
+        ).replaceDiagramsForExport(
+          raw,
+          async (i, _block, png) => {
+            const file = `${outBase}-diag-${i}.png`
+            await writeFile(`${outDir}/${file}`, png)
+            return file
+          },
+          {
+            readSvg: (await loadActions()).svgReaderFor(
+              vaultRef.current.openFile?.path,
+              vaultRef.current.vaultPath,
+            ),
+          },
+        )
         raw = replaced.content
       } catch {
-        raw = editor.getValue()
+        raw = resolveDocumentContent(editor.getValue(), transclusionResolver)
       }
     }
     const content = resolveDocumentContent(raw, transclusionResolver)
@@ -333,22 +343,33 @@ export function useExportActions(ctx: ExportActionsCtx) {
     const base = currentFile.name.replace(/\.[^.]+$/, "")
     // Same diagram rasterization as the main compile path, so the auto
     // rebuilt preview shows diagrams too. PNGs are cleaned after compiling.
-    let sourceForTex = editorContent
+    // Resolved first, so plots fed by `:::data` have their series to draw.
+    const resolvedEditor = resolveDocumentContent(editorContent, transclusionResolver)
+    let sourceForTex = resolvedEditor
     const rebuildDiagFiles: string[] = []
-    if ((await loadDiagramExport()).hasRasterBlocks(editorContent)) {
+    if ((await loadDiagramExport()).hasRasterBlocks(resolvedEditor)) {
       const safeBase = base.replace(/[^A-Za-z0-9-]+/g, "-")
       try {
         const replaced = await (
           await loadDiagramExport()
-        ).replaceDiagramsForExport(editorContent, async (i, _block, png) => {
-          const file = `${safeBase}-comdtex-diag-${i}.png`
-          await writeFile(`${dir}/${file}`, png)
-          rebuildDiagFiles.push(`${dir}/${file}`)
-          return file
-        })
+        ).replaceDiagramsForExport(
+          resolvedEditor,
+          async (i, _block, png) => {
+            const file = `${safeBase}-comdtex-diag-${i}.png`
+            await writeFile(`${dir}/${file}`, png)
+            rebuildDiagFiles.push(`${dir}/${file}`)
+            return file
+          },
+          {
+            readSvg: (await loadActions()).svgReaderFor(
+              currentFile.path,
+              vaultRef.current.vaultPath,
+            ),
+          },
+        )
         sourceForTex = replaced.content
       } catch {
-        sourceForTex = editorContent
+        sourceForTex = resolvedEditor
       }
     }
     const content = resolveDocumentContent(sourceForTex, transclusionResolver)

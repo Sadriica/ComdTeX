@@ -27,6 +27,7 @@ import { parseCitationGroup } from "./bibtex"
 import { accessionsPlugin } from "./accessions"
 import { isBiologyDocument } from "./bioConventions"
 import { seqBlockToLatex } from "./sequence"
+import { specialBlocksToPandoc } from "./exportConversion"
 
 interface LatexMacro {
   command: string
@@ -1228,6 +1229,9 @@ interface TexHeaderFooter {
   footerRight?: string
 }
 
+/** Special blocks the LaTeX exporter renders itself (see extractEnvBlocks). */
+const TEX_OWN_BLOCKS: ReadonlySet<string> = new Set(["seq"])
+
 function exportToTexIn(
   rawInput: string,
   macrosText = "",
@@ -1245,7 +1249,11 @@ function exportToTexIn(
   // Keep marks are editor-only: collapse them to plain text before the LaTeX
   // conversion. `stripKeepMarks` is math-aware, so a doubled caret inside a
   // superscript (`$x^{2^^3}$`) is left alone.
-  const raw = stripKeepMarks(rawInput)
+  // ComdTeX-only blocks that reach here were not rasterized (pseudocode and
+  // `:::code` never are; a diagram whose image failed falls back too). They
+  // printed as raw `:::pseudocode[...]` lines in the PDF; now each is a
+  // captioned listing, as in every pandoc export. `:::seq` has its own LaTeX.
+  const raw = specialBlocksToPandoc(stripKeepMarks(rawInput), { keep: TEX_OWN_BLOCKS })
   const parsed = extractFrontmatter(raw)
   citedInLastPass = false
   linkAccessionsInTex = isBiologyDocument(raw)

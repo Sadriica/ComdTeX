@@ -5,6 +5,8 @@ import {
   svgForPrint,
   extractSvg,
   diagramToSvg,
+  findLocalSvgImages,
+  hasLocalSvgImages,
   hasRasterBlocks,
   replaceDiagramsForExport,
 } from "./diagramExport"
@@ -135,5 +137,34 @@ describe("extractSvg", () => {
   it("pulls the svg out of an html wrapper", () => {
     expect(extractSvg('<div class="x"><svg a="1">y</svg></div>')).toBe('<svg a="1">y</svg>')
     expect(extractSvg("<div>no svg</div>")).toBeNull()
+  })
+})
+
+describe("local SVG images", () => {
+  it("finds local .svg images outside fenced code, not remote ones", () => {
+    const md = [
+      "![Wave](comdtex-examples/figure.svg){#fig:wave}",
+      "![Remote](https://example.org/x.svg)",
+      "```",
+      "![In code](skip.svg)",
+      "```",
+      '![Titled](<a b.svg> "t") and ![png](x.png)',
+    ].join("\n")
+    expect(findLocalSvgImages(md).map((i) => i.src)).toEqual([
+      "comdtex-examples/figure.svg",
+      "a b.svg",
+    ])
+    expect(hasLocalSvgImages(md)).toBe(true)
+    expect(hasRasterBlocks("![p](x.png)")).toBe(false)
+    expect(hasRasterBlocks("![s](x.svg)")).toBe(true)
+  })
+
+  it("leaves an image it cannot read as written", async () => {
+    const md = "![Wave](figure.svg){#fig:wave}"
+    const { content, assets } = await replaceDiagramsForExport(md, async () => "never.png", {
+      readSvg: async () => null,
+    })
+    expect(content).toBe(md)
+    expect(assets).toBe(0)
   })
 })

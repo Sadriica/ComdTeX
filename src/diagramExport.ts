@@ -23,6 +23,7 @@ import { renderPlotHTML } from "./functionPlot"
 import { renderCommDiagSVG } from "./commDiag"
 import { buildTruthTable } from "./truthTable"
 import { getActiveMermaidConfig } from "./mermaidConfig"
+import { pseudocodeToFlowchart } from "./pseudocodeFlowchart"
 
 export interface SpecialBlock {
   type: string
@@ -83,7 +84,47 @@ export const EXPORT_CAPTIONS: Record<string, string> = {
 export const RASTER_TYPES = new Set(["flowchart", "graph", "plot", "commdiag", "excalidraw"])
 
 export function hasRasterBlocks(md: string): boolean {
-  return findSpecialBlocks(md).some((b) => RASTER_TYPES.has(b.type))
+  return findSpecialBlocks(md).some((b) => RASTER_TYPES.has(b.type)) || hasLocalSvgImages(md)
+}
+
+// ── Local SVG images ─────────────────────────────────────────────────────────
+// No LaTeX engine ComdTeX drives reads SVG: xelatex, pdflatex and tectonic stop
+// at `\includegraphics{x.svg}` ("Cannot determine size of graphic"). One SVG
+// figure therefore failed every local engine, the compile fell through to the
+// WASM engine with the original content, and every plot, graph and flowchart
+// in the PDF printed as source code. They are rasterized like the diagrams.
+
+/** `![alt](path.svg "title")` or `![alt](<a path.svg>)`: group 1 is everything
+ *  up to the path, group 2 a bracketed path, group 3 a plain one. */
+const SVG_IMAGE_RE = /(!\[[^\]\n]*\]\(\s*<?)(?:([^<>\n]+\.svg)(?=>)|([^)\s<>]+\.svg)(?=[\s)]))/gi
+
+/** Each local `.svg` image path outside fenced code, with its line and column. */
+export function findLocalSvgImages(
+  md: string,
+): Array<{ line: number; index: number; src: string }> {
+  const out: Array<{ line: number; index: number; src: string }> = []
+  let fence: string | null = null
+  md.split("\n").forEach((text, line) => {
+    const f = /^\s*(`{3,}|~{3,})/.exec(text)
+    if (f) {
+      if (fence === null) fence = f[1][0]
+      else if (f[1][0] === fence) fence = null
+      return
+    }
+    if (fence !== null) return
+    SVG_IMAGE_RE.lastIndex = 0
+    let m: RegExpExecArray | null
+    while ((m = SVG_IMAGE_RE.exec(text)) !== null) {
+      const src = m[2] ?? m[3]
+      if (/^(?:[a-z][\w+.-]*:|\/\/)/i.test(src)) continue // remote or data URL
+      out.push({ line, index: m.index + m[1].length, src })
+    }
+  })
+  return out
+}
+
+export function hasLocalSvgImages(md: string): boolean {
+  return findLocalSvgImages(md).length > 0
 }
 
 /** A truth block as a plain Markdown table every export understands. */
@@ -132,12 +173,29 @@ export function svgForPrint(svg: string): string {
       return PRINT_VARS[name] ?? (fallback ? fallback.trim() : "#1a1a1a")
     },
   )
+  // As a standalone image an <svg> without its namespace is not SVG at all:
+  // the decode fails and the block stayed as source code in the PDF (the
+  // graph renderer emits inline SVG with no xmlns).
+  if (!/<svg[^>]*\sxmlns="/.test(out)) {
+    out = out.replace(/<svg\b/, '<svg xmlns="http://www.w3.org/2000/svg"')
+  }
+  if (/\sxlink:/.test(out) && !/<svg[^>]*\sxmlns:xlink="/.test(out)) {
+    out = out.replace(/<svg\b/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"')
+  }
   // Rasterization needs explicit pixel dimensions; percentage widths render 0.
-  const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(out)
+  // Mermaid's viewBox does not start at 0 0 (`-8 -8 412 590`); matching only
+  // `0 0 w h` left its flowcharts sizeless, rasterized tiny and upscaled.
+  const vb = /<svg[^>]*\sviewBox="\s*-?[\d.]+[\s,]+-?[\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"/.exec(
+    out,
+  )
   if (vb) {
-    out = out.replace(/<svg([^>]*?)\swidth="100%"/, `<svg$1 width="${vb[1]}"`)
-    if (!/<svg[^>]*\sheight="/.test(out)) {
-      out = out.replace(/<svg /, `<svg height="${vb[2]}" `)
+    if (/<svg[^>]*\swidth="[\d.]*%"/.test(out) || !/<svg[^>]*\swidth="/.test(out)) {
+      out = out.replace(/<svg([^>]*?)\swidth="[\d.]*%"/, "<svg$1")
+      out = out.replace(/<svg\b/, `<svg width="${vb[1]}"`)
+    }
+    if (!/<svg[^>]*\sheight="/.test(out) || /<svg[^>]*\sheight="[\d.]*%"/.test(out)) {
+      out = out.replace(/<svg([^>]*?)\sheight="[\d.]*%"/, "<svg$1")
+      out = out.replace(/<svg\b/, `<svg height="${vb[2]}"`)
     }
   }
   return out
@@ -180,9 +238,12 @@ export async function diagramToSvg(block: SpecialBlock): Promise<string | null> 
           themeVariables: { background: "#ffffff" },
         } as Parameters<typeof mermaid.initialize>[0])
         try {
+          // The block holds pseudocode, exactly as the preview reads it; Mermaid
+          // got it raw before, failed to parse, and the PDF printed the source.
+          const chart = pseudocodeToFlowchart(block.body.trim())
           const { svg } = await mermaid.render(
             `comdtex-export-${Math.abs(hash(block.body))}`,
-            block.body,
+            chart,
           )
           return extractSvg(svg)
         } finally {
@@ -256,7 +317,16 @@ export async function svgToPngBytes(svg: string, scale = 2): Promise<Uint8Array 
 
 export interface DiagramAssetWriter {
   /** Persist PNG bytes; returns the path/filename to reference in Markdown. */
-  (index: number, block: SpecialBlock, png: Uint8Array): Promise<string>
+  (index: number, block: SpecialBlock | null, png: Uint8Array): Promise<string>
+}
+
+export interface DiagramExportOptions {
+  /**
+   * Reads a local SVG image by the path the document wrote (resolved against
+   * the document's folder, then the vault root). Null when it cannot be read;
+   * the image is then left as written. Without it SVG images are untouched.
+   */
+  readSvg?: (src: string) => Promise<string | null>
 }
 
 /**
@@ -269,9 +339,11 @@ export interface DiagramAssetWriter {
 export async function replaceDiagramsForExport(
   md: string,
   writeAsset: DiagramAssetWriter,
+  opts: DiagramExportOptions = {},
 ): Promise<{ content: string; assets: number }> {
   const blocks = findSpecialBlocks(md)
-  if (blocks.length === 0) return { content: md, assets: 0 }
+  const svgImages = opts.readSvg ? findLocalSvgImages(md) : []
+  if (blocks.length === 0 && svgImages.length === 0) return { content: md, assets: 0 }
 
   const lines = md.split("\n")
   const counters: Record<string, number> = {}
@@ -301,6 +373,24 @@ export async function replaceDiagramsForExport(
     assetIndex++
     const ref = await writeAsset(assetIndex, block, png)
     replacements.push({ start: block.start, end: block.end, text: [`![${caption}](${ref})`] })
+  }
+
+  // SVG images first, on the untouched lines (block replacements change line
+  // counts). Right to left within a line so earlier columns stay valid. A
+  // block body never holds Markdown images, so the two edits cannot overlap.
+  const pngBySrc = new Map<string, string>()
+  for (const img of [...svgImages].reverse()) {
+    let ref = pngBySrc.get(img.src)
+    if (ref === undefined) {
+      const svg = await opts.readSvg!(img.src).catch(() => null)
+      const png = svg ? await svgToPngBytes(svg) : null
+      if (!png) continue
+      assetIndex++
+      ref = await writeAsset(assetIndex, null, png)
+      pngBySrc.set(img.src, ref)
+    }
+    const text = lines[img.line]
+    lines[img.line] = text.slice(0, img.index) + ref + text.slice(img.index + img.src.length)
   }
 
   for (const r of replacements.reverse()) {

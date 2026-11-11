@@ -40,19 +40,34 @@ const SPECIAL_BLOCK_CAPTIONS: Record<string, string> = {
   seq: "Sequence",
 }
 
-export function specialBlocksToPandoc(md: string): string {
+export function specialBlocksToPandoc(
+  md: string,
+  opts: { keep?: ReadonlySet<string> } = {},
+): string {
   const lines = md.split("\n")
   const out: string[] = []
   let seqCount = 0
+  let fence: string | null = null
   let i = 0
   while (i < lines.length) {
+    // A `:::plot` shown inside a fenced code sample is documentation, not a block.
+    const f = /^\s*(`{3,}|~{3,})/.exec(lines[i])
+    if (f) {
+      if (fence === null) fence = f[1][0]
+      else if (f[1][0] === fence) fence = null
+    }
+    if (f || fence !== null) {
+      out.push(lines[i])
+      i++
+      continue
+    }
     // Openers: ":::type", ":::type[Title]", and the ":::code python" language
     // variant (bare word after the type, code blocks only).
     const open =
       /^:::(pseudocode|flowchart|truth|graph|plot|commdiag|code|excalidraw|seq)(?:\[(.*?)\])?(?:[ \t]+(\S+))?[ \t]*$/.exec(
         lines[i],
       )
-    if (!open) {
+    if (!open || opts.keep?.has(open[1])) {
       out.push(lines[i])
       i++
       continue

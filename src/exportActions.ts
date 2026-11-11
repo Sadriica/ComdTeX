@@ -199,6 +199,33 @@ export async function collectSyncTex(
   }
 }
 
+/**
+ * Reads a local SVG image the way the preview finds it (the document's folder,
+ * then the vault root), for `replaceDiagramsForExport` to rasterize: no LaTeX
+ * engine ComdTeX runs can read SVG.
+ */
+export function svgReaderFor(
+  docPath: string | null | undefined,
+  vaultPath: string | null | undefined,
+): (src: string) => Promise<string | null> {
+  return async (src) => {
+    let path = src
+    try {
+      path = decodeURI(src)
+    } catch {
+      /* a literal % in the name: use it as written */
+    }
+    for (const candidate of imageCandidates(path, docPath, vaultPath)) {
+      try {
+        if (await exists(candidate)) return await readTextFile(candidate)
+      } catch {
+        /* try the next candidate */
+      }
+    }
+    return null
+  }
+}
+
 async function readMacros(vaultPath: string | null): Promise<string> {
   if (!vaultPath) return ""
   try {
@@ -340,18 +367,24 @@ export async function exportLatex(ctx: ExportActionsContext) {
 
   // Diagrams ship as PNGs beside the exported .tex (<name>-diag-N.png) so
   // the file compiles anywhere (Overleaf included: upload them together).
+  // Resolved first, so plots fed by `:::data` have their series (see compileLatexPdf).
+  const resolvedRaw = resolveDocumentContent(rawContent, ctx.resolveTransclusion)
   let content = rawContent
-  if (hasRasterBlocks(rawContent)) {
+  if (hasRasterBlocks(resolvedRaw)) {
     const outDir = pathDirname(outPathEarly) || "."
     const outBase = pathBasename(outPathEarly)
       .replace(/\.[^.]+$/, "")
       .replace(/[^A-Za-z0-9-]+/g, "-")
     try {
-      const replaced = await replaceDiagramsForExport(rawContent, async (i, _block, png) => {
-        const file = `${outBase}-diag-${i}.png`
-        await writeFile(`${outDir}/${file}`, png)
-        return file
-      })
+      const replaced = await replaceDiagramsForExport(
+        resolvedRaw,
+        async (i, _block, png) => {
+          const file = `${outBase}-diag-${i}.png`
+          await writeFile(`${outDir}/${file}`, png)
+          return file
+        },
+        { readSvg: svgReaderFor(ctx.activePath, ctx.vaultPath) },
+      )
       content = replaced.content
     } catch {
       content = rawContent
@@ -462,20 +495,28 @@ export async function compileLatexPdf(ctx: ExportActionsContext) {
   const diagDir = pathDirname(currentFile.path) || "."
   const diagBase = currentFile.name.replace(/\.[^.]+$/, "")
   const diagFiles: string[] = []
+  // Resolved first: a plot that names a dataset (`@data:x`) only has series
+  // after the document pass, so rasterizing the raw text left it as source.
+  // buildLatex resolves again; on resolved text that pass changes nothing.
+  const resolvedForDiagrams = resolveDocumentContent(rawContent, ctx.resolveTransclusion)
   let content = rawContent
   let diagramCount = 0
-  if (hasRasterBlocks(rawContent)) {
+  if (hasRasterBlocks(resolvedForDiagrams)) {
     try {
       // Sanitized prefix: the filename lands inside \includegraphics{...},
       // where an underscore or space from the note's own name would break
       // the compile (escTex escapes them into non-paths).
       const safeBase = diagBase.replace(/[^A-Za-z0-9-]+/g, "-")
-      const replaced = await replaceDiagramsForExport(rawContent, async (i, _block, png) => {
-        const file = `${safeBase}-comdtex-diag-${i}.png`
-        await writeFile(`${diagDir}/${file}`, png)
-        diagFiles.push(`${diagDir}/${file}`)
-        return file
-      })
+      const replaced = await replaceDiagramsForExport(
+        resolvedForDiagrams,
+        async (i, _block, png) => {
+          const file = `${safeBase}-comdtex-diag-${i}.png`
+          await writeFile(`${diagDir}/${file}`, png)
+          diagFiles.push(`${diagDir}/${file}`)
+          return file
+        },
+        { readSvg: svgReaderFor(currentFile.path, ctx.vaultPath) },
+      )
       content = replaced.content
       diagramCount = replaced.assets
     } catch {
@@ -670,12 +711,16 @@ export async function exportPdf(ctx: ExportActionsContext) {
   let pandocContent = content
   if (hasRasterBlocks(content)) {
     try {
-      const replaced = await replaceDiagramsForExport(content, async (i, _block, png) => {
-        const file = `${pandocSafeBase}-comdtex-diag-${i}.png`
-        await writeFile(`${pandocDir}/${file}`, png)
-        pandocDiagFiles.push(`${pandocDir}/${file}`)
-        return file
-      })
+      const replaced = await replaceDiagramsForExport(
+        content,
+        async (i, _block, png) => {
+          const file = `${pandocSafeBase}-comdtex-diag-${i}.png`
+          await writeFile(`${pandocDir}/${file}`, png)
+          pandocDiagFiles.push(`${pandocDir}/${file}`)
+          return file
+        },
+        { readSvg: svgReaderFor(currentFile.path, ctx.vaultPath) },
+      )
       pandocContent = replaced.content
     } catch {
       pandocContent = content
