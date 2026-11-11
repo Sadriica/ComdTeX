@@ -196,7 +196,11 @@ function isTextVaultFile(node: FileNode): boolean {
   return isDocExt(ext) || ext === "bib" || ext === "typ" || ext === "csv"
 }
 
-async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
+/** Image files the preview can embed. They stay out of the tree (a vault of
+ *  figures would bury the notes) but are collected so image paths resolve. */
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "avif"])
+
+async function buildTree(dirPath: string, depth = 0, images?: string[]): Promise<FileNode[]> {
   if (depth > MAX_TREE_DEPTH) return []
   const entries = await readDir(dirPath)
   const nodes: FileNode[] = []
@@ -215,7 +219,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
       // files, still belongs in the tree (previously such folders vanished).
       let children: FileNode[] = []
       try {
-        children = await buildTree(fullPath, depth + 1)
+        children = await buildTree(fullPath, depth + 1, images)
       } catch {
         /* keep the directory node, just with no children */
       }
@@ -232,6 +236,7 @@ async function buildTree(dirPath: string, depth = 0): Promise<FileNode[]> {
         ext === "pdf"
       )
         nodes.push({ name: entry.name, path: fullPath, type: "file", ext })
+      else if (images && ext && IMAGE_EXTS.has(ext)) images.push(fullPath.replace(/\\/g, "/"))
     }
   }
 
@@ -481,6 +486,11 @@ export function useVault(options: UseVaultOptions | number = {}) {
   })
   const [recentVaults, setRecentVaults] = useState<string[]>(() => loadRecentVaults())
   const [tree, setTree] = useState<FileNode[]>([])
+  // Every image in the vault (forward slashes). Kept out of `tree`; the preview
+  // needs it to tell an image next to the note from one at the vault root.
+  // Same array kept when nothing changed, so the preview does not re-render on
+  // every window-focus refresh.
+  const [imagePaths, setImagePaths] = useState<string[]>([])
   const [openTabs, setOpenTabs] = useState<OpenFile[]>([])
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null)
   const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set())
@@ -557,7 +567,12 @@ export function useVault(options: UseVaultOptions | number = {}) {
   const refreshTree = useCallback(
     async (path: string) => {
       try {
-        setTree(await buildTree(path))
+        const images: string[] = []
+        setTree(await buildTree(path, 0, images))
+        images.sort()
+        setImagePaths((prev) =>
+          prev.length === images.length && prev.every((p, i) => p === images[i]) ? prev : images,
+        )
       } catch (e) {
         showToast(t.vault.errorReading(e instanceof Error ? e.message : String(e)), "error")
       }
@@ -2035,6 +2050,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     vaultPath,
     recentVaults,
     tree,
+    imagePaths,
     isLoading,
     openTabs,
     activeTabPath,

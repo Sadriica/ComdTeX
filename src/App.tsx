@@ -904,8 +904,11 @@ function AppContent({
   // the diagnostics need it to tell a missing image from one the panel was
   // simply never shown.
   const vaultAssetPaths = useMemo(
-    () => vaultFileNodes.filter((f) => f.ext !== "md" && f.ext !== "tex").map((f) => f.path),
-    [vaultFileNodes],
+    () => [
+      ...vaultFileNodes.filter((f) => f.ext !== "md" && f.ext !== "tex").map((f) => f.path),
+      ...vault.imagePaths,
+    ],
+    [vaultFileNodes, vault.imagePaths],
   )
 
   // Every file path in the vault (forward slashes), read through a ref so the
@@ -919,7 +922,15 @@ function AppContent({
   useEffect(() => {
     vaultFilePathSetRef.current = vaultFilePathSet
   }, [vaultFilePathSet])
-  const imageExists = useCallback((absPath: string) => vaultFilePathSetRef.current.has(absPath), [])
+  // Images are not tree nodes, so they come from the scan's own list. Before
+  // this, no image ever "existed", and `figure.svg` next to a note in a
+  // subfolder resolved to the vault root and rendered broken. Keyed on the
+  // list (stable while nothing changes), so a new image re-renders the preview.
+  const vaultImagePathSet = useMemo(() => new Set(vault.imagePaths), [vault.imagePaths])
+  const imageExists = useCallback(
+    (absPath: string) => vaultImagePathSet.has(absPath) || vaultFilePathSetRef.current.has(absPath),
+    [vaultImagePathSet],
+  )
 
   const vaultFiles = useMemo(() => {
     // Recompute when the open-tab shape changes immediately, or when debounced
@@ -3248,16 +3259,31 @@ function AppContent({
       // entries) sits inside a paragraph carrying `data-source-line`, so without
       // this branch the fallback at the bottom hijacks the click and jumps the
       // editor to the line the *reference* is written on instead of the target.
-      const anchor = el.closest('a[href^="#"]') as HTMLAnchorElement | null
+      // Wikilinks (`href="#"`) and cross-file env refs (`#env-x` names an id in
+      // ANOTHER note) also start with `#`; they have their own branches below.
+      // Until 1.33 this branch caught them first and did nothing, so clicking
+      // [[note]] or `@doc@thm:x` in the preview went nowhere.
+      const anchor = el.closest(
+        'a[href^="#"]:not(.wikilink):not(.env-ref-cross)',
+      ) as HTMLAnchorElement | null
       if (anchor) {
         e.preventDefault()
         const id = decodeURIComponent(anchor.getAttribute("href")?.slice(1) ?? "")
         // Attribute selector, not `#id`: ids like `env-thm:main` contain a colon,
         // which is a pseudo-class separator in a CSS id selector.
         const target = id
-          ? previewPaneRef.current?.querySelector(`[id="${id.replace(/["\\]/g, "\\$&")}"]`)
+          ? previewPaneRef.current?.querySelector<HTMLElement>(
+              `[id="${id.replace(/["\\]/g, "\\$&")}"]`,
+            )
           : null
-        target?.scrollIntoView({ behavior: "smooth", block: "start" })
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" })
+          // A target already on screen cannot scroll; the flash shows where it is.
+          target.classList.remove("sync-highlight")
+          void target.offsetWidth
+          target.classList.add("sync-highlight")
+          setTimeout(() => target.classList.remove("sync-highlight"), 900)
+        }
         return
       }
 
@@ -3756,7 +3782,7 @@ function AppContent({
         {
           annotate: false,
           docPath: file.path,
-          fileExists: (p) => vaultFilePathSetRef.current.has(p),
+          fileExists: imageExists,
         },
       )
       await navigator.clipboard.writeText(sanitizeRenderedHtml(html))
@@ -3764,7 +3790,7 @@ function AppContent({
     } catch {
       showToast(t.app.copyError ?? "Error al copiar", "error")
     }
-  }, [macros, wikiNames, bibMap, transclusionResolver, t])
+  }, [macros, wikiNames, bibMap, transclusionResolver, imageExists, t])
 
   const handleCopyLatex = useCallback(async () => {
     const file = vaultRef.current.openFile

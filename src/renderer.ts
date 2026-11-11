@@ -65,6 +65,30 @@ const md = new MarkdownIt({
   .enable("table")
   .enable("strikethrough")
 
+// linkify reads a bare `macros.md` or `data.csv` as a web address (.md is
+// Moldova, .csv is not a TLD but `notes.py`, `fig.png` and friends follow the
+// same road for real ones), and the preview then showed `http://macros.md`.
+// In a vault a bare name with a file extension is a file, not a site: undo the
+// fuzzy link (no scheme, no `www.`) when it ends in one.
+const FILE_LIKE_LINK_RE =
+  /^[\w./-]+\.(?:md|markdown|tex|bib|csv|tsv|json|typ|qmd|rmd|txt|pdf|png|jpe?g|gif|svg|webp|py|r|ipynb|cmdx|sty|cls|yaml|yml|toml|sh|js|ts)$/i
+md.core.ruler.after("linkify", "comdtex_unlink_filenames", (state) => {
+  for (const block of state.tokens) {
+    const children = block.type === "inline" ? block.children : null
+    if (!children) continue
+    for (let i = 0; i + 2 < children.length; i++) {
+      const open = children[i]
+      if (open.type !== "link_open" || open.markup !== "linkify") continue
+      const text = children[i + 1]
+      const close = children[i + 2]
+      if (text.type !== "text" || close.type !== "link_close") continue
+      if (/^(?:[a-z][\w+.-]*:|www\.)/i.test(text.content)) continue
+      if (!FILE_LIKE_LINK_RE.test(text.content)) continue
+      children.splice(i, 3, text)
+    }
+  }
+})
+
 // Callout type → icon key. The key is emitted as `data-icon` on an empty span;
 // styles/components/callout-icons.css draws the matching Lucide icon with a
 // CSS mask (currentColor), so no glyph or emoji is baked into the HTML.
