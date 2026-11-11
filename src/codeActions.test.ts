@@ -460,6 +460,17 @@ describe("tables, gaps, shorthands, footnotes, labels", () => {
     expect(fixedBy("x frac(a) y", "shorthand-arity", /Add the missing/)).toBe("x frac(a, ) y")
   })
 
+  it("replaces an empty sum() with the bare operator, wrapped outside math", () => {
+    expect(fixedBy("$sum()$", "shorthand-empty", "Replace with \\sum")).toBe("$\\sum$")
+    expect(fixedBy("$sum( )$", "shorthand-empty", "Replace with \\sum")).toBe("$\\sum$")
+    expect(fixedBy("$$\nint()\n$$", "shorthand-empty", "Replace with \\int")).toBe("$$\n\\int\n$$")
+    expect(fixedBy("so sum() here", "shorthand-empty", "Replace with \\sum")).toBe(
+      "so $\\sum$ here",
+    )
+    // A letter right after would glue onto the command (\sumx).
+    expect(fixedBy("$sum()x$", "shorthand-empty", "Replace with \\sum")).toBe("$\\sum x$")
+  })
+
   it("keeps the first arguments when there are too many", () => {
     expect(
       fixedBy("x sqrt(a, b, c) y", "shorthand-arity", /Keep only the first 1 argument of/),

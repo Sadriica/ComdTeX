@@ -204,6 +204,25 @@ describe("lintShorthands", () => {
     expect(markers[0].message).toBe(es.lint.messages.shorthandArity("sqrt", 1, 2))
   })
 
+  it("info when a sum/int/lim call is empty", () => {
+    for (const text of ["$sum()$", "$sum( )$", "sum()", "$int()$", "$lim()$"]) {
+      const markers = lint(text).filter((m) => m.code === "shorthand-empty")
+      expect(markers, text).toHaveLength(1)
+      expect(markers[0].severity).toBe(Severity.Info)
+    }
+    const name = lint("$sum()$").find((m) => m.code === "shorthand-empty")!
+    expect(name.message).toBe(es.lint.messages.shorthandEmpty("sum", "\\sum"))
+  })
+
+  it("no shorthand-empty with arguments, as LaTeX, or in code", () => {
+    for (const text of ["$sum(i=1, n)$", "$\\sum()$", "```\nsum()\n```", "`sum()`", "frac()"]) {
+      expect(
+        lint(text).filter((m) => m.code === "shorthand-empty"),
+        text,
+      ).toHaveLength(0)
+    }
+  })
+
   it("no error for variadic mat()", () => {
     expect(
       lint("mat(1, 0, 0, 1)").filter((m) => String(m.code).startsWith("shorthand-")),

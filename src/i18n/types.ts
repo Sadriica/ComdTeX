@@ -2030,6 +2030,7 @@ export interface T {
       citeUndefined: (key: string) => string
       shorthandUnclosed: (name: string) => string
       shorthandArity: (name: string, expected: number, got: number) => string
+      shorthandEmpty: (name: string, latex: string) => string
       tableRagged: (actual: number, expected: number) => string
       gapPending: (hint: string | null) => string
       footnoteUndefined: (id: string) => string
@@ -2080,6 +2081,7 @@ export interface T {
       normalizeTable: string
       fillGap: string
       addMissingArgs: (name: string) => string
+      replaceWithBareOperator: (latex: string) => string
       trimExtraArgs: (name: string, expected: number) => string
       addFootnoteDef: (id: string) => string
       renameLabel: (id: string) => string

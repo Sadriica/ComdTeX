@@ -9,6 +9,7 @@
 
 import type * as monacoApi from "monaco-editor"
 import {
+  BARE_OPERATORS,
   EXPECTED_ARGS,
   ENV_REF_KINDS,
   KNOWN_BLOCK_TYPES,
@@ -20,6 +21,7 @@ import {
   type LintContext,
   type LintVaultDoc,
 } from "./contentLinter"
+import { isInMath } from "./completion/triggers"
 import { bioOrganism, geneSuggestion, isComparativeLine } from "./bioConventions"
 import { crossFileRefText, refPathTarget } from "./crossFileRef"
 import { findTableBlock, normalizeTableBlock } from "./markdownEditing"
@@ -459,6 +461,24 @@ function fixArity({ model, marker, covered, actions }: FixInput) {
   return []
 }
 
+function fixEmptyShorthand({ model, marker, covered, actions }: FixInput) {
+  const name = /^(\w+)\s*\(/.exec(covered)?.[1]
+  const latex = name ? BARE_OPERATORS[name] : undefined
+  if (!latex) return []
+  const range = markerRange(marker)
+  const line = model.getLineContent(range.startLineNumber)
+  const before = line.slice(0, range.startColumn - 1)
+  const next = model.getLineContent(range.endLineNumber).charAt(range.endColumn - 1)
+  const text = isInMath(model, range.startLineNumber, before)
+    ? `${latex}${/[A-Za-z]/.test(next) ? " " : ""}`
+    : `$${latex}$`
+  return [
+    quickFix(actions.replaceWithBareOperator(latex), marker, {
+      edits: [textEdit(model, range, text)],
+    }),
+  ]
+}
+
 function fixFootnote({ model, marker, covered, actions }: FixInput) {
   const id = /^\[\^([^\]\s]+)\]$/.exec(covered)?.[1]
   if (!id) return []
@@ -579,6 +599,8 @@ export function fixesForMarker(
       return fixGap(input)
     case "shorthand-arity":
       return fixArity(input)
+    case "shorthand-empty":
+      return fixEmptyShorthand(input)
     case "footnote-undefined":
       return fixFootnote(input)
     case "label-duplicate":

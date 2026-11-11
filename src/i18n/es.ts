@@ -2247,6 +2247,7 @@ export const es: T = {
       shorthandUnclosed: (name) => `Paréntesis sin cerrar en ${name}(...)`,
       shorthandArity: (name, expected, got) =>
         `${name}() espera ${expected} argumento${expected === 1 ? "" : "s"}, recibió ${got}`,
+      shorthandEmpty: (name, latex) => `${name}() vacío: usa ${latex} para el operador solo`,
       tableRagged: (actual, expected) =>
         `Esta fila tiene ${actual} columna${actual === 1 ? "" : "s"} y la cabecera ${expected}. ` +
         `Usa "Normalizar tabla" para rellenar las celdas que faltan.`,
@@ -2316,6 +2317,7 @@ export const es: T = {
       addBibStub: (key) => `Añadir una entrada BibTeX para "${key}" a references.bib`,
       normalizeTable: "Normalizar tabla",
       fillGap: "Completar hueco con IA",
+      replaceWithBareOperator: (latex) => `Reemplazar por ${latex}`,
       addMissingArgs: (name) => `Añadir los argumentos que faltan a ${name}()`,
       trimExtraArgs: (name, expected) =>
         `Conservar solo ${expected === 1 ? "el primer argumento" : `los primeros ${expected} argumentos`} de ${name}()`,

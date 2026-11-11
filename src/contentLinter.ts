@@ -70,6 +70,7 @@ export const LINT_CODES = [
   "cite-undefined",
   "shorthand-unclosed",
   "shorthand-arity",
+  "shorthand-empty",
   "table-ragged",
   "gap-pending",
   "footnote-undefined",
@@ -964,6 +965,16 @@ export const EXPECTED_ARGS: Record<string, number | null> = {
   trans: 1,
 }
 
+/**
+ * Shorthands whose bare LaTeX operator is meaningful on its own. An empty call
+ * (`sum()`) silently renders `\sum_{}^{n}`; the bare symbol is what was meant.
+ */
+export const BARE_OPERATORS: Readonly<Record<string, string>> = {
+  sum: "\\sum",
+  int: "\\int",
+  lim: "\\lim",
+}
+
 const SHORTHAND_NAMES = Object.keys(EXPECTED_ARGS).join("|")
 // Negative lookbehind for \ avoids matching \frac( etc. (LaTeX commands)
 const SHORTHAND_RE = new RegExp(`(?<!\\\\)\\b(${SHORTHAND_NAMES})\\s*\\(`, "g")
@@ -987,6 +998,21 @@ function lintShorthands(env: Env, text: string): Marker[] {
           m.index + m[0].length,
           env.msg.shorthandUnclosed(name),
           env.Severity.Error,
+        ),
+      )
+      continue
+    }
+
+    const bare = BARE_OPERATORS[name]
+    if (bare && balanced.content.trim() === "") {
+      markers.push(
+        emit(
+          env,
+          "shorthand-empty",
+          m.index,
+          balanced.end,
+          env.msg.shorthandEmpty(name, bare),
+          env.Severity.Info,
         ),
       )
       continue

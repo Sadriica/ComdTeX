@@ -2223,6 +2223,7 @@ export const en: T = {
       shorthandUnclosed: (name) => `Unclosed parenthesis in ${name}(...)`,
       shorthandArity: (name, expected, got) =>
         `${name}() expects ${expected} argument${expected === 1 ? "" : "s"}, got ${got}`,
+      shorthandEmpty: (name, latex) => `Empty ${name}(): use ${latex} for the bare operator`,
       tableRagged: (actual, expected) =>
         `This row has ${actual} column${actual === 1 ? "" : "s"} and the header ${expected}. ` +
         `Use "Normalize table" to fill in the missing cells.`,
@@ -2292,6 +2293,7 @@ export const en: T = {
       addBibStub: (key) => `Add a BibTeX entry for "${key}" to references.bib`,
       normalizeTable: "Normalize table",
       fillGap: "Fill gap with AI",
+      replaceWithBareOperator: (latex) => `Replace with ${latex}`,
       addMissingArgs: (name) => `Add the missing arguments to ${name}()`,
       trimExtraArgs: (name, expected) =>
         `Keep only the first ${expected} argument${expected === 1 ? "" : "s"} of ${name}()`,
