@@ -664,6 +664,7 @@ export const es: T = {
       citations: "Citas",
       settings: "Ajustes",
       similarFiles: "Archivos parecidos",
+      symbols: "Símbolos",
     },
     pin: "Fijar comando",
     unpin: "Quitar comando fijado",

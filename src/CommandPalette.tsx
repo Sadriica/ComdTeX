@@ -33,6 +33,7 @@ import {
 import { rankItems, positionRanges } from "./fuzzy"
 import { nameProblemText } from "./fileNaming"
 import { flattenCommands, rankCommands } from "./paletteCommandSearch"
+import { isExactSymbolQuery, rankSymbols } from "./paletteSymbols"
 import { rankSettingEntries, settingSectionName, typoFileMatches } from "./paletteExtras"
 import {
   citationEntries,
@@ -232,6 +233,8 @@ export interface CommandPaletteProps {
   onGoToLine?: (line: number, column?: number) => void
   onInsertCitation?: (key: string) => void
   onInsertReference?: (text: string) => void
+  /** Insert a math symbol (a LaTeX command such as `\mu`) found by name. Without it the Symbols group is hidden. */
+  onInsertSymbol?: (latex: string) => void
   /** Create `<folderRel>/<fileName>` in the vault and open it. */
   onCreateNote?: (fileName: string, folderRel: string) => void
   /** Open Settings on a tab (a setting found by name in the files mode). */
@@ -265,6 +268,7 @@ export default function CommandPalette({
   onGoToLine,
   onInsertCitation,
   onInsertReference,
+  onInsertSymbol,
   onCreateNote,
   onOpenSetting,
   getCreateFolderRel,
@@ -288,6 +292,7 @@ export default function CommandPalette({
     onGoToLine,
     onInsertCitation,
     onInsertReference,
+    onInsertSymbol,
     onCreateNote,
     onOpenSetting,
   })
@@ -298,6 +303,7 @@ export default function CommandPalette({
       onGoToLine,
       onInsertCitation,
       onInsertReference,
+      onInsertSymbol,
       onCreateNote,
       onOpenSetting,
     }
@@ -619,7 +625,23 @@ export default function CommandPalette({
         // document's headings, vault labels, citations and settings, each as
         // its own short group after the files.
         const mixed: Row[] = []
+        let symbolRows: Row[] = []
+        let symbolsFirst = false
         if (q.length >= 2) {
+          if (cb.current.onInsertSymbol) {
+            symbolRows = rankSymbols(query)
+              .slice(0, MIXED_PER_GROUP)
+              .map((sym, i) => ({
+                key: `sym:${sym.latex}`,
+                kind: "mode" as const,
+                label: sym.latex,
+                detail: sym.name,
+                icon: <span className="palette-glyph">{sym.display}</span>,
+                group: i === 0 ? t.palette.groups.symbols : undefined,
+                run: () => finish(() => cb.current.onInsertSymbol?.(sym.latex)),
+              }))
+            symbolsFirst = symbolRows.length > 0 && isExactSymbolQuery(query)
+          }
           const first = (rs: Row[], group: string) => {
             if (rs.length) rs[0] = { ...rs[0], group }
             mixed.push(...rs)
@@ -675,7 +697,8 @@ export default function CommandPalette({
             )
           }
         }
-        const shown = mixed.length ? ranked.slice(0, FILES_WITH_MIXED) : ranked
+        const grouped = mixed.length > 0 || symbolRows.length > 0
+        const shown = grouped ? ranked.slice(0, FILES_WITH_MIXED) : ranked
         const fileRow = (r: (typeof ranked)[number], i: number): Row => ({
           key: `file:${r.entry.path}`,
           kind: r.recent && !q ? "recent" : "file",
@@ -691,12 +714,14 @@ export default function CommandPalette({
                 : undefined
             : i === 0 && similar
               ? t.palette.groups.similarFiles
-              : i === 0 && mixed.length
+              : i === 0 && grouped
                 ? t.palette.groups.files
                 : undefined,
           run: () => finish(() => cb.current.onOpenPath(r.entry.path)),
         })
+        if (symbolsFirst) out.push(...symbolRows)
         shown.forEach((r, i) => out.push(fileRow(r, i)))
+        if (!symbolsFirst) out.push(...symbolRows)
         out.push(...mixed)
         const activeFolder = getCreateFolderRel?.() ?? activeFileFolder(fileEntries, activeFilePath)
         const target = query.trim() ? createNoteTarget(query, activeFolder) : null

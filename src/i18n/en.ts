@@ -660,6 +660,7 @@ export const en: T = {
       citations: "Citations",
       settings: "Settings",
       similarFiles: "Similar files",
+      symbols: "Symbols",
     },
     pin: "Pin command",
     unpin: "Unpin command",

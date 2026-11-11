@@ -132,6 +132,7 @@ import KeepPanel from "./KeepPanel"
 import DocumentLabPanel from "./DocumentLabPanel"
 import FrontmatterPanel from "./FrontmatterPanel"
 import StatusBar from "./StatusBar"
+import { isInMath } from "./completion/triggers"
 import CommandPalette from "./CommandPalette"
 import type { PaletteCommand, PaletteMode } from "./CommandPalette"
 import { computeCursorContext } from "./cursorContext"
@@ -5274,6 +5275,22 @@ function AppContent({
       const selection = editor?.getSelection()
       if (!editor || !selection) return
       editor.executeEdits("palette-ref", [{ range: selection, text, forceMoveMarkers: true }])
+      editor.focus()
+    },
+    onInsertSymbol: (latex: string) => {
+      const editor = editorRef.current
+      const model = editor?.getModel()
+      const selection = editor?.getSelection()
+      if (!editor || !model || !selection) return
+      const line = model.getLineContent(selection.startLineNumber)
+      const before = line.slice(0, selection.startColumn - 1)
+      const inMath = isInMath(model, selection.startLineNumber, before)
+      // A command followed directly by a letter would read as a longer command.
+      const next = model.getLineContent(selection.endLineNumber)[selection.endColumn - 1] ?? ""
+      const text = inMath ? (/[A-Za-z]/.test(next) ? latex + " " : latex) : "$" + latex + "$"
+      editor.pushUndoStop()
+      editor.executeEdits("palette-symbol", [{ range: selection, text, forceMoveMarkers: true }])
+      editor.pushUndoStop()
       editor.focus()
     },
     onOpenSetting: (section: string) => {

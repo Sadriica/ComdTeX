@@ -172,6 +172,23 @@ describe("files mode", () => {
     expect(props.onClose).toHaveBeenCalled()
   })
 
+  it("finds a math symbol by name, ahead of files, and inserts it on Enter", () => {
+    const onInsertSymbol = vi.fn()
+    const { props, input } = setup({ onInsertSymbol })
+    type(input, "mu")
+    expect(labels()[0]).toBe("\\mu")
+    expect(options()[0].textContent).toContain("\u03bc")
+    key(input, "Enter")
+    expect(onInsertSymbol).toHaveBeenCalledWith("\\mu")
+    expect(props.onClose).toHaveBeenCalled()
+  })
+
+  it("hides the Symbols group when the host cannot insert symbols", () => {
+    const { input } = setup()
+    type(input, "mu")
+    expect(labels()).not.toContain("\\mu")
+  })
+
   it("offers to create a note when nothing matches, by row and by Shift+Enter", () => {
     const { props, input } = setup()
     type(input, "brand new idea")

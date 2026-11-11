@@ -206,6 +206,11 @@
 .palette-item-selected .palette-kind {
   color: var(--fg);
 }
+/* A math symbol row: the glyph itself, never wrapped. */
+.palette-glyph {
+  line-height: 1;
+  white-space: nowrap;
+}
 
 .palette-label {
   flex: 1;

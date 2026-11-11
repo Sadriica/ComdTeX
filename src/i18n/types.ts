@@ -642,6 +642,7 @@ export interface T {
       citations: string
       settings: string
       similarFiles: string
+      symbols: string
     }
     pin: string
     unpin: string
