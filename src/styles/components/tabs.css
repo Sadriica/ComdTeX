@@ -8,8 +8,14 @@
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+  /* No visible scrollbar: in WebKitGTK the global 10px one sat on top of the
+     tab labels. The strip scrolls with the wheel (TabBar maps vertical wheel
+     to horizontal) and keeps the active tab in view. */
+  scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar {
+  display: none;
+  height: 0;
 }
 .focus-mode .tab-bar {
   display: none;

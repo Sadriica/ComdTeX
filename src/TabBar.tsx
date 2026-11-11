@@ -1,4 +1,4 @@
-import { memo, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 import type { OpenFile } from "./types"
 import type { LintSummary } from "./contentLinter"
 import { useT } from "./i18n"
@@ -27,11 +27,39 @@ function TabBar({
 }: TabBarProps) {
   const t = useT()
   const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const barRef = useRef<HTMLDivElement>(null)
+  const hasTabs = tabs.length > 0
+
+  // The strip has no visible scrollbar, so the active tab must never sit
+  // off-screen (Ctrl+Tab, opening from the tree or the palette).
+  useEffect(() => {
+    const bar = barRef.current
+    const active = bar?.querySelector<HTMLElement>(".tab-active")
+    if (!bar || !active) return
+    const left = active.offsetLeft
+    const right = left + active.offsetWidth
+    if (left < bar.scrollLeft) bar.scrollLeft = left
+    else if (right > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = right - bar.clientWidth
+  }, [activeTabPath, tabs.length])
+
+  // A mouse wheel only scrolls vertically; on the tab strip that means sideways.
+  useEffect(() => {
+    const bar = barRef.current
+    if (!bar) return
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return
+      if (bar.scrollWidth <= bar.clientWidth) return
+      e.preventDefault()
+      bar.scrollLeft += e.deltaY
+    }
+    bar.addEventListener("wheel", onWheel, { passive: false })
+    return () => bar.removeEventListener("wheel", onWheel)
+  }, [hasTabs])
 
   if (tabs.length === 0) return null
 
   return (
-    <div className="tab-bar">
+    <div className="tab-bar" ref={barRef}>
       {tabs.map((tab, idx) => {
         const counts = lintCounts?.[tab.path]
         const errors = counts?.errors ?? 0
