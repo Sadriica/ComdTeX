@@ -3,6 +3,22 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Math symbols in Ctrl+P.** Typing a symbol's name (`mu`, `Sigma`, `\alpha`) or its Spanish name (`alfa`, `suma`) in the palette shows a Symbols group; Enter inserts it at the cursor, as `\mu` inside math and `$\mu$` outside. An exact name puts the symbols above the file matches.
+- **A hint for an empty `sum()`.** `sum()`, `int()` and `lim()` with nothing inside get an Info note with a quick fix (Ctrl+.) that replaces the call with the bare operator: `\sum`, `\int`, `\lim`.
+
+### Changed
+- **The tab strip has no visible scrollbar.** In the desktop app a thick scrollbar sat over the tab names. Tabs now scroll with the mouse wheel and the active tab is always kept in view.
+
+### Fixed
+- **Every figure reaches the PDF.** One SVG image was enough to stop xelatex, pdflatex and tectonic (none of them reads SVG); the compile then fell back to the WASM engine, and every plot, graph, diagram and flowchart printed as source code. SVG images are now converted to PNG like the diagrams, plots fed by a `:::data` block get their data before they are drawn, graphs and flowcharts convert at all (one lacked the SVG namespace, the other passed its pseudocode to Mermaid unparsed), and Mermaid flowcharts are no longer rasterized tiny. `:::pseudocode` and `:::code` blocks, which used to print as raw `:::` lines in the LaTeX export, become captioned listings.
+- **Wikilinks and cross-file references in the preview work again.** Clicking `[[note]]` or `@note@thm:x` did nothing.
+- **Images next to a note in a subfolder load in the preview.** Images were never in the vault's file list, so `figure.svg` beside `comdtex-examples/comdtex-biology.md` was looked for at the vault root and showed as broken. The Document Lab no longer reports such images as missing either.
+- **Clicking a figure, table or section reference highlights the target** for a moment, so a jump to something already on screen is visible.
+- **A bare file name is not a web link.** `macros.md` in the welcome file rendered as a link to http://macros.md.
+
 ## [1.33.0] - 2026-11-09
 
 ### Added
