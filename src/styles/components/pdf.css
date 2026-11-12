@@ -9,11 +9,13 @@
   color: var(--fg);
   overflow: hidden;
 }
+/* Wraps in the narrow side panel instead of hiding tools off the edge. */
 .pdf-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
-  height: 32px;
+  min-height: 32px;
   padding: 0 var(--space-3);
   border-bottom: 1px solid var(--border);
   background: var(--chrome-bg);
@@ -124,56 +126,44 @@
   white-space: nowrap;
 }
 
-/* Pages sit on a sunken desk, each on its own sheet with a hairline shadow. */
+/* Pages sit on a sunken desk, each on its own sheet with a hairline shadow.
+   pdf.js's viewer needs its scroll container absolutely positioned. */
 .pdf-pages {
+  position: relative;
   flex: 1 1 auto;
-  overflow: auto;
-  padding: var(--space-7) var(--space-5);
-  display: flex;
-  flex-direction: column;
-  /* Auto margins centre a sheet narrower than the pane; `align-items: center`
-     also centred a zoomed sheet wider than it, pushing its left edge out of
-     reach of the scrollbar. */
-  align-items: flex-start;
-  gap: var(--space-6);
+  min-height: 0;
   background: var(--bg-sunken);
+}
+.pdf-viewer-container {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
 }
 /* The pane takes focus for the keyboard (PageDown, Ctrl+F); a hairline is
    enough to show it, the global ring framed the whole document. */
-.pdf-pages:focus-visible {
+.pdf-viewer-container:focus-visible {
   outline: 1px solid var(--border-strong);
   outline-offset: -1px;
 }
-.pdf-page {
-  position: relative;
-  --scale-round-x: 1px;
-  --scale-round-y: 1px;
-  flex-shrink: 0;
-  /* Each sheet is sized inline; containing it keeps a repaint of one page
-     from invalidating the others while scrolling. */
-  contain: layout paint;
-  margin-inline: auto;
-  background: var(--bg-raised);
+.pdf-viewer-container .pdfViewer {
+  padding: var(--space-6) 0;
+}
+.pdf-viewer-container .pdfViewer .page {
+  margin: 0 auto var(--space-6);
   box-shadow: var(--shadow-1);
   outline: 1px solid var(--border);
 }
-/* The bitmap is painted at device resolution; CSS fits it to the sheet, which
-   also stretches a stale bitmap while its re-render after a zoom is queued. */
-.pdf-page canvas {
+/* pdf.js draws its editor toolbar icons as inline-block pseudo-elements;
+   with the app's inherited button font they sat on a line box below the
+   button (the delete icon floated under the toolbar). */
+.pdf-viewer-container .editToolbar .buttons button::before,
+.pdf-viewer-container .editToolbar .buttons button::after {
   display: block;
-  width: 100%;
-  height: 100%;
-  /* A click jumps to the source line, but a page is read, not aimed at: the
-     crosshair it had read as a drawing tool. */
-  cursor: default;
 }
-.pdf-page-label {
-  position: absolute;
-  top: calc(var(--space-6) * -1);
-  right: 0;
-  font-size: var(--text-xs);
-  color: var(--fg-muted);
-  pointer-events: none;
+/* A page is read, not aimed at: the arrow, a text cursor over text (pdf.js's
+   text layer sets that), and the tool's own cursor while editing. */
+.pdf-viewer-container .pdfViewer .page canvas {
+  cursor: default;
 }
 .pdf-empty,
 .pdf-error {
@@ -188,82 +178,9 @@
   color: var(--danger);
 }
 
-/* Text layer (pdf.js TextLayer): transparent text laid exactly over the
-   bitmap, so the page's text can be selected, copied and searched. The rules
-   are the subset of pdf.js's pdf_viewer.css the layer needs; it sizes itself
-   from --total-scale-factor, set on each sheet. */
-.pdf-text-layer {
-  position: absolute;
-  inset: 0;
-  overflow: clip;
-  line-height: 1;
-  text-align: initial;
-  letter-spacing: normal;
-  word-spacing: normal;
-  text-size-adjust: none;
-  forced-color-adjust: none;
-  transform-origin: 0 0;
-  /* Its own stacking context: the text runs must paint above .endOfContent
-     (last in the DOM, which is what keeps a selection's end in place), and
-     the z-index below stays local to the layer. */
-  isolation: isolate;
-  --min-font-size: 1;
-  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
-  --min-font-size-inv: calc(1 / var(--min-font-size));
-}
-.pdf-text-layer :is(span, br) {
-  position: absolute;
-  color: transparent;
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0% 0%;
-  user-select: text;
-}
-.pdf-text-layer > :not(.markedContent, .endOfContent),
-.pdf-text-layer .markedContent span:not(.markedContent) {
-  --font-height: 0;
-  --scale-x: 1;
-  --rotate: 0deg;
-  z-index: var(--z-sticky);
-  font-size: calc(var(--text-scale-factor) * var(--font-height));
-  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
-}
-.pdf-text-layer .markedContent {
-  display: contents;
-}
-.pdf-text-layer .endOfContent {
-  display: block;
-  position: absolute;
-  inset: 100% 0 0;
-  cursor: default;
-  user-select: none;
-}
-.pdf-text-layer.selecting .endOfContent {
-  top: 0;
-}
-.pdf-text-layer span[role="img"] {
-  user-select: none;
-  cursor: default;
-}
-.pdf-text-layer ::selection {
-  background: color-mix(in oklch, var(--accent) 38%, transparent);
-}
-/* A search hit sits inside its run, so it inherits the run's geometry. */
-.pdf-text-layer .pdf-hit {
-  position: static;
-  margin: -1px;
-  padding: 1px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in oklch, var(--warn) 45%, transparent);
-}
-.pdf-text-layer .pdf-hit-active {
-  background: color-mix(in oklch, var(--accent) 55%, transparent);
-  outline: 1px solid var(--accent);
-}
-
-/* Highlights: under the text layer (so text stays selectable), multiplied
-   onto the bitmap like a marker. Geometry comes inline in page points. */
-.pdf-highlights {
+/* Highlights saved by 1.34.2 in the vault: under the text layer (so text
+   stays selectable), multiplied onto the bitmap like a marker. */
+.pdf-legacy-highlights {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -286,7 +203,7 @@
   background: var(--pdf-hl-pink);
 }
 
-/* Floating menu over a selection or a clicked highlight. */
+/* Colour swatches for the active tool, and the menu of a clicked highlight. */
 .pdf-hl-menu {
   position: absolute;
   z-index: var(--z-popover);
@@ -311,6 +228,52 @@
 .pdf-hl-swatch:hover {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+.pdf-swatch-yellow {
+  background: var(--pdf-hl-yellow);
+}
+.pdf-swatch-green {
+  background: var(--pdf-hl-green);
+}
+.pdf-swatch-blue {
+  background: var(--pdf-hl-blue);
+}
+.pdf-swatch-pink {
+  background: var(--pdf-hl-pink);
+}
+.pdf-swatch-black {
+  background: var(--pdf-pen-black);
+}
+.pdf-swatch-red {
+  background: var(--pdf-pen-red);
+}
+.pdf-swatch-navy {
+  background: var(--pdf-pen-blue);
+}
+.pdf-swatch-forest {
+  background: var(--pdf-pen-green);
+}
+.pdf-tool-options {
+  gap: var(--space-3);
+}
+.pdf-tool-hint {
+  margin-right: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+/* Unsaved annotations: the save button carries a dot until they are written. */
+.pdf-save-btn {
+  position: relative;
+}
+.pdf-save-btn.pending::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
 }
 .pdf-hl-menu-sep {
   width: 1px;
@@ -337,7 +300,7 @@
 /* Dark PDF (opt-in, Settings > PDF). The default keeps pages light: the
    invert filter repaints every large canvas on scroll and zoom, so it only
    runs when the person asks for it. */
-.pdf-preview-panel.inverted .pdf-page canvas {
+.pdf-preview-panel.inverted .pdfViewer .page canvas {
   filter: invert(1) hue-rotate(180deg);
 }
 

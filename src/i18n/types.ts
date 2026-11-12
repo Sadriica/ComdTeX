@@ -1970,14 +1970,26 @@ export interface T {
     findNext: string
     findClose: string
     openExternal: string
-    findUnavailable: (error: string) => string
-    highlight: string
+    toolHighlight: string
+    toolText: string
+    toolDraw: string
+    toolImage: string
+    toolColor: string
+    hintHighlight: string
+    hintText: string
+    hintDraw: string
+    colors: Record<
+      "yellow" | "green" | "blue" | "pink" | "black" | "red" | "navy" | "forest",
+      string
+    >
+    undo: string
+    redo: string
+    save: string
+    saving: string
+    saved: string
+    saveFailed: (error: string) => string
     highlightMenu: string
-    highlightColors: Record<"yellow" | "green" | "blue" | "pink", string>
-    copy: string
     removeHighlight: string
-    highlightSaveFailed: (error: string) => string
-    highlightOutsideVault: string
     previousPage: string
     nextPage: string
     page: string

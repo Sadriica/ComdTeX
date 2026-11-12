@@ -1,0 +1,5 @@
+/* pdf.js viewer styles (pages, text layer, find highlights, annotation
+   editors), loaded only with the PDF viewer chunk. In the vendor layer, below
+   every app layer, so components/pdf.css adapts them without specificity
+   tricks. */
+@import "pdfjs-dist/web/pdf_viewer.css" layer(vendor);

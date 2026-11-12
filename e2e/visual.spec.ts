@@ -729,7 +729,7 @@ for (const { name, theme } of THEMES) {
     await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
     await settle(page)
     await page.locator(".sidebar").getByText("paper.pdf").click()
-    await page.locator(".pdf-page canvas").first().waitFor({ timeout: 15_000 })
+    await page.locator(".pdfViewer .page canvas").first().waitFor({ timeout: 15_000 })
     await page.waitForTimeout(1200)
     await shot(page, name, "pdf__tab")
   })

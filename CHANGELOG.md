@@ -3,6 +3,15 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Annotate PDFs, saved into the PDF.** The PDF viewer now runs on pdf.js's own viewer and editor, and the toolbar has its tools: **Highlight** (select text; four colours), **Add text** (click and type), **Draw** (freehand, four pen colours) and **Add image**, with Undo and Redo. Annotations are written into the PDF file itself a moment after each change (or with Ctrl+S), so any PDF reader shows them and they travel when you share the file. A dot on the save button marks changes not yet written. Annotating a PDF you compile from your notes is possible, but the next compile replaces the file.
+
+### Changed
+- **The viewer is pdf.js's own.** Page rendering, the text layer and search now come from pdf.js's viewer (the one Firefox uses), which also brings link and form support. The toolbar, zoom shortcuts (Ctrl+wheel, pinch, Ctrl+/-, Ctrl+0), the page box, the zoom menu, Ctrl+F and click-to-source work as before. A search starts from the page in view.
+- Highlights made with 1.34.2, which lived in `.comdtex-pdf-highlights.json`, are still shown and can be removed; new highlights go into the PDF.
+
 ## [1.34.2] - 2026-11-12
 
 ### Added

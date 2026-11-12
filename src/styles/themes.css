@@ -325,4 +325,9 @@
   --pdf-hl-green: oklch(0.88 0.14 145);
   --pdf-hl-blue: oklch(0.86 0.09 230);
   --pdf-hl-pink: oklch(0.86 0.11 350);
+  /* Pen colours for text and drawings (swatches only; pdf.js gets hex). */
+  --pdf-pen-black: oklch(0 0 0);
+  --pdf-pen-red: oklch(0.6 0.2 25);
+  --pdf-pen-blue: oklch(0.52 0.16 255);
+  --pdf-pen-green: oklch(0.56 0.13 150);
 }

@@ -1,8 +1,7 @@
 /**
- * Highlights on PDF pages, kept in the vault next to the notes
- * (`.comdtex-pdf-highlights.json`) so they travel with the vault and never
- * touch the PDF itself: a compiled PDF is rewritten by every compile, and a
- * paper you read stays byte for byte what you downloaded.
+ * Highlights ComdTeX 1.34.2 kept in the vault (`.comdtex-pdf-highlights.json`).
+ * Since then highlights are pdf.js annotations written into the PDF; these are
+ * still read, drawn and removable so nothing made with 1.34.2 disappears.
  *
  * Rectangles are in PDF points at scale 1 with a top-left origin, so they
  * follow any zoom: the viewer multiplies them by the page's scale.
@@ -121,58 +120,6 @@ export async function saveHighlightsFor(
   await writeTextFileAtomic(fileIn(vaultPath), serializeHighlights(current))
 }
 
-/**
- * Turns the client rectangles of a selection into page rectangles: clipped to
- * the sheet, converted to points, tiny slivers dropped, and the rectangles of
- * one line merged (a line is many text runs, each with its own rectangle).
- */
-export function selectionRectsOnPage(
-  clientRects: ArrayLike<{ left: number; top: number; right: number; bottom: number }>,
-  sheet: { left: number; top: number; right: number; bottom: number },
-  scale: number,
-): HighlightRect[] {
-  const rects: HighlightRect[] = []
-  for (let i = 0; i < clientRects.length; i++) {
-    const r = clientRects[i]
-    const left = Math.max(r.left, sheet.left)
-    const right = Math.min(r.right, sheet.right)
-    const top = Math.max(r.top, sheet.top)
-    const bottom = Math.min(r.bottom, sheet.bottom)
-    if (right - left < 1 || bottom - top < 1) continue
-    rects.push([
-      (left - sheet.left) / scale,
-      (top - sheet.top) / scale,
-      (right - left) / scale,
-      (bottom - top) / scale,
-    ])
-  }
-  rects.sort((a, b) => a[1] - b[1] || a[0] - b[0])
-  const merged: HighlightRect[] = []
-  for (const r of rects) {
-    const last = merged[merged.length - 1]
-    // Same line: vertical overlap of more than half the shorter height, and
-    // touching or overlapping horizontally (runs of one line sit side by side).
-    if (last) {
-      const overlap = Math.min(last[1] + last[3], r[1] + r[3]) - Math.max(last[1], r[1])
-      const sameLine = overlap > Math.min(last[3], r[3]) / 2
-      // Justified lines are one run per word: bridge gaps up to about a word
-      // space (half the line height) so a highlighted line reads as one mark.
-      const gap = Math.min(last[3], r[3]) * 0.6
-      const touches = r[0] <= last[0] + last[2] + gap && r[0] + r[2] >= last[0] - gap
-      if (sameLine && touches) {
-        const x = Math.min(last[0], r[0])
-        const y = Math.min(last[1], r[1])
-        const right = Math.max(last[0] + last[2], r[0] + r[2])
-        const bottom = Math.max(last[1] + last[3], r[1] + r[3])
-        merged[merged.length - 1] = [x, y, right - x, bottom - y]
-        continue
-      }
-    }
-    merged.push(r)
-  }
-  return merged.map((r) => r.map((n) => Math.round(n * 100) / 100) as HighlightRect)
-}
-
 /** The highlight under a point given in page points, topmost (latest) first. */
 export function highlightAt(
   highlights: readonly PdfHighlight[],
@@ -188,8 +135,4 @@ export function highlightAt(
     }
   }
   return null
-}
-
-export function newHighlightId(): string {
-  return `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }

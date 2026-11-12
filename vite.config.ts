@@ -49,8 +49,48 @@ function katexWoff2Only(): Plugin {
   }
 }
 
+// pdf.js's viewer stylesheet is written with CSS nesting and light-dark().
+// Through the CSS inliner its nested rules reached the page without their
+// parent selector (a bare `&:not(.free) {...}` matches every element), which
+// blanked the whole app the first time a PDF opened. The plugin writes a copy
+// with nesting and light-dark() lowered by lightningcss (Safari 15 target,
+// below the WebKitGTK floor) and points src/styles/vendor-pdfjs.css at it.
+const PDFJS_CSS = fileURLToPath(
+  new URL("./node_modules/pdfjs-dist/web/pdf_viewer.css", import.meta.url),
+)
+const PDFJS_IMPORT = '@import "pdfjs-dist/web/pdf_viewer.css" layer(vendor);'
+
+function pdfjsFlatCss(): Plugin {
+  const cached = `${KATEX_CACHE_DIR}pdf_viewer.flat.css`
+  return {
+    name: "comdtex:pdfjs-flat-css",
+    enforce: "pre",
+    async buildStart() {
+      const { transform } = await import("lightningcss")
+      mkdirSync(KATEX_CACHE_DIR, { recursive: true })
+      const out = transform({
+        filename: "pdf_viewer.css",
+        code: readFileSync(PDFJS_CSS),
+        targets: { safari: 15 << 16 },
+        minify: false,
+      })
+      writeFileSync(
+        cached,
+        // Images are referenced relative to the original file.
+        out.code.toString().replace(/url\((["']?)images\//g, "url($1../../pdfjs-dist/web/images/"),
+      )
+    },
+    transform(code, id) {
+      const file = id.split("?")[0]
+      if (/styles[\\/]vendor-pdfjs\.css$/.test(file) && code.includes(PDFJS_IMPORT))
+        return code.replace(PDFJS_IMPORT, `@import "${cached}" layer(vendor);`)
+      return null
+    },
+  }
+}
+
 export default defineConfig(async () => ({
-  plugins: [react(), katexWoff2Only()],
+  plugins: [react(), katexWoff2Only(), pdfjsFlatCss()],
 
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),

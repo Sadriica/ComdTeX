@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 import {
   highlightAt,
   parseHighlights,
-  selectionRectsOnPage,
   serializeHighlights,
   vaultRelative,
   type PdfHighlight,
@@ -44,34 +43,6 @@ describe("highlights file", () => {
   })
 })
 
-describe("selection to page rectangles", () => {
-  const sheet = { left: 100, top: 50, right: 700, bottom: 900 }
-  const r = (left: number, top: number, right: number, bottom: number) => ({
-    left,
-    top,
-    right,
-    bottom,
-  })
-
-  it("converts to page points at the sheet's scale and merges the runs of a line", () => {
-    const rects = selectionRectsOnPage(
-      [r(120, 70, 220, 90), r(220, 71, 300, 90), r(120, 100, 180, 120)],
-      sheet,
-      2,
-    )
-    expect(rects).toEqual([
-      [10, 10, 90, 10],
-      [10, 25, 30, 10],
-    ])
-  })
-
-  it("clips to the sheet and drops slivers", () => {
-    expect(selectionRectsOnPage([r(50, 40, 150, 60), r(200, 300, 200.5, 320)], sheet, 1)).toEqual([
-      [0, 0, 50, 10],
-    ])
-  })
-})
-
 describe("hit testing", () => {
   it("finds the latest highlight under a point on that page only", () => {
     const list = [
@@ -83,17 +54,5 @@ describe("hit testing", () => {
     expect(highlightAt(list, 1, 15, 25)?.id).toBe("old")
     expect(highlightAt(list, 1, 500, 500)).toBeNull()
     expect(highlightAt(list, 3, 15, 25)).toBeNull()
-  })
-})
-
-describe("justified lines", () => {
-  it("bridges word gaps on one line but not the gap between columns", () => {
-    const sheet = { left: 0, top: 0, right: 1000, bottom: 1000 }
-    const r = (left: number, right: number) => ({ left, top: 100, right, bottom: 112 })
-    // Words 4px apart merge; a column 200px away stays separate.
-    expect(selectionRectsOnPage([r(10, 60), r(64, 120), r(320, 400)], sheet, 1)).toEqual([
-      [10, 100, 110, 12],
-      [320, 100, 80, 12],
-    ])
   })
 })

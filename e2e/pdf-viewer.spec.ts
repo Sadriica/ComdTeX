@@ -3,10 +3,10 @@ import { installDeterminism } from "./support/deterministic"
 import { installFakeVault } from "./support/fakeVault"
 import { tinyPdf } from "./support/tinyPdf"
 
-// The PDF viewer: one page painted at a time with far pages freed (it used to
-// keep every page and render them all at once), its own zoom on Ctrl+wheel,
-// pinch and Ctrl +/- (those zoomed the editor font before), and the tools:
-// page box, zoom menu, fit page, selectable text, Ctrl+F search.
+// The PDF viewer, on pdf.js's own viewer: virtualised pages, its own zoom on
+// Ctrl+wheel, pinch and Ctrl +/- (those zoomed the editor font before), the
+// toolbar (page box, zoom menu, search) and the annotation tools, whose work
+// is written into the PDF.
 
 const PAGES = 40
 
@@ -30,43 +30,34 @@ async function openPdf(page: Page, { webkit250 = false } = {}) {
   await page.goto("/")
   await page.locator(".monaco-editor").first().waitFor({ timeout: 30_000 })
   await page.locator(".sidebar").getByText("long.pdf").click()
-  await expect(page.locator(".pdf-page")).toHaveCount(PAGES)
-  await expect.poll(async () => (await painted(page)).includes(1)).toBe(true)
-  return page.locator(".pdf-pages").last()
+  await expect(page.locator(".pdfViewer .page")).toHaveCount(PAGES)
+  await expect(page.locator('.page[data-page-number="1"] canvas')).toBeAttached()
+  return page.locator(".pdf-viewer-container").last()
 }
 
-const painted = (page: Page) =>
-  page.evaluate(() =>
-    [...document.querySelectorAll<HTMLCanvasElement>(".pdf-page canvas")]
-      .filter((c) => c.width > 0)
-      .map((c) => Number(c.dataset.page)),
-  )
-
 const sheetWidth = async (page: Page) =>
-  (await page.locator(".pdf-page").first().boundingBox())!.width
+  (await page.locator('.page[data-page-number="1"]').boundingBox())!.width
 
 const editorFontSize = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("comdtex_settings") ?? "{}").fontSize ?? null)
 
-test("scrolling a long PDF keeps only the pages around the view painted", async ({ page }) => {
+async function selectText(page: Page, pageNumber: number, text: string) {
+  const span = page
+    .locator(`.page[data-page-number="${pageNumber}"] .textLayer span`, { hasText: text })
+    .first()
+  await expect(span).toBeAttached()
+  const b = (await span.boundingBox())!
+  await page.mouse.move(b.x + 2, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width - 2, b.y + b.height / 2, { steps: 6 })
+  await page.mouse.up()
+}
+
+test("scrolling a long PDF renders the end without keeping every page", async ({ page }) => {
   const pane = await openPdf(page)
   await pane.evaluate((el) => (el.scrollTop = el.scrollHeight))
-  await expect.poll(async () => (await painted(page)).includes(PAGES)).toBe(true)
-  const live = await painted(page)
-  expect(live).not.toContain(1)
-  expect(live.length).toBeLessThanOrEqual(8)
-})
-
-test("zooming in enlarges the page and keeps its left edge reachable", async ({ page }) => {
-  const pane = await openPdf(page)
-  const before = await sheetWidth(page)
-  await page.getByRole("button", { name: "Zoom in" }).click()
-  await expect.poll(() => sheetWidth(page)).toBeGreaterThan(before)
-  await pane.evaluate((el) => (el.scrollLeft = 0))
-  const paneBox = (await pane.boundingBox())!
-  expect((await page.locator(".pdf-page").first().boundingBox())!.x).toBeGreaterThanOrEqual(
-    paneBox.x - 1,
-  )
+  await expect(page.locator(`.page[data-page-number="${PAGES}"] canvas`)).toBeAttached()
+  expect(await page.locator(".pdfViewer .page canvas").count()).toBeLessThanOrEqual(12)
 })
 
 test("Ctrl+wheel and Ctrl +/- zoom the PDF, not the editor font", async ({ page }) => {
@@ -83,7 +74,7 @@ test("Ctrl+wheel and Ctrl +/- zoom the PDF, not the editor font", async ({ page 
   await page.keyboard.press("Control+Minus")
   await expect.poll(() => sheetWidth(page)).toBeLessThan(afterWheel)
   await page.keyboard.press("Control+0")
-  await expect(page.getByRole("combobox", { name: "Zoom" })).toHaveValue("width")
+  await expect(page.getByRole("combobox", { name: "Zoom" })).toHaveValue("page-width")
   expect(await editorFontSize(page)).toBe(font)
 })
 
@@ -92,76 +83,72 @@ test("the page box jumps to a page", async ({ page }) => {
   const box = page.getByRole("textbox", { name: "Go to page" })
   await box.fill("25")
   await box.press("Enter")
-  await expect(page.locator('.pdf-page[data-page="25"]')).toBeInViewport()
+  await expect(page.locator('.page[data-page-number="25"]')).toBeInViewport()
   await expect(box).toHaveValue("25")
 })
 
-test("the text is selectable and Ctrl+F finds and highlights it", async ({ page }) => {
+test("Ctrl+F finds text across the PDF and steps through the hits", async ({ page }) => {
   await openPdf(page)
-  await expect(page.locator('.pdf-page[data-page="1"] .pdf-text-layer span').first()).toBeAttached()
-  await page.locator(".pdf-pages").last().focus()
+  await page.locator(".pdf-viewer-container").last().focus()
   await page.keyboard.press("Control+f")
   const input = page.getByRole("searchbox", { name: "Find in PDF" })
   await expect(input).toBeFocused()
   await input.fill("Page 30")
   await expect(page.locator(".pdf-find-count")).toHaveText("1 of 1")
-  await expect(page.locator(".pdf-hit-active")).toBeInViewport()
-  await expect(page.locator(".pdf-hit-active")).toHaveText("Page 30")
+  await expect(page.locator(".textLayer .highlight.selected")).toBeInViewport()
+  // A new search starts from the page in view (page 30 here), as in pdf.js.
   await input.fill("Cheeger")
-  await expect(page.locator(".pdf-find-count")).toHaveText(`1 of ${PAGES}`)
+  await expect(page.locator(".pdf-find-count")).toHaveText(`30 of ${PAGES}`)
   await input.press("Enter")
-  await expect(page.locator(".pdf-find-count")).toHaveText(`2 of ${PAGES}`)
-  await expect(page.locator('.pdf-page[data-page="2"] .pdf-hit-active')).toBeInViewport()
+  await expect(page.locator(".pdf-find-count")).toHaveText(`31 of ${PAGES}`)
+  await input.press("Shift+Enter")
+  await expect(page.locator(".pdf-find-count")).toHaveText(`30 of ${PAGES}`)
   await input.press("Escape")
-  await expect(page.locator(".pdf-hit")).toHaveCount(0)
+  await expect(input).toBeHidden()
 })
 
-test("search and the text layer work where ReadableStream cannot be iterated", async ({ page }) => {
+test("search works where ReadableStream cannot be iterated (WebKitGTK 2.50)", async ({ page }) => {
   await openPdf(page, { webkit250: true })
-  expect(
-    await page.evaluate(
-      () =>
-        typeof (ReadableStream.prototype as unknown as Record<symbol, unknown>)[
-          Symbol.asyncIterator
-        ],
-    ),
-  ).toBe("undefined")
-  await expect(page.locator('.pdf-page[data-page="1"] .pdf-text-layer span').first()).toBeAttached()
   await page.getByRole("button", { name: "Find in PDF" }).click()
   await page.getByRole("searchbox", { name: "Find in PDF" }).fill("Cheeger")
   await expect(page.locator(".pdf-find-count")).toHaveText(`1 of ${PAGES}`)
+  await expect(page.locator('.page[data-page-number="1"] .textLayer span').first()).toBeAttached()
 })
 
-test("selected text can be highlighted, kept, recoloured and removed", async ({ page }) => {
+test("highlight, text and drawing tools annotate the PDF and save it", async ({ page }) => {
   await openPdf(page)
-  const title = page
-    .locator('.pdf-page[data-page="1"] .pdf-text-layer span', { hasText: "Spectral gaps" })
-    .first()
-  await expect(title).toBeAttached()
-  const b = (await title.boundingBox())!
-  await page.mouse.move(b.x + 2, b.y + b.height / 2)
+  const save = page.locator(".pdf-save-btn")
+
+  await page.getByRole("button", { name: "Highlight", exact: true }).click()
+  await expect(page.getByRole("toolbar", { name: "Colour" })).toBeVisible()
+  await selectText(page, 1, "Spectral gaps")
+  await expect(page.locator(".annotationEditorLayer .highlightEditor")).toHaveCount(1)
+  await expect(save).toHaveClass(/pending/)
+
+  await page.getByRole("button", { name: "Add text" }).click()
+  const p1 = (await page.locator('.page[data-page-number="1"]').boundingBox())!
+  // Points inside the view: at fit width the page is taller than the pane.
+  await page.mouse.click(p1.x + p1.width * 0.6, p1.y + 330)
+  await page.keyboard.type("Check this")
+  // Escape commits the note, as in pdf.js.
+  await page.keyboard.press("Escape")
+  await page.getByRole("button", { name: "Add text" }).click()
+  await expect(page.locator(".annotationEditorLayer .freeTextEditor")).toHaveCount(1)
+
+  await page.getByRole("button", { name: "Draw" }).click()
+  await page.getByRole("button", { name: "Colour: Red" }).click()
+  await page.mouse.move(p1.x + 100, p1.y + 420)
   await page.mouse.down()
-  await page.mouse.move(b.x + b.width - 2, b.y + b.height / 2, { steps: 6 })
+  await page.mouse.move(p1.x + 300, p1.y + 470, { steps: 10 })
   await page.mouse.up()
-  const menu = page.getByRole("toolbar", { name: "Highlight" })
-  await expect(menu).toBeVisible()
-  await menu.getByRole("button", { name: "Highlight: Yellow" }).click()
-  const marks = page.locator('.pdf-page[data-page="1"] .pdf-hl')
-  await expect(marks).toHaveCount(1)
-  await expect(marks.first()).toHaveClass(/pdf-hl-yellow/)
+  await page.getByRole("button", { name: "Draw" }).click()
+  await expect(page.locator(".annotationEditorLayer .inkEditor")).toHaveCount(1)
 
-  // Saved in the vault: reopening the PDF brings it back.
-  await page.locator(".tab", { hasText: "spectral-gap.md" }).first().click()
-  await page.locator(".tab", { hasText: "long.pdf" }).first().click()
-  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl')).toHaveCount(1)
+  // Written into the PDF shortly after the last change.
+  await expect(save).not.toHaveClass(/pending/, { timeout: 15_000 })
+  await expect(save).toBeDisabled()
 
-  // A click on it opens its menu: recolour, then remove.
-  const mark = (await page.locator('.pdf-page[data-page="1"] .pdf-hl').first().boundingBox())!
-  await page.mouse.click(mark.x + mark.width / 2, mark.y + mark.height / 2)
-  const options = page.getByRole("toolbar", { name: "Highlight options" })
-  await options.getByRole("button", { name: "Highlight: Green" }).click()
-  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl').first()).toHaveClass(/pdf-hl-green/)
-  await page.mouse.click(mark.x + mark.width / 2, mark.y + mark.height / 2)
-  await options.getByRole("button", { name: "Remove" }).click()
-  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl')).toHaveCount(0)
+  // Undo takes the drawing back.
+  await page.getByRole("button", { name: "Undo" }).click()
+  await expect(page.locator(".annotationEditorLayer .inkEditor")).toHaveCount(0)
 })
