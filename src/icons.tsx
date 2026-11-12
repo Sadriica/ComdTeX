@@ -31,6 +31,7 @@ export {
   Clock,
   Cloud,
   Command,
+  Copy,
   CornerDownLeft,
   Cpu,
   Download,

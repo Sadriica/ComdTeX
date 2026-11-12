@@ -7,15 +7,29 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Copy,
   ExternalLink,
   Icon,
   Search,
   StretchVertical,
+  Trash2,
   X,
   ZoomIn,
   ZoomOut,
 } from "./icons"
 import { parseSyncTex, inverseSync, type SyncTexData } from "./synctex"
+import { showToast } from "./toastService"
+import {
+  HIGHLIGHT_COLORS,
+  highlightAt,
+  loadHighlights,
+  newHighlightId,
+  saveHighlightsFor,
+  selectionRectsOnPage,
+  vaultRelative,
+  type HighlightColor,
+  type PdfHighlight,
+} from "./pdfHighlights"
 import {
   ZOOM_PRESETS,
   clampPercent,
@@ -32,6 +46,28 @@ type PdfJsModule = typeof import("pdfjs-dist")
 type PDFDocumentProxy = import("pdfjs-dist").PDFDocumentProxy
 type TextContent = Awaited<ReturnType<import("pdfjs-dist").PDFPageProxy["getTextContent"]>>
 type TextLayerInstance = InstanceType<PdfJsModule["TextLayer"]>
+
+type PDFPageProxy = import("pdfjs-dist").PDFPageProxy
+
+/**
+ * A page's text, read from pdf.js's text stream with a reader. pdf.js's own
+ * `getTextContent()` iterates the stream with `for await`, which the WebKitGTK
+ * the Linux AppImage ships (2.50) does not support on ReadableStream: every
+ * call threw, so search found nothing and the text layer never appeared.
+ */
+async function readTextContent(page: PDFPageProxy): Promise<TextContent> {
+  const reader = page.streamTextContent().getReader()
+  const content = { items: [], styles: Object.create(null), lang: null } as unknown as TextContent
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) break
+    const chunk = value as TextContent
+    content.lang ??= chunk.lang
+    Object.assign(content.styles, chunk.styles)
+    content.items.push(...chunk.items)
+  }
+  return content
+}
 
 let pdfJsPromise: Promise<PdfJsModule> | null = null
 async function loadPdfJs(): Promise<PdfJsModule> {
@@ -97,6 +133,11 @@ export interface PdfPreviewPanelProps {
    * them while the pointer or the focus is inside it.
    */
   primary?: boolean
+  /**
+   * The open vault. Highlights are stored in it (`.comdtex-pdf-highlights.json`);
+   * a PDF outside the vault can be read but not highlighted.
+   */
+  vaultPath?: string | null
 }
 
 interface RenderedPage {
@@ -130,10 +171,14 @@ interface Sheet extends RenderedPage {
 const PdfPageList = memo(function PdfPageList({
   sheets,
   pageLabel,
+  highlights,
 }: {
   sheets: Sheet[]
   pageLabel: string
+  highlights: PdfHighlight[]
 }) {
+  const byPage = new Map<number, PdfHighlight[]>()
+  for (const h of highlights) byPage.set(h.page, [...(byPage.get(h.page) ?? []), h])
   return (
     <>
       {sheets.map((p) => (
@@ -151,6 +196,27 @@ const PdfPageList = memo(function PdfPageList({
         >
           {/* Zero-sized until the queue paints it (a bare canvas holds 300x150). */}
           <canvas data-page={p.pageNum} width={0} height={0} />
+          {/* Highlights sit between the bitmap and the text, in page points
+              multiplied by the sheet's scale, so a zoom moves them with it. */}
+          {byPage.has(p.pageNum) && (
+            <div className="pdf-highlights" aria-hidden="true">
+              {byPage.get(p.pageNum)!.flatMap((h) =>
+                h.rects.map(([x, y, w, hh], i) => (
+                  <div
+                    key={`${h.id}-${i}`}
+                    className={`pdf-hl pdf-hl-${h.color}`}
+                    data-highlight={h.id}
+                    style={{
+                      left: `calc(var(--total-scale-factor) * ${x}px)`,
+                      top: `calc(var(--total-scale-factor) * ${y}px)`,
+                      width: `calc(var(--total-scale-factor) * ${w}px)`,
+                      height: `calc(var(--total-scale-factor) * ${hh}px)`,
+                    }}
+                  />
+                )),
+              )}
+            </div>
+          )}
           <div className="pdf-text-layer textLayer" />
           <div className="pdf-page-label">
             {pageLabel} {p.pageNum}
@@ -173,6 +239,7 @@ export default function PdfPreviewPanel({
   focusPage,
   invert = false,
   primary = false,
+  vaultPath = null,
 }: PdfPreviewPanelProps) {
   const t = useT()
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -217,6 +284,7 @@ export default function PdfPreviewPanel({
   const [matches, setMatches] = useState<Array<{ page: number; ordinal: number }>>([])
   const [activeMatch, setActiveMatch] = useState(-1)
   const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
   const queryRef = useRef("")
   const activeRef = useRef<{ page: number; ordinal: number } | null>(null)
@@ -347,7 +415,7 @@ export default function PdfPreviewPanel({
     if (!doc) return null
     let hit = textCacheRef.current.get(pageNum)
     if (!hit) {
-      hit = doc.getPage(pageNum).then((page) => page.getTextContent())
+      hit = doc.getPage(pageNum).then(readTextContent)
       textCacheRef.current.set(pageNum, hit)
       hit.catch(() => textCacheRef.current.delete(pageNum))
     }
@@ -489,6 +557,12 @@ export default function PdfPreviewPanel({
         const layer = new mod.TextLayer({ textContentSource: text, container: layerEl, viewport })
         textLayersRef.current.set(pageNum, layer)
         await layer.render()
+        // While dragging, this block fills the layer's empty space, so the
+        // selection stays where the pointer is instead of jumping to the end
+        // of the page (or across to the other column), as in pdf.js's viewer.
+        const end = document.createElement("div")
+        end.className = "endOfContent"
+        layerEl.append(end)
         applyHighlights(pageNum)
       } catch (err) {
         const name = err instanceof Error ? err.name : ""
@@ -770,6 +844,7 @@ export default function PdfPreviewPanel({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a new query starts a new result list
     setMatches([])
     setActiveMatch(-1)
+    setSearchError(null)
     activeRef.current = null
     for (const p of textLayersRef.current.keys()) applyHighlights(p)
     if (!findOpen || !doc || !query.trim() || pages.length === 0) {
@@ -779,9 +854,15 @@ export default function PdfPreviewPanel({
     setSearching(true)
     const timer = setTimeout(async () => {
       const found: Array<{ page: number; ordinal: number }> = []
+      let failed = 0
+      let lastError = ""
       for (let p = 1; p <= pages.length; p++) {
         if (gen !== searchGenRef.current) return
-        const text = await getText(p)?.catch(() => null)
+        const text = await getText(p)?.catch((err: unknown) => {
+          failed++
+          lastError = err instanceof Error ? err.message : String(err)
+          return null
+        })
         if (!text) continue
         const runs = text.items.map((item) => ("str" in item ? item.str : ""))
         const hits = findInRuns(runs, query)
@@ -792,7 +873,13 @@ export default function PdfPreviewPanel({
           setMatches(found.slice())
         }
       }
-      if (gen === searchGenRef.current) setSearching(false)
+      if (gen !== searchGenRef.current) return
+      // Say so when the text could not be read at all, instead of "No matches".
+      if (failed > 0 && failed === pages.length) {
+        console.warn("pdf text extraction failed", lastError)
+        setSearchError(lastError || "?")
+      }
+      setSearching(false)
     }, 180)
     return () => clearTimeout(timer)
   }, [query, findOpen, pages.length, getText, applyHighlights])
@@ -880,14 +967,204 @@ export default function PdfPreviewPanel({
     return () => window.removeEventListener("keydown", onKey, true)
   }, [pdfPath, primary, zoomIn, zoomOut, fitTo, openFind, findOpen, stepMatch])
 
+  // ── Highlights ──────────────────────────────────────────────────────────
+  const relPath = pdfPath && vaultPath ? vaultRelative(pdfPath, vaultPath) : null
+  const [highlights, setHighlights] = useState<PdfHighlight[]>([])
+  const highlightsRef = useRef<PdfHighlight[]>([])
+  useLayoutEffect(() => {
+    highlightsRef.current = highlights
+  }, [highlights])
+
+  useEffect(() => {
+    let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- another PDF starts with no highlights until its own are read
+    setHighlights([])
+    if (!vaultPath || !relPath) return
+    void loadHighlights(vaultPath).then((file) => {
+      if (!cancelled) setHighlights(file.files[relPath] ?? [])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [vaultPath, relPath])
+
+  const persistHighlights = useCallback(
+    (next: PdfHighlight[]) => {
+      setHighlights(next)
+      if (!vaultPath || !relPath) return
+      saveHighlightsFor(vaultPath, relPath, next).catch((err: unknown) =>
+        showToast(
+          t.pdfPreview.highlightSaveFailed(err instanceof Error ? err.message : String(err)),
+          "error",
+        ),
+      )
+    },
+    [vaultPath, relPath, t],
+  )
+
+  // One floating menu: over a fresh selection (colours, copy) or over a
+  // highlight that was clicked (recolour, remove). Positioned in the panel.
+  type Menu =
+    | { kind: "selection"; x: number; y: number }
+    | { kind: "highlight"; id: string; x: number; y: number }
+  const [menu, setMenu] = useState<Menu | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const openMenuAt = useCallback(
+    (
+      what: { kind: "selection" } | { kind: "highlight"; id: string },
+      clientX: number,
+      clientY: number,
+    ) => {
+      const root = rootRef.current?.getBoundingClientRect()
+      if (!root) return
+      const x = Math.min(Math.max(8, clientX - root.left - 80), root.width - 240)
+      const y = Math.min(clientY - root.top + 12, root.height - 48)
+      setMenu({ ...what, x, y } as Menu)
+    },
+    [],
+  )
+
+  const onPagesMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
+    const layer = (e.target as Element).closest<HTMLElement>(".pdf-text-layer")
+    if (!layer) return
+    layer.classList.add("selecting")
+    const done = () => {
+      layer.classList.remove("selecting")
+      window.removeEventListener("mouseup", done, true)
+    }
+    window.addEventListener("mouseup", done, true)
+  }, [])
+
+  const onPagesMouseUp = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const { clientX, clientY } = e
+      // After the browser settles the selection.
+      setTimeout(() => {
+        const sel = window.getSelection()
+        const container = containerRef.current
+        if (!sel || sel.isCollapsed || !container || sel.rangeCount === 0) return
+        if (!container.contains(sel.anchorNode) || !container.contains(sel.focusNode)) return
+        if (!sel.toString().trim()) return
+        openMenuAt({ kind: "selection" }, clientX, clientY)
+      }, 0)
+    },
+    [openMenuAt],
+  )
+
+  // Close the menu on scroll, on a press elsewhere, on Escape, and when the
+  // selection it was opened for goes away.
+  useEffect(() => {
+    if (!menu) return
+    const container = containerRef.current
+    const close = () => setMenu(null)
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenu(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null)
+    }
+    const onSelection = () => {
+      if (menu.kind === "selection" && window.getSelection()?.isCollapsed) setMenu(null)
+    }
+    container?.addEventListener("scroll", close, { passive: true })
+    window.addEventListener("mousedown", onDown, true)
+    window.addEventListener("keydown", onKey)
+    document.addEventListener("selectionchange", onSelection)
+    return () => {
+      container?.removeEventListener("scroll", close)
+      window.removeEventListener("mousedown", onDown, true)
+      window.removeEventListener("keydown", onKey)
+      document.removeEventListener("selectionchange", onSelection)
+    }
+  }, [menu])
+
+  const highlightSelection = useCallback(
+    (color: HighlightColor) => {
+      const sel = window.getSelection()
+      const container = containerRef.current
+      setMenu(null)
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !container) return
+      if (!relPath) {
+        showToast(t.pdfPreview.highlightOutsideVault, "info")
+        return
+      }
+      const range = sel.getRangeAt(0)
+      const clientRects = range.getClientRects()
+      const text = sel.toString().replace(/\s+/g, " ").trim()
+      const created: PdfHighlight[] = []
+      const createdAt = new Date().toISOString()
+      for (const sheet of container.querySelectorAll<HTMLElement>(".pdf-page")) {
+        if (!range.intersectsNode(sheet)) continue
+        const pageNum = Number(sheet.dataset.page)
+        const info = pages.find((p) => p.pageNum === pageNum)
+        if (!info) continue
+        const rects = selectionRectsOnPage(
+          clientRects,
+          sheet.getBoundingClientRect(),
+          computeScale(info),
+        )
+        if (rects.length)
+          created.push({ id: newHighlightId(), page: pageNum, rects, color, text, createdAt })
+      }
+      sel.removeAllRanges()
+      if (created.length) persistHighlights([...highlightsRef.current, ...created])
+    },
+    [relPath, pages, computeScale, persistHighlights, t],
+  )
+
+  const recolorHighlight = useCallback(
+    (id: string, color: HighlightColor) => {
+      setMenu(null)
+      persistHighlights(highlightsRef.current.map((h) => (h.id === id ? { ...h, color } : h)))
+    },
+    [persistHighlights],
+  )
+
+  const removeHighlight = useCallback(
+    (id: string) => {
+      setMenu(null)
+      persistHighlights(highlightsRef.current.filter((h) => h.id !== id))
+    },
+    [persistHighlights],
+  )
+
+  const copySelection = useCallback(() => {
+    const text = window.getSelection()?.toString() ?? ""
+    setMenu(null)
+    if (text) void navigator.clipboard.writeText(text).catch(() => {})
+  }, [])
+
   // ── Click to source ─────────────────────────────────────────────────────
   // Derive PDF coordinates and the nearest text (heading-style synctex shim).
   // A click that ends a text selection is a selection, not a jump.
   const handlePagesClick = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!onClickSource) return
       const selection = window.getSelection()
       if (selection && !selection.isCollapsed) return
+      // A click on a highlight opens its menu (recolour, remove) instead of
+      // jumping to the source.
+      const hitSheet = (e.target as Element).closest<HTMLElement>(".pdf-page")
+      if (hitSheet && highlightsRef.current.length > 0) {
+        const pageNum = Number(hitSheet.dataset.page)
+        const info = pages.find((p) => p.pageNum === pageNum)
+        const rect = hitSheet.getBoundingClientRect()
+        if (info) {
+          const scale = computeScale(info)
+          const hit = highlightAt(
+            highlightsRef.current,
+            pageNum,
+            (e.clientX - rect.left) / scale,
+            (e.clientY - rect.top) / scale,
+          )
+          if (hit) {
+            openMenuAt({ kind: "highlight", id: hit.id }, e.clientX, e.clientY)
+            return
+          }
+        }
+      }
+      if (!onClickSource) return
       const sheet = (e.target as Element).closest<HTMLElement>(".pdf-page")
       const doc = docRef.current
       if (!sheet || !doc) return
@@ -931,7 +1208,7 @@ export default function PdfPreviewPanel({
         // ignore
       }
     },
-    [onClickSource, pages, computeScale, syncData, getText],
+    [onClickSource, pages, computeScale, syncData, getText, openMenuAt],
   )
 
   const openExternally = useCallback(() => {
@@ -1139,7 +1416,9 @@ export default function PdfPreviewPanel({
                   (searching ? "…" : "")
                 : searching
                   ? t.pdfPreview.findSearching
-                  : t.pdfPreview.findNone}
+                  : searchError
+                    ? t.pdfPreview.findUnavailable(searchError)
+                    : t.pdfPreview.findNone}
           </span>
           <button
             type="button"
@@ -1178,6 +1457,8 @@ export default function PdfPreviewPanel({
         tabIndex={0}
         aria-label={t.pdfPreview.title}
         onClick={handlePagesClick}
+        onMouseDown={onPagesMouseDown}
+        onMouseUp={onPagesMouseUp}
       >
         {!pdfPath && <div className="pdf-empty">{t.pdfPreview.noPdf}</div>}
         {pdfPath && loading && <div className="pdf-empty">{t.pdfPreview.loading}</div>}
@@ -1186,8 +1467,56 @@ export default function PdfPreviewPanel({
             {t.pdfPreview.error}: {error}
           </div>
         )}
-        <PdfPageList sheets={sheets} pageLabel={t.pdfPreview.page} />
+        <PdfPageList sheets={sheets} pageLabel={t.pdfPreview.page} highlights={highlights} />
       </div>
+      {menu && (
+        <div
+          ref={menuRef}
+          className="pdf-hl-menu"
+          role="toolbar"
+          aria-label={
+            menu.kind === "selection" ? t.pdfPreview.highlight : t.pdfPreview.highlightMenu
+          }
+          style={{ left: menu.x, top: menu.y }}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`pdf-hl-swatch pdf-hl-${color}${
+                menu.kind === "highlight" &&
+                highlights.find((h) => h.id === menu.id)?.color === color
+                  ? " active"
+                  : ""
+              }`}
+              title={t.pdfPreview.highlightColors[color]}
+              aria-label={`${t.pdfPreview.highlight}: ${t.pdfPreview.highlightColors[color]}`}
+              onClick={() =>
+                menu.kind === "selection"
+                  ? highlightSelection(color)
+                  : recolorHighlight(menu.id, color)
+              }
+            />
+          ))}
+          <span className="pdf-hl-menu-sep" />
+          {menu.kind === "selection" ? (
+            <button type="button" className="pdf-hl-menu-btn" onClick={copySelection}>
+              <Icon icon={Copy} size={14} />
+              {t.pdfPreview.copy}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pdf-hl-menu-btn"
+              onClick={() => removeHighlight(menu.id)}
+            >
+              <Icon icon={Trash2} size={14} />
+              {t.pdfPreview.removeHighlight}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -3,6 +3,15 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Highlight text in a PDF.** Select text and a small menu offers four marker colours and Copy; click a highlight to change its colour or remove it. Highlights follow the zoom, merge the words of a line into one mark, and are saved in the vault (`.comdtex-pdf-highlights.json`, keyed by the PDF's path), so they sync with your notes and never change the PDF file itself. PDFs outside the vault can be read but not highlighted.
+
+### Fixed
+- **Search and text selection in PDFs work in the Linux app.** pdf.js reads a page's text by iterating a stream with `for await`, which the WebKitGTK the AppImage ships (2.50) does not support, so every PDF searched as "No matches" and its text could not be selected. The viewer now reads the text itself, and if a PDF's text really cannot be read, the search says so instead of reporting no matches.
+- **Dragging a selection stays in its column.** On two-column papers a drag jumped to the other column or the end of the page, as the text layer had nothing under the gaps between lines.
+
 ## [1.34.1] - 2026-11-12
 
 ### Added

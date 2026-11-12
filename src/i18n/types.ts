@@ -1970,6 +1970,14 @@ export interface T {
     findNext: string
     findClose: string
     openExternal: string
+    findUnavailable: (error: string) => string
+    highlight: string
+    highlightMenu: string
+    highlightColors: Record<"yellow" | "green" | "blue" | "pink", string>
+    copy: string
+    removeHighlight: string
+    highlightSaveFailed: (error: string) => string
+    highlightOutsideVault: string
     previousPage: string
     nextPage: string
     page: string

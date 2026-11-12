@@ -5,7 +5,7 @@ use tauri_plugin_fs::FsExt;
 /// explicit literal-name grant because the `<vault>/**` glob cannot match a
 /// leading dot on Unix; see `allow_vault_dir`. Keep in sync with
 /// `COMMENTS_FILENAME` in `src/comments.ts`.
-const DOT_FILES_IN_VAULT: &[&str] = &[".comdtex-comments.json"];
+const DOT_FILES_IN_VAULT: &[&str] = &[".comdtex-comments.json", ".comdtex-pdf-highlights.json"];
 
 /// Extends the runtime fs-plugin scope and asset-protocol scope to allow
 /// access to the user's vault folder, which lives at an arbitrary,

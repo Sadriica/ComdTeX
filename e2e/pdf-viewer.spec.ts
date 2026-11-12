@@ -10,9 +10,18 @@ import { tinyPdf } from "./support/tinyPdf"
 
 const PAGES = 40
 
-async function openPdf(page: Page) {
+async function openPdf(page: Page, { webkit250 = false } = {}) {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installDeterminism(page)
+  if (webkit250) {
+    // The WebKitGTK the Linux AppImage ships (2.50) cannot iterate a
+    // ReadableStream with for await; pdf.js's getTextContent does exactly that.
+    await page.addInitScript(() => {
+      const proto = ReadableStream.prototype as unknown as Record<PropertyKey, unknown>
+      delete proto[Symbol.asyncIterator]
+      delete proto.values
+    })
+  }
   await installFakeVault(page, {
     settings: { theme: "vs-dark" },
     files: { "long.pdf": tinyPdf(PAGES) },
@@ -105,4 +114,54 @@ test("the text is selectable and Ctrl+F finds and highlights it", async ({ page 
   await expect(page.locator('.pdf-page[data-page="2"] .pdf-hit-active')).toBeInViewport()
   await input.press("Escape")
   await expect(page.locator(".pdf-hit")).toHaveCount(0)
+})
+
+test("search and the text layer work where ReadableStream cannot be iterated", async ({ page }) => {
+  await openPdf(page, { webkit250: true })
+  expect(
+    await page.evaluate(
+      () =>
+        typeof (ReadableStream.prototype as unknown as Record<symbol, unknown>)[
+          Symbol.asyncIterator
+        ],
+    ),
+  ).toBe("undefined")
+  await expect(page.locator('.pdf-page[data-page="1"] .pdf-text-layer span').first()).toBeAttached()
+  await page.getByRole("button", { name: "Find in PDF" }).click()
+  await page.getByRole("searchbox", { name: "Find in PDF" }).fill("Cheeger")
+  await expect(page.locator(".pdf-find-count")).toHaveText(`1 of ${PAGES}`)
+})
+
+test("selected text can be highlighted, kept, recoloured and removed", async ({ page }) => {
+  await openPdf(page)
+  const title = page
+    .locator('.pdf-page[data-page="1"] .pdf-text-layer span', { hasText: "Spectral gaps" })
+    .first()
+  await expect(title).toBeAttached()
+  const b = (await title.boundingBox())!
+  await page.mouse.move(b.x + 2, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width - 2, b.y + b.height / 2, { steps: 6 })
+  await page.mouse.up()
+  const menu = page.getByRole("toolbar", { name: "Highlight" })
+  await expect(menu).toBeVisible()
+  await menu.getByRole("button", { name: "Highlight: Yellow" }).click()
+  const marks = page.locator('.pdf-page[data-page="1"] .pdf-hl')
+  await expect(marks).toHaveCount(1)
+  await expect(marks.first()).toHaveClass(/pdf-hl-yellow/)
+
+  // Saved in the vault: reopening the PDF brings it back.
+  await page.locator(".tab", { hasText: "spectral-gap.md" }).first().click()
+  await page.locator(".tab", { hasText: "long.pdf" }).first().click()
+  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl')).toHaveCount(1)
+
+  // A click on it opens its menu: recolour, then remove.
+  const mark = (await page.locator('.pdf-page[data-page="1"] .pdf-hl').first().boundingBox())!
+  await page.mouse.click(mark.x + mark.width / 2, mark.y + mark.height / 2)
+  const options = page.getByRole("toolbar", { name: "Highlight options" })
+  await options.getByRole("button", { name: "Highlight: Green" }).click()
+  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl').first()).toHaveClass(/pdf-hl-green/)
+  await page.mouse.click(mark.x + mark.width / 2, mark.y + mark.height / 2)
+  await options.getByRole("button", { name: "Remove" }).click()
+  await expect(page.locator('.pdf-page[data-page="1"] .pdf-hl')).toHaveCount(0)
 })

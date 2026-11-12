@@ -315,3 +315,14 @@
   --input-bg: var(--bg-sunken);
   --panel-bg: var(--bg-surface);
 }
+
+/* PDF highlighter. A PDF page stays white paper in every theme, so the marker
+   colours are one set, blended with multiply like ink on paper. */
+:root,
+.app,
+.app[data-theme] {
+  --pdf-hl-yellow: oklch(0.92 0.16 98);
+  --pdf-hl-green: oklch(0.88 0.14 145);
+  --pdf-hl-blue: oklch(0.86 0.09 230);
+  --pdf-hl-pink: oklch(0.86 0.11 350);
+}

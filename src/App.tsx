@@ -5681,6 +5681,7 @@ function AppContent({
                   <LazyRegion region="panel">
                     <PdfPreviewPanel
                       pdfPath={pdfPath}
+                      vaultPath={vault.vaultPath}
                       onClickSource={handlePdfClickSource}
                       synctex={syncTex?.synctex ?? null}
                       focusPage={pdfFocusPage}
@@ -5785,7 +5786,7 @@ function AppContent({
           />
           {vault.openFile?.mode === "pdf" ? (
             <LazyRegion region="panel" fallback={<div className="region-fallback" />}>
-              <PdfPreviewPanel pdfPath={vault.openFile.path} primary />
+              <PdfPreviewPanel pdfPath={vault.openFile.path} primary vaultPath={vault.vaultPath} />
             </LazyRegion>
           ) : (
             <LazyRegion region="editor" fallback={<div className="region-fallback" />}>
