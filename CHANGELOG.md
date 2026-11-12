@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **A hint for an empty `sum()`.** `sum()`, `int()` and `lim()` with nothing inside get an Info note with a quick fix (Ctrl+.) that replaces the call with the bare operator: `\sum`, `\int`, `\lim`.
 
 ### Changed
+- **Scrolling a PDF is smooth again.** The PDF viewer kept a full-resolution canvas for every page it had shown (a 19-page article held 19) and started a render for each page entering the view at the same time, all on the main thread; each page also went blank while it repainted. It now paints one page at a time, visible pages first and once the scroll settles, paints off screen and swaps the result in, and frees pages more than three away from the view. Measured on a 19-page journal article: canvas memory down from 33 to 7 megapixels, main-thread long tasks halved.
+- **Zoom in the PDF viewer starts from what you see.** Leaving fit-to-width used to jump to 100%, so "zoom in" on a wide pane made the page smaller. A zoomed page wider than the pane can now be scrolled to its left edge, which used to be cut off, and resizing the pane resizes the pages.
 - **The tab strip has no visible scrollbar.** In the desktop app a thick scrollbar sat over the tab names. Tabs now scroll with the mouse wheel and the active tab is always kept in view.
 
 ### Fixed

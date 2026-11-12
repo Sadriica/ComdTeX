@@ -68,19 +68,30 @@
   padding: var(--space-7) var(--space-5);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Auto margins centre a sheet narrower than the pane; `align-items: center`
+     also centred a zoomed sheet wider than it, pushing its left edge out of
+     reach of the scrollbar. */
+  align-items: flex-start;
   gap: var(--space-6);
   background: var(--bg-sunken);
 }
 .pdf-page {
   position: relative;
   flex-shrink: 0;
+  /* Each sheet is sized inline; containing it keeps a repaint of one page
+     from invalidating the others while scrolling. */
+  contain: layout paint;
+  margin-inline: auto;
   background: var(--bg-raised);
   box-shadow: var(--shadow-1);
   outline: 1px solid var(--border);
 }
+/* The bitmap is painted at device resolution; CSS fits it to the sheet, which
+   also stretches a stale bitmap while its re-render after a zoom is queued. */
 .pdf-page canvas {
   display: block;
+  width: 100%;
+  height: 100%;
   cursor: crosshair;
 }
 .pdf-page-label {
