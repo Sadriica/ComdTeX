@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.34.0] - 2026-11-12
 
 ### Added
 - **Math symbols in Ctrl+P.** Typing a symbol's name (`mu`, `Sigma`, `\alpha`) or its Spanish name (`alfa`, `suma`) in the palette shows a Symbols group; Enter inserts it at the cursor, as `\mu` inside math and `$\mu$` outside. An exact name puts the symbols above the file matches.
