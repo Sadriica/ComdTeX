@@ -52,6 +52,9 @@ test("a citation is found by author, and the next key after '; ' is offered", as
   // Let the accepted key land before typing on, as a person would: on a slow
   // runner the re-trigger on "; " could otherwise race the accept.
   await expect(doc(page)).toContainText("[@lubotzky1988")
+  // The widget that accepted must be gone too: on a slow CI runner it was
+  // still closing when "; " re-triggered, and the new list never opened.
+  await expect(widget(page)).toBeHidden()
   await page.keyboard.type("; ")
   await expect(widget(page)).toBeVisible()
   await page.keyboard.type("@levin")
