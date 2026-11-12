@@ -2118,7 +2118,7 @@ export const en: T = {
     later: "Later",
     releaseNotes: "Release notes",
     manualHint:
-      "This copy runs unpacked (the Arch installer or a source build), so it cannot replace itself. Run the installer again in a terminal to update.",
+      "This copy updates through the installer: it runs unpacked (a source build or the Arch install), or it is an AppImage on an Arch-based system, where the installer also turns hardware rendering back on. Run it again in a terminal to update.",
     copyCommand: "Copy update command",
     commandCopied: "Command copied",
   },

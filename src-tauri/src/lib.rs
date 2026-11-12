@@ -235,6 +235,12 @@ async fn list_system_fonts() -> Result<Vec<FontFamilyInfo>, String> {
 /// the running executable in that case, which turns an extracted install (the
 /// Arch path of scripts/install.sh) back into a raw AppImage and drops its
 /// libwayland patch, so those installs update by re-running the installer.
+///
+/// A mounted AppImage on an Arch-based distro is "manual" too. It is what an
+/// in-app update left behind on installs that predate this check, and the
+/// AppImage forces `WEBKIT_DISABLE_DMABUF_RENDERER=1` (software rendering:
+/// slow typing, slow PDF scrolling); updating it in place would keep it that
+/// way. The installer's Arch path unpacks it and drops that variable.
 #[tauri::command]
 fn update_install_kind() -> &'static str {
     install_kind(
@@ -244,15 +250,31 @@ fn update_install_kind() -> &'static str {
             tauri::utils::platform::bundle_type(),
             Some(tauri::utils::config::BundleType::Deb | tauri::utils::config::BundleType::Rpm)
         ),
+        std::fs::read_to_string("/etc/os-release")
+            .map(|text| is_arch_like(&text))
+            .unwrap_or(false),
     )
 }
 
-fn install_kind(linux: bool, in_appimage: bool, packaged: bool) -> &'static str {
-    if !linux || in_appimage || packaged {
+fn install_kind(linux: bool, in_appimage: bool, packaged: bool, arch_like: bool) -> &'static str {
+    if !linux || packaged || (in_appimage && !arch_like) {
         "self"
     } else {
         "manual"
     }
+}
+
+/// `ID=arch` or `arch` among `ID_LIKE` (Manjaro, EndeavourOS, CachyOS...),
+/// the same rule as `is_arch_like` in scripts/install.sh.
+fn is_arch_like(os_release: &str) -> bool {
+    let value = |key: &str| {
+        os_release
+            .lines()
+            .find_map(|line| line.strip_prefix(key))
+            .map(|v| v.trim().trim_matches('"').to_string())
+            .unwrap_or_default()
+    };
+    value("ID=") == "arch" || value("ID_LIKE=").split_whitespace().any(|id| id == "arch")
 }
 
 /// Navigation guard (defense in depth). The sanitizer and the preview click
@@ -333,10 +355,24 @@ mod tests {
 
     #[test]
     fn only_unpacked_linux_installs_update_by_hand() {
-        assert_eq!(install_kind(false, false, false), "self");
-        assert_eq!(install_kind(true, true, false), "self");
-        assert_eq!(install_kind(true, false, true), "self");
-        assert_eq!(install_kind(true, false, false), "manual");
+        assert_eq!(install_kind(false, false, false, false), "self");
+        assert_eq!(install_kind(true, true, false, false), "self");
+        assert_eq!(install_kind(true, false, true, false), "self");
+        assert_eq!(install_kind(true, false, false, false), "manual");
+        // A mounted AppImage on Arch goes back through the installer, which
+        // unpacks it and turns hardware rendering back on.
+        assert_eq!(install_kind(true, true, false, true), "manual");
+        assert_eq!(install_kind(true, false, true, true), "self");
+    }
+
+    #[test]
+    fn reads_arch_like_from_os_release() {
+        assert!(is_arch_like("NAME=\"Arch Linux\"\nID=arch\n"));
+        assert!(is_arch_like("ID=manjaro\nID_LIKE=arch\n"));
+        assert!(is_arch_like("ID=cachyos\nID_LIKE=\"arch\"\n"));
+        assert!(!is_arch_like("ID=ubuntu\nID_LIKE=debian\n"));
+        assert!(!is_arch_like("ID=archlinux-ish\nID_LIKE=\"debian\"\n"));
+        assert!(!is_arch_like(""));
     }
 
     #[test]

@@ -2139,7 +2139,7 @@ export const es: T = {
     later: "Más tarde",
     releaseNotes: "Notas de la versión",
     manualHint:
-      "Esta copia corre descomprimida (instalador de Arch o compilada desde el código), así que no puede reemplazarse sola. Vuelve a correr el instalador en una terminal para actualizar.",
+      "Esta copia se actualiza con el instalador: corre descomprimida (compilada desde el código o instalada en Arch), o es un AppImage en un sistema basado en Arch, donde el instalador además vuelve a activar el renderizado por hardware. Vuelve a correrlo en una terminal para actualizar.",
     copyCommand: "Copiar comando de actualización",
     commandCopied: "Comando copiado",
   },

@@ -3,6 +3,12 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Arch installs no longer end up in slow software rendering after an update.** The in-app updater replaces the running AppImage, and the AppImage forces `WEBKIT_DISABLE_DMABUF_RENDERER=1`, which the Arch installer removes because it makes typing and PDF scrolling slow. On Arch-based systems an AppImage now updates through the installer (the banner copies its command), which unpacks it and turns hardware rendering back on.
+- The pointer over a PDF page is the normal arrow, not a crosshair.
+
 ## [1.34.0] - 2026-11-12
 
 ### Added
