@@ -80,6 +80,16 @@ describe("findByName", () => {
     const node = findByName(tree, "report")
     expect(node?.name).toBe("report.tex")
   })
+
+  it("finds a file named with its extension, as PDF quotes link it", () => {
+    const withPdf: FileNode[] = [
+      ...tree,
+      { name: "Paper.pdf", path: "/vault/Paper.pdf", type: "file", ext: "pdf" },
+    ]
+    expect(findByName(withPdf, "paper.pdf")?.path).toBe("/vault/Paper.pdf")
+    expect(getFileNameSet(withPdf).has("paper.pdf")).toBe(true)
+    expect(findByName(withPdf, "notes.pdf")).toBeNull()
+  })
 })
 
 describe("processWikilinks", () => {

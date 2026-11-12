@@ -3081,6 +3081,17 @@ function AppContent({
   // texToSrc map (texLineMap.ts) turns that into an editor line. When the PDF
   // came from the WASM engine (which emits no SyncTeX), we fall back to the
   // heading shim below: match the nearest text snippet against headings.
+  // The PDF viewer wrote a note (its annotations, exported): show it.
+  const handlePdfNoteCreated = useCallback(
+    (path: string) => {
+      void (async () => {
+        if (vault.vaultPath) await vault.refreshTree(vault.vaultPath)
+        await vault.openFilePath(path)
+      })()
+    },
+    [vault],
+  )
+
   const handlePdfClickSource = useCallback(
     (
       page: number,
@@ -5682,6 +5693,7 @@ function AppContent({
                     <PdfPreviewPanel
                       pdfPath={pdfPath}
                       vaultPath={vault.vaultPath}
+                      onNoteCreated={handlePdfNoteCreated}
                       onClickSource={handlePdfClickSource}
                       synctex={syncTex?.synctex ?? null}
                       focusPage={pdfFocusPage}
@@ -5786,7 +5798,12 @@ function AppContent({
           />
           {vault.openFile?.mode === "pdf" ? (
             <LazyRegion region="panel" fallback={<div className="region-fallback" />}>
-              <PdfPreviewPanel pdfPath={vault.openFile.path} primary vaultPath={vault.vaultPath} />
+              <PdfPreviewPanel
+                pdfPath={vault.openFile.path}
+                primary
+                vaultPath={vault.vaultPath}
+                onNoteCreated={handlePdfNoteCreated}
+              />
             </LazyRegion>
           ) : (
             <LazyRegion region="editor" fallback={<div className="region-fallback" />}>

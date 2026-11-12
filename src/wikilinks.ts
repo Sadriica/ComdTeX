@@ -20,6 +20,9 @@ export function getFileNameSet(tree: FileNode[]): Set<string> {
           names.add(stem.slice(-depth).join("/"))
         }
         names.add(n.name.replace(/\.[^.]+$/, "").toLowerCase())
+        // A file named with its extension (`[[paper.pdf]]`, as the PDF viewer
+        // writes in quotes) resolves too.
+        names.add(n.name.toLowerCase())
       }
       if (n.children) collect(n.children)
     }
@@ -52,6 +55,7 @@ export function findByName(tree: FileNode[], name: string): FileNode | null {
   const search = (nodes: FileNode[]): FileNode | null => {
     for (const n of nodes) {
       if (n.type === "file" && n.name.replace(/\.[^.]+$/, "").toLowerCase() === lower) return n
+      if (n.type === "file" && /\.[^./]+$/.test(lower) && n.name.toLowerCase() === lower) return n
       if (n.children) {
         const f = search(n.children)
         if (f) return f

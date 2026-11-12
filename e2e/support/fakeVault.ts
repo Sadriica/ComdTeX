@@ -137,6 +137,20 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
         return `/${out.join("/")}`
       }
       const bytes = (s: string) => enc.encode(s).buffer
+      // PDFs are binary: kept one char per byte (latin1) so a written PDF
+      // reads back byte for byte. Text files stay UTF-8.
+      const isBinary = (path: string) => /\.pdf$/i.test(path)
+      const latin1Bytes = (s: string) => {
+        const out = new Uint8Array(s.length)
+        for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff
+        return out.buffer
+      }
+      const latin1Text = (data: Uint8Array) => {
+        let out = ""
+        for (let i = 0; i < data.length; i += 0x8000)
+          out += String.fromCharCode(...data.subarray(i, i + 0x8000))
+        return out
+      }
       const info = (e: Entry) => ({
         isFile: !e.dir,
         isDirectory: e.dir,
@@ -277,7 +291,7 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
           case "plugin:fs|read_file": {
             const e = get(p)
             if (e.dir) throw new Error(`Is a directory (os error 21): ${p}`)
-            return bytes(e.text)
+            return isBinary(p) ? latin1Bytes(e.text) : bytes(e.text)
           }
           case "plugin:fs|stat":
           case "plugin:fs|lstat":
@@ -292,7 +306,11 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
             const data = args instanceof Uint8Array ? args : new Uint8Array(0)
             const full = norm(target)
             addDirs(full.slice(0, full.lastIndexOf("/")))
-            fs.set(full, { dir: false, text: dec.decode(data), mtime: Date.now() })
+            fs.set(full, {
+              dir: false,
+              text: isBinary(full) ? latin1Text(data) : dec.decode(data),
+              mtime: Date.now(),
+            })
             return null
           }
           case "plugin:fs|mkdir":

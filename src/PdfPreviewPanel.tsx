@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import "./styles/vendor-pdfjs.css"
 import { useT } from "./i18n"
 import {
@@ -7,11 +7,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Copy,
   ExternalLink,
   Highlighter,
   Icon,
   ImagePlus,
+  ListTree,
+  MessageSquare,
   PenLine,
+  Printer,
+  Quote,
   Redo2,
   Save,
   Search,
@@ -33,6 +38,23 @@ import {
   vaultRelative,
   type PdfHighlight,
 } from "./pdfHighlights"
+import {
+  ANNOTATION_TYPE,
+  annotationsMarkdown,
+  kindOf,
+  notePathFor,
+  quadBoxes,
+  quoteMarkdown,
+  rgbToHex,
+  sortEntries,
+  textInBoxes,
+  type PdfAnnotationEntry,
+  type TextItemLike,
+} from "./pdfAnnotations"
+import { commentText, PdfCommentManager, type CommentTarget } from "./pdfCommentManager"
+import { caretInTextLayer } from "./pdfTextSnap"
+
+const PdfAnnotationsList = lazy(() => import("./PdfAnnotationsList"))
 
 // pdf.js 6 reads text with `for await` over a ReadableStream, which the
 // WebKitGTK of the Linux AppImage (2.50) lacks; see streamIterator.ts.
@@ -98,7 +120,54 @@ export interface PdfPreviewPanelProps {
   primary?: boolean
   /** The open vault: highlights saved by 1.34.2 live in it (read and removed only). */
   vaultPath?: string | null
+  /** A note was written (the exported annotations): refresh the tree and open it. */
+  onNoteCreated?: (path: string) => void
 }
+
+/** An annotation editor as this file uses it (pdf.js keeps the class private). */
+interface LiveEditor extends CommentTarget {
+  uid: string
+  pageIndex: number
+  annotationElementId: string | null
+  deleted?: boolean
+  isEmpty(): boolean
+  serialize(isForCopying?: boolean): Record<string, unknown> | null
+  remove(): void
+}
+
+function isLiveEditor(v: unknown): v is LiveEditor {
+  return (
+    !!v &&
+    typeof v === "object" &&
+    typeof (v as LiveEditor).serialize === "function" &&
+    typeof (v as LiveEditor).uid === "string"
+  )
+}
+
+/** A saved annotation, as pdf.js's getAnnotationsByType reports it. */
+interface SavedAnnotation {
+  id: string
+  annotationType: number
+  pageIndex: number
+  rect: [number, number, number, number]
+  color?: ArrayLike<number> | null
+  quadPoints?: ArrayLike<number> | null
+  contentsObj?: { str?: string } | null
+  it?: string | null
+}
+
+const ANNOTATION_TYPES = new Set<number>(Object.values(ANNOTATION_TYPE))
+
+/**
+ * Sets a comment through pdf.js (the editor or popup stores and saves it);
+ * null removes it.
+ */
+function setTargetComment(target: CommentTarget, text: string | null): void {
+  target.comment = text
+}
+
+/** File name of a path, either separator. */
+const baseName = (path: string) => path.split(/[\\/]/).pop() ?? path
 
 /** pdf.js editor modes the toolbar offers (AnnotationEditorType values). */
 const EDITOR = { NONE: 0, FREETEXT: 3, HIGHLIGHT: 9, STAMP: 13, INK: 15 } as const
@@ -138,6 +207,7 @@ export default function PdfPreviewPanel({
   invert = false,
   primary = false,
   vaultPath = null,
+  onNoteCreated,
 }: PdfPreviewPanelProps) {
   const t = useT()
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -172,6 +242,41 @@ export default function PdfPreviewPanel({
   })
   const [findState, setFindState] = useState<number | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Comments: the dialog to write one, the popup that shows one.
+  const [commentDialog, setCommentDialog] = useState<{
+    target: CommentTarget
+    text: string
+    x: number
+    y: number
+  } | null>(null)
+  const [commentPopup, setCommentPopup] = useState<{
+    target: CommentTarget
+    text: string
+    x: number
+    y: number
+    pinned: boolean
+  } | null>(null)
+  const lastPointerRef = useRef<[number, number]>([0, 0])
+  // After highlighting from the selection menu the viewer goes back to reading.
+  const backToReadingRef = useRef(false)
+
+  // The menu over a text selection (no tool active).
+  const [selectionMenu, setSelectionMenu] = useState<{
+    x: number
+    y: number
+    above: boolean
+    text: string
+    page: number
+  } | null>(null)
+
+  // The Annotations panel.
+  const [annotationsOpen, setAnnotationsOpen] = useState(false)
+  const [annotations, setAnnotations] = useState<PdfAnnotationEntry[]>([])
+  const [annotationsLoading, setAnnotationsLoading] = useState(false)
+  const editorsRef = useRef(new Map<string, LiveEditor>())
+
+  const [printing, setPrinting] = useState<string | null>(null)
 
   const syncData = useCallback((): SyncTexData | null => {
     if (!synctex) return null
@@ -211,6 +316,14 @@ export default function PdfPreviewPanel({
     else pageDiv.append(layer)
   }, [])
 
+  // pdf.js calls the comment manager from inside the viewer; it reaches the
+  // current React state through this ref.
+  const commentHostRef = useRef({
+    openDialog: (_target: CommentTarget, _x: number, _y: number) => {},
+    togglePopup: (_target: CommentTarget | null, _visible: boolean, _pinned: boolean) => {},
+    changed: () => {},
+  })
+
   // ── Viewer setup (once) ──────────────────────────────────────────────────
   useEffect(() => {
     let disposed = false
@@ -222,6 +335,12 @@ export default function PdfPreviewPanel({
       const eventBus = new lib.EventBus()
       const linkService = new lib.PDFLinkService({ eventBus })
       const findController = new lib.PDFFindController({ eventBus, linkService })
+      const commentManager = new PdfCommentManager({
+        openDialog: (target, x, y) => commentHostRef.current.openDialog(target, x, y),
+        togglePopup: (target, visible, pinned) =>
+          commentHostRef.current.togglePopup(target, visible, pinned),
+        changed: () => commentHostRef.current.changed(),
+      })
       const viewer = new lib.PDFViewer({
         container,
         viewer: viewerDiv,
@@ -238,7 +357,10 @@ export default function PdfPreviewPanel({
         maxCanvasPixels: 2 ** 24,
         // The sheets get the app's own shadow (components/pdf.css).
         removePageBorders: true,
-      })
+        // Comments on highlights, text and drawings, through ComdTeX's dialog.
+        enableComment: true,
+        commentManager,
+      } as ConstructorParameters<typeof lib.PDFViewer>[0])
       linkService.setViewer(viewer)
       viewerRef.current = viewer
       busRef.current = eventBus
@@ -256,9 +378,28 @@ export default function PdfPreviewPanel({
           setScaleValue(presetValue ?? String(s))
         },
       )
-      eventBus.on("annotationeditormodechanged", ({ mode: m }: { mode: number }) =>
-        setMode((m === -1 ? EDITOR.NONE : m) as EditorMode),
-      )
+      // pdf.js asks its toolbar for a mode change through these events (to
+      // highlight a selection, or to edit an annotation on double click).
+      // Firefox's viewer app answers them; here the viewer does.
+      eventBus.on("showannotationeditorui", ({ mode: m }: { mode: number }) => {
+        viewer.annotationEditorMode = { mode: m }
+      })
+      eventBus.on("switchannotationeditormode", (evt: { mode: number }) => {
+        viewer.annotationEditorMode = evt as unknown as typeof viewer.annotationEditorMode
+      })
+      eventBus.on("annotationeditormodechanged", ({ mode: m }: { mode: number }) => {
+        setMode((m === -1 ? EDITOR.NONE : m) as EditorMode)
+        setSelectionMenu(null)
+        // A highlight made from the selection menu: pdf.js switched to the
+        // highlight tool to make it; once it exists, back to reading.
+        if (m === EDITOR.HIGHLIGHT && backToReadingRef.current) {
+          setTimeout(() => {
+            if (!backToReadingRef.current) return
+            backToReadingRef.current = false
+            viewer.annotationEditorMode = { mode: EDITOR.NONE }
+          }, 0)
+        }
+      })
       eventBus.on(
         "editingstateschanged",
         ({
@@ -343,6 +484,23 @@ export default function PdfPreviewPanel({
     saveRef.current = save
   }, [save])
 
+  // Something changed in the document's annotations: write it shortly, and
+  // refresh the Annotations panel.
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshAnnotationsRef = useRef<() => void>(() => {})
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = setTimeout(() => refreshAnnotationsRef.current(), 250)
+  }, [])
+  const markDirty = useCallback(() => {
+    if (!docRef.current) return
+    dirtyRef.current = true
+    setSaveState("dirty")
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => void saveRef.current(), AUTOSAVE_MS)
+    scheduleRefresh()
+  }, [scheduleRefresh])
+
   // ── Loading a document ───────────────────────────────────────────────────
   useEffect(() => {
     if (!ready) return
@@ -373,13 +531,13 @@ export default function PdfPreviewPanel({
           return
         }
         const { pdf } = await loadPdfJs()
-        let url = pdfPath
-        try {
-          url = (await import("@tauri-apps/api/core")).convertFileSrc(pdfPath)
-        } catch {
-          /* not in Tauri */
-        }
-        const doc = await pdf.getDocument({ url }).promise
+        // The bytes are read from disk every time. Through the asset URL the
+        // webview could hand back a cached copy from before the annotations
+        // were written, and a save from that copy would drop them.
+        const { readFile } = await import("@tauri-apps/plugin-fs")
+        const data = await readFile(pdfPath)
+        if (cancelled) return
+        const doc = await pdf.getDocument({ data }).promise
         if (cancelled) {
           doc.loadingTask.destroy().catch(() => {})
           return
@@ -392,12 +550,11 @@ export default function PdfPreviewPanel({
         docRef.current = doc
         setPageCount(doc.numPages)
         dirtyRef.current = false
-        ;(doc.annotationStorage as unknown as { onSetModified: () => void }).onSetModified = () => {
-          dirtyRef.current = true
-          setSaveState("dirty")
-          if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-          saveTimerRef.current = setTimeout(() => void saveRef.current(), AUTOSAVE_MS)
-        }
+        editorsRef.current.clear()
+        setAnnotations([])
+        ;(doc.annotationStorage as unknown as { onSetModified: () => void }).onSetModified =
+          markDirty
+        scheduleRefresh()
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -407,7 +564,7 @@ export default function PdfPreviewPanel({
     return () => {
       cancelled = true
     }
-  }, [pdfPath, ready])
+  }, [pdfPath, ready, markDirty, scheduleRefresh])
 
   // Write pending annotations when the panel goes away.
   useEffect(
@@ -469,6 +626,39 @@ export default function PdfPreviewPanel({
     }
   }, [])
 
+  // A fitted zoom follows the pane: a window or sidebar resize, or the
+  // Annotations panel opening, refits the pages.
+  const scaleValueRef = useRef(scaleValue)
+  useEffect(() => {
+    scaleValueRef.current = scaleValue
+  }, [scaleValue])
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || typeof ResizeObserver === "undefined") return
+    let frame = 0
+    let lastWidth = container.clientWidth
+    let lastHeight = container.clientHeight
+    const observer = new ResizeObserver(() => {
+      if (container.clientWidth === lastWidth && container.clientHeight === lastHeight) return
+      lastWidth = container.clientWidth
+      lastHeight = container.clientHeight
+      if (frame) cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        const fit = scaleValueRef.current
+        const viewer = viewerRef.current
+        if (viewer?.pagesCount && (fit === "page-width" || fit === "page-fit")) {
+          viewer.currentScaleValue = fit
+        }
+      })
+    })
+    observer.observe(container)
+    return () => {
+      observer.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [])
+
   // ── Annotation tools ─────────────────────────────────────────────────────
   // Editor parameters travel on the event bus, as in pdf.js's own toolbar.
   const applyColor = useCallback((tool: EditorMode, markerName: MarkerName, penName: PenName) => {
@@ -517,6 +707,488 @@ export default function PdfPreviewPanel({
   const editingAction = useCallback((name: "undo" | "redo") => {
     busRef.current?.dispatch("editingaction", { source: null, name })
   }, [])
+
+  // ── Highlights follow the text ───────────────────────────────────────────
+  // With the Highlight tool, pdf.js turns a drag that starts off the glyphs
+  // (between words or lines, in a margin) into a freehand marker stroke. Here
+  // the marker always follows the text, as in Chrome or Zotero: such a drag
+  // starts a text selection instead. Pages without text (scans) keep the
+  // freehand marker, the only way to mark them.
+  const modeRef = useRef(mode)
+  useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const onPointerDown = (e: PointerEvent) => {
+      lastPointerRef.current = [e.clientX, e.clientY]
+      if (modeRef.current !== EDITOR.HIGHLIGHT) return
+      const target = e.target as HTMLElement
+      const layer = target.closest<HTMLElement>(".textLayer")
+      if (!layer) return
+      const offText = target === layer || target.classList.contains("endOfContent")
+      if (!offText || e.button !== 0 || !layer.querySelector("span:not(.markedContent)")) return
+      const start = caretInTextLayer(layer, e.clientX, e.clientY)
+      if (!start) return
+      // Neither pdf.js's freehand stroke nor the browser's (empty) selection:
+      // the selection is built here, from the text nearest the pointer.
+      e.preventDefault()
+      e.stopPropagation()
+      const sel = window.getSelection()
+      if (!sel) return
+      sel.setBaseAndExtent(start.node, start.offset, start.node, start.offset)
+      const move = (ev: PointerEvent) => {
+        const end = caretInTextLayer(layer, ev.clientX, ev.clientY)
+        if (end) sel.setBaseAndExtent(start.node, start.offset, end.node, end.offset)
+      }
+      const stop = () => {
+        window.removeEventListener("pointermove", move, true)
+        window.removeEventListener("pointerup", stop, true)
+        window.removeEventListener("pointercancel", stop, true)
+      }
+      window.addEventListener("pointermove", move, true)
+      window.addEventListener("pointerup", stop, true)
+      window.addEventListener("pointercancel", stop, true)
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      lastPointerRef.current = [e.clientX, e.clientY]
+    }
+    container.addEventListener("pointerdown", onPointerDown, true)
+    container.addEventListener("pointermove", onPointerMove, { passive: true })
+    return () => {
+      container.removeEventListener("pointerdown", onPointerDown, true)
+      container.removeEventListener("pointermove", onPointerMove)
+    }
+  }, [])
+
+  // ── The selection menu ───────────────────────────────────────────────────
+  // Select text with no tool on and a small menu offers the marker colours,
+  // a comment, Copy and Copy as quote (with a link back to the page).
+  const readSelection = useCallback(() => {
+    const container = containerRef.current
+    const root = rootRef.current
+    const sel = window.getSelection()
+    if (!container || !root || !sel || sel.isCollapsed || !sel.rangeCount) return null
+    const range = sel.getRangeAt(0)
+    const anchor =
+      range.commonAncestorContainer instanceof Element
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement
+    if (!anchor || !container.contains(anchor)) return null
+    const start =
+      range.startContainer instanceof Element
+        ? range.startContainer
+        : range.startContainer.parentElement
+    const pageDiv = start?.closest<HTMLElement>(".page[data-page-number]")
+    if (!pageDiv || !start?.closest(".textLayer")) return null
+    const text = sel.toString().trim()
+    if (!text) return null
+    const rects = [...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+    if (!rects.length) return null
+    const box = root.getBoundingClientRect()
+    const top = Math.min(...rects.map((r) => r.top))
+    const bottom = Math.max(...rects.map((r) => r.bottom))
+    const last = rects[rects.length - 1]
+    const above = top - box.top > 64
+    return {
+      x: Math.min(Math.max(8, last.right - box.left - 120), box.width - 260),
+      y: above ? top - box.top - 8 : bottom - box.top + 8,
+      above,
+      text,
+      page: Number(pageDiv.dataset.pageNumber),
+    }
+  }, [])
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const onUp = () => {
+      if (modeRef.current !== EDITOR.NONE) return
+      // After the browser has settled the selection.
+      setTimeout(() => setSelectionMenu(readSelection()), 0)
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.shiftKey && modeRef.current === EDITOR.NONE) setSelectionMenu(readSelection())
+    }
+    const onSelectionChange = () => {
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed) setSelectionMenu(null)
+    }
+    const onScroll = () => setSelectionMenu((m) => (m ? readSelection() : m))
+    container.addEventListener("pointerup", onUp)
+    container.addEventListener("keyup", onKeyUp)
+    container.addEventListener("scroll", onScroll, { passive: true })
+    document.addEventListener("selectionchange", onSelectionChange)
+    return () => {
+      container.removeEventListener("pointerup", onUp)
+      container.removeEventListener("keyup", onKeyUp)
+      container.removeEventListener("scroll", onScroll)
+      document.removeEventListener("selectionchange", onSelectionChange)
+    }
+  }, [readSelection])
+
+  const highlightSelection = useCallback((color: MarkerName, withComment = false) => {
+    const bus = busRef.current
+    if (!bus) return
+    setMarker(color)
+    bus.dispatch("switchannotationeditorparams", {
+      source: null,
+      type: PARAM.HIGHLIGHT_COLOR,
+      value: HIGHLIGHT_COLORS[color],
+    })
+    backToReadingRef.current = true
+    setSelectionMenu(null)
+    bus.dispatch("editingaction", {
+      source: null,
+      name: withComment ? "commentSelection" : "highlightSelection",
+    })
+  }, [])
+
+  const pdfName = pdfPath ? baseName(pdfPath) : ""
+
+  const copySelection = useCallback(
+    (asQuote: boolean) => {
+      const menu = selectionMenu
+      if (!menu) return
+      const text = asQuote
+        ? quoteMarkdown(menu.text, pdfName, menu.page, { page: t.pdfPreview.pageAbbrev })
+        : menu.text
+      void navigator.clipboard.writeText(text).then(
+        () => showToast(asQuote ? t.pdfPreview.quoteCopied : t.pdfPreview.copied, "success", 2000),
+        () => {},
+      )
+      setSelectionMenu(null)
+    },
+    [selectionMenu, pdfName, t],
+  )
+
+  // ── Comments ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!commentPopup?.pinned) return
+    const close = (e: Event) => {
+      const target = e.target as Element | null
+      if (target?.closest?.(".pdf-comment-popup, .annotationCommentButton, .comment")) return
+      setCommentPopup(null)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setCommentPopup(null)
+    window.addEventListener("pointerdown", close, true)
+    window.addEventListener("keydown", onKey)
+    return () => {
+      window.removeEventListener("pointerdown", close, true)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [commentPopup?.pinned])
+
+  const placeNear = useCallback((x: number, y: number, width: number, height: number) => {
+    const box = rootRef.current?.getBoundingClientRect()
+    if (!box) return { x: 8, y: 8 }
+    return {
+      x: Math.min(Math.max(8, x - box.left), Math.max(8, box.width - width - 8)),
+      y: Math.min(Math.max(8, y - box.top + 12), Math.max(8, box.height - height - 8)),
+    }
+  }, [])
+
+  useEffect(() => {
+    commentHostRef.current = {
+      openDialog: (target, x, y) => {
+        setCommentPopup(null)
+        const at = placeNear(x, y, 300, 180)
+        setCommentDialog({ target, text: commentText(target), ...at })
+      },
+      togglePopup: (target, visible, pinned) => {
+        if (!target || !visible) {
+          setCommentPopup((p) => (p && (!target || p.target === target) ? null : p))
+          return
+        }
+        const text = commentText(target)
+        if (!text) return
+        const [px, py] = lastPointerRef.current
+        setCommentPopup({ target, text, pinned, ...placeNear(px, py, 280, 120) })
+      },
+      changed: () => markDirty(),
+    }
+  }, [placeNear, markDirty])
+
+  const closeCommentDialog = useCallback(() => {
+    setCommentDialog(null)
+    containerRef.current?.focus({ preventScroll: true })
+  }, [])
+
+  const saveComment = useCallback(
+    (text: string | null) => {
+      const dialog = commentDialog
+      if (!dialog) return
+      try {
+        setTargetComment(dialog.target, text && text.trim() ? text.trim() : null)
+      } catch (err) {
+        showToast(
+          t.pdfPreview.saveFailed(err instanceof Error ? err.message : String(err)),
+          "error",
+        )
+      }
+      markDirty()
+      closeCommentDialog()
+    },
+    [commentDialog, markDirty, closeCommentDialog, t],
+  )
+
+  // ── The Annotations panel ────────────────────────────────────────────────
+  const originalsRef = useRef<{ doc: PDFDocumentProxy; list: Promise<SavedAnnotation[]> } | null>(
+    null,
+  )
+  const pageTextRef = useRef<{
+    doc: PDFDocumentProxy | null
+    pages: Map<number, Promise<TextItemLike[]>>
+  }>({
+    doc: null,
+    pages: new Map(),
+  })
+
+  const pageText = useCallback((doc: PDFDocumentProxy, pageIndex: number) => {
+    const cache = pageTextRef.current
+    if (cache.doc !== doc) {
+      cache.doc = doc
+      cache.pages = new Map()
+    }
+    let items = cache.pages.get(pageIndex)
+    if (!items) {
+      items = doc
+        .getPage(pageIndex + 1)
+        .then((page) => page.getTextContent())
+        .then((tc) => tc.items.filter((i): i is TextItemLike & typeof i => "str" in i))
+        .catch(() => [])
+      cache.pages.set(pageIndex, items)
+    }
+    return items
+  }, [])
+
+  const collectAnnotations = useCallback(async (): Promise<PdfAnnotationEntry[]> => {
+    const doc = docRef.current
+    if (!doc) return []
+    if (originalsRef.current?.doc !== doc) {
+      originalsRef.current = {
+        doc,
+        list: (
+          doc.getAnnotationsByType(ANNOTATION_TYPES, null as unknown as Set<number>) as Promise<
+            SavedAnnotation[]
+          >
+        ).catch(() => []),
+      }
+    }
+    const saved = await originalsRef.current.list
+    const byId = new Map<string, PdfAnnotationEntry>()
+    for (const a of saved) {
+      const kind = kindOf(a.annotationType, a.it)
+      if (!kind) continue
+      const contents = a.contentsObj?.str ?? ""
+      let text = ""
+      let comment = contents
+      if (kind === "text" || kind === "note") {
+        text = contents
+        comment = ""
+      } else if (kind === "highlight") {
+        const boxes = a.quadPoints?.length ? quadBoxes(a.quadPoints) : [a.rect]
+        text = textInBoxes(await pageText(doc, a.pageIndex), boxes)
+      }
+      byId.set(a.id, {
+        id: a.id,
+        page: a.pageIndex + 1,
+        kind,
+        color: rgbToHex(a.color),
+        text,
+        comment,
+        rect: [...a.rect] as PdfAnnotationEntry["rect"],
+        live: false,
+      })
+    }
+
+    const editors = new Map<string, LiveEditor>()
+    const live: PdfAnnotationEntry[] = []
+    const storage = doc.annotationStorage as unknown as Iterable<[string, unknown]>
+    for (const [, value] of storage) {
+      if (isLiveEditor(value)) {
+        const ed = value
+        if (ed.deleted) {
+          if (ed.annotationElementId) byId.delete(ed.annotationElementId)
+          continue
+        }
+        if (ed.isEmpty()) continue
+        const original = ed.annotationElementId ? byId.get(ed.annotationElementId) : undefined
+        const s = ed.serialize(false) as {
+          annotationType?: number
+          pageIndex?: number
+          rect?: number[]
+          color?: number[]
+          quadPoints?: number[] | null
+          value?: string
+          deleted?: boolean
+        } | null
+        const comment = (ed.comment as { text?: string; deleted?: boolean } | null) ?? null
+        const commentStr = comment && !comment.deleted ? (comment.text ?? "") : ""
+        if (!s || s.deleted) {
+          // An annotation of the file opened for editing but unchanged.
+          if (original && ed.annotationElementId) {
+            byId.delete(ed.annotationElementId)
+            live.push({
+              ...original,
+              id: ed.uid,
+              live: true,
+              comment: commentStr || original.comment,
+            })
+            editors.set(ed.uid, ed)
+          }
+          continue
+        }
+        const kind = kindOf(s.annotationType ?? -1)
+        if (!kind || !s.rect) continue
+        const pageIndex = s.pageIndex ?? ed.pageIndex
+        let text = ""
+        if (kind === "text") text = s.value ?? ""
+        else if (kind === "highlight") {
+          const boxes = s.quadPoints?.length ? quadBoxes(s.quadPoints) : [s.rect]
+          text = textInBoxes(await pageText(doc, pageIndex), boxes)
+        }
+        if (ed.annotationElementId) byId.delete(ed.annotationElementId)
+        live.push({
+          id: ed.uid,
+          page: pageIndex + 1,
+          kind,
+          color: rgbToHex(s.color) ?? original?.color ?? null,
+          text,
+          comment: commentStr,
+          rect: s.rect.slice(0, 4) as PdfAnnotationEntry["rect"],
+          live: true,
+        })
+        editors.set(ed.uid, ed)
+      } else if (value && typeof value === "object" && "popup" in value && "id" in value) {
+        // A comment changed on an annotation of the file (its popup).
+        const v = value as { id: string; popup?: { deleted?: boolean; contents?: string } }
+        const o = byId.get(v.id)
+        if (o && v.popup) o.comment = v.popup.deleted ? "" : (v.popup.contents ?? "")
+      }
+    }
+    editorsRef.current = editors
+    return sortEntries([...byId.values(), ...live])
+  }, [pageText])
+
+  useEffect(() => {
+    refreshAnnotationsRef.current = () => {
+      if (!annotationsOpen) return
+      setAnnotationsLoading(true)
+      void collectAnnotations()
+        .then(setAnnotations)
+        .finally(() => setAnnotationsLoading(false))
+    }
+    if (annotationsOpen) refreshAnnotationsRef.current()
+  }, [annotationsOpen, collectAnnotations])
+
+  const jumpTo = useCallback((entry: PdfAnnotationEntry) => {
+    const viewer = viewerRef.current
+    if (!viewer?.pagesCount) return
+    viewer.scrollPageIntoView({
+      pageNumber: entry.page,
+      destArray: [null, { name: "XYZ" }, entry.rect[0], entry.rect[3] + 36, null],
+      allowNegativeOffset: true,
+    })
+  }, [])
+
+  const commentOnEntry = useCallback(
+    (entry: PdfAnnotationEntry) => {
+      const editor = editorsRef.current.get(entry.id)
+      if (!editor) return
+      jumpTo(entry)
+      const box = rootRef.current?.getBoundingClientRect()
+      const at = box
+        ? placeNear(box.left + box.width / 2 - 150, box.top + 80, 300, 180)
+        : { x: 8, y: 8 }
+      setCommentDialog({ target: editor, text: commentText(editor), ...at })
+    },
+    [jumpTo, placeNear],
+  )
+
+  const deleteEntry = useCallback(
+    (entry: PdfAnnotationEntry) => {
+      const editor = editorsRef.current.get(entry.id)
+      if (!editor) return
+      try {
+        editor.remove()
+      } catch {
+        /* already gone */
+      }
+      markDirty()
+    },
+    [markDirty],
+  )
+
+  const notesLabels = useCallback(
+    () => ({
+      page: t.pdfPreview.pageAbbrev,
+      title: t.pdfPreview.noteTitle,
+      pageHeading: t.pdfPreview.pageHeading,
+      kinds: t.pdfPreview.kinds,
+      empty: t.pdfPreview.noteEmpty,
+    }),
+    [t],
+  )
+
+  const copyAllMarkdown = useCallback(() => {
+    const md = annotationsMarkdown(pdfName, annotations, notesLabels())
+    void navigator.clipboard.writeText(md).then(
+      () => showToast(t.pdfPreview.markdownCopied, "success", 2000),
+      () => {},
+    )
+  }, [annotations, pdfName, notesLabels, t])
+
+  const exportToNote = useCallback(() => {
+    if (!pdfPath) return
+    void (async () => {
+      const { exists } = await import("@tauri-apps/plugin-fs")
+      const { writeTextFileAtomic } = await import("./atomicWrite")
+      // Never over an existing note: paper-annotations.md, then -2, -3...
+      const first = notePathFor(pdfPath)
+      let target = first
+      for (let n = 2; await exists(target); n++) target = first.replace(/\.md$/, `-${n}.md`)
+      await writeTextFileAtomic(target, annotationsMarkdown(pdfName, annotations, notesLabels()))
+      showToast(t.pdfPreview.exported(baseName(target)), "success", 3000)
+      onNoteCreated?.(target)
+    })().catch((err: unknown) =>
+      showToast(
+        t.pdfPreview.exportFailed(err instanceof Error ? err.message : String(err)),
+        "error",
+      ),
+    )
+  }, [pdfPath, pdfName, annotations, notesLabels, onNoteCreated, t])
+
+  // ── Print ────────────────────────────────────────────────────────────────
+  const printAbortRef = useRef<AbortController | null>(null)
+  const print = useCallback(() => {
+    const doc = docRef.current
+    if (!doc || printAbortRef.current) return
+    const abort = (printAbortRef.current = new AbortController())
+    setPrinting(t.pdfPreview.printing(0, doc.numPages))
+    void (async () => {
+      const { renderPagesForPrint, printImages } = await import("./pdfPrint")
+      const pages = await renderPagesForPrint(
+        doc,
+        (done, total) => setPrinting(t.pdfPreview.printing(done, total)),
+        abort.signal,
+      )
+      printImages(pages.urls, pages.widthPt, pages.heightPt)
+    })()
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return
+        showToast(
+          t.pdfPreview.printFailed(err instanceof Error ? err.message : String(err)),
+          "error",
+        )
+      })
+      .finally(() => {
+        printAbortRef.current = null
+        setPrinting(null)
+      })
+  }, [t])
+  useEffect(() => () => printAbortRef.current?.abort(), [])
 
   // ── Search ───────────────────────────────────────────────────────────────
   const dispatchFind = useCallback((again: boolean, previous = false) => {
@@ -757,7 +1429,7 @@ export default function PdfPreviewPanel({
   return (
     <div
       ref={rootRef}
-      className={`pdf-preview-panel${invert ? " inverted" : ""}`}
+      className={`pdf-preview-panel${invert ? " inverted" : ""}${annotationsOpen && hasDoc ? " with-annotations" : ""}`}
       data-gesture-optout
       onPointerEnter={() => (pointerInsideRef.current = true)}
       onPointerLeave={() => (pointerInsideRef.current = false)}
@@ -918,6 +1590,27 @@ export default function PdfPreviewPanel({
         <span className="pdf-toolbar-sep" />
         <button
           type="button"
+          className={`pdf-toolbar-btn${annotationsOpen ? " active" : ""}`}
+          onClick={() => setAnnotationsOpen((o) => !o)}
+          disabled={!hasDoc}
+          title={t.pdfPreview.annotations}
+          aria-label={t.pdfPreview.annotations}
+          aria-pressed={annotationsOpen}
+        >
+          <Icon icon={ListTree} size={14} />
+        </button>
+        <button
+          type="button"
+          className="pdf-toolbar-btn"
+          onClick={print}
+          disabled={!hasDoc || !!printing}
+          title={printing ?? t.pdfPreview.print}
+          aria-label={t.pdfPreview.print}
+        >
+          <Icon icon={Printer} size={14} />
+        </button>
+        <button
+          type="button"
           className={`pdf-toolbar-btn${findOpen ? " active" : ""}`}
           onClick={() => (findOpen ? closeFind() : openFind())}
           disabled={!hasDoc}
@@ -1045,7 +1738,122 @@ export default function PdfPreviewPanel({
         >
           <div ref={viewerDivRef} className="pdfViewer" />
         </div>
+        {printing && (
+          <div className="pdf-print-status" role="status">
+            {printing}
+          </div>
+        )}
+        {annotationsOpen && hasDoc && (
+          <Suspense fallback={null}>
+            <PdfAnnotationsList
+              entries={annotations}
+              loading={annotationsLoading}
+              onJump={jumpTo}
+              onComment={commentOnEntry}
+              onDelete={deleteEntry}
+              onCopyAll={copyAllMarkdown}
+              onExport={exportToNote}
+              onClose={() => setAnnotationsOpen(false)}
+            />
+          </Suspense>
+        )}
       </div>
+      {selectionMenu && (
+        <div
+          className={`pdf-selection-menu${selectionMenu.above ? " above" : ""}`}
+          role="toolbar"
+          aria-label={t.pdfPreview.selectionMenu}
+          style={{ left: selectionMenu.x, top: selectionMenu.y }}
+          onPointerDown={(e) => e.preventDefault()}
+        >
+          {(Object.keys(HIGHLIGHT_COLORS) as MarkerName[]).map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={`pdf-hl-swatch pdf-swatch-${name}`}
+              title={t.pdfPreview.highlightIn(t.pdfPreview.colors[name])}
+              aria-label={t.pdfPreview.highlightIn(t.pdfPreview.colors[name])}
+              onClick={() => highlightSelection(name)}
+            />
+          ))}
+          <span className="pdf-toolbar-divider" />
+          <button
+            type="button"
+            className="pdf-toolbar-btn"
+            onClick={() => highlightSelection(marker, true)}
+            title={t.pdfPreview.comment}
+            aria-label={t.pdfPreview.comment}
+          >
+            <Icon icon={MessageSquare} size={14} />
+          </button>
+          <button
+            type="button"
+            className="pdf-toolbar-btn"
+            onClick={() => copySelection(false)}
+            title={t.pdfPreview.copy}
+            aria-label={t.pdfPreview.copy}
+          >
+            <Icon icon={Copy} size={14} />
+          </button>
+          <button
+            type="button"
+            className="pdf-toolbar-btn"
+            onClick={() => copySelection(true)}
+            title={t.pdfPreview.copyQuote}
+            aria-label={t.pdfPreview.copyQuote}
+          >
+            <Icon icon={Quote} size={14} />
+          </button>
+        </div>
+      )}
+      {commentPopup && !commentDialog && (
+        <div
+          className="pdf-comment-popup"
+          role="note"
+          style={{ left: commentPopup.x, top: commentPopup.y }}
+        >
+          <p className="pdf-comment-popup-text">{commentPopup.text}</p>
+          {commentPopup.pinned && (
+            <div className="pdf-comment-popup-actions">
+              <button
+                type="button"
+                className="pdf-toolbar-btn"
+                onClick={() =>
+                  commentHostRef.current.openDialog(
+                    commentPopup.target,
+                    commentPopup.x + (rootRef.current?.getBoundingClientRect().left ?? 0),
+                    commentPopup.y + (rootRef.current?.getBoundingClientRect().top ?? 0),
+                  )
+                }
+                title={t.pdfPreview.editComment}
+                aria-label={t.pdfPreview.editComment}
+              >
+                <Icon icon={PenLine} size={14} />
+              </button>
+              <button
+                type="button"
+                className="pdf-toolbar-btn"
+                onClick={() => setCommentPopup(null)}
+                title={t.pdfPreview.findClose}
+                aria-label={t.pdfPreview.findClose}
+              >
+                <Icon icon={X} size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {commentDialog && (
+        <CommentDialog
+          key={commentDialog.target.uid ?? "comment"}
+          initial={commentDialog.text}
+          x={commentDialog.x}
+          y={commentDialog.y}
+          onSave={(text) => saveComment(text)}
+          onDelete={commentDialog.text ? () => saveComment(null) : undefined}
+          onCancel={closeCommentDialog}
+        />
+      )}
       {legacyMenu && (
         <div
           className="pdf-hl-menu"
@@ -1063,6 +1871,78 @@ export default function PdfPreviewPanel({
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/** The dialog that writes a comment (Ctrl+Enter saves, Escape cancels). */
+function CommentDialog({
+  initial,
+  x,
+  y,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  initial: string
+  x: number
+  y: number
+  onSave: (text: string) => void
+  onDelete?: () => void
+  onCancel: () => void
+}) {
+  const t = useT()
+  const [text, setText] = useState(initial)
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+  useEffect(() => {
+    ref.current?.focus()
+    ref.current?.setSelectionRange(initial.length, initial.length)
+  }, [initial])
+  return (
+    <div
+      className="pdf-comment-dialog"
+      role="dialog"
+      aria-label={t.pdfPreview.commentDialog}
+      style={{ left: x, top: y }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          onCancel()
+        } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault()
+          onSave(text)
+        }
+      }}
+    >
+      <textarea
+        ref={ref}
+        className="pdf-comment-input"
+        aria-label={t.pdfPreview.commentDialog}
+        placeholder={t.pdfPreview.commentPlaceholder}
+        value={text}
+        rows={4}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="pdf-comment-dialog-actions">
+        {onDelete && (
+          <button type="button" className="pdf-comment-btn danger" onClick={onDelete}>
+            {t.pdfPreview.deleteComment}
+          </button>
+        )}
+        <span className="pdf-toolbar-sep" />
+        <button type="button" className="pdf-comment-btn" onClick={onCancel}>
+          {t.pdfPreview.commentCancel}
+        </button>
+        <button
+          type="button"
+          className="pdf-comment-btn primary"
+          onClick={() => onSave(text)}
+          disabled={!text.trim() && !initial}
+        >
+          {t.pdfPreview.commentSave}
+        </button>
+      </div>
     </div>
   )
 }

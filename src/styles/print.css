@@ -195,3 +195,33 @@
     page-break-before: auto;
   }
 }
+
+/* Printing a PDF from the viewer (pdfPrint.ts): its pages, drawn as images,
+   are the only thing on the sheet. */
+.pdf-print-root {
+  display: none;
+}
+@media print {
+  html.pdf-printing body > :not(.pdf-print-root) {
+    display: none !important;
+  }
+  html.pdf-printing .pdf-print-root {
+    display: block !important;
+  }
+  html.pdf-printing,
+  html.pdf-printing body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  .pdf-print-root img {
+    display: block;
+    width: 100%;
+    height: auto;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .pdf-print-root img:last-child {
+    break-after: auto;
+  }
+}

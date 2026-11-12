@@ -24,7 +24,7 @@ async function openPdf(page: Page, { webkit250 = false } = {}) {
   }
   await installFakeVault(page, {
     settings: { theme: "vs-dark" },
-    files: { "long.pdf": tinyPdf(PAGES) },
+    files: { "long.pdf": tinyPdf(PAGES), "notes.md": "# Notes\n" },
     storage: { comdtex_deps_dismissed: JSON.stringify(["pandoc", "zip"]) },
   })
   await page.goto("/")
@@ -46,6 +46,7 @@ async function selectText(page: Page, pageNumber: number, text: string) {
     .locator(`.page[data-page-number="${pageNumber}"] .textLayer span`, { hasText: text })
     .first()
   await expect(span).toBeAttached()
+  await span.scrollIntoViewIfNeeded()
   const b = (await span.boundingBox())!
   await page.mouse.move(b.x + 2, b.y + b.height / 2)
   await page.mouse.down()
@@ -151,4 +152,103 @@ test("highlight, text and drawing tools annotate the PDF and save it", async ({ 
   // Undo takes the drawing back.
   await page.getByRole("button", { name: "Undo" }).click()
   await expect(page.locator(".annotationEditorLayer .inkEditor")).toHaveCount(0)
+})
+
+test("the highlight tool follows the text, even from a drag that starts in the margin", async ({
+  page,
+}) => {
+  await openPdf(page)
+  await page.getByRole("button", { name: "Highlight", exact: true }).click()
+  const span = page
+    .locator('.page[data-page-number="1"] .textLayer span', { hasText: "Spectral gaps" })
+    .first()
+  const b = (await span.boundingBox())!
+  // From the left margin, off the glyphs: pdf.js would draw a freehand stroke.
+  await page.mouse.move(b.x - 30, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width * 0.6, b.y + b.height / 2, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.locator(".annotationEditorLayer .highlightEditor")).toHaveCount(1)
+  await expect(page.locator(".annotationEditorLayer .highlightEditor.free")).toHaveCount(0)
+})
+
+test("selecting text offers highlight, comment, copy and quote; all of it is saved and listed", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await openPdf(page)
+  const menu = page.getByRole("toolbar", { name: "Selection" })
+
+  // Highlight straight from the selection, then back to reading.
+  await selectText(page, 1, "Spectral gaps")
+  await expect(menu).toBeVisible()
+  await menu.getByRole("button", { name: "Highlight in Green" }).click()
+  await expect(page.locator(".annotationEditorLayer .highlightEditor")).toHaveCount(1)
+  await expect(page.getByRole("button", { name: "Highlight", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  )
+
+  // Copy as quote: Markdown with a link back to the page.
+  await selectText(page, 2, "Spectral gaps")
+  await menu.getByRole("button", { name: "Copy as quote" }).click()
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "> Spectral gaps and mixing times\n>\n> ([[long.pdf]], p. 2)\n",
+  )
+
+  // A comment on a selection: highlight plus the comment dialog.
+  await selectText(page, 2, "the spectral gap controls")
+  await menu.getByRole("button", { name: "Comment" }).click()
+  const dialog = page.getByRole("dialog", { name: "Comment" })
+  await dialog.getByRole("textbox").fill("Compare with Cheeger")
+  await dialog.getByRole("button", { name: "Save" }).click()
+  await expect(dialog).toBeHidden()
+
+  // The Annotations panel lists both, in reading order, with the comment.
+  await page.getByRole("button", { name: "Annotations", exact: true }).click()
+  const panel = page.getByRole("complementary", { name: "Annotations" })
+  await expect(panel.locator(".pdf-annotation")).toHaveCount(2)
+  await expect(panel.locator(".pdf-annotation-text").first()).toHaveText(
+    "Spectral gaps and mixing times",
+  )
+  await expect(panel.locator(".pdf-annotation-comment")).toHaveText("Compare with Cheeger")
+
+  // Written into the PDF: reopening it shows them again.
+  const save = page.locator(".pdf-save-btn")
+  await expect(save).not.toHaveClass(/pending/, { timeout: 15_000 })
+  await page.locator(".sidebar").getByText("notes.md", { exact: true }).click()
+  await expect(page.locator(".pdfViewer")).toHaveCount(0)
+  await page.locator(".sidebar").getByText("long.pdf").click()
+  await expect(page.locator('.page[data-page-number="1"] canvas')).toBeAttached()
+  await page.getByRole("button", { name: "Annotations", exact: true }).click()
+  await expect(panel.locator(".pdf-annotation")).toHaveCount(2)
+  await expect(panel.locator(".pdf-annotation-comment")).toHaveText("Compare with Cheeger")
+  await expect(panel.locator(".pdf-annotations-page")).toHaveText(["Page 1", "Page 2"])
+
+  // Exported into a reading note beside the PDF, which opens.
+  await panel.getByRole("button", { name: "Export to a note" }).click()
+  await expect(page.locator(".tab", { hasText: "long-annotations" })).toBeVisible()
+  await expect(page.locator(".monaco-editor").first()).toContainText("Compare with Cheeger")
+})
+
+test("print draws every page, annotations included, and opens the print dialog", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.print = () => {
+      const w = window as unknown as { __printed?: number }
+      w.__printed = document.querySelectorAll(".pdf-print-root img").length
+      window.dispatchEvent(new Event("afterprint"))
+    }
+  })
+  await openPdf(page)
+  await page.getByRole("button", { name: "Print" }).click()
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __printed?: number }).__printed), {
+      timeout: 30_000,
+    })
+    .toBe(PAGES)
+  // Cleaned up after the dialog.
+  await expect(page.locator(".pdf-print-root")).toHaveCount(0)
 })

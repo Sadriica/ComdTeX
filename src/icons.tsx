@@ -63,6 +63,7 @@ export {
   Notebook,
   Pencil,
   PenLine,
+  Printer,
   Pin,
   PinOff,
   Plus,

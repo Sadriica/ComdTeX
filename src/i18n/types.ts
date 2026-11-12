@@ -1998,6 +1998,38 @@ export interface T {
     jumpedToLine: (line: number) => string
     syncUnavailable: string
     syncNoMatch: string
+    selectionMenu: string
+    highlightIn: (color: string) => string
+    comment: string
+    copy: string
+    copyQuote: string
+    copied: string
+    quoteCopied: string
+    print: string
+    printing: (done: number, total: number) => string
+    printFailed: (error: string) => string
+    annotations: string
+    noAnnotations: string
+    closeAnnotations: string
+    copyAllMarkdown: string
+    exportToNote: string
+    exported: (name: string) => string
+    exportFailed: (error: string) => string
+    markdownCopied: string
+    goToAnnotation: string
+    addComment: string
+    editComment: string
+    deleteAnnotation: string
+    deleteComment: string
+    commentDialog: string
+    commentPlaceholder: string
+    commentSave: string
+    commentCancel: string
+    pageHeading: (page: number) => string
+    pageAbbrev: string
+    noteTitle: (name: string) => string
+    noteEmpty: string
+    kinds: Record<"highlight" | "text" | "ink" | "image" | "note", string>
   }
 
   cloudSync: {

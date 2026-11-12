@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Highlight, comment and quote straight from a selection.** Select text in a PDF and a small menu offers the four marker colours, **Comment**, **Copy** and **Copy as quote**. The quote is Markdown with a link back to the page (`> text` and `([[paper.pdf]], p. 3)`), and `[[paper.pdf]]` now resolves to the PDF. After a highlight from the menu the viewer goes back to reading.
+- **Comments on annotations.** A comment can be added to any highlight, text box or drawing (from the selection menu, the annotation's own bar, or the Annotations panel). It is saved into the PDF as the annotation's note, so other readers show it too.
+- **Annotations panel.** A toolbar button opens the list of every highlight, text box, drawing and comment in the PDF, in reading order and grouped by page, as Zotero's annotation sidebar does. A click goes to the spot. **Copy all as Markdown** puts them on the clipboard, and **Export to a note** writes `paper-annotations.md` beside the PDF and opens it: highlights as quotes with their page, comments underneath. An existing note is never overwritten.
+- **Print.** The toolbar prints the PDF with its annotations through the system print dialog.
+
+### Fixed
+- **The highlighter follows the text.** A drag that started between words, between lines or in the margin drew a freehand marker stroke over the page. It now selects the nearest text, as in Chrome or Zotero. Pages without text (scans) keep the freehand marker.
+- **Annotations come back when a PDF is reopened.** The viewer read the PDF through the webview, which could hand back a copy cached from before the annotations were written; the next save from that copy dropped them. The file is now read from disk every time.
+- A fitted zoom (fit width or fit page) refits when the pane changes size.
+
 ## [1.35.0] - 2026-11-12
 
 ### Added
