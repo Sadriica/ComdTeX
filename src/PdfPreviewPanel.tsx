@@ -1009,7 +1009,7 @@ export default function PdfPreviewPanel({
               }
             }}
           />
-          <span className="pdf-page-total">/ {totalPages === 0 ? "—" : totalPages}</span>
+          <span className="pdf-page-total">/ {totalPages === 0 ? "…" : totalPages}</span>
         </span>
         <button
           type="button"
