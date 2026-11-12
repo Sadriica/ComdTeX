@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.35.0] - 2026-11-12
+
 ### Added
 - **Annotate PDFs, saved into the PDF.** The PDF viewer now runs on pdf.js's own viewer and editor, and the toolbar has its tools: **Highlight** (select text; four colours), **Add text** (click and type), **Draw** (freehand, four pen colours) and **Add image**, with Undo and Redo. Annotations are written into the PDF file itself a moment after each change (or with Ctrl+S), so any PDF reader shows them and they travel when you share the file. A dot on the save button marks changes not yet written. Annotating a PDF you compile from your notes is possible, but the next compile replaces the file.
 
