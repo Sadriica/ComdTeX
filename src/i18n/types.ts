@@ -1958,6 +1958,18 @@ export interface T {
     zoomIn: string
     zoomOut: string
     fitWidth: string
+    fitPage: string
+    zoomLevel: string
+    goToPage: string
+    find: string
+    findPlaceholder: string
+    findCount: (current: number, total: number) => string
+    findSearching: string
+    findNone: string
+    findPrevious: string
+    findNext: string
+    findClose: string
+    openExternal: string
     previousPage: string
     nextPage: string
     page: string

@@ -5785,7 +5785,7 @@ function AppContent({
           />
           {vault.openFile?.mode === "pdf" ? (
             <LazyRegion region="panel" fallback={<div className="region-fallback" />}>
-              <PdfPreviewPanel pdfPath={vault.openFile.path} />
+              <PdfPreviewPanel pdfPath={vault.openFile.path} primary />
             </LazyRegion>
           ) : (
             <LazyRegion region="editor" fallback={<div className="region-fallback" />}>

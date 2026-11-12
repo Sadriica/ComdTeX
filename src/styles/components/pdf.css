@@ -54,11 +54,73 @@
   flex: 1 1 auto;
 }
 .pdf-page-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--fg-muted);
-  min-width: 4em;
-  text-align: center;
   font-variant-numeric: tabular-nums;
+}
+/* Type a page number and press Enter. */
+.pdf-page-input,
+.pdf-find-input,
+.pdf-zoom-select {
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.pdf-page-input {
+  width: 3.4em;
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+.pdf-zoom-select {
+  padding: 0 var(--space-2);
+  cursor: pointer;
+}
+.pdf-page-input:focus,
+.pdf-find-input:focus,
+.pdf-zoom-select:focus {
+  border-color: var(--focus-ring);
+  outline-offset: -1px;
+}
+.pdf-page-total {
+  white-space: nowrap;
+}
+.pdf-toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-3) var(--space-2);
+  background: var(--border);
+}
+
+/* Find bar under the toolbar (Ctrl+F). */
+.pdf-findbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome-bg);
+  color: var(--fg-muted);
+  flex: 0 0 auto;
+}
+.pdf-find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 320px;
+  padding: 0 var(--space-3);
+}
+.pdf-find-count {
+  min-width: 6em;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Pages sit on a sunken desk, each on its own sheet with a hairline shadow. */
@@ -75,8 +137,16 @@
   gap: var(--space-6);
   background: var(--bg-sunken);
 }
+/* The pane takes focus for the keyboard (PageDown, Ctrl+F); a hairline is
+   enough to show it, the global ring framed the whole document. */
+.pdf-pages:focus-visible {
+  outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
+}
 .pdf-page {
   position: relative;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
   flex-shrink: 0;
   /* Each sheet is sized inline; containing it keeps a repaint of one page
      from invalidating the others while scrolling. */
@@ -115,6 +185,64 @@
 }
 .pdf-error {
   color: var(--danger);
+}
+
+/* Text layer (pdf.js TextLayer): transparent text laid exactly over the
+   bitmap, so the page's text can be selected, copied and searched. The rules
+   are the subset of pdf.js's pdf_viewer.css the layer needs; it sizes itself
+   from --total-scale-factor, set on each sheet. */
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.pdf-text-layer .markedContent {
+  display: contents;
+}
+.pdf-text-layer span[role="img"] {
+  user-select: none;
+  cursor: default;
+}
+.pdf-text-layer ::selection {
+  background: color-mix(in oklch, var(--accent) 38%, transparent);
+}
+/* A search hit sits inside its run, so it inherits the run's geometry. */
+.pdf-text-layer .pdf-hit {
+  position: static;
+  margin: -1px;
+  padding: 1px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--warn) 45%, transparent);
+}
+.pdf-text-layer .pdf-hit-active {
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: 1px solid var(--accent);
 }
 
 /* Dark PDF (opt-in, Settings > PDF). The default keeps pages light: the

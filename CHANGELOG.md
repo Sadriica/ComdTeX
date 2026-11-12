@@ -5,9 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **PDF viewer tools.** Type a page number to jump to it; a zoom menu with fit width, fit page and 50% to 400% (100% is now the printed size); select and copy the PDF's text; **Ctrl+F** finds text across the whole PDF with a match count, Enter and Shift+Enter (or F3) to step through the hits, each highlighted on the page; a button opens the PDF in the system viewer.
+
+### Changed
+- **The PDF zooms with Ctrl+wheel, a touchpad pinch, Ctrl++, Ctrl+- and Ctrl+0.** All of them changed the editor's font size instead, even over the PDF. Wheel and pinch zoom around the pointer; the keys act on a PDF tab, or on the PDF panel while the pointer or focus is in it.
+- **Long PDFs open at once and scroll without stalls.** The viewer waited until it had read the size of every page before showing anything, and every scroll step re-rendered the frame of every page (600 of them for a 600-page PDF). It now shows the document after page 1, reads the other sizes in the background and redraws only what changed. On a 600-page PDF, main-thread stalls while scrolling dropped from about 2.3 s to none. The text layer is built after the pages in view are painted, so the picture comes first.
+
 ### Fixed
 - **Arch installs no longer end up in slow software rendering after an update.** The in-app updater replaces the running AppImage, and the AppImage forces `WEBKIT_DISABLE_DMABUF_RENDERER=1`, which the Arch installer removes because it makes typing and PDF scrolling slow. On Arch-based systems an AppImage now updates through the installer (the banner copies its command), which unpacks it and turns hardware rendering back on.
-- The pointer over a PDF page is the normal arrow, not a crosshair.
+- The pointer over a PDF page is the normal arrow (a text cursor over text), not a crosshair. A click that ends a text selection no longer jumps the editor.
 
 ## [1.34.0] - 2026-11-12
 

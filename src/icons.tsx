@@ -21,7 +21,9 @@ export {
   Bookmark,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Circle,
   CircleCheck,
   CircleHelp,
@@ -70,6 +72,7 @@ export {
   Sigma,
   Sparkles,
   Square,
+  StretchVertical,
   Tag,
   Timer,
   Trash2,
@@ -77,6 +80,8 @@ export {
   Undo2,
   Upload,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react"
 
 export type { LucideIcon }
