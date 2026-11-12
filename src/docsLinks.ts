@@ -13,12 +13,15 @@ export const DOCS_SITE = "https://comdtex.witara.site"
 // docs page is added, renamed or removed on the site.
 export const DOCS_PAGES = [
   "ai",
+  "appearance",
+  "biology",
   "citations",
   "collaboration",
   "compile-pdf",
   "daily-notes",
   "data",
   "diagrams",
+  "editor",
   "environments",
   "first-vault",
   "folder-rules",
@@ -27,6 +30,7 @@ export const DOCS_PAGES = [
   "interop",
   "journal-templates",
   "long-documents",
+  "palette",
   "panels",
   "plots",
   "references",
