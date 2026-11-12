@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.34.2] - 2026-11-12
 
 ### Added
 - **Highlight text in a PDF.** Select text and a small menu offers four marker colours and Copy; click a highlight to change its colour or remove it. Highlights follow the zoom, merge the words of a line into one mark, and are saved in the vault (`.comdtex-pdf-highlights.json`, keyed by the PDF's path), so they sync with your notes and never change the PDF file itself. PDFs outside the vault can be read but not highlighted.
