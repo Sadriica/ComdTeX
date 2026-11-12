@@ -3,7 +3,7 @@
 All notable changes to ComdTeX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.34.1] - 2026-11-12
 
 ### Added
 - **PDF viewer tools.** Type a page number to jump to it; a zoom menu with fit width, fit page and 50% to 400% (100% is now the printed size); select and copy the PDF's text; **Ctrl+F** finds text across the whole PDF with a match count, Enter and Shift+Enter (or F3) to step through the hits, each highlighted on the page; a button opens the PDF in the system viewer.
