@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.36.0] - 2026-11-12
+
 ### Added
 - **Highlight, comment and quote straight from a selection.** Select text in a PDF and a small menu offers the four marker colours, **Comment**, **Copy** and **Copy as quote**. The quote is Markdown with a link back to the page (`> text` and `([[paper.pdf]], p. 3)`), and `[[paper.pdf]]` now resolves to the PDF. After a highlight from the menu the viewer goes back to reading.
 - **Comments on annotations.** A comment can be added to any highlight, text box or drawing (from the selection menu, the annotation's own bar, or the Annotations panel). It is saved into the PDF as the annotation's note, so other readers show it too.
