@@ -1955,6 +1955,7 @@ export const en: T = {
     findNext: "Next match",
     findClose: "Close search",
     openExternal: "Open in the system viewer",
+    moreTools: "More tools",
     toolHighlight: "Highlight",
     toolText: "Add text",
     toolDraw: "Draw",

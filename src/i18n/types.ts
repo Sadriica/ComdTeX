@@ -1970,6 +1970,7 @@ export interface T {
     findNext: string
     findClose: string
     openExternal: string
+    moreTools: string
     toolHighlight: string
     toolText: string
     toolDraw: string

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **The PDF toolbar keeps to one row.** In a narrow pane it used to wrap, leaving a button or two alone on a second line. Now the buttons that do not fit move, least used first, into a **More tools** menu (the "..." at the end): print and open in the system viewer, then zoom in and out and fit page, then fit width and the page arrows, then undo and redo, then annotations and find, and last save. The page box, the zoom menu and the annotation tools always stay. It is measured, not guessed, so the Spanish labels fit too.
+
 ### Fixed
 - **The sidebar collapses fully again after opening a PDF.** The PDF viewer's stylesheet has its own global `.sidebar` rule, which landed on the app sidebar: collapsed, it stayed 180px wide with only the expand arrow, and expanded it could not grow past 632px and picked up a card border and shadow. The app sidebar now sets each of those properties itself.
 - **Settings › Sync describes the open vault.** With a vault open, the settings never received its git state and always said "Nothing leaves this disk", even for a repository with a remote. They now say how the vault really travels, and **Open the Git panel** works from there.

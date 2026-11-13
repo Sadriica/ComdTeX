@@ -9,7 +9,7 @@
   color: var(--fg);
   overflow: hidden;
 }
-/* Wraps in the narrow side panel instead of hiding tools off the edge. */
+/* One row: what does not fit moves to the More menu; wrapping is the last resort. */
 .pdf-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -53,7 +53,12 @@
   opacity: 0.45;
   cursor: default;
 }
-.pdf-toolbar-sep {
+/* Buttons keep their size; the spacer takes the slack. The overflow-N classes
+   that hide buttons moved to the More menu are in overrides.css. */
+.pdf-toolbar > * {
+  flex-shrink: 0;
+}
+.pdf-toolbar > .pdf-toolbar-sep {
   flex: 1 1 auto;
 }
 .pdf-page-indicator {

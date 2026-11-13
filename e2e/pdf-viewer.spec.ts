@@ -266,3 +266,31 @@ test("the sidebar still collapses to a rail once the PDF viewer's styles are loa
   await expect(sidebar).toHaveClass(/sidebar-collapsed/)
   expect((await sidebar.boundingBox())!.width).toBeLessThanOrEqual(40)
 })
+
+test("a narrow PDF pane keeps the toolbar on one row and moves the rest to More tools", async ({
+  page,
+}) => {
+  await openPdf(page)
+  const bar = page.locator(".pdf-toolbar").first()
+  const more = bar.getByRole("button", { name: "More tools" })
+  await expect(more).toBeHidden()
+  await expect(bar.getByRole("button", { name: "Print" })).toBeVisible()
+
+  await page.setViewportSize({ width: 700, height: 900 })
+  await expect(more).toBeVisible()
+  await expect(bar.getByRole("button", { name: "Print" })).toBeHidden()
+  expect((await bar.boundingBox())!.height).toBeLessThan(40)
+
+  await more.click()
+  const menu = page.getByRole("menu")
+  await expect(menu.getByRole("menuitem", { name: "Print" })).toBeVisible()
+  await expect(menu.getByRole("menuitem", { name: "Open in the system viewer" })).toBeVisible()
+  await expect(menu.getByRole("menuitem", { name: "Find in PDF" })).toHaveCount(0)
+  await menu.getByRole("menuitem", { name: "Fit page" }).click()
+  await expect(menu).toBeHidden()
+  await expect(bar.locator(".pdf-zoom-select")).toHaveValue("page-fit")
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(more).toBeHidden()
+  await expect(bar.getByRole("button", { name: "Print" })).toBeVisible()
+})

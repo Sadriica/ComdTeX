@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import "./styles/vendor-pdfjs.css"
 import { useT } from "./i18n"
 import {
@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ChevronUp,
   Copy,
+  Ellipsis,
   ExternalLink,
   Highlighter,
   Icon,
@@ -53,6 +54,7 @@ import {
 } from "./pdfAnnotations"
 import { commentText, PdfCommentManager, type CommentTarget } from "./pdfCommentManager"
 import { caretInTextLayer } from "./pdfTextSnap"
+import ContextMenu, { type ContextMenuItem } from "./ContextMenu"
 
 const PdfAnnotationsList = lazy(() => import("./PdfAnnotationsList"))
 
@@ -199,6 +201,30 @@ const AUTOSAVE_MS = 1500
  * toolbar is ComdTeX's; annotations (highlights, text, drawings, images) are
  * written into the PDF file itself, so every reader shows them.
  */
+/** How many groups of toolbar buttons can move into the More tools menu. */
+const OVERFLOW_LEVELS = 6
+
+/** True when some visible toolbar item sits on a second row. */
+function toolbarWraps(bar: HTMLElement): boolean {
+  let top = Infinity
+  let bottom = -Infinity
+  for (const child of bar.children) {
+    const r = child.getBoundingClientRect()
+    if (r.width === 0 && r.height === 0) continue
+    top = Math.min(top, r.top)
+    bottom = Math.max(bottom, r.top)
+  }
+  // Items on one row differ in top only by their height difference (a few px).
+  return bottom - top > 12
+}
+
+/** The toolbar classes that hide every button up to `level`. */
+function overflowClasses(level: number): string {
+  let classes = ""
+  for (let i = 1; i <= level; i++) classes += ` overflow-${i}`
+  return classes
+}
+
 export default function PdfPreviewPanel({
   pdfPath,
   onClickSource,
@@ -211,6 +237,9 @@ export default function PdfPreviewPanel({
 }: PdfPreviewPanelProps) {
   const t = useT()
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const toolbarRef = useRef<HTMLDivElement | null>(null)
+  const [overflowLevel, setOverflowLevel] = useState(0)
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const viewerDivRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<PDFViewer | null>(null)
@@ -1412,6 +1441,63 @@ export default function PdfPreviewPanel({
         : []
   const activeColor: ColorName = mode === EDITOR.HIGHLIGHT ? marker : pen
 
+  // The toolbar keeps to one row: when it does not fit, the least-used buttons
+  // move into the More tools menu a level at a time (each button's
+  // data-overflow). Measured rather than guessed, so a longer Spanish zoom
+  // label or a long page count is accounted for.
+  const fitToolbar = useCallback(() => {
+    const bar = toolbarRef.current
+    if (!bar) return
+    const keep = bar.className
+    let level = 0
+    for (; level < OVERFLOW_LEVELS; level++) {
+      bar.className = `pdf-toolbar${overflowClasses(level)}`
+      if (!toolbarWraps(bar)) break
+    }
+    bar.className = keep
+    setOverflowLevel(level)
+    if (level === 0) setMoreMenu(null)
+  }, [])
+  useLayoutEffect(fitToolbar, [fitToolbar, t, pageCount, hasDoc, zoomValue])
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    let width = root.clientWidth
+    const observer = new ResizeObserver(() => {
+      if (root.clientWidth === width) return
+      width = root.clientWidth
+      fitToolbar()
+    })
+    observer.observe(root)
+    return () => observer.disconnect()
+  }, [fitToolbar])
+  const closeMoreMenu = useCallback(() => setMoreMenu(null), [])
+  // In toolbar order; each entry carries the level at which its button hides.
+  const overflowItems: ContextMenuItem[] = (
+    [
+      [3, t.pdfPreview.previousPage, () => goToPage(currentPage - 1), !hasDoc || currentPage <= 1],
+      [
+        3,
+        t.pdfPreview.nextPage,
+        () => goToPage(currentPage + 1),
+        !hasDoc || currentPage >= pageCount,
+      ],
+      [2, t.pdfPreview.zoomOut, zoomOut, !hasDoc],
+      [2, t.pdfPreview.zoomIn, zoomIn, !hasDoc],
+      [3, t.pdfPreview.fitWidth, () => setZoom("page-width"), !hasDoc],
+      [2, t.pdfPreview.fitPage, () => setZoom("page-fit"), !hasDoc],
+      [4, t.pdfPreview.undo, () => editingAction("undo"), !canUndo],
+      [4, t.pdfPreview.redo, () => editingAction("redo"), !canRedo],
+      [6, t.pdfPreview.save, () => void save(), !hasDoc || saveState === "clean"],
+      [5, t.pdfPreview.annotations, () => setAnnotationsOpen((o) => !o), !hasDoc],
+      [1, t.pdfPreview.print, print, !hasDoc || !!printing],
+      [5, t.pdfPreview.find, () => (findOpen ? closeFind() : openFind()), !hasDoc],
+      [1, t.pdfPreview.openExternal, openExternally, !pdfPath],
+    ] as const
+  )
+    .filter(([level]) => level <= overflowLevel)
+    .map(([, label, action, disabled]) => ({ label, action, disabled }))
+
   const toolButton = (tool: EditorMode, icon: typeof Highlighter, label: string) => (
     <button
       type="button"
@@ -1434,8 +1520,14 @@ export default function PdfPreviewPanel({
       onPointerEnter={() => (pointerInsideRef.current = true)}
       onPointerLeave={() => (pointerInsideRef.current = false)}
     >
-      <div className="pdf-toolbar" role="toolbar" aria-label={t.pdfPreview.title}>
+      <div
+        ref={toolbarRef}
+        className={`pdf-toolbar${overflowClasses(overflowLevel)}`}
+        role="toolbar"
+        aria-label={t.pdfPreview.title}
+      >
         <button
+          data-overflow="3"
           type="button"
           className="pdf-toolbar-btn"
           onClick={() => goToPage(currentPage - 1)}
@@ -1472,6 +1564,7 @@ export default function PdfPreviewPanel({
           <span className="pdf-page-total">/ {hasDoc ? pageCount : "…"}</span>
         </span>
         <button
+          data-overflow="3"
           type="button"
           className="pdf-toolbar-btn"
           onClick={() => goToPage(currentPage + 1)}
@@ -1483,6 +1576,7 @@ export default function PdfPreviewPanel({
         </button>
         <span className="pdf-toolbar-divider" />
         <button
+          data-overflow="2"
           type="button"
           className="pdf-toolbar-btn"
           onClick={zoomOut}
@@ -1515,6 +1609,7 @@ export default function PdfPreviewPanel({
           ))}
         </select>
         <button
+          data-overflow="2"
           type="button"
           className="pdf-toolbar-btn"
           onClick={zoomIn}
@@ -1525,6 +1620,7 @@ export default function PdfPreviewPanel({
           <Icon icon={ZoomIn} size={14} />
         </button>
         <button
+          data-overflow="3"
           type="button"
           className={`pdf-toolbar-btn${scaleValue === "page-width" ? " active" : ""}`}
           onClick={() => setZoom("page-width")}
@@ -1536,6 +1632,7 @@ export default function PdfPreviewPanel({
           <Icon icon={ArrowLeftRight} size={14} />
         </button>
         <button
+          data-overflow="2"
           type="button"
           className={`pdf-toolbar-btn${scaleValue === "page-fit" ? " active" : ""}`}
           onClick={() => setZoom("page-fit")}
@@ -1552,6 +1649,7 @@ export default function PdfPreviewPanel({
         {toolButton(EDITOR.INK, PenLine, t.pdfPreview.toolDraw)}
         {toolButton(EDITOR.STAMP, ImagePlus, t.pdfPreview.toolImage)}
         <button
+          data-overflow="4"
           type="button"
           className="pdf-toolbar-btn"
           onClick={() => editingAction("undo")}
@@ -1562,6 +1660,7 @@ export default function PdfPreviewPanel({
           <Icon icon={Undo2} size={14} />
         </button>
         <button
+          data-overflow="4"
           type="button"
           className="pdf-toolbar-btn"
           onClick={() => editingAction("redo")}
@@ -1572,6 +1671,7 @@ export default function PdfPreviewPanel({
           <Icon icon={Redo2} size={14} />
         </button>
         <button
+          data-overflow="6"
           type="button"
           className={`pdf-toolbar-btn pdf-save-btn${saveState !== "clean" ? " pending" : ""}`}
           onClick={() => void save()}
@@ -1589,6 +1689,7 @@ export default function PdfPreviewPanel({
         </button>
         <span className="pdf-toolbar-sep" />
         <button
+          data-overflow="5"
           type="button"
           className={`pdf-toolbar-btn${annotationsOpen ? " active" : ""}`}
           onClick={() => setAnnotationsOpen((o) => !o)}
@@ -1600,6 +1701,7 @@ export default function PdfPreviewPanel({
           <Icon icon={ListTree} size={14} />
         </button>
         <button
+          data-overflow="1"
           type="button"
           className="pdf-toolbar-btn"
           onClick={print}
@@ -1610,6 +1712,7 @@ export default function PdfPreviewPanel({
           <Icon icon={Printer} size={14} />
         </button>
         <button
+          data-overflow="5"
           type="button"
           className={`pdf-toolbar-btn${findOpen ? " active" : ""}`}
           onClick={() => (findOpen ? closeFind() : openFind())}
@@ -1621,6 +1724,7 @@ export default function PdfPreviewPanel({
           <Icon icon={Search} size={14} />
         </button>
         <button
+          data-overflow="1"
           type="button"
           className="pdf-toolbar-btn"
           onClick={openExternally}
@@ -1629,6 +1733,24 @@ export default function PdfPreviewPanel({
           aria-label={t.pdfPreview.openExternal}
         >
           <Icon icon={ExternalLink} size={14} />
+        </button>
+        <button
+          type="button"
+          className={`pdf-toolbar-btn pdf-more-btn${moreMenu ? " active" : ""}`}
+          // Stop the open menu's outside-click handler from closing it just
+          // before this click would reopen it.
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            if (moreMenu) return setMoreMenu(null)
+            const r = e.currentTarget.getBoundingClientRect()
+            setMoreMenu({ x: Math.max(8, r.right - 200), y: r.bottom + 4 })
+          }}
+          title={t.pdfPreview.moreTools}
+          aria-label={t.pdfPreview.moreTools}
+          aria-haspopup="menu"
+          aria-expanded={!!moreMenu}
+        >
+          <Icon icon={Ellipsis} size={14} />
         </button>
       </div>
       {toolColors.length > 0 && (
@@ -1853,6 +1975,9 @@ export default function PdfPreviewPanel({
           onDelete={commentDialog.text ? () => saveComment(null) : undefined}
           onCancel={closeCommentDialog}
         />
+      )}
+      {moreMenu && overflowItems.length > 0 && (
+        <ContextMenu x={moreMenu.x} y={moreMenu.y} items={overflowItems} onClose={closeMoreMenu} />
       )}
       {legacyMenu && (
         <div

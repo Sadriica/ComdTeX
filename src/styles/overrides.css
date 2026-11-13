@@ -1,5 +1,18 @@
 /* Last word before print: rules that must beat every component whatever its
    specificity. The layer order does that, so none of this needs !important. */
+
+/* PDF toolbar buttons moved into the More tools menu (the overflow-N classes
+   come from a measurement in PdfPreviewPanel). Here because the icon-button
+   utility, a later layer than components, would otherwise display them. */
+.pdf-toolbar.overflow-1 [data-overflow="1"],
+.pdf-toolbar.overflow-2 [data-overflow="2"],
+.pdf-toolbar.overflow-3 [data-overflow="3"],
+.pdf-toolbar.overflow-4 [data-overflow="4"],
+.pdf-toolbar.overflow-5 [data-overflow="5"],
+.pdf-toolbar.overflow-6 [data-overflow="6"],
+.pdf-toolbar:not(.overflow-1) > .pdf-more-btn {
+  display: none;
+}
 /* Reduced motion: no animation or transition durations, whatever the component. */
 @media (prefers-reduced-motion: reduce) {
   *,

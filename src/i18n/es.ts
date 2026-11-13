@@ -1972,6 +1972,7 @@ export const es: T = {
     findNext: "Resultado siguiente",
     findClose: "Cerrar búsqueda",
     openExternal: "Abrir en el visor del sistema",
+    moreTools: "Más herramientas",
     toolHighlight: "Resaltar",
     toolText: "Añadir texto",
     toolDraw: "Dibujar",

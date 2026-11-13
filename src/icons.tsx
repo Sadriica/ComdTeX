@@ -35,6 +35,7 @@ export {
   CornerDownLeft,
   Cpu,
   Download,
+  Ellipsis,
   ExternalLink,
   File,
   FilePlus,
