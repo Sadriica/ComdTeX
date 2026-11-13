@@ -252,3 +252,17 @@ test("print draws every page, annotations included, and opens the print dialog",
   // Cleaned up after the dialog.
   await expect(page.locator(".pdf-print-root")).toHaveCount(0)
 })
+
+test("the sidebar still collapses to a rail once the PDF viewer's styles are loaded", async ({
+  page,
+}) => {
+  // pdf.js's stylesheet has a global .sidebar rule (180px minimum, 632px
+  // maximum, a card border and shadow) that used to land on the app sidebar.
+  await openPdf(page)
+  const sidebar = page.locator(".main > .sidebar")
+  await expect(sidebar).toHaveCSS("box-shadow", "none")
+  await expect(sidebar).toHaveCSS("max-width", "none")
+  await page.locator(".sidebar-collapse-btn").click()
+  await expect(sidebar).toHaveClass(/sidebar-collapsed/)
+  expect((await sidebar.boundingBox())!.width).toBeLessThanOrEqual(40)
+})

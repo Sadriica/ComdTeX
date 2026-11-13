@@ -9,11 +9,24 @@
 
 /* ── Sidebar ── */
 .sidebar {
+  /* pdf.js's viewer stylesheet (loaded with the PDF viewer) has a global
+     .sidebar rule for its own comments panel: a 180px minimum, a 632px maximum,
+     a card border, radius, shadow and padding. Pin each of those here so
+     opening a PDF cannot hold the collapsed rail at 180px or cap the width. */
+  position: static;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: none;
+  padding: 0;
   background: var(--bg-surface);
+  border: 0;
   border-right: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
   overflow: hidden;
 }
 
