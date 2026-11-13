@@ -92,6 +92,22 @@
   line-height: var(--leading-normal);
   padding: var(--space-4) var(--space-5) var(--space-3);
 }
+.cloud-sync-posture {
+  max-width: 240px;
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+.cloud-sync-posture.alarming {
+  color: var(--warn);
+}
+.cloud-sync-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
 .cloud-sync-list {
   list-style: none;
   padding: 0 var(--space-4) var(--space-5);
@@ -151,7 +167,8 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--border);
 }
-.cloud-sync-actions button {
+.cloud-sync-actions button,
+.cloud-sync-empty-actions button {
   flex: 1 1 auto;
   height: 24px;
   white-space: nowrap;
@@ -164,7 +181,8 @@
   font-size: var(--text-sm);
   transition: var(--transition-ui);
 }
-.cloud-sync-actions button:hover {
+.cloud-sync-actions button:hover,
+.cloud-sync-empty-actions button:hover {
   background: var(--bg-hover);
   border-color: var(--accent);
 }

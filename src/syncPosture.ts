@@ -67,3 +67,43 @@ export function nextStep(
       return null
   }
 }
+
+/** The posture sentences, as `t.cloudSync.settings` provides them. */
+export interface PostureStrings {
+  postureGitShared: string
+  postureGitLocal: string
+  postureGitInCloud: string
+  postureCloudOnly: string
+  postureLocalOnly: string
+  stepMoveOutOfCloud: string
+  stepAddRemote: string
+  stepStartGit: string
+}
+
+/**
+ * What to tell the user about a posture: where the vault stands, the one next
+ * step (if any), and whether to say it as a warning. The Sync settings and the
+ * Sync panel both read this, so they never describe the same vault differently.
+ */
+export function postureCopy(
+  posture: SyncPosture,
+  s: PostureStrings,
+): { text: string; step: string | null; alarming: boolean } {
+  const text = {
+    "git-shared": s.postureGitShared,
+    "git-local": s.postureGitLocal,
+    "git-in-cloud": s.postureGitInCloud,
+    "cloud-only": s.postureCloudOnly,
+    "local-only": s.postureLocalOnly,
+  }[posture]
+  const next = nextStep(posture)
+  const step =
+    next === "move-out-of-cloud"
+      ? s.stepMoveOutOfCloud
+      : next === "add-remote"
+        ? s.stepAddRemote
+        : next === "start-git"
+          ? s.stepStartGit
+          : null
+  return { text, step, alarming: posture === "git-in-cloud" }
+}

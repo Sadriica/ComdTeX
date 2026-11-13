@@ -2041,6 +2041,10 @@ export interface T {
     bannerDismiss: string
     panelTitle: string
     panelEmpty: string
+    panelEmptyIn: (provider: string) => string
+    panelNotInCloud: string
+    panelDetectOff: string
+    panelOpenSettings: string
     panelHelp: string
     conflictWith: (provider: string) => string
     conflictMissingOriginal: string

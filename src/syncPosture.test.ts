@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { syncPosture, needsAttention, nextStep } from "./syncPosture"
+import { syncPosture, needsAttention, nextStep, postureCopy } from "./syncPosture"
+import { LANGS } from "./i18n"
 
 const facts = (isRepo: boolean, hasRemote: boolean, inCloud: boolean) => ({
   isRepo,
@@ -41,5 +42,29 @@ describe("syncPosture", () => {
 
   it("ignores a remote claim that cannot be true without a repository", () => {
     expect(syncPosture(facts(false, true, false))).toBe("local-only")
+  })
+})
+
+describe("postureCopy", () => {
+  const s = LANGS.en.cloudSync.settings
+
+  it("gives a shared repository its sentence and no step", () => {
+    expect(postureCopy("git-shared", s)).toEqual({
+      text: s.postureGitShared,
+      step: null,
+      alarming: false,
+    })
+  })
+
+  it("pairs each weaker posture with its next step", () => {
+    expect(postureCopy("git-local", s).step).toBe(s.stepAddRemote)
+    expect(postureCopy("local-only", s).step).toBe(s.stepStartGit)
+    expect(postureCopy("cloud-only", s).text).toBe(s.postureCloudOnly)
+  })
+
+  it("raises a repository inside a cloud folder as a warning", () => {
+    const copy = postureCopy("git-in-cloud", s)
+    expect(copy.alarming).toBe(true)
+    expect(copy.step).toBe(s.stepMoveOutOfCloud)
   })
 })

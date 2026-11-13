@@ -2259,6 +2259,11 @@ export const es: T = {
     bannerDismiss: "Ignorar",
     panelTitle: "Conflictos de sincronización",
     panelEmpty: "No hay conflictos detectados.",
+    panelEmptyIn: (provider) => `No hay copias en conflicto en tu carpeta de ${provider}.`,
+    panelNotInCloud:
+      "Este vault no está dentro de una carpeta de nube (Dropbox, Google Drive, OneDrive), así que aquí no pueden aparecer copias en conflicto.",
+    panelDetectOff: "La detección de conflictos está desactivada.",
+    panelOpenSettings: "Ajustes de sincronización",
     panelHelp: "Tu cliente de nube creó copias en conflicto. Revisa cuál versión conservar.",
     conflictWith: (provider) => `Conflicto de ${provider}`,
     conflictMissingOriginal: "Original no encontrado",

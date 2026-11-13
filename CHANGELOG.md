@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Settings › Sync describes the open vault.** With a vault open, the settings never received its git state and always said "Nothing leaves this disk", even for a repository with a remote. They now say how the vault really travels, and **Open the Git panel** works from there.
+- **The Sync panel explains an empty list.** It said only "No conflicts detected.", flush against the edge, even for a vault no cloud client touches. It now says whether the vault is in a cloud folder (or that detection is off), how the vault travels, and offers **Open the Git panel** and **Sync settings**.
+
 ## [1.36.0] - 2026-11-12
 
 ### Added

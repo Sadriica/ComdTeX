@@ -1173,6 +1173,7 @@ function AppContent({
     }
   }, [vault.vaultPath])
 
+  const vaultSyncPosture = syncPosture({ ...gitFacts, inCloud: cloudInfo !== null })
   const cloudConflicts: ConflictEntry[] = useMemo(
     () =>
       cloudInfo && settings.cloudSyncDetectEnabled
@@ -5375,7 +5376,7 @@ function AppContent({
             settings={settings}
             initialSection={settingsSection}
             cloudProvider={cloudInfo?.provider ?? null}
-            syncPosture={syncPosture({ ...gitFacts, inCloud: cloudInfo !== null })}
+            syncPosture={vaultSyncPosture}
             onOpenGit={() => {
               setSettingsOpen(false)
               setSettingsSection(undefined)
@@ -5714,6 +5715,14 @@ function AppContent({
                     onResolved={() => {
                       if (vault.vaultPath) vault.refreshTree(vault.vaultPath)
                     }}
+                    provider={cloudInfo?.provider ?? null}
+                    detectEnabled={settings.cloudSyncDetectEnabled}
+                    posture={vaultSyncPosture}
+                    onOpenGit={() => setGitOpenSignal((n) => n + 1)}
+                    onOpenSettings={() => {
+                      setSettingsSection("sync")
+                      setSettingsOpen(true)
+                    }}
                   />
                 )}
                 {sidebarMode === "comments" && (
@@ -5966,6 +5975,12 @@ function AppContent({
           settings={settings}
           initialSection={settingsSection}
           cloudProvider={cloudInfo?.provider ?? null}
+          syncPosture={vaultSyncPosture}
+          onOpenGit={() => {
+            setSettingsOpen(false)
+            setSettingsSection(undefined)
+            setGitOpenSignal((n) => n + 1)
+          }}
           onClose={() => {
             setSettingsOpen(false)
             setSettingsSection(undefined)

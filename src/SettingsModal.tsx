@@ -6,7 +6,7 @@ import type { Settings } from "./useSettings"
 import { useFocusTrap } from "./useFocusTrap"
 import { PROVIDER_PRESETS, getPreset, checkConnection, type AiCheck } from "./ai/aiProvider"
 import { providerLabel, type CloudProvider } from "./cloudSync"
-import { nextStep, type SyncPosture } from "./syncPosture"
+import { postureCopy, type SyncPosture } from "./syncPosture"
 import { findSettings, type SettingsSectionId } from "./settingsIndex"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
@@ -90,26 +90,10 @@ export default function SettingsModal({
   }
 
   const cs = t.cloudSync.settings
-  const postureText =
-    syncPosture === "git-shared"
-      ? cs.postureGitShared
-      : syncPosture === "git-local"
-        ? cs.postureGitLocal
-        : syncPosture === "git-in-cloud"
-          ? cs.postureGitInCloud
-          : syncPosture === "cloud-only"
-            ? cs.postureCloudOnly
-            : cs.postureLocalOnly
-  const postureAlarming = syncPosture === "git-in-cloud"
-  const step = syncPosture ? nextStep(syncPosture) : null
-  const postureStep =
-    step === "move-out-of-cloud"
-      ? cs.stepMoveOutOfCloud
-      : step === "add-remote"
-        ? cs.stepAddRemote
-        : step === "start-git"
-          ? cs.stepStartGit
-          : null
+  const posture = syncPosture ? postureCopy(syncPosture, cs) : null
+  const postureText = posture?.text ?? cs.postureLocalOnly
+  const postureAlarming = posture?.alarming ?? false
+  const postureStep = posture?.step ?? null
 
   useFocusTrap(modalRef, open, onClose)
   if (!open) return null

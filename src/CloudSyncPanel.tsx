@@ -2,7 +2,10 @@ import { remove, rename, exists } from "@tauri-apps/plugin-fs"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
-import { providerLabel, type ConflictEntry } from "./cloudSync"
+import { providerLabel, type CloudProvider, type ConflictEntry } from "./cloudSync"
+import { postureCopy, type SyncPosture } from "./syncPosture"
+import PanelHeader from "./PanelHeader"
+import { Cloud, Icon } from "./icons"
 import { pathDirname } from "./pathUtils"
 import { showToast } from "./toastService"
 import { renderEmptyMessage } from "./emptyStateMessage"
@@ -13,9 +16,26 @@ interface CloudSyncPanelProps {
   onOpenFile: (path: string) => void
   /** Called after a destructive action so the host can refresh the tree. */
   onResolved: () => void
+  /** The cloud client whose folder holds the vault, or null when it is in none. */
+  provider: CloudProvider | null
+  /** The "Detect sync conflicts" setting. */
+  detectEnabled: boolean
+  /** Where the vault stands, so an empty panel can say how it does sync. */
+  posture: SyncPosture
+  onOpenGit: () => void
+  onOpenSettings: () => void
 }
 
-export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: CloudSyncPanelProps) {
+export default function CloudSyncPanel({
+  conflicts,
+  onOpenFile,
+  onResolved,
+  provider,
+  detectEnabled,
+  posture,
+  onOpenGit,
+  onOpenSettings,
+}: CloudSyncPanelProps) {
   const t = useT()
 
   const handleOpenBoth = (c: ConflictEntry) => {
@@ -86,19 +106,37 @@ export default function CloudSyncPanel({ conflicts, onOpenFile, onResolved }: Cl
   }
 
   if (conflicts.length === 0) {
+    // "No conflicts" alone reads as an all-clear even for a vault no cloud
+    // client touches, so say why the list is empty and how this vault does
+    // travel, with the step that would make it safer.
+    const message = !detectEnabled
+      ? t.cloudSync.panelDetectOff
+      : provider
+        ? t.cloudSync.panelEmptyIn(providerLabel(provider))
+        : t.cloudSync.panelNotInCloud
+    const copy = postureCopy(posture, t.cloudSync.settings)
     return (
       <div className="cloud-sync-panel">
-        <div className="panel-header">{t.cloudSync.panelTitle}</div>
-        {renderEmptyMessage(t.cloudSync.panelEmpty)}
+        <PanelHeader title={t.cloudSync.panelTitle} />
+        <div className="panel-empty-rich">
+          <div className="panel-empty-icon" aria-hidden="true">
+            <Icon icon={Cloud} size={16} />
+          </div>
+          <p className="panel-empty-message">{renderEmptyMessage(message)}</p>
+          <p className={`cloud-sync-posture${copy.alarming ? " alarming" : ""}`}>{copy.text}</p>
+          {copy.step && <p className="cloud-sync-posture">{copy.step}</p>}
+          <div className="cloud-sync-empty-actions">
+            <button onClick={onOpenGit}>{t.cloudSync.settings.openGit}</button>
+            <button onClick={onOpenSettings}>{t.cloudSync.panelOpenSettings}</button>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="cloud-sync-panel">
-      <div className="panel-header">
-        {t.cloudSync.panelTitle} ({conflicts.length})
-      </div>
+      <PanelHeader title={t.cloudSync.panelTitle} count={conflicts.length} />
       <div className="panel-help">{t.cloudSync.panelHelp}</div>
       <ul className="cloud-sync-list">
         {conflicts.map((c) => (

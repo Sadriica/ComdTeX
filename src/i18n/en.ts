@@ -2238,6 +2238,11 @@ export const en: T = {
     bannerDismiss: "Dismiss",
     panelTitle: "Sync conflicts",
     panelEmpty: "No conflicts detected.",
+    panelEmptyIn: (provider) => `No conflict copies in your ${provider} folder.`,
+    panelNotInCloud:
+      "This vault is not inside a cloud folder (Dropbox, Google Drive, OneDrive), so no conflict copies can appear here.",
+    panelDetectOff: "Conflict detection is off.",
+    panelOpenSettings: "Sync settings",
     panelHelp: "Your cloud client created conflict copies. Review which version to keep.",
     conflictWith: (provider) => `${provider} conflict`,
     conflictMissingOriginal: "Original missing",
