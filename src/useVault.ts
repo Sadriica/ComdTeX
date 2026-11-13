@@ -1708,6 +1708,44 @@ export function useVault(options: UseVaultOptions | number = {}) {
    * Update the content of any open tab without making it active.
    * Used for wikilink refactoring on file rename.
    */
+  /**
+   * Reload open tabs whose file changed on disk (a git sync brought changes),
+   * but only clean ones: a tab with unsaved edits, a queued save or a pending
+   * conflict is left alone, and its next save meets the usual
+   * reload/keep-mine guard. Returns how many tabs were reloaded.
+   */
+  const reloadCleanTabs = useCallback(async (): Promise<number> => {
+    let reloaded = 0
+    for (const tab of openTabsRef.current) {
+      if (tab.mode === "pdf" || tab.isDirty || !tab.cachedMtime) continue
+      const path = tab.path
+      if (saveTimers.current.has(path) || pendingContent.current.has(path)) continue
+      if (conflictPaths.current.has(path) || contentCommitTimers.current.has(path)) continue
+      try {
+        const mtime = (await stat(path)).mtime?.getTime()
+        if (!mtime || mtime <= tab.cachedMtime) continue
+        const fresh = toEditorContent(path, await readTextFile(path))
+        // Typing may have started while the file was being read.
+        const now = openTabsRef.current.find((x) => x.path === path)
+        if (!now || now.isDirty || saveTimers.current.has(path)) continue
+        openTabsRef.current = openTabsRef.current.map((x) =>
+          x.path === path ? { ...x, content: fresh, isDirty: false, cachedMtime: mtime } : x,
+        )
+        setOpenTabs((tabs) =>
+          tabs.map((x) =>
+            x.path === path ? { ...x, content: fresh, isDirty: false, cachedMtime: mtime } : x,
+          ),
+        )
+        clearDraft(path)
+        searchIndexRef.current.setFromEditorContent(path, mtime, fresh)
+        reloaded++
+      } catch {
+        /* deleted or unreadable: the tree refresh reports it */
+      }
+    }
+    return reloaded
+  }, [])
+
   const patchTabContent = useCallback((path: string, newContent: string) => {
     // The bytes were just written, so a queued content commit (which would
     // copy the older live buffer back into state) must not fire, and the live
@@ -2073,6 +2111,7 @@ export function useVault(options: UseVaultOptions | number = {}) {
     updateContent,
     saveFile,
     patchTabContent,
+    reloadCleanTabs,
     writeFileSafe,
     flushPending,
     hasPendingSave,

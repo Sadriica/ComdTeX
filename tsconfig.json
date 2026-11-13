@@ -21,5 +21,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
+  // Runs real git through Node; vitest checks it, the app's DOM-only types do not.
+  "exclude": ["src/**/*.git.test.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

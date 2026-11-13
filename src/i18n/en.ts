@@ -2229,6 +2229,72 @@ export const en: T = {
     noCommentAtCursor: "No comment on the current line",
   },
 
+  gitSync: {
+    title: "Sync with git",
+    intro:
+      "Your vault travels as a git repository: every change has a record, and the shared copy lets another machine or a coauthor pick it up.",
+    remote: (url) => `Shared at ${url}`,
+    branch: (name) => `Branch ${name}`,
+    pending: (changes, ahead, behind) =>
+      [
+        changes > 0 ? `${changes} ${changes === 1 ? "change" : "changes"} not yet recorded` : "",
+        ahead > 0 ? `${ahead} to send` : "",
+        behind > 0 ? `${behind} to bring` : "",
+      ]
+        .filter(Boolean)
+        .join(", "),
+    level: "Level with the shared copy, as of the last check.",
+    lastSync: (when) => `Last sync ${when}.`,
+    neverSynced: "Not synced yet in this session.",
+    justNow: "just now",
+    minutesAgo: (n) => (n === 1 ? "1 minute ago" : `${n} minutes ago`),
+    syncNow: "Sync now",
+    syncing: "Syncing…",
+    autoSync: "Sync automatically",
+    autoSyncDesc:
+      "Brings changes when the vault opens and when you come back to the window, and sends yours a few minutes after you stop writing and when you close ComdTeX. On a conflict it stops and tells you; it never picks a version for you.",
+    autoDelay: "Send after",
+    autoDelayDesc: "How long after your last edit.",
+    minutes: (n) => (n === 1 ? "1 minute" : `${n} minutes`),
+    autoPaused:
+      "Automatic sync is paused until the conflict is resolved. Resolve it in the Git panel, then press Sync now.",
+    startIntro:
+      "This vault keeps no history. Start one: every change gets a record, and then you can share the vault.",
+    start: "Start history",
+    startDone: "History started.",
+    startFailed: (err) => `Could not start the history: ${err}`,
+    connectIntro:
+      "Create an empty repository (on GitHub, GitLab or your own server), paste its address and connect. ComdTeX sends the vault there.",
+    createOnGitHub: "Create a repository on GitHub",
+    urlPlaceholder: "Repository address (https://… or git@…)",
+    connect: "Connect",
+    connected: "Vault connected and sent.",
+    connectFailed: (err) => `Could not connect: ${err}`,
+    resolveInGit: "Resolve in the Git panel",
+    syncedBoth: "Synced: changes brought in and yours sent.",
+    syncedBrought: "Synced: changes brought in.",
+    syncedSent: "Synced: your changes were sent.",
+    syncedLevel: "Synced: nothing new on either side.",
+    broughtToast: "Changes from the shared copy were brought in.",
+    conflict: (files) =>
+      `Sync stopped: the other copy changed the same lines in ${files === 1 ? "1 file" : `${files} files`}. Your work is recorded and nothing was overwritten.`,
+    conflictInProgress:
+      "A merge is waiting for you in the Git panel; sync waits until it is finished.",
+    skippedDetached: "Not on a branch, so there is nothing to sync.",
+    skippedNoRemote: "This vault has no shared copy yet.",
+    pushRejected: "The other copy moved first; its changes will be brought in on the next sync.",
+    timedOut: "git took too long to answer.",
+    errorStage: {
+      commit: "Could not record the changes:",
+      fetch: "Could not reach the shared copy:",
+      merge: "Could not bring the changes:",
+      push: "Could not send the changes:",
+    },
+    closing: "Syncing before closing…",
+    status: { syncing: "Syncing", synced: "Synced", conflict: "Sync stopped", error: "Not synced" },
+    statusTitle: "Git sync. Click for the Sync settings.",
+    cloudHeading: "Cloud folders",
+  },
   cloudSync: {
     statusBadge: (provider) => `Sync: ${provider}`,
     statusBadgeTitle: (provider, root) => `Vault is synced with ${provider}\n${root}`,

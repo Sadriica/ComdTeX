@@ -57,6 +57,8 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   { id: "autoRebuildPdf", section: "pdf", label: (t) => t.settings.autoRebuildPdf },
   { id: "pdfDarkMode", section: "pdf", label: (t) => t.settings.pdfDarkMode },
 
+  { id: "gitAutoSync", section: "sync", label: (t) => t.gitSync.autoSync },
+  { id: "gitAutoSyncDelay", section: "sync", label: (t) => t.gitSync.autoDelay },
   {
     id: "cloudSyncBannerEnabled",
     section: "sync",

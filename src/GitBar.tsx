@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, type ReactNode } from "react"
+import { connectRemote } from "./vaultSync"
 import { confirm as tauriConfirm } from "@tauri-apps/plugin-dialog"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { useT } from "./i18n"
@@ -743,15 +744,10 @@ function CollabSection({
       run(async () => {
         const url = remoteUrl.trim()
         if (!url) return
-        const add = await git("remote", "add", "origin", url)
-        if (add.code !== 0) throw new Error(add.stderr || add.stdout)
-        const branch = status.branch || "main"
-        const push = await git("push", "-u", "origin", branch)
-        if (push.code !== 0) {
-          showToast(g.collabConnectError(push.stderr || push.stdout), "error", 6000)
-        } else {
-          showToast(g.collabConnected, "success")
-        }
+        const r = await connectRemote((args) => git(...args), url, status.branch || "main")
+        if (!r.ok && r.stage === "remote") throw new Error(r.message)
+        if (!r.ok) showToast(g.collabConnectError(r.message), "error", 6000)
+        else showToast(g.collabConnected, "success")
         setRemoteUrl("")
       }),
     [run, git, remoteUrl, status.branch, g],

@@ -2250,6 +2250,79 @@ export const es: T = {
     noCommentAtCursor: "No hay comentario en la línea actual",
   },
 
+  gitSync: {
+    title: "Sincronizar con git",
+    intro:
+      "Tu vault viaja como repositorio git: cada cambio queda registrado, y la copia compartida permite que otra máquina o un coautor lo recojan.",
+    remote: (url) => `Compartido en ${url}`,
+    branch: (name) => `Rama ${name}`,
+    pending: (changes, ahead, behind) =>
+      [
+        changes > 0
+          ? `${changes} ${changes === 1 ? "cambio sin registrar" : "cambios sin registrar"}`
+          : "",
+        ahead > 0 ? `${ahead} por enviar` : "",
+        behind > 0 ? `${behind} por traer` : "",
+      ]
+        .filter(Boolean)
+        .join(", "),
+    level: "Al día con la copia compartida, según la última comprobación.",
+    lastSync: (when) => `Última sincronización ${when}.`,
+    neverSynced: "Todavía no se sincronizó en esta sesión.",
+    justNow: "hace un momento",
+    minutesAgo: (n) => (n === 1 ? "hace 1 minuto" : `hace ${n} minutos`),
+    syncNow: "Sincronizar ahora",
+    syncing: "Sincronizando…",
+    autoSync: "Sincronizar automáticamente",
+    autoSyncDesc:
+      "Trae cambios al abrir el vault y al volver a la ventana, y envía los tuyos unos minutos después de que dejas de escribir y al cerrar ComdTeX. Si hay un conflicto se detiene y te avisa; nunca elige una versión por ti.",
+    autoDelay: "Enviar después de",
+    autoDelayDesc: "Cuánto después de tu última edición.",
+    minutes: (n) => (n === 1 ? "1 minuto" : `${n} minutos`),
+    autoPaused:
+      "La sincronización automática está en pausa hasta resolver el conflicto. Resuélvelo en el panel de Git y luego pulsa Sincronizar ahora.",
+    startIntro:
+      "Este vault no guarda historial. Empieza uno: cada cambio queda registrado, y después puedes compartir el vault.",
+    start: "Empezar historial",
+    startDone: "Historial iniciado.",
+    startFailed: (err) => `No se pudo empezar el historial: ${err}`,
+    connectIntro:
+      "Crea un repositorio vacío (en GitHub, GitLab o tu propio servidor), pega su dirección y conecta. ComdTeX envía el vault allí.",
+    createOnGitHub: "Crear un repositorio en GitHub",
+    urlPlaceholder: "Dirección del repositorio (https://… o git@…)",
+    connect: "Conectar",
+    connected: "Vault conectado y enviado.",
+    connectFailed: (err) => `No se pudo conectar: ${err}`,
+    resolveInGit: "Resolver en el panel de Git",
+    syncedBoth: "Sincronizado: cambios traídos y los tuyos enviados.",
+    syncedBrought: "Sincronizado: cambios traídos.",
+    syncedSent: "Sincronizado: tus cambios se enviaron.",
+    syncedLevel: "Sincronizado: nada nuevo en ninguno de los dos lados.",
+    broughtToast: "Se trajeron cambios de la copia compartida.",
+    conflict: (files) =>
+      `Sincronización detenida: la otra copia cambió las mismas líneas en ${files === 1 ? "1 archivo" : `${files} archivos`}. Tu trabajo quedó registrado y no se sobrescribió nada.`,
+    conflictInProgress:
+      "Hay una fusión esperándote en el panel de Git; la sincronización espera a que termine.",
+    skippedDetached: "No estás en una rama, así que no hay nada que sincronizar.",
+    skippedNoRemote: "Este vault todavía no tiene copia compartida.",
+    pushRejected: "La otra copia se adelantó; sus cambios se traerán en la próxima sincronización.",
+    timedOut: "git tardó demasiado en responder.",
+    errorStage: {
+      commit: "No se pudieron registrar los cambios:",
+      fetch: "No se pudo llegar a la copia compartida:",
+      merge: "No se pudieron traer los cambios:",
+      push: "No se pudieron enviar los cambios:",
+    },
+    closing: "Sincronizando antes de cerrar…",
+    status: {
+      syncing: "Sincronizando",
+      synced: "Sincronizado",
+      conflict: "Sincronización detenida",
+      error: "Sin sincronizar",
+    },
+    statusTitle: "Sincronización con git. Haz clic para ver los ajustes de Sync.",
+    cloudHeading: "Carpetas en la nube",
+  },
   cloudSync: {
     statusBadge: (provider) => `Sync: ${provider}`,
     statusBadgeTitle: (provider, root) => `Vault sincronizado con ${provider}\n${root}`,

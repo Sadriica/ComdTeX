@@ -2033,6 +2033,53 @@ export interface T {
     kinds: Record<"highlight" | "text" | "ink" | "image" | "note", string>
   }
 
+  gitSync: {
+    title: string
+    intro: string
+    remote: (url: string) => string
+    branch: (name: string) => string
+    pending: (changes: number, ahead: number, behind: number) => string
+    level: string
+    lastSync: (when: string) => string
+    neverSynced: string
+    justNow: string
+    minutesAgo: (n: number) => string
+    syncNow: string
+    syncing: string
+    autoSync: string
+    autoSyncDesc: string
+    autoDelay: string
+    autoDelayDesc: string
+    minutes: (n: number) => string
+    autoPaused: string
+    startIntro: string
+    start: string
+    startDone: string
+    startFailed: (err: string) => string
+    connectIntro: string
+    createOnGitHub: string
+    urlPlaceholder: string
+    connect: string
+    connected: string
+    connectFailed: (err: string) => string
+    resolveInGit: string
+    syncedBoth: string
+    syncedBrought: string
+    syncedSent: string
+    syncedLevel: string
+    broughtToast: string
+    conflict: (files: number) => string
+    conflictInProgress: string
+    skippedDetached: string
+    skippedNoRemote: string
+    pushRejected: string
+    timedOut: string
+    errorStage: { commit: string; fetch: string; merge: string; push: string }
+    closing: string
+    status: { syncing: string; synced: string; conflict: string; error: string }
+    statusTitle: string
+    cloudHeading: string
+  }
   cloudSync: {
     statusBadge: (provider: string) => string
     statusBadgeTitle: (provider: string, root: string) => string

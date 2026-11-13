@@ -43,9 +43,12 @@ export interface FakeVaultOptions {
    * Canned git for the Git panel (`plugin:shell|execute` with program `git`).
    * Unset keeps git "not installed". `repo` is a dirty repo with a remote, one
    * commit behind and two ahead; `conflict` is a merge with an unmerged file;
-   * `not-repo` answers like a folder that is not a repository.
+   * `not-repo` answers like a folder that is not a repository; `no-remote` is
+   * a repository with nowhere to push; `sync-conflict` is `repo` whose merge
+   * of the other copy stops on a conflict. Every git call is recorded in
+   * `window.__FAKE_GIT__` (arguments after `-C <vault>`, space-joined).
    */
-  git?: "repo" | "conflict" | "not-repo"
+  git?: "repo" | "conflict" | "not-repo" | "no-remote" | "sync-conflict"
   /**
    * Fake a Dropbox install. `banner`: the client exists but the vault is not
    * inside it (the "move your vault" banner). `conflicts`: the vault is inside
@@ -179,10 +182,17 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
       }
 
       // Canned git output, keyed on the subcommand after `-C <vault>`.
+      let initialized = false
       const fakeGit = (all: string[]) => {
         const at = all.indexOf("-C")
         const [sub, ...rest] = at >= 0 ? all.slice(at + 2) : all
+        gitCalls.push([sub, ...rest].join(" "))
         const ok = (stdout = "") => ({ code: 0, signal: null, stdout, stderr: "" })
+        const no = (stderr = "") => ({ code: 1, signal: null, stdout: "", stderr })
+        // `git init` turns the not-a-repo folder into a repository with no remote.
+        if (git === "not-repo" && sub === "init") initialized = true
+        if (git === "not-repo" && initialized)
+          return sub === "remote" ? ok("") : sub === "init" ? ok("Initialized\n") : ok()
         if (git === "not-repo")
           return {
             code: 128,
@@ -191,8 +201,23 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
             stderr: "fatal: not a git repository (or any of the parent directories): .git",
           }
         const conflict = git === "conflict"
+        const args = rest.join(" ")
         switch (sub) {
+          case "symbolic-ref":
+            return rest.includes("--short") ? ok("main\n") : ok()
+          case "rev-parse":
+            if (args === "--is-inside-work-tree") return ok("true\n")
+            if (args === "-q --verify MERGE_HEAD") return conflict ? ok("abc123\n") : no()
+            if (args === "--abbrev-ref --symbolic-full-name @{u}") return ok("origin/main\n")
+            return ok()
+          case "rev-list":
+            return ok("2\t1\n")
+          case "merge":
+            if (git === "sync-conflict" && rest[0] === "--no-edit")
+              return no("CONFLICT (content): Merge conflict in notes/mixing-times.md")
+            return ok()
           case "status": {
+            if (args === "--porcelain") return ok(" M notes/mixing-times.md\n?? scratch/todo.md\n")
             const head = conflict
               ? "## main...origin/main [ahead 1, behind 1]"
               : "## main...origin/main [ahead 2, behind 1]"
@@ -212,6 +237,9 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
             return ok([head, ...rows].join("\0") + "\0")
           }
           case "remote":
+            if (git === "no-remote") return rest[0] === "add" ? ok() : ok("")
+            if (rest[0] === "get-url")
+              return ok("https://github.com/ada-tester/spectral-vault.git\n")
             return rest[0] === "-v"
               ? ok(
                   "origin\thttps://github.com/ada-tester/spectral-vault.git (fetch)\n" +
@@ -235,6 +263,8 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
           case "stash":
             return ok("stash@{0}: WIP on main: 9f3c2ab Tighten the Cheeger bound\n")
           case "diff":
+            if (rest.includes("--name-only"))
+              return ok(conflict || git === "sync-conflict" ? "notes/mixing-times.md\n" : "")
             return ok(
               [
                 "diff --git a/notes/mixing-times.md b/notes/mixing-times.md",
@@ -255,6 +285,8 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
 
       // Calls are recorded so a spec can assert on them if it wants to.
       const calls: string[] = []
+      const gitCalls: string[] = []
+      w.__FAKE_GIT__ = gitCalls
       w.__FAKE_CALLS__ = calls
       w.__FAKE_FS__ = fs
 

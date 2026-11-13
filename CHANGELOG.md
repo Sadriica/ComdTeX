@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Set up sync from Settings › Sync.** The page now walks a vault through git sync one step at a time: **Start history** for a plain folder, then **Connect** to a shared copy (create an empty repository, for example on GitHub, paste its address), then the state of the sync: where it is shared, what is waiting to be recorded, sent or brought, and when it last synced, with **Sync now**.
+- **Automatic sync** (off until you turn it on). It brings changes when the vault opens and when you come back to the window, sends yours a few minutes after you stop writing (1, 2, 5 or 10, your choice) and when you close ComdTeX, and checks every ten minutes besides. Open tabs without unsaved edits show what was brought in; a tab you are editing is left alone. If both copies changed the same lines it stops, keeps your work recorded, leaves no half-finished merge and tells you once; it never picks a version for you. Automatic sync then waits until you resolve it in the Git panel and sync by hand. An outage is reported once, not on every attempt.
+- A **Sync** badge in the status bar while automatic sync is on, which turns into a warning when a sync stops; a click opens the Sync settings.
+
 ## [1.36.1] - 2026-11-13
 
 ### Changed

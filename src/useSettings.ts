@@ -83,6 +83,10 @@ export interface Settings {
   cloudSyncBannerEnabled: boolean
   /** Detect cloud-sync conflict copies + show the sync StatusBar indicator. */
   cloudSyncDetectEnabled: boolean
+  /** Sync the vault's git repository on its own (off until the user turns it on). */
+  gitAutoSync: boolean
+  /** Minutes after the last edit before automatic sync sends it. */
+  gitAutoSyncDelay: number
 }
 
 /**
@@ -134,7 +138,12 @@ export const DEFAULTS: Settings = {
   listContinuation: true,
   cloudSyncBannerEnabled: true,
   cloudSyncDetectEnabled: true,
+  gitAutoSync: false,
+  gitAutoSyncDelay: 2,
 }
+
+/** The choices offered for `gitAutoSyncDelay`, in minutes. */
+export const GIT_SYNC_DELAYS = [1, 2, 5, 10]
 
 const KEY = STORAGE_KEYS.SETTINGS
 const AI_API_KEY_SECRET = "aiApiKey"
@@ -166,6 +175,8 @@ function load(): Settings {
     const merged: Settings = sanitizeFonts({ ...DEFAULTS, ...JSON.parse(raw) })
     if (merged.documentStyle !== "paper" && merged.documentStyle !== "sans")
       merged.documentStyle = DEFAULTS.documentStyle
+    if (!GIT_SYNC_DELAYS.includes(merged.gitAutoSyncDelay))
+      merged.gitAutoSyncDelay = DEFAULTS.gitAutoSyncDelay
     const replacement = RETIRED_DEFAULT_MODELS[merged.aiModel]
     if (replacement) merged.aiModel = replacement
     return merged

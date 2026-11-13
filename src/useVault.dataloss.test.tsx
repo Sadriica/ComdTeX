@@ -169,6 +169,54 @@ describe("useVault data-loss guards", () => {
     })
   })
 
+  describe("reloadCleanTabs (after a git sync brings changes)", () => {
+    it("reloads a clean tab whose file changed on disk", async () => {
+      fsMock.touch(`${VAULT}/a.md`, "old")
+      const { result } = renderHook(() => useVault(60_000))
+      await act(async () => {
+        await result.current.openFilePath(`${VAULT}/a.md`)
+      })
+      await waitFor(() => expect(result.current.openFile?.content).toBe("old"))
+
+      fsMock.touch(`${VAULT}/a.md`, "brought from the other copy")
+      let reloaded = 0
+      await act(async () => {
+        reloaded = await result.current.reloadCleanTabs()
+      })
+      expect(reloaded).toBe(1)
+      expect(result.current.openFile?.content).toBe("brought from the other copy")
+      expect(result.current.openFile?.isDirty).toBe(false)
+    })
+
+    it("never replaces unsaved edits", async () => {
+      fsMock.touch(`${VAULT}/a.md`, "old")
+      const { result } = renderHook(() => useVault(60_000))
+      await openAndType(result, `${VAULT}/a.md`, "mine, not saved yet")
+
+      fsMock.touch(`${VAULT}/a.md`, "theirs")
+      let reloaded = -1
+      await act(async () => {
+        reloaded = await result.current.reloadCleanTabs()
+      })
+      expect(reloaded).toBe(0)
+      expect(result.current.openFile?.content).toBe("mine, not saved yet")
+      expect(disk(`${VAULT}/a.md`)).toBe("theirs")
+    })
+
+    it("leaves a tab alone when its file did not change", async () => {
+      fsMock.touch(`${VAULT}/a.md`, "same")
+      const { result } = renderHook(() => useVault(60_000))
+      await act(async () => {
+        await result.current.openFilePath(`${VAULT}/a.md`)
+      })
+      let reloaded = -1
+      await act(async () => {
+        reloaded = await result.current.reloadCleanTabs()
+      })
+      expect(reloaded).toBe(0)
+    })
+  })
+
   describe("create / rename / move", () => {
     it("refuses to create over an existing file", async () => {
       fsMock.touch(`${VAULT}/a.md`, "precious")

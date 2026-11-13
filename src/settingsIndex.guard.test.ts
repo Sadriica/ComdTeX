@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import modalSrc from "./SettingsModal.tsx?raw"
+import settingsModalSrc from "./SettingsModal.tsx?raw"
+import syncSetupSrc from "./SyncSetup.tsx?raw"
 import { SETTINGS_INDEX, findSettings } from "./settingsIndex"
 import { LANGS } from "./i18n"
 
@@ -7,6 +8,9 @@ import { LANGS } from "./i18n"
 // the modal and not to the index is invisible to search while looking perfectly
 // present in its tab, which is worse than no search at all: the user concludes
 // the option does not exist. This guard fails the build instead.
+
+// The modal's rows, including the ones it renders through SyncSetup.
+const modalSrc = settingsModalSrc + syncSetupSrc
 
 const editedKeys = new Set(
   [...modalSrc.matchAll(/onChange\(\{\s*(\w+)/g)]

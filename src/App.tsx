@@ -160,6 +160,8 @@ import {
   type ConflictEntry,
 } from "./cloudSync"
 import CloudSyncPanel from "./CloudSyncPanel"
+import { useVaultSync } from "./useVaultSync"
+import { useSyncStatus } from "./syncStatusStore"
 import CloudSyncBanner from "./CloudSyncBanner"
 import TableEditor from "./TableEditor"
 import { checkForUpdate, downloadAndInstallUpdate } from "./useUpdater"
@@ -341,6 +343,9 @@ function renderErrorHtml(error: unknown): string {
     .replace(/>/g, "&gt;")
   return `<pre style="color:red;padding:1rem">Error al renderizar: ${msg}</pre>`
 }
+
+/** The longest closing the app waits for a final git sync. */
+const CLOSE_SYNC_MS = 10_000
 
 function currentTauriWindow() {
   try {
@@ -1140,6 +1145,8 @@ function AppContent({
   // anywhere but this machine. Read once per vault (two cheap git calls, no
   // watcher): the Sync settings need it to say something true instead of
   // listing two mechanisms as if they were equals.
+  const [gitFactsVersion, setGitFactsVersion] = useState(0)
+  const refreshGitFacts = useCallback(() => setGitFactsVersion((n) => n + 1), [])
   const [gitFacts, setGitFacts] = useState<{ isRepo: boolean; hasRemote: boolean }>({
     isRepo: false,
     hasRemote: false,
@@ -1171,9 +1178,31 @@ function AppContent({
     return () => {
       cancelled = true
     }
-  }, [vault.vaultPath])
+  }, [vault.vaultPath, gitFactsVersion])
 
   const vaultSyncPosture = syncPosture({ ...gitFacts, inCloud: cloudInfo !== null })
+  const autoSyncOn = settings.gitAutoSync && gitFacts.isRepo && gitFacts.hasRemote
+  const syncStatus = useSyncStatus()
+  // The badge is for automatic sync, or for a sync that went wrong (even one
+  // started by hand), so a stopped sync is never invisible.
+  const gitSyncBadge: "syncing" | "synced" | "conflict" | "error" | null = (() => {
+    const o = syncStatus.outcome
+    if (syncStatus.running) return autoSyncOn ? "syncing" : null
+    if (o?.kind === "conflict") return "conflict"
+    if (o?.kind === "error") return "error"
+    return autoSyncOn ? "synced" : null
+  })()
+  const { runSync } = useVaultSync({
+    vaultPath: vault.vaultPath,
+    auto: autoSyncOn,
+    delayMinutes: settings.gitAutoSyncDelay,
+    editSignal: vault.openFile?.content,
+    flushPending: vault.flushPending,
+    onPulled: () => {
+      void vault.reloadCleanTabs()
+      if (vault.vaultPath) vault.refreshTree(vault.vaultPath)
+    },
+  })
   const cloudConflicts: ConflictEntry[] = useMemo(
     () =>
       cloudInfo && settings.cloudSyncDetectEnabled
@@ -1558,15 +1587,27 @@ function AppContent({
       /* best-effort */
     }
     const dirtyTabs = openTabsRef.current.filter((t) => t.isDirty)
-    if (dirtyTabs.length === 0) return true
-    const names = dirtyTabs.map((t) => t.name).join(", ")
-    try {
-      return await tauriConfirm(t.app.unsavedChanges(names), { title: "ComdTeX", kind: "warning" })
-    } catch {
-      // Dialog unavailable: allow the close (matches prior behavior).
-      return true
+    let proceed = true
+    if (dirtyTabs.length > 0) {
+      const names = dirtyTabs.map((t) => t.name).join(", ")
+      try {
+        proceed = await tauriConfirm(t.app.unsavedChanges(names), {
+          title: "ComdTeX",
+          kind: "warning",
+        })
+      } catch {
+        // Dialog unavailable: allow the close (matches prior behavior).
+        proceed = true
+      }
     }
-  }, [t, vault])
+    // Send the last edits before the window goes, but never hold it for long:
+    // anything not sent now is recorded and goes with the next sync.
+    if (proceed && autoSyncOn) {
+      showToast(t.gitSync.closing, "info", 10_000)
+      await Promise.race([runSync("close"), new Promise((r) => setTimeout(r, CLOSE_SYNC_MS))])
+    }
+    return proceed
+  }, [t, vault, autoSyncOn, runSync])
 
   // X-button handler: confirm, then close the window explicitly.
   const handleCloseRequest = useCallback(async () => {
@@ -5926,6 +5967,11 @@ function AppContent({
         readingWpm={settings.readingWpm}
         fillingGaps={fillingGaps}
         onCloudSyncClick={() => openPanel("cloudSync")}
+        gitSync={gitSyncBadge}
+        onGitSyncClick={() => {
+          setSettingsSection("sync")
+          setSettingsOpen(true)
+        }}
         onGoToLine={(line) => {
           const editor = editorRef.current
           editor?.setPosition({ lineNumber: line, column: 1 })
@@ -5976,6 +6022,9 @@ function AppContent({
           initialSection={settingsSection}
           cloudProvider={cloudInfo?.provider ?? null}
           syncPosture={vaultSyncPosture}
+          vaultPath={vault.vaultPath}
+          runSync={runSync}
+          onRepoChanged={refreshGitFacts}
           onOpenGit={() => {
             setSettingsOpen(false)
             setSettingsSection(undefined)

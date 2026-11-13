@@ -27,6 +27,10 @@ interface StatusBarProps {
   readingWpm?: number
   /** Shows a cancellable-looking progress chip while the AI fills {{?}} gaps. */
   fillingGaps?: boolean
+  /** Git sync state; the badge shows only when set. */
+  gitSync?: "syncing" | "synced" | "conflict" | "error" | null
+  /** Opens the Sync settings. */
+  onGitSyncClick?: () => void
 }
 
 function wordCount(text: string): number {
@@ -54,6 +58,8 @@ export default function StatusBar({
   cloudConflictCount,
   readingWpm = 200,
   fillingGaps = false,
+  gitSync = null,
+  onGitSyncClick,
 }: StatusBarProps) {
   const t = useT()
   // Memoized so the cursor moving (line/col change every keystroke) doesn't
@@ -107,6 +113,20 @@ export default function StatusBar({
           >
             {texEngineLabel}
           </span>
+        )}
+        {gitSync && (
+          <button
+            className="status-item status-git-sync"
+            data-state={gitSync}
+            title={t.gitSync.statusTitle}
+            onClick={onGitSyncClick}
+          >
+            <Icon
+              icon={gitSync === "conflict" || gitSync === "error" ? TriangleAlert : RefreshCw}
+              size={14}
+            />
+            {t.gitSync.status[gitSync]}
+          </button>
         )}
         {cloudSync &&
           (() => {

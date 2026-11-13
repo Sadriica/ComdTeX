@@ -7,6 +7,9 @@ import { useFocusTrap } from "./useFocusTrap"
 import { PROVIDER_PRESETS, getPreset, checkConnection, type AiCheck } from "./ai/aiProvider"
 import { providerLabel, type CloudProvider } from "./cloudSync"
 import { postureCopy, type SyncPosture } from "./syncPosture"
+import SyncSetup from "./SyncSetup"
+import type { SyncReason } from "./useVaultSync"
+import type { SyncOutcome } from "./vaultSync"
 import { findSettings, type SettingsSectionId } from "./settingsIndex"
 import { showToast } from "./toastService"
 import { STORAGE_KEYS } from "./storageKeys"
@@ -25,6 +28,12 @@ interface SettingsModalProps {
   syncPosture?: SyncPosture
   /** Hands the user over to the Git panel. */
   onOpenGit?: () => void
+  /** The open vault, for the git sync setup (null on the welcome screen). */
+  vaultPath?: string | null
+  /** Runs a git sync now (the same one automatic sync uses). */
+  runSync?: (reason: SyncReason) => Promise<SyncOutcome | null>
+  /** The vault became a repository or gained a remote. */
+  onRepoChanged?: () => void
   onClose: () => void
   onChange: (partial: Partial<Settings>) => void
 }
@@ -38,6 +47,9 @@ export default function SettingsModal({
   cloudProvider,
   syncPosture,
   onOpenGit,
+  vaultPath = null,
+  runSync,
+  onRepoChanged,
   onClose,
   onChange,
 }: SettingsModalProps) {
@@ -615,7 +627,18 @@ export default function SettingsModal({
                     offers any switch to flip. */}
                 <div className="setting-section-title">{cs.posture}</div>
                 <p className={postureAlarming ? "setting-warn" : "setting-hint"}>{postureText}</p>
-                {postureStep && (
+                {vaultPath && runSync && syncPosture && (
+                  <SyncSetup
+                    vaultPath={vaultPath}
+                    posture={syncPosture}
+                    settings={settings}
+                    onChange={onChange}
+                    runSync={runSync}
+                    onOpenGit={onOpenGit}
+                    onRepoChanged={onRepoChanged}
+                  />
+                )}
+                {postureStep && !(vaultPath && runSync) && (
                   <div className="setting-row">
                     <span>{postureStep}</span>
                     {onOpenGit && (
@@ -626,7 +649,7 @@ export default function SettingsModal({
                   </div>
                 )}
 
-                <div className="setting-section-title">{t.settings.sections.sync}</div>
+                <div className="setting-section-title">{t.gitSync.cloudHeading}</div>
                 <p className="setting-hint">{cs.safetyNet}</p>
 
                 <label className="setting-row" data-setting="cloudSyncBannerEnabled">
