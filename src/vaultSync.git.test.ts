@@ -24,7 +24,13 @@ const IDENTITY = [
   "user.email=ada@example.org",
   "-c",
   "init.defaultBranch=main",
+  // Windows runners default to autocrlf, which would rewrite the notes on checkout.
+  "-c",
+  "core.autocrlf=false",
 ]
+
+// Git is slow to start on Windows; each test runs a dozen commands.
+const GIT_TIMEOUT = 60_000
 
 function runner(dir: string): GitRunner {
   return (args) =>
@@ -43,7 +49,7 @@ function runner(dir: string): GitRunner {
 const sh = (dir: string, ...args: string[]) =>
   execFileSync("git", [...IDENTITY, "-C", dir, ...args], { stdio: "pipe" }).toString()
 
-describe.skipIf(!hasGit)("syncVault with real git", () => {
+describe.skipIf(!hasGit)("syncVault with real git", { timeout: GIT_TIMEOUT }, () => {
   let root: string
   let a: string
   let b: string
@@ -62,7 +68,7 @@ describe.skipIf(!hasGit)("syncVault with real git", () => {
     sh(a, "push", "-u", "origin", "main")
     b = join(root, "b")
     execFileSync("git", [...IDENTITY, "clone", shared, b], { stdio: "pipe" })
-  })
+  }, GIT_TIMEOUT)
 
   afterAll(() => rmSync(root, { recursive: true, force: true }))
 
