@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.36.1] - 2026-11-13
+
 ### Changed
 - **The PDF toolbar keeps to one row.** In a narrow pane it used to wrap, leaving a button or two alone on a second line. Now the buttons that do not fit move, least used first, into a **More tools** menu (the "..." at the end): print and open in the system viewer, then zoom in and out and fit page, then fit width and the page arrows, then undo and redo, then annotations and find, and last save. The page box, the zoom menu and the annotation tools always stay. It is measured, not guessed, so the Spanish labels fit too.
 
