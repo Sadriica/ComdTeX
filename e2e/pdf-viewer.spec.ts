@@ -285,7 +285,11 @@ test("a narrow PDF pane keeps the toolbar on one row and moves the rest to More 
   const menu = page.getByRole("menu")
   await expect(menu.getByRole("menuitem", { name: "Print" })).toBeVisible()
   await expect(menu.getByRole("menuitem", { name: "Open in the system viewer" })).toBeVisible()
-  await expect(menu.getByRole("menuitem", { name: "Find in PDF" })).toHaveCount(0)
+  // Exactly the buttons the toolbar hides; how many depends on the fonts.
+  const hidden = await bar
+    .locator("[data-overflow]")
+    .evaluateAll((els) => els.filter((el) => getComputedStyle(el).display === "none").length)
+  await expect(menu.getByRole("menuitem")).toHaveCount(hidden)
   await menu.getByRole("menuitem", { name: "Fit page" }).click()
   await expect(menu).toBeHidden()
   await expect(bar.locator(".pdf-zoom-select")).toHaveValue("page-fit")
