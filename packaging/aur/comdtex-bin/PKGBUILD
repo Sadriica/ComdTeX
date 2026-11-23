@@ -1,28 +1,33 @@
 # Maintainer: sadriica <santirodrigmoca@outlook.com>
-# Repackages the official .deb release. Regenerate checksums for a new
-# version with ../update.sh <version> (it pulls the published .sha256).
+# Repackages the official .deb release. Do not edit pkgver or the checksums by
+# hand: ../update.sh <version> rewrites them and regenerates .SRCINFO.
 pkgname=comdtex-bin
-pkgver=1.16.0
+pkgver=1.37.0
 pkgrel=1
-pkgdesc="Desktop IDE for academic writing in Markdown + LaTeX (binary release)"
+pkgdesc="Desktop Markdown and LaTeX editor for mathematics and science (binary release)"
 arch=('x86_64')
 url="https://github.com/Sadriica/ComdTeX"
 license=('MIT')
 depends=('webkit2gtk-4.1' 'gtk3' 'hicolor-icon-theme')
 optdepends=(
   'pandoc-cli: DOCX/Beamer/Typst export and document import'
-  'typst: Typst → PDF export'
+  'typst: Typst to PDF export'
   'zip: vault backup'
   'git: in-app Git panel'
   'texlive-fontsrecommended: local XeLaTeX compilation'
 )
 provides=('comdtex')
 conflicts=('comdtex')
-source=("${url}/releases/download/v${pkgver}/comdtex_${pkgver}_amd64.deb")
-sha256sums=('a56c414210c350af37be1d2dceaf5e64abc91ce7219a2cb68297896fa549777a')
+options=('!strip' '!debug')
+noextract=("comdtex_${pkgver}_amd64.deb")
+source=("${url}/releases/download/v${pkgver}/comdtex_${pkgver}_amd64.deb"
+        "LICENSE-${pkgver}::https://raw.githubusercontent.com/Sadriica/ComdTeX/v${pkgver}/LICENSE")
+sha256sums=('666a86c484cc679f4aa9e5cb3af5b409f9a32b9e7ae1cd98138de018566e6242'
+            '63ca15856a1f908d03636e716fa96e402ec8cd2ae1e05f42b3e9b04a2af80c6b')
 
 package() {
   # The .deb payload mirrors the final filesystem layout.
-  bsdtar -xf data.tar.gz -C "$pkgdir"
+  bsdtar -xOf "comdtex_${pkgver}_amd64.deb" data.tar.gz | bsdtar -xf - -C "$pkgdir"
   chmod -R go-w "$pkgdir/usr"
+  install -Dm644 "LICENSE-${pkgver}" "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
 }

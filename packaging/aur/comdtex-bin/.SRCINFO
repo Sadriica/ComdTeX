@@ -1,0 +1,26 @@
+pkgbase = comdtex-bin
+	pkgdesc = Desktop Markdown and LaTeX editor for mathematics and science (binary release)
+	pkgver = 1.37.0
+	pkgrel = 1
+	url = https://github.com/Sadriica/ComdTeX
+	arch = x86_64
+	license = MIT
+	depends = webkit2gtk-4.1
+	depends = gtk3
+	depends = hicolor-icon-theme
+	optdepends = pandoc-cli: DOCX/Beamer/Typst export and document import
+	optdepends = typst: Typst to PDF export
+	optdepends = zip: vault backup
+	optdepends = git: in-app Git panel
+	optdepends = texlive-fontsrecommended: local XeLaTeX compilation
+	provides = comdtex
+	conflicts = comdtex
+	noextract = comdtex_1.37.0_amd64.deb
+	options = !strip
+	options = !debug
+	source = https://github.com/Sadriica/ComdTeX/releases/download/v1.37.0/comdtex_1.37.0_amd64.deb
+	source = LICENSE-1.37.0::https://raw.githubusercontent.com/Sadriica/ComdTeX/v1.37.0/LICENSE
+	sha256sums = 666a86c484cc679f4aa9e5cb3af5b409f9a32b9e7ae1cd98138de018566e6242
+	sha256sums = 63ca15856a1f908d03636e716fa96e402ec8cd2ae1e05f42b3e9b04a2af80c6b
+
+pkgname = comdtex-bin

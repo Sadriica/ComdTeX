@@ -459,7 +459,7 @@ Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settin
 
 ### Linux: Arch (AUR-style package)
 
-`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration). **Not published on the AUR yet**, and the PKGBUILD is pinned to 1.16.0: use the one-line installer for current releases, or bump it first with `packaging/aur/update.sh <version>`:
+`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration). **Not published on the AUR yet** (the files track the latest release; see `packaging/README.md` for the publishing setup). Until then, use the one-line installer, or build the package locally:
 
 ```bash
 cd packaging/aur/comdtex-bin && makepkg -si
