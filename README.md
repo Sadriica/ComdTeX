@@ -508,6 +508,16 @@ Use the one-line installer or the PKGBUILD above. The installer applies the extr
 
 Download the `.exe` (NSIS installer) from the [latest release](https://github.com/Sadriica/ComdTeX/releases/latest) and run it.
 
+### macOS (beta, unsigned)
+
+An Apple Silicon (M1 or later) build is attached to a release when the macOS build succeeds. It is a **beta**: it is signed ad hoc, not with an Apple Developer ID, and it is not notarized, so macOS blocks it the first time you open it. To allow it:
+
+1. Open the `.dmg` and drag ComdTeX to **Applications**.
+2. Open ComdTeX. macOS says it cannot verify the app; click **Done** (not Move to Bin).
+3. Open **System Settings > Privacy & Security**, scroll to **Security**, click **Open Anyway** next to ComdTeX, then confirm and enter your password.
+
+On macOS Sequoia (15) and later the old right-click > Open shortcut no longer bypasses this, so use **Open Anyway**. You only do this once per install. In-app updates are still signature-checked with ComdTeX's own key. Intel Macs are not built.
+
 ### Optional dependencies
 
 Since v1.3.0, PDF compilation works out of the box thanks to the bundled WASM LaTeX engine: no external tools required.
@@ -550,7 +560,7 @@ In-app updates start with the first version after 1.30.0; up to 1.30.0, download
 | DOCX / Beamer / Typst export & import require pandoc | PDF no longer needs pandoc (WASM engine bundled); DOCX, Beamer, Typst, and document import still do. Typst → PDF additionally needs the `typst` binary. |
 | AI assistant is bring-your-own | Off by default; you supply your own provider and API key. ComdTeX ships no keys and makes no AI requests until enabled. |
 | Vim mode | Provided by `monaco-vim` (community library). Some advanced motions may not work. |
-| No mobile support | Desktop only (Linux, Windows). |
+| No mobile support | Desktop only (Linux, Windows, macOS beta). |
 | Folder rules | A folder can carry its own default template, filename pattern, default frontmatter and generated files (`.comdtex-folder.json`); see [docs/folder-rules.md](docs/folder-rules.md). |
 | Cloud sync is BYO | Use Dropbox / Google Drive / OneDrive's native client. ComdTeX detects the setup and surfaces a sync indicator and a conflicts panel; see [docs/cloud-sync.md](docs/cloud-sync.md). |
 | Reveal.js export needs internet to render | The exported `.html` deck loads Reveal.js 5.1.0 (pinned) from `https://unpkg.com/...`, so the exported file needs an internet connection to display correctly. |
@@ -677,6 +687,7 @@ This triggers the GitHub Actions release workflow:
 |---|---|---|
 | `build` (matrix) | `ubuntu-22.04` | `.AppImage` (patched for Mesa 24+) and `.deb` |
 | `build` (matrix) | `windows-latest` | `.exe` (NSIS installer) |
+| `build` (matrix) | `macos-latest` | `.dmg` and updater archive, ad-hoc signed beta; non-blocking: if it fails, the release and `latest.json` still ship for Linux and Windows |
 | `verify` | `ubuntu-22.04` | Lint, type check, unit tests, clippy and rustfmt; the `build` matrix only starts if it passes |
 | `publish` | `ubuntu-22.04` | Removes draft status after the build matrix succeeds |
 

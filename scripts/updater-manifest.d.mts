@@ -8,6 +8,7 @@ export function buildManifest(input: {
   repo: string
   sigs: Record<string, string>
   pubDate: string
+  assets?: string[]
 }): {
   manifest: {
     version: string

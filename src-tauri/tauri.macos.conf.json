@@ -1,0 +1,9 @@
+{
+  "bundle": {
+    "category": "public.app-category.productivity",
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    }
+  }
+}

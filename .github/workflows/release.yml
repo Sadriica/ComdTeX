@@ -71,7 +71,11 @@ jobs:
     permissions:
       contents: write
 
-    timeout-minutes: 60
+    # The macOS leg is a beta (ad-hoc signed, never built on the maintainer's
+    # machine): it may fail or time out without failing the build job, the
+    # publish job or latest.json for Linux and Windows.
+    continue-on-error: ${{ matrix.beta == true }}
+    timeout-minutes: ${{ matrix.beta == true && 45 || 60 }}
 
     strategy:
       fail-fast: false
@@ -83,6 +87,10 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: nsis
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+            beta: true
 
     runs-on: ${{ matrix.os }}
 
@@ -172,8 +180,18 @@ jobs:
             echo "| Linux (all distros, including Arch) | \`.AppImage\`: portable, no installation required |"
             echo "| Linux Debian/Ubuntu | \`.deb\` |"
             echo "| Windows | \`.exe\` (NSIS installer) |"
+            echo "| macOS, Apple Silicon (beta, unsigned) | \`.dmg\`, attached only when the macOS build succeeded |"
             echo ""
             echo "> The \`.AppImage\` is patched to work on Arch / Mesa 24+ (no \`EGL_BAD_PARAMETER\` crash)."
+            echo ""
+            echo "### macOS beta (unsigned)"
+            echo "The macOS build is a beta. It is not signed with an Apple Developer ID and not notarized, so macOS blocks it the first time. To open it:"
+            echo ""
+            echo "1. Open the \`.dmg\` and drag ComdTeX to Applications."
+            echo "2. Open ComdTeX once. macOS says it cannot verify the app; click **Done** (not Move to Bin)."
+            echo "3. Open **System Settings > Privacy & Security**, scroll to **Security** and click **Open Anyway** next to ComdTeX, then confirm and enter your password."
+            echo ""
+            echo "On macOS Sequoia (15) and later the old right-click > Open shortcut no longer bypasses this; the Open Anyway button is the way. On older versions, right-click the app and choose Open. Only Apple Silicon (M1 or later) is built."
             echo ""
             echo "### Updates"
             echo "ComdTeX checks for a new version on startup and installs it from inside the app: the AppImage and the Windows installer update in place, the \`.deb\` asks for your password to install. Every update is signature-checked."
@@ -211,6 +229,40 @@ jobs:
           # Signed updater artifacts only in release builds, so a local build
           # never needs the private key.
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.release.conf.json
+
+      - name: Check the ad-hoc signature (macOS beta)
+        if: matrix.os == 'macos-latest'
+        run: |
+          APP=$(find src-tauri/target -type d -name "*.app" -path "*release/bundle/macos/*" | head -1)
+          echo "App bundle: $APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E "Signature|Identifier|flags" || true
+
+      - name: Upload macOS artifacts (beta)
+        if: matrix.os == 'macos-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          BUNDLE_DIR=$(find src-tauri/target -type d -path "*release/bundle" | head -1)
+          ARCHIVE=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" | head -1)
+          test -s "$ARCHIVE"
+          test -s "${ARCHIVE}.sig"
+          # A name of our own, so the archive and its signature share a stem and the
+          # manifest generator can pair them.
+          mkdir -p macos-out
+          cp "$ARCHIVE" "macos-out/ComdTeX_${VERSION}_aarch64.app.tar.gz"
+          cp "${ARCHIVE}.sig" "macos-out/ComdTeX_${VERSION}_aarch64.app.tar.gz.sig"
+          DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
+          cp "$DMG" macos-out/
+          cd macos-out
+          for f in *.dmg *.app.tar.gz; do shasum -a 256 "$f" > "$f.sha256"; done
+          # Upload the archive before its signature: latest.json needs both.
+          gh release upload "${{ github.ref_name }}" *.dmg *.app.tar.gz *.sha256 \
+            --clobber --repo "${{ github.repository }}"
+          gh release upload "${{ github.ref_name }}" *.app.tar.gz.sig \
+            --clobber --repo "${{ github.repository }}"
 
       - name: Patch AppImage for EGL compatibility
         if: matrix.os == 'ubuntu-22.04'
@@ -322,7 +374,11 @@ jobs:
           mkdir sigs
           gh release download "${{ github.ref_name }}" -p "*.sig" -D sigs \
             --repo "${{ github.repository }}"
-          node scripts/updater-manifest.mjs "${{ github.ref_name }}" "${{ github.repository }}" sigs
+          # Optional platforms (the macOS beta) are listed only when both their
+          # archive and signature are among the release assets.
+          gh release view "${{ github.ref_name }}" --json assets -q '.assets[].name' \
+            --repo "${{ github.repository }}" > sigs/assets.txt
+          node scripts/updater-manifest.mjs "${{ github.ref_name }}" "${{ github.repository }}" sigs sigs/assets.txt
           gh release upload "${{ github.ref_name }}" latest.json \
             --clobber --repo "${{ github.repository }}"
 

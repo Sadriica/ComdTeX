@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - **The API key note in Settings told the wrong story.** It said the key was kept in localStorage; it is kept in the OS keychain, apart from your other settings.
 - **Help panel and error messages name settings as Settings does.** The sync scroll entry reads "Sync editor↔preview scroll" and the missing-package hint points to Settings → PDF compilation.
+- **macOS beta build (Apple Silicon).** Releases now try to attach an ad-hoc signed `.dmg` and updater archive for macOS. It is unsigned by Apple, so the first launch needs **Open Anyway** in System Settings > Privacy & Security (steps in the README and the release notes). The macOS build is non-blocking: if it fails, the Linux and Windows release and its update manifest are unaffected, and `latest.json` lists macOS only when its files are complete.
 
 ## [1.37.0] - 2026-11-13
 
