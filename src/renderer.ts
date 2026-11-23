@@ -28,7 +28,7 @@ import {
 } from "./equations"
 import { resolveCitations, renderBibliography } from "./bibtex"
 import { resolveImagePath } from "./imagePaths"
-import { resolveDocLanguage, withDocLanguage, type DocLang } from "./docLang"
+import { activeDocTerms, resolveDocLanguage, withDocLanguage, type DocLang } from "./docLang"
 import type { BibEntry } from "./bibtex"
 import { extractFrontmatter, renderFrontmatterHeader } from "./frontmatter"
 import {
@@ -44,6 +44,7 @@ import { prescanTables, resolveTableRefs, wrapTables } from "./tables"
 import { processBlockIds, attachBlockIds, type TransclusionResolver } from "./transclusion"
 import { resolveDocumentContent } from "./documentResolve"
 import { stripKeepMarks } from "./keepMarks"
+import { hasCriticMarks, renderCriticMarks } from "./criticMarkup"
 import { pickCiteStyle } from "./citeStyles"
 import { highlightCode } from "./syntaxHighlight"
 
@@ -906,6 +907,11 @@ function renderMarkdownImpl(
      * without either, the interface language (docLang.ts).
      */
     lang?: DocLang
+    /**
+     * Show tracked changes (CriticMarkup) as styled marks. Only the live
+     * preview sets it; every other caller gets the accepted text.
+     */
+    showChanges?: boolean
   },
 ): string {
   linkAccessions = raw.startsWith("---") && isBiologyDocument(raw)
@@ -927,7 +933,11 @@ function renderMarkdownImpl(
 
   // Transclusions and `:::csv` selections, resolved exactly as every export
   // path resolves them (documentResolve.ts is the single definition).
-  content = resolveDocumentContent(content, transclusionResolver)
+  // Tracked changes are accepted here unless the caller is the live preview
+  // (`showChanges`): hover cards, the AI panel, copy-as-HTML and the HTML
+  // export all want the document as it would read once accepted.
+  const showChanges = opts?.showChanges === true
+  content = resolveDocumentContent(content, transclusionResolver, { keepChanges: showChanges })
   content = processBlockIds(content)
 
   // Keep marks (`^^texto^^` / `^^def: texto^^`) are invisible outside the
@@ -938,6 +948,15 @@ function renderMarkdownImpl(
   // `indexOf` when the document has no marks, so this costs nothing on the
   // per-keystroke render path for documents that don't use the feature.
   content = stripKeepMarks(content)
+
+  // Tracked changes ({++add++}, {--del--}, {~~a~>b~~}, {>>note<<}, {==hl==})
+  // become styled inline HTML here, before math is rendered, so a formula
+  // inside a mark still goes through KaTeX. criticMarkup.ts treats math and
+  // code as atomic, so nothing is parsed inside them.
+  if (showChanges && hasCriticMarks(content)) {
+    const t = activeDocTerms().changes
+    content = renderCriticMarks(content, t)
+  }
 
   // Auto-generated table of contents: a standalone `[[toc]]` / `[toc]` line
   // becomes a placeholder now and is expanded into a live list (always in sync

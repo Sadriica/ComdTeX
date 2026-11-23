@@ -14,6 +14,7 @@ import type { Settings } from "./useSettings"
 import type { useExportActions } from "./useExportActions"
 import type { UpdateInfo } from "./useUpdater"
 import { showToast } from "./toastService"
+import { applySuggestion, resolveAtCursor, resolveEverything } from "./criticEditor"
 import { COMPLETIONS } from "./monacoSetup"
 
 /** Small coloured highlight swatch (CSS, `--mark-*` tokens) for the palette. */
@@ -193,6 +194,74 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     if (!applyGuardedLineEdit(editor, c.modelUri, lineNumber, expectedLine, edit)) {
       showToast(t.palette.here.staleEdit, "info")
     }
+  }
+
+  // Tracked changes (CriticMarkup). They act on the editor's own selection and
+  // caret, so they need no cursor context from the palette.
+  const trackedChangeCommands = (): PaletteCommand[] => {
+    const run = (fn: (editor: MonacoEditor.IStandaloneCodeEditor) => void) => () => {
+      const editor = editorRef.current
+      if (editor) fn(editor)
+    }
+    const kw = ["track", "changes", "critic", "review", "revisar", "cambios", "suggest", "sugerir"]
+    return [
+      {
+        id: "tracked:add",
+        label: t.tracked.insertAddition,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => applySuggestion(e, "add", t)),
+      },
+      {
+        id: "tracked:del",
+        label: t.tracked.insertDeletion,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => applySuggestion(e, "del", t)),
+      },
+      {
+        id: "tracked:sub",
+        label: t.tracked.insertReplacement,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => applySuggestion(e, "sub", t)),
+      },
+      {
+        id: "tracked:comment",
+        label: t.tracked.insertComment,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => applySuggestion(e, "comment", t)),
+      },
+      {
+        id: "tracked:accept",
+        label: t.tracked.acceptChange,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => resolveAtCursor(e, "accept", t)),
+      },
+      {
+        id: "tracked:reject",
+        label: t.tracked.rejectChange,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => resolveAtCursor(e, "reject", t)),
+      },
+      {
+        id: "tracked:acceptAll",
+        label: t.tracked.acceptAll,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => resolveEverything(e, "accept", t)),
+      },
+      {
+        id: "tracked:rejectAll",
+        label: t.tracked.rejectAll,
+        keywords: kw,
+        category: "Edición",
+        action: run((e) => resolveEverything(e, "reject", t)),
+      },
+    ]
   }
 
   // Contextual commands: only offered where they apply, and listed first in the
@@ -1071,6 +1140,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
       category: "Vista",
       action: () => openPanel("keep"),
     },
+    ...trackedChangeCommands(),
     {
       id: "properties",
       label: t.palette.openPanel(t.sidebar.properties),

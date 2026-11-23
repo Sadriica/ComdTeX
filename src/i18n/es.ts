@@ -1824,6 +1824,12 @@ export const es: T = {
     table: "Tabla",
     section: "sección",
     circularEmbed: (target) => `Transclusión circular: ${target}`,
+    changes: {
+      added: "Añadido",
+      deleted: "Eliminado",
+      comment: "Comentario",
+      highlight: "Resaltado",
+    },
     bibliography: {
       heading: "Referencias",
       untitled: "Sin título",
@@ -2180,6 +2186,30 @@ export const es: T = {
     search: "Buscar",
     replaceAll: "Reemplazar todo",
     replace: "Reemplazar",
+  },
+
+  tracked: {
+    insertAddition: "Cambio con seguimiento: marcar como adición",
+    insertDeletion: "Cambio con seguimiento: marcar como eliminación",
+    insertReplacement: "Cambio con seguimiento: sugerir reemplazo",
+    insertComment: "Cambio con seguimiento: añadir comentario",
+    acceptChange: "Cambio con seguimiento: aceptar el cambio en el cursor",
+    rejectChange: "Cambio con seguimiento: rechazar el cambio en el cursor",
+    acceptAll: "Cambios con seguimiento: aceptar todos",
+    rejectAll: "Cambios con seguimiento: rechazar todos",
+    added: "Adición",
+    deleted: "Eliminación",
+    replaced: "Reemplazo",
+    comment: "Comentario",
+    highlight: "Resaltado",
+    noneHere: "No hay un cambio con seguimiento en el cursor",
+    none: "Esta nota no tiene cambios con seguimiento",
+    overlap:
+      "La selección se cruza con un cambio existente. Resuélvelo primero o selecciona otro texto.",
+    delimiter:
+      "La selección contiene texto que cerraría la marca antes de tiempo. Selecciona menos texto.",
+    acceptedN: (n) => `${n} ${n === 1 ? "cambio aceptado" : "cambios aceptados"}`,
+    rejectedN: (n) => `${n} ${n === 1 ? "cambio rechazado" : "cambios rechazados"}`,
   },
 
   editorNav: {

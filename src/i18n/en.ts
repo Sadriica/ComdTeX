@@ -1808,6 +1808,12 @@ export const en: T = {
     table: "Table",
     section: "Section",
     circularEmbed: (target) => `Circular transclusion: ${target}`,
+    changes: {
+      added: "Added",
+      deleted: "Deleted",
+      comment: "Comment",
+      highlight: "Highlight",
+    },
     bibliography: {
       heading: "References",
       untitled: "Untitled",
@@ -2160,6 +2166,29 @@ export const en: T = {
     search: "Search",
     replaceAll: "Replace all",
     replace: "Replace",
+  },
+
+  tracked: {
+    insertAddition: "Tracked change: mark as addition",
+    insertDeletion: "Tracked change: mark as deletion",
+    insertReplacement: "Tracked change: suggest replacement",
+    insertComment: "Tracked change: add comment",
+    acceptChange: "Tracked change: accept change at cursor",
+    rejectChange: "Tracked change: reject change at cursor",
+    acceptAll: "Tracked changes: accept all",
+    rejectAll: "Tracked changes: reject all",
+    added: "Addition",
+    deleted: "Deletion",
+    replaced: "Replacement",
+    comment: "Comment",
+    highlight: "Highlight",
+    noneHere: "No tracked change at the cursor",
+    none: "This note has no tracked changes",
+    overlap:
+      "The selection overlaps an existing tracked change. Resolve it first or select other text.",
+    delimiter: "The selection contains text that would close the mark early. Select less text.",
+    acceptedN: (n) => `Accepted ${n} ${n === 1 ? "change" : "changes"}`,
+    rejectedN: (n) => `Rejected ${n} ${n === 1 ? "change" : "changes"}`,
   },
 
   editorNav: {

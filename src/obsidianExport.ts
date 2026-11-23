@@ -6,6 +6,7 @@
  * editor-only keep marks (`^^def: …^^`) collapse to their plain text.
  */
 
+import { acceptAll } from "./criticMarkup"
 import { stripKeepMarks } from "./keepMarks"
 import { numberEnvironmentsForExport } from "./envExport"
 
@@ -25,7 +26,12 @@ const ENV_LABELS: Record<string, string> = {
 export function exportToObsidianMarkdown(rawMarkdown: string): string {
   // Keep marks are editor-only. Strip first: `stripKeepMarks` is math/code-aware
   // and needs the document still shaped as prose. See keepMarks.ts.
-  return numberEnvironmentsForExport(stripKeepMarks(rawMarkdown), "callout", undefined, ENV_LABELS)
+  return numberEnvironmentsForExport(
+    stripKeepMarks(acceptAll(rawMarkdown)),
+    "callout",
+    undefined,
+    ENV_LABELS,
+  )
     .replace(
       /^:::(?:(?:sm|lg)\s+)?([\w]+)(?:\[([^\]]*)\])?(?:\s*\{#[\w:.-]+\})?\s*\n([\s\S]*?)^:::\s*$/gm,
       (_full, rawName: string, title: string | undefined, body: string) => {

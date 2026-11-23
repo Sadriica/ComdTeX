@@ -18,6 +18,7 @@
  */
 
 import { ALL_ENVS } from "./environments"
+import { acceptAll } from "./criticMarkup"
 import { stripKeepMarks } from "./keepMarks"
 
 /** Environments that produce Anki cards. */
@@ -74,7 +75,7 @@ export function extractAnkiCards(rawMarkdown: string): AnkiCard[] {
   // Keep marks are editor-only: collapse them to plain text first so no `^^`
   // reaches a card. Cloze `{{…}}` is a different delimiter and survives this
   // untouched, so the two features compose cleanly.
-  const markdown = stripKeepMarks(rawMarkdown)
+  const markdown = stripKeepMarks(acceptAll(rawMarkdown))
   const cards: AnkiCard[] = []
   let m: RegExpExecArray | null
   // `replace`-style global regex requires resetting lastIndex when we use .exec

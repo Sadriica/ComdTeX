@@ -1,0 +1,113 @@
+/* ── Tracked changes (CriticMarkup) ──
+   Used by the preview (<ins>/<del>/<mark>/comment marker) and by the editor
+   decorations. Meaning never rests on colour alone: additions are underlined
+   and carry a "+" cue, deletions are struck through and carry a minus cue,
+   comments are a bordered marker, highlights keep the mark background. The
+   colours are the theme's status tokens, so dark, light and high contrast
+   all work. */
+.preview-content ins.critic-add {
+  padding: 0 0.12em;
+  border-radius: var(--radius-sm);
+  background: var(--ok-bg);
+  color: var(--ok);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+.preview-content ins.critic-add::before {
+  content: "+";
+  margin-right: 0.12em;
+  font-size: 0.75em;
+  vertical-align: super;
+  font-weight: 700;
+}
+.preview-content del.critic-del {
+  padding: 0 0.12em;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.09em;
+}
+.preview-content del.critic-del::before {
+  content: "\2212";
+  margin-right: 0.12em;
+  font-size: 0.75em;
+  vertical-align: super;
+  font-weight: 700;
+}
+.preview-content mark.critic-highlight {
+  border-bottom: 2px solid var(--warn);
+}
+.preview-content .critic-comment {
+  position: relative;
+  display: inline-block;
+  min-width: 1.15em;
+  margin: 0 0.15em;
+  padding: 0 0.2em;
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-family: var(--font-ui);
+  font-size: 0.78em;
+  line-height: 1.35;
+  text-align: center;
+  cursor: help;
+  vertical-align: baseline;
+}
+.preview-content .critic-comment-icon::before {
+  content: "\00b6";
+}
+.preview-content .critic-comment:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.preview-content .critic-comment::after {
+  content: attr(data-comment);
+  position: absolute;
+  top: 125%;
+  left: 50%;
+  z-index: var(--z-tooltip);
+  display: none;
+  width: max-content;
+  max-width: 22em;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  text-align: left;
+  white-space: normal;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.preview-content .critic-comment:hover::after,
+.preview-content .critic-comment:focus::after {
+  display: block;
+}
+
+/* Editor decorations (Monaco inline classes). */
+.critic-ed-add {
+  background: var(--ok-bg);
+  border-bottom: 2px solid var(--ok);
+}
+.critic-ed-del {
+  background: var(--danger-bg);
+  text-decoration: line-through;
+}
+.critic-ed-sub {
+  background: var(--info-bg);
+  border-bottom: 2px double var(--info);
+}
+.critic-ed-comment {
+  background: var(--warn-bg);
+  border-bottom: 1px dotted var(--warn);
+  font-style: italic;
+}
+.critic-ed-highlight {
+  background: var(--warn-bg);
+  border-bottom: 2px solid var(--warn);
+}

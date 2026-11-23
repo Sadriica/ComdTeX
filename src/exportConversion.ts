@@ -1,5 +1,6 @@
 import { toStorageMd } from "./cmdxFormat"
 import { exportToObsidianMarkdown } from "./obsidianExport"
+import { acceptAll } from "./criticMarkup"
 import { stripKeepMarks } from "./keepMarks"
 import { numberEnvironmentsForExport } from "./envExport"
 import { seqBlockToMarkdown } from "./sequence"
@@ -115,7 +116,10 @@ export function toPandocMarkdownInput(cmdxContent: string): string {
   // Environments are numbered after the special blocks degrade (so nested ones
   // are already fences) and before toStorageMd flattens them to callouts.
   return toStorageMd(
-    numberEnvironmentsForExport(specialBlocksToPandoc(stripKeepMarks(cmdxContent)), "bold"),
+    numberEnvironmentsForExport(
+      specialBlocksToPandoc(stripKeepMarks(acceptAll(cmdxContent))),
+      "bold",
+    ),
     { envLabels: false },
   )
 }

@@ -52,6 +52,11 @@ import {
   type KeepMarkDecorationsHandle,
 } from "./monacoSetup"
 import { configureEditorNavigation } from "./editorNavigation"
+import {
+  registerCriticActions,
+  setupCriticDecorations,
+  type CriticDecorationsHandle,
+} from "./criticEditor"
 import { monacoThemeName, refreshMonacoThemes, setupMonacoTheming } from "./monacoThemes"
 import {
   loadComments,
@@ -718,6 +723,17 @@ function AppContent({
   const [comments, setComments] = useState<Comment[]>([])
   const commentDecorationsRef = useRef<CommentDecorationsHandle | null>(null)
   const keepMarkDecorationsRef = useRef<KeepMarkDecorationsHandle | null>(null)
+  const criticDecorationsRef = useRef<CriticDecorationsHandle | null>(null)
+  const criticActionsRef = useRef<(() => void) | null>(null)
+  // Menu labels are fixed when registered: register them again, and refresh the
+  // hover text, when the interface language changes.
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !criticActionsRef.current) return
+    criticActionsRef.current()
+    criticActionsRef.current = registerCriticActions(editor, t)
+    criticDecorationsRef.current?.refresh()
+  }, [t])
   const [texEngineState, setTexEngineState] = useState<"idle" | "initializing" | "compiling">(
     "idle",
   )
@@ -1936,6 +1952,8 @@ function AppContent({
       mathPreviewDisposableRef.current?.dispose()
       commentDecorationsRef.current?.dispose()
       keepMarkDecorationsRef.current?.dispose()
+      criticDecorationsRef.current?.dispose()
+      criticActionsRef.current?.()
       if (cursorSaveRef.current) clearTimeout(cursorSaveRef.current)
       if (cursorUiTimerRef.current) clearTimeout(cursorUiTimerRef.current)
       if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current)
@@ -2135,7 +2153,12 @@ function AppContent({
           bibMap,
           transclusionResolver,
           envRefResolver,
-          { annotate: false, docPath: docPath ?? undefined, fileExists: imageExists },
+          {
+            annotate: false,
+            docPath: docPath ?? undefined,
+            fileExists: imageExists,
+            showChanges: true,
+          },
         )
       } catch (e) {
         return renderErrorHtml(e)
@@ -2663,6 +2686,13 @@ function AppContent({
       keepMarkDecorationsRef.current = setupKeepMarkDecorations(editor, monaco, () => {
         openPanel("keep")
       })
+
+      // Tracked changes: decorations for CriticMarkup marks and the context
+      // menu entries (the palette commands live in commands.ts).
+      criticDecorationsRef.current?.dispose()
+      criticDecorationsRef.current = setupCriticDecorations(editor, monaco, () => tRef.current)
+      criticActionsRef.current?.()
+      criticActionsRef.current = registerCriticActions(editor, tRef.current)
 
       // ── Editor → Preview double-click sync ───────────────────────────────────
       editor.onMouseDown((e) => {

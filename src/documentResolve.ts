@@ -14,10 +14,19 @@
 // contain a `:::csv` block that must then be expanded.
 
 import { expandCsvBlocks } from "./csvRange"
+import { acceptAll } from "./criticMarkup"
 import { parseDataBlocks } from "./datasets"
 import { expandPlotData } from "./plotData"
 import { expandValueRefs } from "./resultValues"
 import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
+
+export interface ResolveOptions {
+  /**
+   * Keep CriticMarkup marks in the result (the preview renders them). By
+   * default every mark is accepted, which is what each export wants.
+   */
+  keepChanges?: boolean
+}
 
 /**
  * Expand a document's references against the vault: transcluded notes and
@@ -29,11 +38,20 @@ import { resolveTransclusions, type TransclusionResolver } from "./transclusion"
  * declarations and CSV blocks BEFORE it is embedded, and the host document
  * is expanded after.
  */
-export function resolveDocumentContent(raw: string, resolver?: TransclusionResolver): string {
+export function resolveDocumentContent(
+  rawInput: string,
+  resolver?: TransclusionResolver,
+  opts?: ResolveOptions,
+): string {
+  // Tracked changes (CriticMarkup) are accepted in this copy unless the
+  // caller is the preview, which shows them. The file is never touched.
+  const keep = opts?.keepChanges === true
+  const raw = keep ? rawInput : acceptAll(rawInput)
   if (!resolver) return raw
   const resolveEmbedded: TransclusionResolver = (target) => {
-    const content = resolver(target)
-    if (content == null) return content
+    const found = resolver(target)
+    if (found == null) return found
+    const content = keep ? found : acceptAll(found)
     // An embedded note may declare its own datasets and use them.
     const embedded = parseDataBlocks(content)
     const withPlots = expandPlotData(embedded.content, embedded.datasets, resolver)

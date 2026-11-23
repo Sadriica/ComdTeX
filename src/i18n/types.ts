@@ -1676,6 +1676,8 @@ export interface T {
     section: string
     /** Warning printed in place of an embed that would include itself. */
     circularEmbed: (target: string) => string
+    /** Names the preview gives tracked changes (tooltips and screen readers). */
+    changes: { added: string; deleted: string; comment: string; highlight: string }
     bibliography: {
       heading: string
       untitled: string
@@ -1873,6 +1875,29 @@ export interface T {
     search: string
     replaceAll: string
     replace: string
+  }
+
+  /** Tracked changes (CriticMarkup): editor commands, hovers and notices. */
+  tracked: {
+    insertAddition: string
+    insertDeletion: string
+    insertReplacement: string
+    insertComment: string
+    acceptChange: string
+    rejectChange: string
+    acceptAll: string
+    rejectAll: string
+    added: string
+    deleted: string
+    replaced: string
+    comment: string
+    highlight: string
+    noneHere: string
+    none: string
+    overlap: string
+    delimiter: string
+    acceptedN: (n: number) => string
+    rejectedN: (n: number) => string
   }
 
   /** Editor navigation (go to definition, usages, links) and its hover cards. */

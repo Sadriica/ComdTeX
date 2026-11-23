@@ -147,7 +147,55 @@ const SPECIAL_END_RE = /^:::\s*$/
 
 /** Blank every non-newline character, keeping length and line structure. */
 function blank(match: string): string {
-  return match.replace(/[^\n]/g, " ")
+  return match.replace(/[^\n]/g, fillChar)
+}
+
+// What `blank` writes. A space for the keep-mark scan; `exclusionRegions`
+// swaps in a sentinel for the duration of one synchronous call so other
+// scanners (criticMarkup.ts) can learn WHICH characters were blanked.
+let fillChar = " "
+
+/**
+ * Half-open `[start, end)` ranges of `text` that are math, code or raw-DSL
+ * blocks: the same regions `blankExclusions` hides. Consecutive blanked lines
+ * (a fenced block, a `$$` block) come back as one range.
+ */
+export function exclusionRegions(text: string): Array<[number, number]> {
+  const SENTINEL = "\u0001"
+  if (text.indexOf(SENTINEL) >= 0) fillChar = " "
+  else fillChar = SENTINEL
+  let scan: string
+  try {
+    scan = blankExclusions(text)
+  } finally {
+    fillChar = " "
+  }
+  const regions: Array<[number, number]> = []
+  if (scan === text) return regions
+  const n = scan.length
+  let i = 0
+  while (i < n) {
+    if (scan[i] !== SENTINEL || text[i] === SENTINEL) {
+      i++
+      continue
+    }
+    const start = i
+    let end = i
+    while (end < n) {
+      if (scan[end] === SENTINEL && text[end] !== SENTINEL) end++
+      else if (
+        scan[end] === "\n" &&
+        scan[end + 1] === SENTINEL &&
+        text[end + 1] !== SENTINEL &&
+        end > start
+      )
+        end++
+      else break
+    }
+    regions.push([start, end])
+    i = end
+  }
+  return regions
 }
 
 /** Blank the bodies of `:::code`, `:::commdiag`, … blocks (raw DSL, not prose). */

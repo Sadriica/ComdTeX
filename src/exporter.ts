@@ -21,6 +21,7 @@ import { numberEnvironmentsForExport } from "./envExport"
 import { extractFrontmatter } from "./frontmatter"
 import { preprocessFigureLabels } from "./figures"
 import { SUPPLEMENT_LINE_RE, hasSupplementMarker } from "./supplement"
+import { acceptAll } from "./criticMarkup"
 import { stripKeepMarks } from "./keepMarks"
 import { pickCiteStyle } from "./citeStyles"
 import { parseCitationGroup } from "./bibtex"
@@ -1150,7 +1151,7 @@ export function splitSlides(body: string): string[] {
 export function exportReveal(rawMarkdown: string, title: string): string {
   // Keep marks are editor-only: collapse them to plain text so no `^^`
   // ever reaches a slide. See keepMarks.ts.
-  const markdown = stripKeepMarks(rawMarkdown)
+  const markdown = stripKeepMarks(acceptAll(rawMarkdown))
   // Read theme from frontmatter (`reveal_theme` preferred, `theme` as fallback).
   const parsed = extractFrontmatter(markdown)
   const body = parsed?.content ?? markdown
@@ -1214,7 +1215,7 @@ export function exportToTex(
 ): string {
   // The document's own `lang` wins, else the interface language; everything
   // the export prints ("Figura"/"Figure", theorem names, babel) follows it.
-  const lang = resolveDocLanguage(extractFrontmatter(stripKeepMarks(rawInput))?.data)
+  const lang = resolveDocLanguage(extractFrontmatter(stripKeepMarks(acceptAll(rawInput)))?.data)
   return withDocLanguage(lang, () =>
     exportToTexIn(rawInput, macrosText, title, author, frontmatter),
   )
@@ -1253,7 +1254,7 @@ function exportToTexIn(
   // `:::code` never are; a diagram whose image failed falls back too). They
   // printed as raw `:::pseudocode[...]` lines in the PDF; now each is a
   // captioned listing, as in every pandoc export. `:::seq` has its own LaTeX.
-  const raw = specialBlocksToPandoc(stripKeepMarks(rawInput), { keep: TEX_OWN_BLOCKS })
+  const raw = specialBlocksToPandoc(stripKeepMarks(acceptAll(rawInput)), { keep: TEX_OWN_BLOCKS })
   const parsed = extractFrontmatter(raw)
   citedInLastPass = false
   linkAccessionsInTex = isBiologyDocument(raw)
