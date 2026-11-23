@@ -1059,6 +1059,41 @@ export const es: T = {
     stashSuccess: "Cambios guardados en stash.",
     stashPopSuccess: "Stash aplicado.",
     noStashes: "No hay stashes.",
+    review: {
+      title: "Rondas de revisión",
+      start: "Iniciar ronda de revisión",
+      startConfirm: (n) =>
+        `¿Registrar todo lo pendiente de este vault en un commit y marcarlo como ronda de revisión ${n}? No se envía nada a ningún sitio.`,
+      started: (n, committed) =>
+        committed
+          ? `Ronda de revisión ${n} iniciada. Se registraron los cambios pendientes.`
+          : `Ronda de revisión ${n} iniciada.`,
+      none: "Todavía no hay rondas de revisión.",
+      explain:
+        "Una ronda marca el vault tal como lo envías a revisión. Después, compara una nota con una ronda para ver qué cambió como cambios con seguimiento.",
+      round: (n) => `Ronda ${n}`,
+      compare: "Comparar",
+      compareWith: (n) => `Comparar la nota abierta con la ronda ${n}`,
+      noNote: "Abre una nota para compararla con una ronda.",
+      noSuchNote: (n) => `Esta nota no existía en la ronda ${n}.`,
+      tooDifferent:
+        "Las versiones son demasiado distintas para mostrarlas como cambios con seguimiento.",
+      identical: (n) => `La nota es igual que en la ronda ${n}.`,
+      notRepo: "Este vault todavía no tiene historial. Actívalo en Ajustes, Sincronización.",
+      empty: "Todavía no hay nada que marcar. Guarda una nota primero.",
+      error: (msg) => `Falló la ronda de revisión: ${msg}`,
+      commitMessage: (n) => `Ronda de revisión ${n}`,
+      cantShow:
+        "Esta parte cambió de una forma que no se puede mostrar como cambios con seguimiento.",
+      dialogTitle: (n, file) => `${file} comparado con la ronda ${n}`,
+      inexact:
+        "Algunas partes cambiaron de una forma que no se puede mostrar como marcas; aparecen como el texto nuevo con una nota.",
+      legend:
+        "Las adiciones van en verde y subrayadas, las eliminaciones en rojo y tachadas. Solo lectura.",
+      copy: "Copiar como CriticMarkup",
+      copied: "Copiado",
+      close: "Cerrar",
+    },
     stashError: (msg) => `Error en stash: ${msg}`,
     remotes: "Remotos",
     reloadRemotes: "Recargar remotos",

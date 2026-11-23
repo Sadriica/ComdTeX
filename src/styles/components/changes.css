@@ -111,3 +111,27 @@
   background: var(--warn-bg);
   border-bottom: 2px solid var(--warn);
 }
+
+/* Read-only comparison with a review round (Git panel). */
+.modal-review {
+  width: min(760px, 100%);
+  height: min(80vh, 100%);
+}
+.review-legend,
+.review-inexact {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.review-inexact {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--fg);
+}
+.review-compare-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}

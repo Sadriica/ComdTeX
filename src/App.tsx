@@ -5281,13 +5281,48 @@ function AppContent({
   // Lets the Sync settings hand the user over to the Git panel instead of
   // telling them where to click.
   const [gitOpenSignal, setGitOpenSignal] = useState(0)
+  // "Compare with round N" in the Git panel: the open note, vault-relative,
+  // read live from the editor when asked.
+  const reviewPath = vault.openFile?.path ?? null
+  const reviewName = vault.openFile?.name ?? ""
+  const reviewNote = useMemo(() => {
+    const root = vault.vaultPath?.replace(/\\/g, "/").replace(/\/+$/, "")
+    const abs = reviewPath?.replace(/\\/g, "/")
+    if (!root || !abs || !abs.startsWith(root + "/")) return null
+    return {
+      relPath: abs.slice(root.length + 1),
+      name: reviewName,
+      getText: () => editorRef.current?.getValue() ?? vaultRef.current.openFile?.content ?? "",
+    }
+  }, [vault.vaultPath, reviewPath, reviewName])
+  const renderChangesHtml = useCallback(
+    (markdown: string) =>
+      sanitizeRenderedHtml(
+        renderMarkdown(
+          markdown,
+          macros,
+          vault.vaultPath ?? undefined,
+          wikiNames,
+          bibMap,
+          transclusionResolver,
+          undefined,
+          { annotate: false, showChanges: true },
+        ),
+      ),
+    [macros, vault.vaultPath, wikiNames, bibMap, transclusionResolver],
+  )
   const gitBarEl = useMemo(
     () => (
       <LazyRegion region="git-bar">
-        <GitBar vaultPath={vault.vaultPath} openSignal={gitOpenSignal} />
+        <GitBar
+          vaultPath={vault.vaultPath}
+          openSignal={gitOpenSignal}
+          reviewNote={reviewNote}
+          renderChangesHtml={renderChangesHtml}
+        />
       </LazyRegion>
     ),
-    [vault.vaultPath, gitOpenSignal],
+    [vault.vaultPath, gitOpenSignal, reviewNote, renderChangesHtml],
   )
 
   // ── Command palette wiring ───────────────────────────────────────────────

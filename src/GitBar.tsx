@@ -26,6 +26,8 @@ import { showToast } from "./toastService"
 import { pathBasename, pathDirname } from "./pathUtils"
 import { runGit, isNotRepo, parseStatusZ, type GitFile, type GitStatus } from "./gitApi"
 import { collabState, defaultSaveMessage, unmergedFiles } from "./collabGuide"
+import { compareWithRound, listRounds, startRound, type ReviewRound } from "./reviewRounds"
+import ReviewCompareDialog, { type ReviewComparison } from "./ReviewCompareDialog"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -696,6 +698,134 @@ export function StashSection({ vaultPath }: { vaultPath: string }) {
   )
 }
 
+// ── Review rounds ─────────────────────────────────────────────────────────────
+//
+// A round is a lightweight tag `review-N` on a commit (reviewRounds.ts, pure
+// and tested). "Compare" turns the open note's difference from a round into
+// tracked changes and hands it to the read-only dialog.
+
+export interface ReviewNote {
+  /** Path of the open note relative to the vault, with forward slashes. */
+  relPath: string
+  /** Name shown in the dialog title. */
+  name: string
+  /** The note as it is in the editor now. */
+  getText: () => string
+}
+
+function ReviewSection({
+  vaultPath,
+  note,
+  onCompare,
+}: {
+  vaultPath: string
+  note: ReviewNote | null
+  onCompare: (c: ReviewComparison) => void
+}) {
+  const g = useT().git
+  const r = g.review
+  const [rounds, setRounds] = useState<ReviewRound[]>([])
+  const [busy, setBusy] = useState(false)
+  const run = useCallback((args: string[]) => runGit(vaultPath, args), [vaultPath])
+  const load = useCallback(async () => {
+    try {
+      setRounds(await listRounds(run))
+    } catch {
+      setRounds([])
+    }
+  }, [run])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and on vault change; state is set after the await
+    void load()
+  }, [load])
+
+  const start = useCallback(async () => {
+    const next = (rounds.length ? rounds[rounds.length - 1].n : 0) + 1
+    try {
+      if (!(await tauriConfirm(r.startConfirm(next), { kind: "info" }))) return
+      setBusy(true)
+      const res = await startRound(run, { message: r.commitMessage })
+      if (res.ok) showToast(r.started(res.round.n, res.committed), "success")
+      else if (res.reason === "not-repo") showToast(r.notRepo, "info")
+      else if (res.reason === "empty") showToast(r.empty, "info")
+      else showToast(r.error(res.message), "error")
+      await load()
+    } catch (e) {
+      showToast(r.error(String(e)), "error")
+    } finally {
+      setBusy(false)
+    }
+  }, [rounds, run, load, r])
+
+  const compare = useCallback(
+    async (round: ReviewRound) => {
+      if (!note) return
+      try {
+        const res = await compareWithRound(run, round, note.relPath, note.getText(), r.cantShow)
+        if (!res.ok) {
+          showToast(res.reason === "no-such-note" ? r.noSuchNote(round.n) : r.tooDifferent, "info")
+        } else if (!res.changed) {
+          showToast(r.identical(round.n), "info")
+        } else {
+          onCompare({
+            round: round.n,
+            fileName: note.name,
+            markup: res.markup,
+            exact: res.exact,
+          })
+        }
+      } catch (e) {
+        showToast(r.error(String(e)), "error")
+      }
+    },
+    [note, run, onCompare, r],
+  )
+
+  return (
+    <GitSection
+      title={r.title}
+      count={rounds.length}
+      defaultOpen={false}
+      headerAction={{
+        label: <Icon icon={Plus} size={14} />,
+        title: r.start,
+        onClick: () => {
+          if (!busy) void start()
+        },
+      }}
+    >
+      <div className="git-section-body">
+        {rounds.length === 0 ? (
+          <div className="git-no-changes">
+            {r.none}
+            <br />
+            {r.explain}
+          </div>
+        ) : (
+          [...rounds].reverse().map((rd) => (
+            <div key={rd.tag} className="git-stash-entry">
+              <span className="git-stash-label">
+                {r.round(rd.n)} <span className="git-log-hash">{rd.commit}</span>
+                {rd.date ? ` ${rd.date.slice(0, 10)}` : ""}
+              </span>
+              <button
+                className="git-action git-section-action"
+                title={note ? r.compareWith(rd.n) : r.noNote}
+                aria-label={note ? r.compareWith(rd.n) : r.noNote}
+                disabled={!note}
+                onClick={() => void compare(rd)}
+              >
+                {r.compare}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </GitSection>
+  )
+}
+
 // ── Guided collaboration ──────────────────────────────────────────────────────
 //
 // Plain language over the same git the panel below already speaks: share the
@@ -969,10 +1099,14 @@ function ChangesPanel({
   vaultPath,
   status,
   onRefresh,
+  reviewNote,
+  onCompare,
 }: {
   vaultPath: string
   status: GitStatus
   onRefresh: () => void
+  reviewNote: ReviewNote | null
+  onCompare: (c: ReviewComparison) => void
 }) {
   const g = useT().git
   const [commitMsg, setCommitMsg] = useState("")
@@ -1235,6 +1369,9 @@ function ChangesPanel({
       {/* Stash */}
       <StashSection vaultPath={vaultPath} />
 
+      {/* Review rounds */}
+      <ReviewSection vaultPath={vaultPath} note={reviewNote} onCompare={onCompare} />
+
       {/* Recent commits */}
       <GitSection title={g.recentCommits} defaultOpen={false}>
         <div className="git-log-list">
@@ -1271,9 +1408,18 @@ interface GitBarProps {
    * asking twice in a row works.
    */
   openSignal?: number
+  /** The open note, for "Compare with round N" (null: nothing open). */
+  reviewNote?: ReviewNote | null
+  /** Markdown with tracked changes to sanitized HTML, for the read-only comparison. */
+  renderChangesHtml?: (markdown: string) => string
 }
 
-export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
+export default function GitBar({
+  vaultPath,
+  openSignal = 0,
+  reviewNote = null,
+  renderChangesHtml,
+}: GitBarProps) {
   const g = useT().git
 
   const [status, setStatus] = useState<GitStatus | null>(null)
@@ -1283,6 +1429,7 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
   const [panelOpen, setPanelOpen] = useState(false)
   const [branchOpen, setBranchOpen] = useState(false)
   const [remoteOp, setRemoteOp] = useState<string | null>(null)
+  const [comparison, setComparison] = useState<ReviewComparison | null>(null)
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -1569,10 +1716,28 @@ export default function GitBar({ vaultPath, openSignal = 0 }: GitBarProps) {
                 </div>
               )}
 
-              {status && <ChangesPanel vaultPath={vaultPath} status={status} onRefresh={refresh} />}
+              {status && (
+                <ChangesPanel
+                  vaultPath={vaultPath}
+                  status={status}
+                  onRefresh={refresh}
+                  reviewNote={reviewNote}
+                  onCompare={(c) => {
+                    setComparison(c)
+                    setPanelOpen(false)
+                  }}
+                />
+              )}
             </>
           )}
         </div>
+      )}
+      {comparison && renderChangesHtml && (
+        <ReviewCompareDialog
+          comparison={comparison}
+          renderHtml={renderChangesHtml}
+          onClose={() => setComparison(null)}
+        />
       )}
     </div>
   )

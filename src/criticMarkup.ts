@@ -424,7 +424,7 @@ function attrSafe(s: string): string {
  * (display math, fenced code) inside the body are left outside the tag. The
  * number of lines is unchanged: the preview's source-line sync stays right.
  */
-function wrapBody(body: string, open: string, close: string): string {
+function wrapBody(body: string, open: string, close: string, lineStart = false): string {
   if (body === "") return ""
   const regions = exclusionRegions(body)
   const parts: string[] = []
@@ -441,20 +441,36 @@ function wrapBody(body: string, open: string, close: string): string {
       pieces.push(part.slice(1))
       continue
     }
+    const first = pieces.length === 0
     pieces.push(
       part
         .split(/(\n[ \t]*\n)/)
-        .map((seg, k) => (k % 2 === 1 || seg.trim() === "" ? seg : wrapSegment(seg, open, close)))
+        .map((seg, k) =>
+          k % 2 === 1 || seg.trim() === ""
+            ? seg
+            : wrapSegment(seg, open, close, k > 0 || (first && lineStart)),
+        )
         .join(""),
     )
   }
   return pieces.join("")
 }
 
-function wrapSegment(seg: string, open: string, close: string): string {
+// A list, heading or quote marker opening a mark that starts a line stays
+// outside the tag, so `{++## New++}` still renders as a heading.
+const BLOCK_PREFIX_RE = /^(?:#{1,6} |[-*+] |\d+[.)] |> )/
+
+function wrapSegment(seg: string, open: string, close: string, lineStart: boolean): string {
   const lead = /^\s*/.exec(seg)![0]
   const trail = /\s*$/.exec(seg)![0]
-  return lead + open + seg.slice(lead.length, seg.length - trail.length) + close + trail
+  let body = seg.slice(lead.length, seg.length - trail.length)
+  let prefix = ""
+  if (lineStart || lead.includes("\n")) {
+    prefix = BLOCK_PREFIX_RE.exec(body)?.[0] ?? ""
+    body = body.slice(prefix.length)
+  }
+  if (body === "") return seg
+  return lead + prefix + open + body + close + trail
 }
 
 /**
@@ -476,15 +492,22 @@ export function renderCriticMarks(text: string, labels: CriticLabels = DEFAULT_L
   for (const m of marks) {
     out += text.slice(cursor, m.start)
     cursor = m.end
+    const ls = m.start === 0 || text[m.start - 1] === "\n"
     switch (m.kind) {
       case "add":
-        out += wrapBody(m.text, `<ins class="critic critic-add" title="${labels.added}">`, "</ins>")
+        out += wrapBody(
+          m.text,
+          `<ins class="critic critic-add" title="${labels.added}">`,
+          "</ins>",
+          ls,
+        )
         break
       case "del":
         out += wrapBody(
           m.text,
           `<del class="critic critic-del" title="${labels.deleted}">`,
           "</del>",
+          ls,
         )
         break
       case "sub":
@@ -493,6 +516,7 @@ export function renderCriticMarks(text: string, labels: CriticLabels = DEFAULT_L
             m.oldText ?? "",
             `<del class="critic critic-del" title="${labels.deleted}">`,
             "</del>",
+            ls,
           ) +
           wrapBody(
             m.newText ?? "",
@@ -509,6 +533,7 @@ export function renderCriticMarks(text: string, labels: CriticLabels = DEFAULT_L
             m.text,
             `<mark class="critic critic-highlight" title="${labels.highlight}">`,
             "</mark>",
+            ls,
           ) + (m.comment !== undefined ? comment(m.comment) : "")
         break
     }

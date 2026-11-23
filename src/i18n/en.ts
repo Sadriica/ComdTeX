@@ -1054,6 +1054,38 @@ export const en: T = {
     stashSuccess: "Changes stashed.",
     stashPopSuccess: "Stash applied.",
     noStashes: "No stashes.",
+    review: {
+      title: "Review rounds",
+      start: "Start review round",
+      startConfirm: (n) =>
+        `Record everything pending in this vault as one commit and mark it as review round ${n}? Nothing is sent anywhere.`,
+      started: (n, committed) =>
+        committed
+          ? `Review round ${n} started. Pending changes were recorded.`
+          : `Review round ${n} started.`,
+      none: "No review rounds yet.",
+      explain:
+        "A round marks the vault as you send it out for review. Later, compare a note with a round to see what changed as tracked changes.",
+      round: (n) => `Round ${n}`,
+      compare: "Compare",
+      compareWith: (n) => `Compare the open note with round ${n}`,
+      noNote: "Open a note to compare it with a round.",
+      noSuchNote: (n) => `This note did not exist in round ${n}.`,
+      tooDifferent: "These versions are too different to show as tracked changes.",
+      identical: (n) => `The note is the same as in round ${n}.`,
+      notRepo: "This vault has no history yet. Start history in Settings, Sync.",
+      empty: "There is nothing to mark yet. Save a note first.",
+      error: (msg) => `Review round failed: ${msg}`,
+      commitMessage: (n) => `Review round ${n}`,
+      cantShow: "This part changed in a way that cannot be shown as tracked changes.",
+      dialogTitle: (n, file) => `${file} compared with round ${n}`,
+      inexact:
+        "Some parts changed in a way that cannot be shown as marks; they appear as the new text with a note.",
+      legend: "Additions are green and underlined, deletions red and struck through. Read only.",
+      copy: "Copy as CriticMarkup",
+      copied: "Copied",
+      close: "Close",
+    },
     stashError: (msg) => `Stash failed: ${msg}`,
     remotes: "Remotes",
     reloadRemotes: "Reload remotes",

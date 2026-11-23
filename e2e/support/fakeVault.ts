@@ -260,6 +260,22 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
             )
           case "config":
             return ok(rest[0] === "user.email" ? "ada@example.org\n" : "Ada Tester\n")
+          // Review rounds: only when a spec sets `window.__FAKE_ROUNDS__`, a map
+          // of vault-relative path to the note's text in round 1.
+          case "for-each-ref": {
+            const rounds = (w as unknown as { __FAKE_ROUNDS__?: Record<string, string> })
+              .__FAKE_ROUNDS__
+            return ok(rounds ? "review-1\tabc1234\t2026-03-01T10:00:00+00:00\n" : "")
+          }
+          case "show": {
+            const rounds = (w as unknown as { __FAKE_ROUNDS__?: Record<string, string> })
+              .__FAKE_ROUNDS__
+            const m = /^review-1:\.\/(.+)$/.exec(rest[0] ?? "")
+            const text = m && rounds ? rounds[m[1]] : undefined
+            return text === undefined
+              ? { ...no("fatal: path does not exist"), code: 128 }
+              : ok(text)
+          }
           case "stash":
             return ok("stash@{0}: WIP on main: 9f3c2ab Tighten the Cheeger bound\n")
           case "diff":

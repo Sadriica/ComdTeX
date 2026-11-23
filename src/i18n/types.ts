@@ -977,6 +977,32 @@ export interface T {
     stashSuccess: string
     stashPopSuccess: string
     noStashes: string
+    review: {
+      title: string
+      start: string
+      startConfirm: (n: number) => string
+      started: (n: number, committed: boolean) => string
+      none: string
+      explain: string
+      round: (n: number) => string
+      compare: string
+      compareWith: (n: number) => string
+      noNote: string
+      noSuchNote: (n: number) => string
+      tooDifferent: string
+      identical: (n: number) => string
+      notRepo: string
+      empty: string
+      error: (msg: string) => string
+      commitMessage: (n: number) => string
+      cantShow: string
+      dialogTitle: (n: number, file: string) => string
+      inexact: string
+      legend: string
+      copy: string
+      copied: string
+      close: string
+    }
     stashError: (msg: string) => string
     // panel
     // remotes section

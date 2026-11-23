@@ -333,6 +333,12 @@ describe("renderCriticMarks", () => {
     expect(h).toContain("$$\nx\n$$")
     expect(h.match(/<ins /g)).toHaveLength(2)
   })
+  it("keeps a block marker outside the tag when a mark starts the line", () => {
+    expect(renderCriticMarks("{++## New\n++}")).toMatch(/^## <ins [^>]*>New<\/ins>\n$/)
+    expect(renderCriticMarks("- {--item--}")).toContain("- <del")
+    expect(renderCriticMarks("a {++## no++}")).toContain("<ins")
+    expect(renderCriticMarks("a {++## no++}")).toContain(">## no</ins>")
+  })
   it("returns text without marks untouched", () => {
     expect(renderCriticMarks("plain $x$")).toBe("plain $x$")
   })
