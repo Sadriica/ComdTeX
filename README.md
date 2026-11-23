@@ -451,7 +451,7 @@ git clone https://github.com/Sadriica/ComdTeX && cd ComdTeX
 
 ### Linux: AppImage (universal)
 
-Download the `.AppImage` from the [latest release](https://github.com/sadriica/comdtex/releases/latest), make it executable, and run it:
+Download the `.AppImage` from the [latest release](https://github.com/Sadriica/ComdTeX/releases/latest), make it executable, and run it:
 
 ```bash
 chmod +x ComdTeX_*.AppImage
@@ -464,7 +464,7 @@ The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwaylan
 
 ### Linux: Debian/Ubuntu (.deb)
 
-Download the `.deb` from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and install it:
+Download the `.deb` from the [latest release](https://github.com/Sadriica/ComdTeX/releases/latest) and install it:
 
 ```bash
 sudo dpkg -i comdtex_*.deb
@@ -483,7 +483,7 @@ Use the one-line installer or the PKGBUILD above. The installer applies the extr
 
 ### Windows
 
-Download the `.exe` (NSIS installer) from the [latest release](https://github.com/sadriica/comdtex/releases/latest) and run it.
+Download the `.exe` (NSIS installer) from the [latest release](https://github.com/Sadriica/ComdTeX/releases/latest) and run it.
 
 ### Optional dependencies
 
@@ -726,12 +726,12 @@ Requires updating **all five** of the following; omitting any causes inconsisten
 2. `src/monacoSetup.ts`: add a completion entry to `COMPLETIONS`
 3. `src/Toolbar.tsx`: add an entry to the appropriate section in `getSections(t)` (the unified menu bar)
 4. `src/HelpPanel.tsx`: add a `<Row>` entry in the corresponding section
-5. `src/i18n.ts`: add the label to `T.toolbar` and `T.helpPanel` in **both** `en` and `es`
+5. `src/i18n/types.ts`, `src/i18n/en.ts`, `src/i18n/es.ts`: add the label to `T.toolbar` and `T.helpPanel` in the type and in **both** `en` and `es`
 
 ### Adding UI strings
 
-1. Add the key and type to the `T` interface in `src/i18n.ts`
-2. Provide the translation in both the `en` and `es` objects
+1. Add the key and type to the `T` interface in `src/i18n/types.ts`
+2. Provide the translation in both `src/i18n/en.ts` and `src/i18n/es.ts`
 3. Access via `useT()` in the component; never hardcode English text
 
 ### Project structure
@@ -779,7 +779,7 @@ Requires updating **all five** of the following; omitting any causes inconsisten
 | `globalErrorHandlers.ts` | Reports uncaught errors and unhandled rejections once, as a toast |
 | `contentLinter.ts` | Real-time Monaco markers: broken links, citations, equations, shorthand errors |
 | `checkDeps.ts` | Checks optional shell tools (`pandoc`, `zip`, `typst`) on startup |
-| `i18n.ts` | EN/ES translation system: `T` interface, `LANGS`, `LanguageContext`, `useT()` |
+| `i18n.ts`, `i18n/` | EN/ES translation system: `i18n.ts` holds `LANGS`, `LanguageContext`, `useT()`; the `T` interface is in `i18n/types.ts` and the strings in `i18n/en.ts` and `i18n/es.ts` |
 | `toastService.ts` | Singleton toast module |
 | `types.ts` | Shared TypeScript types (`FileNode`, `OpenFile`, `SearchResult`) |
 
