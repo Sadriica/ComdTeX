@@ -173,8 +173,18 @@ describe.skipIf(!hasGit)("cloneVault with real git", { timeout: GIT_TIMEOUT }, (
     execFileSync("git", [...IDENTITY, "init", lfs], { stdio: "pipe" })
     writeFileSync(join(lfs, ".gitattributes"), "*.bin filter=lfs diff=lfs merge=lfs -text\n")
     writeFileSync(join(lfs, "big.bin"), "not a real pointer\n")
-    git(lfs, "add", "-A")
-    git(lfs, "commit", "-m", "lfs")
+    // Seed with the LFS filter off, so a machine with git-lfs installed does not
+    // turn the file into a real pointer before the clone runs.
+    const noLfs = [
+      "-c",
+      "filter.lfs.clean=",
+      "-c",
+      "filter.lfs.process=",
+      "-c",
+      "filter.lfs.required=false",
+    ]
+    git(lfs, ...noLfs, "add", "-A")
+    git(lfs, ...noLfs, "commit", "-m", "lfs")
     const r = await cloneVault(nodeHost(), { url: lfs, parent: out, name: "lfs" })
     expect(r).toMatchObject({ ok: true })
     expect(readFileSync(join(out, "lfs", "big.bin"), "utf8")).toBe("not a real pointer\n")
