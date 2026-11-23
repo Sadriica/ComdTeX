@@ -24,13 +24,18 @@ import { safeGitConfig } from "./gitApi"
 
 // ── Address validation ──────────────────────────────────────────────────────
 
-export type CloneUrlProblem = "empty" | "option" | "helper" | "unsupported" | "spaces"
+export type CloneUrlProblem =
+  "empty" | "option" | "helper" | "unsupported" | "spaces" | "noScheme" | "credentials"
 
 /** Schemes git can fetch over and that ComdTeX accepts. */
 const URL_SCHEME = /^(https?|ssh|git|file):\/\//i
 /** scp-like: `git@github.com:user/repo.git`. */
 const SCP_LIKE = /^[\w.-]+@[\w.-]+:[^\s]+$/
 /** An absolute local path (a bare repository on disk, a mounted share). */
+/** `github.com/user/repo`: a web address typed without its `https://`. */
+const BARE_WEB_ADDRESS = /^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?\/\S+/i
+/** `user:token@host` or `token@host` in an http(s) address. */
+const EMBEDDED_CREDENTIALS = /^https?:\/\/[^/?#]*@/i
 const LOCAL_PATH = /^(\/|[A-Za-z]:[\\/]|\\\\)/
 
 export function validateCloneUrl(
@@ -43,6 +48,10 @@ export function validateCloneUrl(
   // Remote helpers: `ext::sh -c ...` runs a program; `hg::` and friends load one.
   if (/^[\w+.-]+::/.test(url)) return { ok: false, problem: "helper" }
   if (/[\s\u0000-\u001f]/.test(url)) return { ok: false, problem: "spaces" }
+  // A token in the address would be written to .git/config by git clone.
+  if (EMBEDDED_CREDENTIALS.test(url)) return { ok: false, problem: "credentials" }
+  if (BARE_WEB_ADDRESS.test(url) && !URL_SCHEME.test(url) && !SCP_LIKE.test(url))
+    return { ok: false, problem: "noScheme" }
   if (URL_SCHEME.test(url) || SCP_LIKE.test(url) || LOCAL_PATH.test(url)) return { ok: true, url }
   return { ok: false, problem: "unsupported" }
 }

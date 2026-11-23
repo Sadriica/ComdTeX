@@ -2115,7 +2115,10 @@ export interface T {
     >
     received: (size: string) => string
     done: (name: string) => string
-    problem: Record<"empty" | "option" | "helper" | "unsupported" | "spaces", string>
+    problem: Record<
+      "empty" | "option" | "helper" | "unsupported" | "spaces" | "noScheme" | "credentials",
+      string
+    >
     error: Record<
       | "gitMissing"
       | "auth"

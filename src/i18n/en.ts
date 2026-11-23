@@ -2332,6 +2332,9 @@ export const en: T = {
       option: "An address cannot start with a dash.",
       helper: "That kind of address (a git remote helper such as ext::) is not allowed.",
       unsupported: "Use an https://, ssh:// or git@host:path address.",
+      noScheme: "Add https:// at the start, for example https://github.com/user/repo.",
+      credentials:
+        "Remove the user name and token from the address. ComdTeX does not store tokens in the repository settings: use a git credential helper or an SSH key.",
       spaces: "The address cannot contain spaces.",
     },
     error: {

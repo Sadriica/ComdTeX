@@ -2356,6 +2356,9 @@ export const es: T = {
       option: "Una dirección no puede empezar con un guion.",
       helper: "Ese tipo de dirección (un ayudante remoto de git como ext::) no está permitido.",
       unsupported: "Usa una dirección https://, ssh:// o git@servidor:ruta.",
+      noScheme: "Añade https:// al principio, por ejemplo https://github.com/usuario/repo.",
+      credentials:
+        "Quita el usuario y el token de la dirección. ComdTeX no guarda tokens en la configuración del repositorio: usa un credential helper de git o una clave SSH.",
       spaces: "La dirección no puede contener espacios.",
     },
     error: {

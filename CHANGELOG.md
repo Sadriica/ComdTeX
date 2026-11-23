@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Open from Git explains two address mistakes.** An address typed without its scheme (`github.com/user/repo`) now says to add `https://`, and an `https://` address with a user name or token inside it is refused with advice to use a git credential helper or an SSH key, so a token is never written to the repository settings.
 - **Compare with round no longer marks the whole note as changed.** The note open in the editor was compared with the raw text git holds, so every theorem block, `table(...)` shorthand and CRLF line end showed up as a change. The round's text is now converted to the editor form first, and an unchanged note gives no marks.
 
 ## [1.38.0] - 2026-11-23

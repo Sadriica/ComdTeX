@@ -52,6 +52,33 @@ describe("validateCloneUrl", () => {
   })
 })
 
+describe("validateCloneUrl suggestions", () => {
+  it("rejects an address without a scheme, with its own problem", () => {
+    for (const u of [
+      "github.com/user/repo",
+      "www.gitlab.com/ada/notes.git",
+      "git.example.org:8080/a/b",
+    ])
+      expect(validateCloneUrl(u), u).toEqual({ ok: false, problem: "noScheme" })
+    expect(validateCloneUrl("notes")).toEqual({ ok: false, problem: "unsupported" })
+  })
+
+  it("keeps accepting scp-like and local addresses", () => {
+    expect(validateCloneUrl("git@github.com:user/repo.git")).toMatchObject({ ok: true })
+    expect(validateCloneUrl("/srv/git/a.git")).toMatchObject({ ok: true })
+  })
+
+  it("rejects credentials embedded in an http(s) address", () => {
+    for (const u of [
+      "https://ada:ghp_secret@github.com/ada/notes.git",
+      "https://ghp_secret@github.com/ada/notes.git",
+      "http://user:pw@host/x",
+    ])
+      expect(validateCloneUrl(u), u).toEqual({ ok: false, problem: "credentials" })
+    expect(validateCloneUrl("https://github.com/ada/a@b")).toMatchObject({ ok: true })
+  })
+})
+
 describe("repoNameFromUrl", () => {
   it("takes the last segment without .git", () => {
     expect(repoNameFromUrl("https://github.com/ada/notes.git")).toBe("notes")
