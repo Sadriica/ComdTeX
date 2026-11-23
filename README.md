@@ -459,7 +459,7 @@ Re-run it anytime to update; `--uninstall` removes it cleanly (vaults and settin
 
 ### Linux: Arch (AUR-style package)
 
-`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration). **Not published on the AUR yet** (the files track the latest release; see `packaging/README.md` for the publishing setup). Until then, use the one-line installer, or build the package locally:
+`packaging/aur/comdtex-bin/` contains a PKGBUILD that repackages the official `.deb` (full desktop integration). **Not published on the AUR yet** (the files are updated for each release by `packaging/aur/update.sh`, and the version in them can lag behind the latest release; see `packaging/README.md` for the publishing setup). Until then, use the one-line installer, or build the package locally:
 
 ```bash
 cd packaging/aur/comdtex-bin && makepkg -si
@@ -477,13 +477,13 @@ git clone https://github.com/Sadriica/ComdTeX && cd ComdTeX
 Download the `.AppImage` from the [latest release](https://github.com/Sadriica/ComdTeX/releases/latest), make it executable, and run it:
 
 ```bash
-chmod +x ComdTeX_*.AppImage
-./ComdTeX_*.AppImage
+chmod +x comdtex_*.AppImage
+./comdtex_*.AppImage
 ```
 
 The released AppImage is patched in CI for Mesa 24+ EGL compatibility (libwayland-egl removed, `WEBKIT_DISABLE_DMABUF_RENDERER=1` set). It runs portably on Fedora, openSUSE Tumbleweed, Debian/Ubuntu, and other distros; no system install required.
 
-> **Blank white window on Arch/Manjaro?** The AppImage's bundled `libwayland-client/cursor/server` can be older than your Mesa/Wayland stack, aborting WebKit's EGL init (`EGL_BAD_PARAMETER`). Use the one-line installer above: it extracts the AppImage, removes those libraries, and also drops the baked-in `WEBKIT_DISABLE_DMABUF_RENDERER=1` (with system libs in place it only forces slow software rendering). Manual equivalent: `./ComdTeX_*.AppImage --appimage-extract`, delete `squashfs-root/usr/lib/libwayland-*.so*`, remove the `WEBKIT_DISABLE_DMABUF_RENDERER` line from `squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh`, run `squashfs-root/AppRun`.
+> **Blank white window on Arch/Manjaro?** The AppImage's bundled `libwayland-client/cursor/server` can be older than your Mesa/Wayland stack, aborting WebKit's EGL init (`EGL_BAD_PARAMETER`). Use the one-line installer above: it extracts the AppImage, removes those libraries, and also drops the baked-in `WEBKIT_DISABLE_DMABUF_RENDERER=1` (with system libs in place it only forces slow software rendering). Manual equivalent: `./comdtex_*.AppImage --appimage-extract`, delete `squashfs-root/usr/lib/libwayland-*.so*`, remove the `WEBKIT_DISABLE_DMABUF_RENDERER` line from `squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh`, run `squashfs-root/AppRun`.
 
 ### Linux: Debian/Ubuntu (.deb)
 
