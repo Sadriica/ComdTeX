@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Compare with round no longer marks the whole note as changed.** The note open in the editor was compared with the raw text git holds, so every theorem block, `table(...)` shorthand and CRLF line end showed up as a change. The round's text is now converted to the editor form first, and an unchanged note gives no marks.
+
 ## [1.38.0] - 2026-11-23
 
 ### Added

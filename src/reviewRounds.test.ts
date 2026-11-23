@@ -7,6 +7,7 @@ import {
   noteAtRound,
   startRound,
 } from "./reviewRounds"
+import { toEditorContent, toStorage } from "./cmdxFormat"
 import type { GitRunner } from "./vaultSync"
 
 function roundTrip(a: string, b: string) {
@@ -215,5 +216,42 @@ describe("rounds with a scripted runner", () => {
     })
     const c = await compareWithRound(git, 1, "notes/a.md", "new\n")
     expect(c.ok && c.markup).toBe("{~~old~>new~~}\n")
+  })
+})
+
+describe("compareWithRound with editor (CMDX) text", () => {
+  const cmdx =
+    "# T\n\n:::theorem[Bolzano]{#thm:b}\nEvery bounded sequence has a limit point.\n:::\n\ntable(A, B)\n\nEnd.\n"
+  const disk = toStorage(cmdx, "md")
+  const git =
+    (text: string): GitRunner =>
+    async () => ({ code: 0, stdout: text, stderr: "" })
+
+  it("the stored form really differs from the editor form", () => {
+    expect(disk).not.toBe(cmdx)
+  })
+
+  it("gives no marks for an unchanged note", async () => {
+    const editor = toEditorContent("a.md", disk)
+    const c = await compareWithRound(git(disk), 1, "a.md", editor)
+    expect(c.ok && c.changed).toBe(false)
+    expect(c.ok && parseCriticMarks(c.markup).length).toBe(0)
+  })
+
+  it("gives no spurious marks when the file has CRLF on disk", async () => {
+    const crlf = disk.replace(/\n/g, "\r\n")
+    const editor = toEditorContent("a.md", crlf)
+    const c = await compareWithRound(git(crlf), 1, "a.md", editor)
+    expect(c.ok && c.changed).toBe(false)
+    expect(c.ok && parseCriticMarks(c.markup).length).toBe(0)
+  })
+
+  it("still marks a real change", async () => {
+    const editor = toEditorContent("a.md", disk).replace("End.", "The end.")
+    const c = await compareWithRound(git(disk), 1, "a.md", editor)
+    expect(c.ok && c.changed).toBe(true)
+    expect(c.ok && parseCriticMarks(c.markup).length).toBe(1)
+    expect(c.ok && acceptAll(c.markup)).toBe(editor)
+    expect(c.ok && rejectAll(c.markup)).toBe(toEditorContent("a.md", disk))
   })
 })

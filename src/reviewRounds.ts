@@ -15,6 +15,7 @@
 // tree beyond recording it in a commit.
 
 import { acceptAll, hasCriticMarks, parseCriticMarks, rejectAll } from "./criticMarkup"
+import { storageFormatForPath, toCmdx } from "./cmdxFormat"
 import { exclusionRegions } from "./keepMarks"
 import type { GitRunner } from "./vaultSync"
 
@@ -369,7 +370,24 @@ export type CompareResult =
   | { ok: true; markup: string; changed: boolean; exact: boolean }
   | { ok: false; reason: "no-such-note" | "too-different" }
 
-/** The open note compared with how it stood in `round`, as CriticMarkup. */
+/**
+ * A stored note in the form the editor holds it: LF line ends and CMDX. The
+ * editor text (`currentText`) is already in that form, so the git text must be
+ * too, or every `:::theorem[..]{#..}` and `table(..)` reads as a change. This
+ * is the pure part of `toEditorContent` (cmdxFormat.ts), without its memory of
+ * line endings, which must not be touched by reading an old version.
+ */
+function storedToEditorText(path: string, stored: string): string {
+  const lf = stored.replace(/\r\n/g, "\n")
+  const format = storageFormatForPath(path)
+  return format ? toCmdx(lf, format) : lf
+}
+
+/**
+ * The open note compared with how it stood in `round`, as CriticMarkup.
+ * `currentText` is the editor text (CMDX); the round's text is converted to
+ * the same form before the diff.
+ */
 export async function compareWithRound(
   git: GitRunner,
   round: ReviewRound | number,
@@ -379,7 +397,7 @@ export async function compareWithRound(
 ): Promise<CompareResult> {
   const before = await noteAtRound(git, round, vaultRelativePath)
   if (before === null) return { ok: false, reason: "no-such-note" }
-  const diff = diffToCriticMarkup(before, currentText, note)
+  const diff = diffToCriticMarkup(storedToEditorText(vaultRelativePath, before), currentText, note)
   if (diff === null) return { ok: false, reason: "too-different" }
   return {
     ok: true,
