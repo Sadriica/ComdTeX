@@ -2,7 +2,7 @@
 
 Distribution channels beyond the GitHub release itself. Every submission is an outward-facing action: prepare here, publish only on explicit request.
 
-**Status: none of these channels has been published.** The winget manifests and the AUR files are current (1.37.0, real sha256). The release workflow updates the AUR package automatically once the owner completes the AUR setup below. The Flatpak manifest is still frozen at 1.16.0 (edit its `url:`/`sha256:` pairs by hand from the release's `.sha256` assets), and the Flathub submission, the winget PR and the AUR package do not exist yet.
+**Status (1.38.0):** nothing is live yet. winget: the manifests for 1.38.0 are submitted as PR microsoft/winget-pkgs#487562, in review and waiting for the owner to sign the Microsoft CLA. AUR: `PKGBUILD` and `.SRCINFO` are at 1.38.0 with real sha256 sums, but the package is not published on the AUR (the owner setup below is pending); once `AUR_SSH_PRIVATE_KEY` is set the release workflow updates it on every stable tag. Flatpak: the manifest is frozen at 1.16.0 (edit its `url:`/`sha256:` pairs by hand from the release's `.sha256` assets) and there is no Flathub submission.
 
 | Channel | Dir | Bump procedure | Publish procedure |
 |---|---|---|---|
