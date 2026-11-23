@@ -50,6 +50,7 @@ export interface PaletteCommandsCtx {
   handleVaultBackup: () => void
   openCmdkRef: RefObject<() => void>
   selectVault: () => void
+  openFromGit: () => void
   setTemplateOpen: (open: boolean) => void
   /** Inline create in the file tree, at the shared target folder. */
   startInlineCreate: (kind: "file" | "folder") => void
@@ -137,6 +138,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
     handleVaultBackup,
     openCmdkRef,
     selectVault,
+    openFromGit,
     setTemplateOpen,
     startInlineCreate,
     handleOpenDailyNote,
@@ -1309,6 +1311,7 @@ export function buildPaletteCommands(ctx: PaletteCommandsCtx): PaletteCommand[] 
 
     // ── Vault ────────────────────────────────────────────────────────────────
     { id: "vault", label: t.palette.openVault, category: "Vault", action: selectVault },
+    { id: "openFromGit", label: t.palette.openFromGit, category: "Vault", action: openFromGit },
     {
       id: "newFile",
       label: t.palette.newFile,

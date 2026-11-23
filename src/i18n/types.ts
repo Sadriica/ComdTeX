@@ -537,6 +537,7 @@ export interface T {
     settings: string
     shortcuts: string
     openVault: string
+    openFromGit: string
     viewOutline: string
     viewBacklinks: string
     viewProperties: string
@@ -1044,6 +1045,7 @@ export interface T {
     view: string
     vault: string
     openVault: string
+    openFromGit: string
     newFromTemplate: string
     save: string
     saveAs: string
@@ -1161,6 +1163,7 @@ export interface T {
     tagline: string
     openExisting: string
     createNew: string
+    openFromGit: string
     features: string
     recents: string
     hint: string
@@ -2037,6 +2040,45 @@ export interface T {
     noteTitle: (name: string) => string
     noteEmpty: string
     kinds: Record<"highlight" | "text" | "ink" | "image" | "note", string>
+  }
+
+  cloneVault: {
+    title: string
+    intro: string
+    urlLabel: string
+    urlPlaceholder: string
+    folderLabel: string
+    chooseFolder: string
+    pickerTitle: string
+    nameLabel: string
+    willCreate: (path: string) => string
+    sshHint: string
+    clone: string
+    cancel: string
+    close: string
+    cancelling: string
+    working: string
+    phase: Record<
+      "starting" | "counting" | "compressing" | "receiving" | "resolving" | "checkout",
+      string
+    >
+    received: (size: string) => string
+    done: (name: string) => string
+    problem: Record<"empty" | "option" | "helper" | "unsupported" | "spaces", string>
+    error: Record<
+      | "gitMissing"
+      | "auth"
+      | "notFound"
+      | "network"
+      | "destNotEmpty"
+      | "destInvalid"
+      | "tooLarge"
+      | "stalled"
+      | "other",
+      string
+    >
+    details: string
+    cancelled: string
   }
 
   gitSync: {

@@ -6,6 +6,9 @@
   "permissions": [
     "core:default",
     "allow-allow-vault-dir",
+    "allow-prepare-clone-dest",
+    "allow-finish-clone",
+    "allow-discard-clone",
     "allow-set-secret",
     "allow-get-secret",
     "allow-delete-secret",
@@ -78,6 +81,13 @@
         { "name": "claude",   "cmd": "claude",   "args": true }
       ]
     },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        { "name": "git", "cmd": "git", "args": true }
+      ]
+    },
+    "shell:allow-kill",
     "updater:default",
     "process:allow-restart",
     "core:window:allow-minimize",

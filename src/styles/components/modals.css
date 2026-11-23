@@ -483,3 +483,84 @@
 .template-name-block + .modal-footer {
   border-top: none;
 }
+
+/* ── Open from Git ── */
+.clone-modal {
+  width: min(560px, 100%);
+}
+.clone-intro,
+.clone-hint {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.clone-problem {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.clone-folder-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.clone-folder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+  font-size: var(--text-sm);
+}
+.clone-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.clone-progress-label {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.clone-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--border);
+}
+.clone-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 120ms linear;
+}
+.clone-bar-fill.indeterminate {
+  width: 35%;
+  animation: clone-slide 1.2s ease-in-out infinite alternate;
+}
+@keyframes clone-slide {
+  from {
+    margin-left: 0;
+  }
+  to {
+    margin-left: 65%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .clone-bar-fill.indeterminate {
+    animation: none;
+  }
+}
+.clone-error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.clone-error p {
+  margin: 0;
+}
+.clone-error pre {
+  margin: var(--space-2) 0 0;
+  overflow: auto;
+  max-height: 8em;
+  white-space: pre-wrap;
+  color: var(--fg-muted);
+}

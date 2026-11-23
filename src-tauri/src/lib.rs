@@ -145,6 +145,126 @@ fn allow_vault_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Prefix of the scratch folder a clone is made in, beside its destination.
+/// `discard_clone` refuses anything that does not carry it, so the command
+/// cannot be turned into a general "delete this folder".
+const CLONE_TEMP_PREFIX: &str = ".comdtex-clone-";
+
+#[derive(serde::Serialize)]
+struct CloneTarget {
+    temp: String,
+    dest: String,
+}
+
+/// A clone destination is usable when it does not exist yet or is an empty
+/// folder. The errors are codes the frontend maps to plain-language messages.
+fn check_clone_dest(dest: &std::path::Path) -> Result<(), String> {
+    if !dest.exists() {
+        return Ok(());
+    }
+    if !dest.is_dir() {
+        return Err("dest-is-file".to_string());
+    }
+    let empty = std::fs::read_dir(dest)
+        .map_err(|e| format!("dest-unreadable: {e}"))?
+        .next()
+        .is_none();
+    if empty {
+        Ok(())
+    } else {
+        Err("dest-not-empty".to_string())
+    }
+}
+
+fn valid_clone_name(name: &str) -> bool {
+    !name.trim().is_empty()
+        && name != "."
+        && name != ".."
+        && !name.contains(['/', '\\', '\0', ':'])
+        && !name.starts_with(CLONE_TEMP_PREFIX)
+}
+
+fn plan_clone(
+    parent: &str,
+    name: &str,
+    home: Option<&std::path::Path>,
+) -> Result<CloneTarget, String> {
+    validate_vault_path(parent, home)?;
+    if !valid_clone_name(name) {
+        return Err("bad-name".to_string());
+    }
+    let parent_dir = std::path::Path::new(parent);
+    if !parent_dir.is_dir() {
+        return Err("parent-missing".to_string());
+    }
+    let dest = parent_dir.join(name);
+    validate_vault_path(&dest.to_string_lossy(), home)?;
+    check_clone_dest(&dest)?;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp = parent_dir.join(format!("{CLONE_TEMP_PREFIX}{}-{nanos}", std::process::id()));
+    Ok(CloneTarget {
+        temp: temp.to_string_lossy().into_owned(),
+        dest: dest.to_string_lossy().into_owned(),
+    })
+}
+
+/// Checks the destination before anything is downloaded and picks the scratch
+/// folder the clone is made in (a sibling of the destination, so the final
+/// move is a same-volume rename).
+#[tauri::command]
+fn prepare_clone_dest(
+    app: tauri::AppHandle,
+    parent: String,
+    name: String,
+) -> Result<CloneTarget, String> {
+    let home = app.path().home_dir().ok();
+    plan_clone(&parent, &name, home.as_deref())
+}
+
+fn is_clone_temp(temp: &std::path::Path) -> bool {
+    temp.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.starts_with(CLONE_TEMP_PREFIX))
+}
+
+fn finish_clone_at(temp: &std::path::Path, dest: &std::path::Path) -> Result<(), String> {
+    if !is_clone_temp(temp) || !temp.is_dir() || temp.parent() != dest.parent() {
+        return Err("bad-temp".to_string());
+    }
+    check_clone_dest(dest)?;
+    if dest.is_dir() {
+        std::fs::remove_dir(dest).map_err(|e| format!("dest-unreadable: {e}"))?;
+    }
+    std::fs::rename(temp, dest).map_err(|e| format!("move-failed: {e}"))
+}
+
+fn discard_clone_at(temp: &std::path::Path) -> Result<(), String> {
+    if !is_clone_temp(temp) {
+        return Err("bad-temp".to_string());
+    }
+    if temp.is_dir() {
+        std::fs::remove_dir_all(temp).map_err(|e| format!("discard-failed: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Moves a finished clone from its scratch folder into the destination. Only
+/// runs after git exited cleanly, so a failed or cancelled clone never leaves
+/// a half vault at the destination.
+#[tauri::command]
+fn finish_clone(temp: String, dest: String) -> Result<(), String> {
+    finish_clone_at(std::path::Path::new(&temp), std::path::Path::new(&dest))
+}
+
+/// Deletes the scratch folder of a failed or cancelled clone.
+#[tauri::command]
+fn discard_clone(temp: String) -> Result<(), String> {
+    discard_clone_at(std::path::Path::new(&temp))
+}
+
 /// OS-keychain-backed secret storage, used to keep the AI provider API key
 /// (and any other future secrets) out of localStorage/plaintext JSON. The key used to
 /// live in `settings.aiApiKey` inside `localStorage`; it is now written
@@ -321,6 +441,9 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             allow_vault_dir,
+            prepare_clone_dest,
+            finish_clone,
+            discard_clone,
             set_secret,
             get_secret,
             delete_secret,
@@ -417,6 +540,64 @@ mod tests {
         assert!(validate_vault_path("/data/notes", None).is_ok());
         assert!(validate_vault_path("D:\\Notes", None).is_ok());
         assert!(validate_vault_path("C:\\Users\\me\\vault", None).is_ok());
+    }
+
+    #[test]
+    fn clone_plan_rejects_bad_names_and_busy_destinations() {
+        let base = std::env::temp_dir().join(format!("comdtex-clone-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("busy")).unwrap();
+        std::fs::write(base.join("busy").join("a.md"), "x").unwrap();
+        std::fs::create_dir_all(base.join("empty")).unwrap();
+        std::fs::write(base.join("file"), "x").unwrap();
+        let parent = base.to_string_lossy().into_owned();
+        let plan = |name: &str| plan_clone(&parent, name, None);
+        assert_eq!(plan("busy").err().as_deref(), Some("dest-not-empty"));
+        assert_eq!(plan("file").err().as_deref(), Some("dest-is-file"));
+        assert_eq!(plan("..").err().as_deref(), Some("bad-name"));
+        assert_eq!(plan("a/b").err().as_deref(), Some("bad-name"));
+        assert_eq!(plan("").err().as_deref(), Some("bad-name"));
+        assert!(plan("empty").is_ok());
+        let fresh = plan("fresh").unwrap();
+        assert!(fresh.dest.ends_with("fresh"));
+        assert!(fresh.temp.contains(CLONE_TEMP_PREFIX));
+        assert_eq!(
+            plan_clone(&format!("{parent}/nope"), "x", None)
+                .err()
+                .as_deref(),
+            Some("parent-missing")
+        );
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn finish_moves_and_discard_only_touches_scratch_folders() {
+        let base = std::env::temp_dir().join(format!("comdtex-clone-fin-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let temp = base.join(format!("{CLONE_TEMP_PREFIX}1"));
+        std::fs::create_dir_all(temp.join(".git")).unwrap();
+        std::fs::write(temp.join("n.md"), "x").unwrap();
+        let dest = base.join("vault");
+        std::fs::create_dir_all(&dest).unwrap(); // empty destination is fine
+        finish_clone_at(&temp, &dest).unwrap();
+        assert!(dest.join("n.md").exists() && !temp.exists());
+        // A real folder is never discarded, whatever the frontend asks.
+        assert_eq!(discard_clone_at(&dest).err().as_deref(), Some("bad-temp"));
+        assert!(dest.exists());
+        let scratch = base.join(format!("{CLONE_TEMP_PREFIX}2"));
+        std::fs::create_dir_all(&scratch).unwrap();
+        discard_clone_at(&scratch).unwrap();
+        assert!(!scratch.exists());
+        // A busy destination is refused and the scratch folder is kept.
+        let again = base.join(format!("{CLONE_TEMP_PREFIX}3"));
+        std::fs::create_dir_all(&again).unwrap();
+        assert_eq!(
+            finish_clone_at(&again, &dest).err().as_deref(),
+            Some("dest-not-empty")
+        );
+        assert!(again.exists());
+        std::fs::remove_dir_all(&base).unwrap();
     }
 
     #[test]

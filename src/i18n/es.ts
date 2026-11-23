@@ -560,6 +560,7 @@ export const es: T = {
     settings: "Configuración",
     shortcuts: "Atajos de teclado",
     openVault: "Abrir vault...",
+    openFromGit: "Abrir desde Git...",
     viewOutline: "Ver esquema",
     viewBacklinks: "Ver backlinks",
     viewProperties: "Ver propiedades",
@@ -1120,6 +1121,7 @@ export const es: T = {
     view: "Ver",
     vault: "Vault",
     openVault: "Abrir vault...",
+    openFromGit: "Abrir desde Git...",
     newFromTemplate: "Nuevo desde plantilla",
     save: "Guardar",
     saveAs: "Guardar como...",
@@ -1237,6 +1239,7 @@ export const es: T = {
     tagline: "Editor académico para Markdown + LaTeX",
     openExisting: "Abrir carpeta existente",
     createNew: "Crear nueva carpeta",
+    openFromGit: "Abrir desde Git",
     features: "Funciones",
     recents: "Recientes",
     hint: "Ctrl+O para abrir vault",
@@ -2253,6 +2256,60 @@ export const es: T = {
     noVault: "Abre un vault para usar comentarios",
     noFile: "Abre un archivo para añadir comentarios",
     noCommentAtCursor: "No hay comentario en la línea actual",
+  },
+
+  cloneVault: {
+    title: "Abrir desde Git",
+    intro:
+      "Descarga un repositorio y ábrelo como vault. ComdTeX ejecuta git en tu equipo y nunca pide ni guarda contraseñas ni tokens.",
+    urlLabel: "Dirección del repositorio",
+    urlPlaceholder: "https://github.com/usuario/notas.git o git@github.com:usuario/notas.git",
+    folderLabel: "Guardar en",
+    chooseFolder: "Elegir carpeta...",
+    pickerTitle: "Elige dónde se crea la carpeta del vault",
+    nameLabel: "Nombre de la carpeta",
+    willCreate: (path) => `Se creará en ${path}`,
+    sshHint:
+      "Para un repositorio privado, configura antes una llave SSH o un asistente de credenciales de git; la dirección puede ser entonces la de SSH (git@...).",
+    clone: "Descargar y abrir",
+    cancel: "Cancelar",
+    close: "Cerrar",
+    cancelling: "Cancelando...",
+    working: "Descargando el repositorio",
+    phase: {
+      starting: "Contactando al servidor...",
+      counting: "Contando archivos...",
+      compressing: "Preparando la descarga...",
+      receiving: "Descargando...",
+      resolving: "Reuniendo el historial...",
+      checkout: "Escribiendo los archivos...",
+    },
+    received: (size) => `${size} recibidos`,
+    done: (name) => `Se abrió ${name}.`,
+    problem: {
+      empty: "Pega la dirección de un repositorio.",
+      option: "Una dirección no puede empezar con un guion.",
+      helper: "Ese tipo de dirección (un ayudante remoto de git como ext::) no está permitido.",
+      unsupported: "Usa una dirección https://, ssh:// o git@servidor:ruta.",
+      spaces: "La dirección no puede contener espacios.",
+    },
+    error: {
+      gitMissing:
+        "Git no está instalado o ComdTeX no puede ejecutarlo. Instala Git e inténtalo de nuevo.",
+      auth: "El servidor pidió iniciar sesión y ComdTeX no escribe contraseñas. Configura una llave SSH o un asistente de credenciales de git para ese servidor e inténtalo de nuevo (para un repositorio privado de GitHub, lo más simple es la dirección git@github.com:... con una llave SSH).",
+      notFound:
+        "No se encontró ese repositorio. Revisa la dirección; un repositorio privado también parece inexistente si no has iniciado sesión.",
+      network:
+        "No se pudo contactar al servidor. Revisa tu conexión y la dirección e inténtalo de nuevo.",
+      destNotEmpty: "Esa carpeta ya tiene archivos. Elige otra carpeta u otro nombre.",
+      destInvalid: "No se puede usar esa carpeta. Elige otro lugar u otro nombre.",
+      tooLarge:
+        "El repositorio pesa más de 2 GB, así que se detuvo la descarga. No se guardó nada.",
+      stalled: "El servidor dejó de responder, así que se detuvo la descarga. No se guardó nada.",
+      other: "Git no pudo descargar el repositorio.",
+    },
+    details: "Detalles",
+    cancelled: "Descarga cancelada. No se guardó nada.",
   },
 
   gitSync: {

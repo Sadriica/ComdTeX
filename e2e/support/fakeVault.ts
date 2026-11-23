@@ -400,6 +400,15 @@ export async function installFakeVault(page: Page, options: FakeVaultOptions = {
           case "plugin:dialog|open":
           case "plugin:dialog|save":
             return null
+          // Open from Git: the destination checks pass; spawning git then
+          // fails below ("not installed"), so the modal shows that message.
+          case "prepare_clone_dest":
+            return {
+              temp: `${a.parent}/.comdtex-clone-e2e`,
+              dest: `${a.parent}/${a.name}`,
+            }
+          case "discard_clone":
+            return null
           default:
             if (cmd === "plugin:shell|execute" && a.program === "git" && git) {
               return fakeGit((a.args as string[]) ?? [])

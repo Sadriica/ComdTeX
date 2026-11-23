@@ -17,6 +17,7 @@ export interface BuildMenusCtx {
   deps: DepStatus | null
   exportActions: ReturnType<typeof useExportActions>
   selectVault: () => void
+  openFromGit: () => void
   setTemplateOpen: (open: boolean) => void
   /** Inline create in the file tree, at the shared target folder. */
   startInlineCreate: (kind: "file" | "folder") => void
@@ -58,6 +59,7 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
     deps,
     exportActions,
     selectVault,
+    openFromGit,
     setTemplateOpen,
     startInlineCreate,
     handleSave,
@@ -81,6 +83,7 @@ export function buildMenus(ctx: BuildMenusCtx): MenuDef[] {
       label: t.menus.file,
       entries: [
         { label: t.menus.openVault, action: selectVault },
+        { label: t.menus.openFromGit, action: openFromGit },
         { separator: true },
         {
           label: t.palette.newFile,

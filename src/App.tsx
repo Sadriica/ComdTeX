@@ -399,6 +399,7 @@ const AiPanel = lazy(() => import("./AiPanel"))
 const CmdKEdit = lazy(() => import("./CmdKEdit"))
 const SettingsModal = lazy(() => import("./SettingsModal"))
 const HelpModal = lazy(() => import("./HelpModal"))
+const CloneVaultModal = lazy(() => import("./CloneVaultModal"))
 const TemplateModal = lazy(() => import("./TemplateModal"))
 const SearchReplacePanel = lazy(() => import("./SearchReplacePanel"))
 const UpdateChecker = lazy(() => import("./UpdateChecker"))
@@ -749,6 +750,8 @@ function AppContent({
   }, [])
   // ── The app's own text prompt (replaces window.prompt) ───────────────────
   const [textPrompt, setTextPrompt] = useState<TextPromptRequest | null>(null)
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const openFromGit = useCallback(() => setCloneOpen(true), [])
   const promptResolve = useRef<((value: string | null) => void) | null>(null)
   const askText = useCallback(
     (req: TextPromptRequest) =>
@@ -5102,6 +5105,7 @@ function AppContent({
         handleVaultBackup,
         openCmdkRef,
         selectVault: vault.selectVault,
+        openFromGit,
         setTemplateOpen: setTemplateOpenAtTarget,
         startInlineCreate,
         handleOpenDailyNote,
@@ -5149,6 +5153,7 @@ function AppContent({
       handleCopyLatex,
       handleVaultBackup,
       vault.selectVault,
+      openFromGit,
       handleOpenDailyNote,
       handleOpenMacros,
       vault.restoreExampleFiles,
@@ -5195,6 +5200,7 @@ function AppContent({
         deps,
         exportActions,
         selectVault: vault.selectVault,
+        openFromGit,
         setTemplateOpen: setTemplateOpenAtTarget,
         startInlineCreate,
         handleSave,
@@ -5221,6 +5227,7 @@ function AppContent({
       deps,
       exportActions,
       vault.selectVault,
+      openFromGit,
       handleSave,
       handleSaveAs,
       handleFind,
@@ -5364,6 +5371,16 @@ function AppContent({
       : undefined,
     getCreateFolderRel,
   }
+  const cloneEl = cloneOpen ? (
+    <CloneVaultModal
+      open
+      onClose={() => setCloneOpen(false)}
+      onCloned={(path) => {
+        void vault.selectVault(path)
+      }}
+    />
+  ) : null
+
   const paletteEl = (
     <CommandPalette
       key={paletteReq.nonce}
@@ -5403,6 +5420,7 @@ function AppContent({
           onCreateVault={() => {
             void vault.createVault()
           }}
+          onOpenFromGit={openFromGit}
           recentVaults={vault.recentVaults}
           onOpenRecent={(path) => {
             void vault.selectVault(path)
@@ -5430,6 +5448,7 @@ function AppContent({
             onChange={updateSettings}
           />
           <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+          {cloneEl}
         </LazyRegion>
       </div>
     )
@@ -6050,6 +6069,7 @@ function AppContent({
           defaultFolder={templateFolderDefault}
         />
         <TextPromptModal request={textPrompt} onResult={handlePromptResult} />
+        {cloneEl}
 
         {/* Focus view, detached from the top bar. Deliberately NOT a sidebar
             panel: starting or resetting a timer is a glance-and-click action,

@@ -7,7 +7,17 @@ ComdTeX can keep a vault in sync between coauthors without a cloud service of it
 1. Open the Git panel (the branch button in the top bar). If the vault has no repository yet, initialize it from the panel.
 2. In **Write with someone else**, click **Create repository on GitHub**. Create it *private* and empty (no README).
 3. Copy the repository address (the `https://…` or `git@…` one) and paste it into the box; click **Connect**. Your vault is uploaded and becomes the shared copy.
-4. Invite your coauthor from the repository's settings (Collaborators). They clone it once and open the folder as a vault in ComdTeX.
+4. Invite your coauthor from the repository's settings (Collaborators). They get the vault with **File › Open from Git** (see below).
+
+## Getting a shared vault (once)
+
+**File › Open from Git** (also on the welcome screen and in the command palette) downloads a repository and opens it as a vault.
+
+1. Paste the repository address (`https://…`, `ssh://…` or `git@host:user/repo.git`).
+2. Choose the folder it is created in; the folder name defaults to the repository name.
+3. Click **Download and open**. A progress bar shows the download and **Cancel** stops it.
+
+ComdTeX runs the `git` installed on your machine and never asks for or stores a password or token. For a private repository, set up an SSH key or a git credential helper first (for GitHub, an SSH key and the `git@github.com:…` address is the simplest); otherwise the dialog tells you the server asked for a login. The repository is downloaded to a hidden scratch folder and moved into place only when it finishes, so a failed or cancelled download leaves nothing behind. Git LFS files are not downloaded (they stay as small pointer files) and submodules are not fetched. Downloads over 2 GB, or that stop answering for two minutes, are stopped.
 
 ## Day to day
 

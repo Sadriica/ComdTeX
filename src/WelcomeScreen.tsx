@@ -4,6 +4,7 @@ import { Cpu, Folder, Icon, Library, ScrollText, Sigma, Upload } from "./icons"
 interface WelcomeScreenProps {
   onOpenVault: () => void
   onCreateVault: () => void
+  onOpenFromGit: () => void
   recentVaults: string[]
   onOpenRecent: (path: string) => void
 }
@@ -11,6 +12,7 @@ interface WelcomeScreenProps {
 export default function WelcomeScreen({
   onOpenVault,
   onCreateVault,
+  onOpenFromGit,
   recentVaults,
   onOpenRecent,
 }: WelcomeScreenProps) {
@@ -56,6 +58,9 @@ export default function WelcomeScreen({
         </button>
         <button className="welcome-btn welcome-btn-secondary" onClick={onCreateVault}>
           {t.welcome.createNew}
+        </button>
+        <button className="welcome-btn welcome-btn-secondary" onClick={onOpenFromGit}>
+          {t.welcome.openFromGit}
         </button>
       </div>
 

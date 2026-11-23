@@ -6,6 +6,9 @@ fn main() {
     let attributes =
         tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
             "allow_vault_dir",
+            "prepare_clone_dest",
+            "finish_clone",
+            "discard_clone",
             "set_secret",
             "get_secret",
             "delete_secret",
