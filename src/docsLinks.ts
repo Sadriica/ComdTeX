@@ -39,6 +39,7 @@ export const DOCS_PAGES = [
   "shortcuts",
   "shorthands",
   "study-tools",
+  "tracked-changes",
   "troubleshooting",
   "typst",
 ] as const
