@@ -13,7 +13,7 @@
     "format": "prettier --write src/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:perf": "vitest run --no-file-parallelism src/fuzzy.test.ts src/paletteSources.perf.test.ts src/graphLayout.test.ts src/editorHovers.test.ts src/contentLinter.perf.test.ts src/completion/perf.test.ts",
+    "test:perf": "vitest run --no-file-parallelism src/fuzzy.test.ts src/paletteSources.perf.test.ts src/graphLayout.test.ts src/editorHovers.test.ts src/contentLinter.perf.test.ts src/criticMarkup.perf.test.ts src/completion/perf.test.ts",
     "test:e2e": "playwright test",
     "test:visual": "VISUAL=1 playwright test -c playwright.visual.config.ts",
     "test:watch": "vitest",

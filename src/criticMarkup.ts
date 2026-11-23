@@ -152,6 +152,22 @@ function parseWith(text: string, regions: Region[]): CriticMark[] {
   const n = text.length
   // A closer search that failed from `p` fails from every later point too.
   const failedFrom = new Map<string, number>()
+  // The same holds for the `~>` search of substitutions: remember the last
+  // separator found (still the first one after any later start) or that none
+  // exists, so a run of `{~~x~~}` without `~>` costs linear, not quadratic.
+  let sepAt = -1
+  let sepNoneFrom = -1
+  const nextSep = (from: number): number => {
+    if (sepNoneFrom >= 0 && from >= sepNoneFrom) return -1
+    if (sepAt >= from) return sepAt
+    const k = findOutside(text, "~>", from, regions)
+    if (k < 0) {
+      sepNoneFrom = from
+      return -1
+    }
+    sepAt = k
+    return k
+  }
   let i = 0
   while (i < n) {
     const j = text.indexOf("{", i)
@@ -177,7 +193,7 @@ function parseWith(text: string, regions: Region[]): CriticMark[] {
     const body = text.slice(from, c)
     let mark: CriticMark
     if (def.kind === "sub") {
-      const sep = findOutside(text, "~>", from, regions)
+      const sep = nextSep(from)
       if (sep < 0 || sep + 2 > c) {
         i = j + 1
         continue

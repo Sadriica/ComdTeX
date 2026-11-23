@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Tracked changes no longer freeze on a long run of `{~~x~~}`.** A note with tens of thousands of replacement marks that have no `~>` took tens of seconds to read, because every mark searched the whole rest of the text for its separator. The search is now remembered, so the cost is linear. Parsing results are unchanged.
 - **README AppImage commands use the real file name.** The release asset is `comdtex_<version>_amd64.AppImage`, but the run and manual extraction commands used `ComdTeX_*.AppImage`, which matches nothing on a case-sensitive system. The AUR note no longer says the packaging files always follow the latest release.
 - **Open from Git explains two address mistakes.** An address typed without its scheme (`github.com/user/repo`) now says to add `https://`, and an `https://` address with a user name or token inside it is refused with advice to use a git credential helper or an SSH key, so a token is never written to the repository settings.
 - **Compare with round no longer marks the whole note as changed.** The note open in the editor was compared with the raw text git holds, so every theorem block, `table(...)` shorthand and CRLF line end showed up as a change. The round's text is now converted to the editor form first, and an unchanged note gives no marks.
