@@ -1386,6 +1386,12 @@ export interface T {
     hpExp: string
     hpLn: string
     hpLog: string
+    // units and chemistry
+    unitsChemistry: string
+    hpSi: string
+    hpNum: string
+    hpUnit: string
+    hpCe: string
     // equations section
     numberedEq: string
     numberedNoLabel: string

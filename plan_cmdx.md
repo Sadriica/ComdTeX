@@ -5,7 +5,7 @@
 > [`docs/cmdx-contract.md`](docs/cmdx-contract.md) and the README.
 > Kept for historical reference only.
 
-## Status: IN DEVELOPMENT
+## Status: shipped in 1.2.0 (2026-04-27), superseded by the contract
 
 > **Start date:** 2026-04-24
 > **Target version:** 1.2.0

@@ -412,6 +412,12 @@ export default function HelpPanel() {
           <Row code="ln(x)" desc={hp.hpLn} render={math("\\ln(x)")} />
           <Row code="log(x)" desc={hp.hpLog} render={math("\\log(x)")} />
 
+          <div className="hp-label">{hp.unitsChemistry}</div>
+          <Row code="si(9.81, m/s^2)" desc={hp.hpSi} render={math("9.81\\,\\mathrm{m\\,s^{-2}}")} />
+          <Row code="num(6.022e23)" desc={hp.hpNum} render={math("6.022 \\times 10^{23}")} />
+          <Row code="unit(mol/L)" desc={hp.hpUnit} render={math("\\mathrm{mol\\,L^{-1}}")} />
+          <Row code="ce(H2O)" desc={hp.hpCe} render={math("\\ce{H2O}")} />
+
           <p className="hp-intro">
             <strong>{hp.nesting}</strong>{" "}
             <code className="hp-code">{"frac(sqrt(abs(x)), 1 + norm(vec(x)))"}</code>

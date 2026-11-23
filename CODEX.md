@@ -21,7 +21,7 @@ Every meaningful feature should update the right documentation layer:
 - `README.md`: product features, architecture, workflows, compatibility, developer-facing structure.
 - `src/HelpPanel.tsx`: in-app syntax/workflow documentation.
 - `src/HelpModal.tsx`: keyboard shortcuts and quick commands.
-- `src/i18n.ts`: every visible UI string in both Spanish and English.
+- `src/i18n/` (`types.ts`, `en.ts`, `es.ts`): every visible UI string in both English and Spanish; the typed shape in `types.ts` and the parity tests keep the two in step.
 - Tests: reusable logic should have Vitest coverage.
 
 Default verification after changes:
@@ -45,7 +45,7 @@ Do not accept TypeScript, ESLint, CSS minifier, or failing test errors as normal
 - Preserve user/offline changes. Do not revert unrelated dirty files.
 - Prefer pure modules with tests over adding more logic to `App.tsx`.
 - UI controls that are clickable should generally be `button`, not clickable `div`.
-- UI strings should not be hardcoded if they are part of a visible reusable flow; add to `i18n.ts`.
+- UI strings should not be hardcoded if they are part of a visible reusable flow; add to `src/i18n/` (all three files).
 - `sanitizeRenderedHtml()` must wrap rendered preview HTML before `dangerouslySetInnerHTML`. It removes form controls, global `<style>`, out-of-flow `position`, high `z-index` and `url()` in inline styles.
 - Every git call goes through `runGit` in `src/gitApi.ts` (hooks, `core.fsmonitor` and `ext::` disabled). Never call `Command.create("git", ...)` directly.
 - Storage conversion (`cmdxFormat.ts`) must never rewrite a table that has body rows, and must keep environment labels, callout fold markers and unknown callout types. `cmdxFormat.roundtrip` tests guard this.
@@ -125,10 +125,10 @@ Project export resolves `![[transclusions]]` into a single markdown stream and e
 
 Commands/menu entries currently include:
 
-- `Exportar proyecto .tex`
-- `Compilar PDF con LaTeX local`
+- `Export project as .tex` (`Exportar proyecto como .tex`)
+- `Compile PDF with local LaTeX` (`Compilar PDF con LaTeX local`)
 
-Local LaTeX compile attempts:
+The PDF compile tries the bundled WASM engine first (Settings → PDF compilation → Use built-in LaTeX engine (WASM); skipped when the document has diagram blocks), then local engines in this order:
 
 1. `tectonic`
 2. `xelatex`
@@ -161,7 +161,7 @@ Main files:
 
 ### Templates
 
-Built-in templates now include advanced academic flows:
+Built-in templates (`src/templates.ts`) include advanced academic flows:
 
 - Blank
 - Article
@@ -172,6 +172,9 @@ Built-in templates now include advanced academic flows:
 - Overleaf-ready paper
 - Thesis / long document
 - Lecture notes book
+- Journal templates (IEEE, ACM, Elsevier, APA, PLOS, Bioinformatics, bioRxiv, BMC), which carry `comdtex.texclass` frontmatter
+
+Non-journal templates carry Spanish `content` and English `contentEn`; insert them through `templateBody(tpl, lang)`.
 
 Custom templates are supported through `TemplateModal` and persisted in localStorage key:
 
@@ -183,18 +186,19 @@ Supported variables include:
 
 - `{{title}}`
 - `{{filename}}`
-- `{{date}}`
+- `{{date}}` and `{{today}}`
 - `{{date:formatted}}`
+- `{{date:<pattern>}}` (for example `{{date:YYYY-MM-DD}}`)
 - `{{datetime}}`
 - `{{year}}`
 - `{{time}}`
-- `{{author}}`
+- `{{author}}` (currently replaced by an empty string)
 
 ### Navigation And Editing
 
 Relevant additions:
 
-- `QuickSwitcher.tsx`: `Ctrl+;`, recent/vault file switcher.
+- `CommandPalette.tsx`: `Ctrl+P` and `Ctrl+;` open it in files mode (the old quick switcher), `Ctrl+Shift+P` opens the commands.
 - `ClosedTabsPopup.tsx`: reopen closed tabs.
 - `BookmarksPopup.tsx`: bookmark popup.
 - `appShortcuts.ts`: central shortcut dispatcher.
@@ -208,13 +212,13 @@ When adding syntax or document behavior:
 
 - Update `README.md`.
 - Update `HelpPanel.tsx`.
-- Update `i18n.ts`.
+- Update `src/i18n/` (types, en, es).
 - Add or update module tests.
 
 When adding a shortcut:
 
 - Update `HelpModal.tsx`.
-- Update `i18n.ts`.
+- Update `src/i18n/` (types, en, es).
 - Update `appShortcuts.test.ts`.
 
 When adding export behavior:
@@ -225,17 +229,18 @@ When adding export behavior:
 
 ## Current Verification Baseline
 
-Latest verification at v1.29.1 (2026-10-15, local run):
+Latest verification at v1.37.0 (2026-11-23, local run):
 
 ```text
-npm test: 90 files, 1477 tests passed
+npm test: 161 files, 3215 tests passed
 npx tsc --noEmit: passed
 npx eslint src/: 0 errors, 0 warnings
 npm run format:check: clean
-npm run test:coverage: 52.5% statements / 47% branches / 40.8% functions / 53.6% lines
+npm run test:coverage: 67.3% statements / 61.5% branches / 58.5% functions / 68.6% lines
   (floor in vite.config.ts: 45 / 40 / 34 / 47)
-cargo test --lib (src-tauri): 5 tests passed
 ```
+
+The Rust suite (`cargo test` in `src-tauri`) was not re-run for this baseline; CI runs it.
 
 Before tagging, run the full gate list in the README (Development section). `release.yml` runs a `verify` job (lint, types, tests, clippy, rustfmt) that the build jobs depend on; `ci.yml` also runs `format:check`, `cargo test` and the coverage floor.
 
@@ -276,7 +281,6 @@ Reference/export:
 
 Navigation/UX:
 
-- `src/QuickSwitcher.tsx`
 - `src/ClosedTabsPopup.tsx`
 - `src/BookmarksPopup.tsx`
 - `src/appShortcuts.ts`
@@ -288,8 +292,8 @@ Navigation/UX:
 
 High-value next steps:
 
-- Reduce `App.tsx` (about 4,400 lines). Export actions already moved to `exportActions.ts` and `useExportActions.ts`; sidebar composition and command palette construction are still inside it.
-- Extend Playwright coverage (`e2e/` has a smoke spec and a Mermaid labels spec) to sidebar panel navigation and export flows.
+- Reduce `App.tsx` (about 6,100 lines). Export actions already moved to `exportActions.ts` and `useExportActions.ts`; sidebar composition and command palette construction are still inside it.
+- Extend Playwright coverage (`e2e/` has about 20 specs: editor, palette, sync, PDF viewer, visual) to sidebar panel navigation and export flows, which are still thin.
 - Add a real compatibility report export/copy button.
 - Add manualChunks/build tuning for Monaco/Mermaid if bundle warnings become a release concern.
 

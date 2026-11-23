@@ -84,8 +84,8 @@ Shorthands expand to LaTeX when you press **Tab**. They work inside `$...$` and 
 | `root(n, x)` | `\sqrt[n]{x}` |
 | `abs(x)` | `\left|x\right|` |
 | `norm(v)` | `\left\|v\right\|` |
-| `ceil(x)` | `\lceil x\rceil` |
-| `floor(x)` | `\lfloor x\rfloor` |
+| `ceil(x)` | `\left\lceil x \right\rceil` |
+| `floor(x)` | `\left\lfloor x \right\rfloor` |
 
 **Sums, integrals, limits**
 
@@ -96,6 +96,20 @@ Shorthands expand to LaTeX when you press **Tab**. They work inside `$...$` and 
 | `lim(x, 0)` | `\lim_{x \to 0}` |
 | `der(f, x)` | `\frac{df}{dx}` |
 | `pder(f, x)` | `\frac{\partial f}{\partial x}` |
+
+**Functions**
+
+| Shorthand | Result |
+|---|---|
+| `sin(x)` | `\sin(x)` |
+| `cos(x)` | `\cos(x)` |
+| `tan(x)` | `\tan(x)` |
+| `cot(x)` | `\cot(x)` |
+| `sec(x)` | `\sec(x)` |
+| `csc(x)` | `\csc(x)` |
+| `exp(x)` | `\exp(x)` |
+| `ln(x)` | `\ln(x)` |
+| `log(x)` | `\log(x)` |
 
 **Algebra and decorators**
 
@@ -126,8 +140,17 @@ Shorthands expand to LaTeX when you press **Tab**. They work inside `$...$` and 
 |---|---|
 | `mat(1,0,0,1)` | auto-shaped bracket matrix (`[` `]`) |
 | `matf(2,3, a,b,c, d,e,f)` | fixed 2×3 bracket matrix |
-| `pmat(1,0,0,1)` | parenthesis matrix (`(` `)`) |
+| `[[1,2],[3,4]]` | literal numeric matrix (bracket matrix) |
 | `table(Col1, Col2)` | Markdown table header row |
+
+**Units and chemistry**
+
+| Shorthand | Result |
+|---|---|
+| `si(9.81, m/s^2)` | quantity with units (upright units in the preview, `siunitx` `\qty` on export) |
+| `num(6.022e23)` | formatted number (`\num` on export) |
+| `unit(mol/L)` | standalone unit (`\unit` on export) |
+| `ce(H2O)` | chemical formula (`\ce`, mhchem) |
 
 ### 4. Use Math Environments
 
@@ -602,7 +625,7 @@ npm run test:coverage # coverage with the regression floor
 (cd src-tauri && cargo test --lib)   # Rust tests
 ```
 
-Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statements, 40% branches, 34% functions, 47% lines (the real figures are about 52.5 / 47 / 40.8 / 53.6). CI (`ci.yml`) runs lint, `lint:css`, type check, `format:check`, tests with coverage, clippy, `cargo fmt --check` and `cargo test`.
+Coverage thresholds in `vite.config.ts` are a floor, not a target: 45% statements, 40% branches, 34% functions, 47% lines (the real figures at 1.37.0 are about 67.3 / 61.5 / 58.5 / 68.6). CI (`ci.yml`) runs lint, `lint:css`, type check, `format:check`, tests with coverage, clippy, `cargo fmt --check` and `cargo test`.
 
 The bulk prettier commit is listed in `.git-blame-ignore-revs`; to make `git blame` skip it run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 

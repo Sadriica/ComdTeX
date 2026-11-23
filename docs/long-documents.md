@@ -29,7 +29,7 @@ by themselves.)
 
 `:::excalidraw` blocks fold themselves the first time you open a file, because
 their scene is a single base64 line that takes up half the screen. This can be
-turned off in Settings → Editor.
+turned off in Settings → Editor (**Fold Excalidraw drawings**).
 
 ## The outline as an index
 
@@ -81,7 +81,7 @@ Pressing Enter keeps the structure: the dash, the number (which increments), the
 On an empty marker, Enter leaves the list instead of adding another empty one;
 if it was nested, it goes up one level.
 
-This can be turned off in Settings → Editor.
+This can be turned off in Settings → Editor (**Continue lists on Enter**).
 
 For ragged tables (rows with fewer columns than the header) there is a warning in
 the editor and the **Normalize table** command, which fills in the missing cells

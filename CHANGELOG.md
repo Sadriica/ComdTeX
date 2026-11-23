@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Units and chemistry in the Help panel.** The math shorthands section now lists `si()`, `num()`, `unit()` and `ce()`, which were implemented but missing from it.
+
+### Fixed
+- **The API key note in Settings told the wrong story.** It said the key was kept in localStorage; it is kept in the OS keychain, apart from your other settings.
+- **Help panel and error messages name settings as Settings does.** The sync scroll entry reads "Sync editor↔preview scroll" and the missing-package hint points to Settings → PDF compilation.
+
 ## [1.37.0] - 2026-11-13
 
 ### Added

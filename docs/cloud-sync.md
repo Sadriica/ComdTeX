@@ -40,7 +40,7 @@ If everything is wired up correctly, the bottom **status bar** will show:
 
 ### 4. (Optional) Enable autosave
 
-Cloud sync triggers on every disk write. ComdTeX's autosave (Settings → *Autoguardado*, default 800 ms) means every keystroke pause flushes to disk and your cloud client picks it up, effectively continuous sync.
+Cloud sync triggers on every disk write. ComdTeX's autosave (Settings → **Autosave**, default 800 ms) means every keystroke pause flushes to disk and your cloud client picks it up, effectively continuous sync.
 
 ---
 
@@ -79,8 +79,8 @@ Settings → **Sync** has two toggles:
 
 | Setting | Effect |
 |---|---|
-| **Detect cloud providers** (`cloudSyncDetectEnabled`, default on) | Turns the whole feature on/off: when off, no provider scan runs, the StatusBar badge and FileTree markers disappear, and no conflict detection happens. |
-| **Show "move into cloud" banner** (`cloudSyncBannerEnabled`, default on) | Controls only the suggestion banner shown when a provider is installed but the vault sits outside it. The conflicts panel and badge are unaffected. |
+| **Detect sync conflicts** (`cloudSyncDetectEnabled`, default on) | Turns the whole feature on/off: when off, no provider scan runs, the StatusBar badge and FileTree markers disappear, and no conflict detection happens. |
+| **Show sync hints** (`cloudSyncBannerEnabled`, default on) | Controls only the suggestion banner shown when a provider is installed but the vault sits outside it. The conflicts panel and badge are unaffected. |
 
 The banner also remembers a one-time dismissal in `localStorage` under `comdtex_cloud_banner_dismissed` (no per-provider granularity).
 

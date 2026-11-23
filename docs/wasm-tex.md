@@ -54,7 +54,7 @@ The SwiftLaTeX engines ship with the **TeX Live core** required for plain
 `amsfonts`, `amssymb`, `amsthm`, `hyperref`, `graphicx`, `geometry`,
 `fontspec`, `inputenc`, `fontenc`, and `babel-english`. The engine
 **lazy-fetches** any other package from the server configured in
-**Settings → PDF** (default <https://texlive2.swiftlatex.com/>) on first use.
+**Settings → PDF compilation** (default <https://texlive2.swiftlatex.com/>) on first use.
 Results are cached **only in worker memory**: the cache does not survive an
 app restart, so a fresh session needs the server again. Two mitigations exist:
 
