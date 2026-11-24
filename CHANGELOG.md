@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.38.1] - 2026-11-24
+
 ### Fixed
 - **Tracked changes no longer freeze on a long run of `{~~x~~}`.** A note with tens of thousands of replacement marks that have no `~>` took tens of seconds to read, because every mark searched the whole rest of the text for its separator. The search is now remembered, so the cost is linear. Parsing results are unchanged.
 - **README AppImage commands use the real file name.** The release asset is `comdtex_<version>_amd64.AppImage`, but the run and manual extraction commands used `ComdTeX_*.AppImage`, which matches nothing on a case-sensitive system. The AUR note no longer says the packaging files always follow the latest release.
