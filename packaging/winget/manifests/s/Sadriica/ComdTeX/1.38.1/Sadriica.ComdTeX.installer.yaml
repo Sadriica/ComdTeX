@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
 
 PackageIdentifier: Sadriica.ComdTeX
-PackageVersion: 1.38.0
+PackageVersion: 1.38.1
 InstallerType: nullsoft
 Scope: machine
 InstallModes:
@@ -13,10 +13,10 @@ InstallerSwitches:
   SilentWithProgress: /S
 UpgradeBehavior: install
 ElevationRequirement: elevatesSelf
-ReleaseDate: 2026-11-23
+ReleaseDate: 2026-11-24
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/Sadriica/ComdTeX/releases/download/v1.38.0/comdtex_1.38.0_x64-setup.exe
-    InstallerSha256: AFBE81CB0E2CFCB9866427BCF293F64DB8A4BAC29E85E05093978CB0D71802A9
+    InstallerUrl: https://github.com/Sadriica/ComdTeX/releases/download/v1.38.1/comdtex_1.38.1_x64-setup.exe
+    InstallerSha256: 5403F5B711FB040C5D1FDCB0D2F8EB85958DF72D800093CD3A5292C089D0E3EC
 ManifestType: installer
 ManifestVersion: 1.12.0

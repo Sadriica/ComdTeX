@@ -2,7 +2,7 @@
 # Repackages the official .deb release. Do not edit pkgver or the checksums by
 # hand: ../update.sh <version> rewrites them and regenerates .SRCINFO.
 pkgname=comdtex-bin
-pkgver=1.38.0
+pkgver=1.38.1
 pkgrel=1
 pkgdesc="Desktop Markdown and LaTeX editor for mathematics and science (binary release)"
 arch=('x86_64')
@@ -22,7 +22,7 @@ options=('!strip' '!debug')
 noextract=("comdtex_${pkgver}_amd64.deb")
 source=("${url}/releases/download/v${pkgver}/comdtex_${pkgver}_amd64.deb"
         "LICENSE-${pkgver}::https://raw.githubusercontent.com/Sadriica/ComdTeX/v${pkgver}/LICENSE")
-sha256sums=('3e90c15db9f7760b9b974591e690e0028f39500e969e2d52691adf470b4f2c78'
+sha256sums=('595a805364295c37db5ad3c9b9c3085567e3faafbde2d5f191668b6b30becdd4'
             '63ca15856a1f908d03636e716fa96e402ec8cd2ae1e05f42b3e9b04a2af80c6b')
 
 package() {
